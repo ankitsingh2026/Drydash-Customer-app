@@ -1,10 +1,13 @@
 // app/(customer)/(tabs)/home/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useRef } from "react";
+import { Truck } from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
+  Easing,
+  PanResponder,
   ScrollView,
   StyleSheet,
   Text,
@@ -49,27 +52,130 @@ const ORDERS: Order[] = [
     subtitle: "Delivered • Nov 24, 2023",
     total: "$52.75",
   },
-  {
-    id: "2478",
-    status: "Completed",
-    subtitle: "Delivered • Nov 20, 2023",
-    total: "$15.00",
-  },
 ];
 
 export default function Home() {
   const { theme, isDark } = useTheme();
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<Order[]>(ORDERS); // placeholder
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const onPressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.96,
-      useNativeDriver: true,
-    }).start();
+  // Swipe button animated value
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const dragX = useRef(new Animated.Value(0)).current;
+  const swipeContainerWidth = width - 32; // some space
+  const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
+
+  // Hero card entrance anims
+  const heroAnims = useRef(
+    Array.from({ length: 3 }).map(() => new Animated.Value(0))
+  ).current;
+
+  useEffect(() => {
+    // simulate loading (in real app, swap with real API call)
+    const t = setTimeout(() => {
+      setLoading(false);
+      // fade in sections and hero card entrance
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+
+      Animated.stagger(
+        80,
+        heroAnims.map((a) =>
+          Animated.timing(a, {
+            toValue: 1,
+            duration: 450,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          })
+        )
+      ).start();
+    }, 900);
+
+    return () => clearTimeout(t);
+  }, []);
+
+  // simple pulsating skeleton loop
+  const pulse = useRef(new Animated.Value(0.7)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0.7,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const onPressBook = () => {
+    // quick tap fallback
+    Animated.sequence([
+      Animated.timing(swipeX, {
+        toValue: SWIPE_THRESHOLD,
+        duration: 220,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(swipeX, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      router.push("/book-pickup");
+    });
   };
-  const onPressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
-  };
+
+  // Pan responder for the swipe button
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        dragX.setOffset((dragX as any)._value || 0);
+        dragX.setValue(0);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const dx = Math.max(0, gestureState.dx); // only allow right drag
+        dragX.setValue(dx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        dragX.flattenOffset();
+        const finalX = (dragX as any)._value || 0;
+        if (finalX > SWIPE_THRESHOLD * 0.9) {
+          // complete
+          Animated.timing(dragX, {
+            toValue: SWIPE_THRESHOLD,
+            duration: 160,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }).start(() => {
+            // navigate and reset after small delay
+            router.push("/book-pickup");
+            setTimeout(() => {
+              dragX.setValue(0);
+            }, 400);
+          });
+        } else {
+          // reset
+          Animated.spring(dragX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   const getStatusStyle = (status: Order["status"]) => {
     switch (status) {
@@ -84,26 +190,38 @@ export default function Home() {
     }
   };
 
+  /* ---------------- Skeleton small component ---------------- */
+  const SkeletonBox = ({ style }: { style?: any }) => (
+    <Animated.View
+      style={[
+        {
+          backgroundColor: isDark ? "#0B1220" : "#F1F5F9",
+          opacity: pulse,
+        },
+        style,
+      ]}
+    />
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* top spacing so content doesn't hide under header */}
         <View style={{ height: 12 }} />
 
         {/* Header text */}
-        <View style={styles.header}>
+        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <Text style={[styles.brand, { color: theme.primary }]}>
             LUXE LAUNDRY
           </Text>
           <Text style={[styles.heading, { color: theme.text }]}>
             Premium Laundry Care
           </Text>
-        </View>
+        </Animated.View>
 
-        {/* HERO CAROUSEL (static cards) */}
+        {/* HERO CARDS */}
         <ScrollView
           horizontal
           pagingEnabled
@@ -112,190 +230,252 @@ export default function Home() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
         >
-          {[
-            { tag: "FEATURED", title: "24/7 Pickup & Delivery" },
-            { tag: "PREMIUM", title: "Dry Cleaning & Steam Press" },
-            { tag: "FAST", title: "Express Delivery < 24 Hrs" },
-          ].map((item, i) => (
-            <View
-              key={i}
-              style={[
-                styles.heroCard,
-                { backgroundColor: theme.card, borderColor: theme.border },
-              ]}
-            >
-              <Text style={[styles.heroTag, { color: theme.primary }]}>
-                {item.tag}
-              </Text>
-              <Text style={[styles.heroTitle, { color: theme.text }]}>
-                {item.title}
-              </Text>
-            </View>
-          ))}
+          {[0, 1, 2].map((i) => {
+            const heroStyle = {
+              transform: [
+                {
+                  scale: heroAnims[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.98, 1],
+                  }),
+                },
+                {
+                  translateY: heroAnims[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [12, 0],
+                  }),
+                },
+              ],
+              opacity: heroAnims[i],
+            };
+
+            return loading ? (
+              <View
+                key={i}
+                style={[
+                  styles.heroCard,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                    justifyContent: "center",
+                    alignItems: "center",
+                  },
+                ]}
+              >
+                <SkeletonBox
+                  style={{
+                    width: "80%",
+                    height: 18,
+                    borderRadius: 8,
+                    marginBottom: 10,
+                  }}
+                />
+                <SkeletonBox
+                  style={{ width: "90%", height: 22, borderRadius: 10 }}
+                />
+              </View>
+            ) : (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.heroCard,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                  heroStyle,
+                ]}
+              >
+                <Text style={[styles.heroTag, { color: theme.primary }]}>
+                  {i === 0 ? "FEATURED" : i === 1 ? "PREMIUM" : "FAST"}
+                </Text>
+                <Text style={[styles.heroTitle, { color: theme.text }]}>
+                  {i === 0
+                    ? "24/7 Pickup & Delivery"
+                    : i === 1
+                    ? "Dry Cleaning & Steam Press"
+                    : "Express Delivery < 24 Hrs"}
+                </Text>
+              </Animated.View>
+            );
+          })}
         </ScrollView>
 
-        {/* CTA */}
-        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPressIn={onPressIn}
-            onPressOut={onPressOut}
-            onPress={() => router.push("/book-pickup")}
-            style={[styles.ctaButton, { backgroundColor: theme.primary }]}
+        {/* Swipe to Book */}
+        <Animated.View
+          style={[
+            styles.swipeContainerWrap,
+            { opacity: fadeAnim, transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }] },
+          ]}
+        >
+          <Text style={[styles.sectionTitleSmall, { color: theme.text }]}>
+            Quick Action
+          </Text>
+
+          <View
+            style={[
+              styles.swipeContainer,
+              { backgroundColor: isDark ? "#071018" : "#F3F4F6", borderColor: theme.border },
+            ]}
           >
-            <Text style={styles.ctaText}>Place Order / Book Pickup</Text>
-          </TouchableOpacity>
+            <View style={styles.swipeTextWrap}>
+              <Text style={[styles.swipeHint, { color: theme.subText }]}>
+                Swipe to Book Pickup
+              </Text>
+            </View>
+
+            {/* draggable button */}
+            <Animated.View
+              style={[
+                styles.swipeDraggable,
+                {
+                  transform: [{ translateX: dragX }],
+                  backgroundColor: theme.primary,
+                },
+              ]}
+              {...panResponder.panHandlers}
+            >
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={onPressBook}
+                style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}
+              >
+                <Truck   size={20} color="#000" />
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
         </Animated.View>
 
         {/* Offer Card */}
-        <View
-          style={[
-            styles.offerCard,
-            {
-              backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
-              borderColor: "#D4AF37",
-            },
-          ]}
-        >
-          <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
-            LIMITED OFFER
-          </Text>
-          <Text style={[styles.offerTitle, { color: theme.text }]}>
-            First Order 20% OFF
-          </Text>
-        </View>
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View
+            style={[
+              styles.offerCard,
+              {
+                backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
+                borderColor: "#D4AF37",
+              },
+            ]}
+          >
+            <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
+              LIMITED OFFER
+            </Text>
+            <Text style={[styles.offerTitle, { color: theme.text }]}>
+              First Order 20% OFF
+            </Text>
+          </View>
+        </Animated.View>
 
         {/* Quick Services */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Quick Services
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/services")}>
-              <Text style={[styles.viewAll, { color: theme.primary }]}>
-                View All
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Quick Services
               </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.servicesRow}>
-            {QUICK_SERVICES.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                style={[styles.serviceBox, { backgroundColor: theme.card }]}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/services/${s.key}`)}
-              >
-                <View
-                  style={[
-                    styles.serviceIconWrapper,
-                    { backgroundColor: isDark ? "#062B2A" : "#E6FFFA" },
-                  ]}
-                >
-                  <Ionicons
-                    name={s.icon as any}
-                    size={20}
-                    color={theme.primary}
-                  />
-                </View>
-                <Text style={[styles.serviceLabel, { color: theme.subText }]}>
-                  {s.label}
+              <TouchableOpacity onPress={() => router.push("/services")}>
+                <Text style={[styles.viewAll, { color: theme.primary }]}>
+                  View All
                 </Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+            </View>
 
-        {/* Recent Activity / Order History */}
-        <View style={[styles.section, { marginTop: 6 }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Recent Activity
-            </Text>
-            <TouchableOpacity onPress={() => router.push("/orders")}>
-              <Text style={[styles.viewAll, { color: theme.primary }]}>
-                See All
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Order list */}
-          {ORDERS.map((o) => {
-            const statusStyle = getStatusStyle(o.status);
-            return (
-              <View
-                key={o.id}
-                style={[
-                  styles.orderCard,
-                  { backgroundColor: theme.card, borderColor: theme.border },
-                ]}
-              >
-                <View style={styles.orderRow}>
-                  <View>
-                    <Text style={[styles.orderId, { color: theme.text }]}>
-                      Order #{o.id}
-                    </Text>
-                    <Text
-                      style={[styles.orderSubtitle, { color: theme.subText }]}
-                    >
-                      {o.subtitle}
-                    </Text>
+            <View style={styles.servicesRow}>
+              {QUICK_SERVICES.map((s, idx) =>
+                loading ? (
+                  <View key={s.key} style={[styles.serviceBox, { backgroundColor: theme.card }]}>
+                    <SkeletonBox style={{ width: 44, height: 44, borderRadius: 12, marginBottom: 8 }} />
+                    <SkeletonBox style={{ width: "70%", height: 12, borderRadius: 6 }} />
                   </View>
-
-                  <View
-                    style={[
-                      styles.statusPill,
-                      { backgroundColor: statusStyle.bg },
-                    ]}
+                ) : (
+                  <TouchableOpacity
+                    key={s.key}
+                    style={[styles.serviceBox, { backgroundColor: theme.card }]}
+                    activeOpacity={0.85}
+                    onPress={() => router.push(`/services/${s.key}`)}
                   >
-                    <Text
-                      style={[styles.statusText, { color: statusStyle.text }]}
-                    >
-                      {o.status}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.orderFooter}>
-                  <Text style={[styles.orderTotal, { color: theme.text }]}>
-                    Total: {o.total}
-                  </Text>
-
-                  <View style={styles.orderActions}>
-                    {o.status === "Active" && (
-                      <TouchableOpacity
-                        style={[
-                          styles.primarySmall,
-                          { backgroundColor: theme.primary },
-                        ]}
-                        onPress={() => router.push(`/orders/${o.id}`)}
-                      >
-                        <Text style={styles.primarySmallText}>Track</Text>
-                      </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
+                    <View
                       style={[
-                        styles.secondarySmall,
-                        { backgroundColor: isDark ? "#0F1720" : "#F3F4F6" },
+                        styles.serviceIconWrapper,
+                        { backgroundColor: isDark ? "#062B2A" : "#E6FFFA" },
                       ]}
-                      onPress={() => router.push(`/orders/${o.id}`)}
                     >
-                      <Text
-                        style={[
-                          styles.secondarySmallText,
-                          { color: theme.text },
-                        ]}
-                      >
-                        View Details
-                      </Text>
-                    </TouchableOpacity>
+                      <Ionicons name={s.icon as any} size={20} color={theme.primary} />
+                    </View>
+                    <Text style={[styles.serviceLabel, { color: theme.subText }]}>{s.label}</Text>
+                  </TouchableOpacity>
+                )
+              )}
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Recent Activity */}
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View style={[styles.section, { marginTop: 6 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Recent Activity
+              </Text>
+              <TouchableOpacity onPress={() => router.push("/orders")}>
+                <Text style={[styles.viewAll, { color: theme.primary }]}>See All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Order list */}
+            {loading
+              ? // skeleton order cards
+                [0, 1].map((n) => (
+                  <View key={n} style={[styles.orderCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    <SkeletonBox style={{ width: "55%", height: 14, borderRadius: 8, marginBottom: 8 }} />
+                    <SkeletonBox style={{ width: "80%", height: 12, borderRadius: 8, marginBottom: 12 }} />
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <SkeletonBox style={{ width: "35%", height: 18, borderRadius: 8 }} />
+                      <SkeletonBox style={{ width: 96, height: 36, borderRadius: 10 }} />
+                    </View>
                   </View>
-                </View>
-              </View>
-            );
-          })}
-        </View>
+                ))
+              : messages.map((o) => {
+                  const statusStyle = getStatusStyle(o.status);
+                  return (
+                    <View
+                      key={o.id}
+                      style={[styles.orderCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                    >
+                      <View style={styles.orderRow}>
+                        <View>
+                          <Text style={[styles.orderId, { color: theme.text }]}>Order #{o.id}</Text>
+                          <Text style={[styles.orderSubtitle, { color: theme.subText }]}>{o.subtitle}</Text>
+                        </View>
+
+                        <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                          <Text style={[styles.statusText, { color: statusStyle.text }]}>{o.status}</Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.orderFooter}>
+                        <Text style={[styles.orderTotal, { color: theme.text }]}>Total: {o.total}</Text>
+
+                        <View style={styles.orderActions}>
+                          {o.status === "Active" && (
+                            <TouchableOpacity
+                              style={[styles.primarySmall, { backgroundColor: theme.primary }]}
+                              onPress={() => router.push(`/orders/${o.id}`)}
+                            >
+                              <Text style={styles.primarySmallText}>Track</Text>
+                            </TouchableOpacity>
+                          )}
+
+                          <TouchableOpacity
+                            style={[styles.secondarySmall, { backgroundColor: isDark ? "#0F1720" : "#F3F4F6" }]}
+                            onPress={() => router.push(`/orders/${o.id}`)}
+                          >
+                            <Text style={[styles.secondarySmallText, { color: theme.text }]}>View Details</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+          </View>
+        </Animated.View>
 
         <View style={{ height: 60 }} />
       </ScrollView>
@@ -336,6 +516,41 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   heroTitle: { fontSize: 22, fontWeight: "800", lineHeight: 28 },
+
+  /* Swipe to book */
+  swipeContainerWrap: {
+    paddingHorizontal: 16,
+    marginTop: 20,
+  },
+  sectionTitleSmall: { fontSize: 14, fontWeight: "800", marginBottom: 8 },
+  swipeContainer: {
+    height: 64,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 8,
+    overflow: "hidden",
+    justifyContent: "center",
+  },
+  swipeTextWrap: {
+    position: "absolute",
+    left: 66,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center",
+  },
+  swipeHint: { fontWeight: "700", fontSize: 14 },
+
+  swipeDraggable: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+  },
 
   ctaButton: {
     marginHorizontal: 16,

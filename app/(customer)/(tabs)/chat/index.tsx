@@ -1,13 +1,16 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from "react-native";
 import { useTheme } from "../../../../context/ThemeContext";
@@ -44,19 +47,26 @@ export default function Chat() {
     },
   ]);
 
-  const sendMessage = () => {
-    if (!message.trim()) return;
+  const flatRef = useRef<FlatList<Message> | null>(null);
 
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text: message,
-      sender: "user",
-      time: "Now",
-    };
+const sendMessage = () => {
+  if (!message.trim()) return;
 
-    setMessages((prev) => [...prev, newMsg]);
-    setMessage("");
+  const newMsg: Message = {
+    id: Date.now().toString(),
+    text: message,
+    sender: "user",
+    time: "Now",
   };
+
+  setMessages((prev) => [...prev, newMsg]);
+  setMessage("");
+
+  setTimeout(() => {
+    flatRef.current?.scrollToEnd({ animated: true });
+  }, 50);
+};
+
 
   const renderItem = ({ item }: { item: Message }) => {
     const isUser = item.sender === "user";
@@ -72,9 +82,7 @@ export default function Chat() {
           style={[
             styles.bubble,
             {
-              backgroundColor: isUser
-                ? theme.primary
-                : theme.card,
+              backgroundColor: isUser ? theme.primary : theme.card,
             },
           ]}
         >
@@ -92,54 +100,76 @@ export default function Chat() {
     );
   };
 
+  // Choose behavior per platform (Android: 'height' often works better)
+  const behavior = Platform.OS === "ios" ? "padding" : "height";
+  // Adjust offset depending on header size (tweak if needed)
+  const keyboardVerticalOffset = Platform.OS === "ios" ? 90 : 80;
+
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      keyboardVerticalOffset={90}
-    >
-      {/* HEADER */}
-      <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          Support Chat
-        </Text>
-        <View style={styles.status}>
-          <View style={styles.onlineDot} />
-          <Text style={styles.statusText}>Online</Text>
-        </View>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={behavior}
+        keyboardVerticalOffset={keyboardVerticalOffset}
+        enabled
+      >
+        {/* Dismiss keyboard when tapping outside */}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={[styles.container, { backgroundColor: theme.background }]}>
+            {/* HEADER */}
+            <View style={[styles.header, { backgroundColor: theme.background }]}>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>
+                Support Chat
+              </Text>
+              <View style={styles.status}>
+                <View style={styles.onlineDot} />
+                <Text style={styles.statusText}>Online</Text>
+              </View>
+            </View>
 
-      {/* CHAT LIST */}
-      <FlatList
-        data={messages}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={{ padding: 16 }}
-        showsVerticalScrollIndicator={false}
-      />
+            {/* FlatList inverted so newest message is at bottom and keyboard pushes it up */}
+            <FlatList
+              ref={(r) => (flatRef.current = r)}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={{ padding: 16, paddingBottom: 90 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              onContentSizeChange={() =>
+                flatRef.current?.scrollToEnd({ animated: true })
+              }
+            />
 
-      {/* INPUT */}
-      <View style={[styles.inputRow, { backgroundColor: theme.card }]}>
-        <TextInput
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Type your message..."
-          placeholderTextColor="#94a3b8"
-          style={[styles.input, { color: theme.text }]}
-        />
 
-        <TouchableOpacity
-          onPress={sendMessage}
-          activeOpacity={0.8}
-          style={[
-            styles.sendBtn,
-            { backgroundColor: theme.primary },
-          ]}
-        >
-          <Ionicons name="send" size={18} color="#000" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+            {/* INPUT */}
+            <View style={[styles.inputRow, { backgroundColor: theme.card }]}>
+              <TextInput
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Type your message..."
+                placeholderTextColor="#94a3b8"
+                style={[styles.input, { color: theme.text }]}
+                onFocus={() =>
+                  // scroll to bottom when input focused (inverted list => offset 0)
+                  setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: true }), 50)
+                }
+                returnKeyType="send"
+                onSubmitEditing={sendMessage}
+              />
+
+              <TouchableOpacity
+                onPress={sendMessage}
+                activeOpacity={0.8}
+                style={[styles.sendBtn, { backgroundColor: theme.primary }]}
+              >
+                <Ionicons name="send" size={18} color="#000" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

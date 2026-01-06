@@ -68,7 +68,23 @@ export default function Orders() {
       showsVerticalScrollIndicator={false}
     >
       {/* HEADER */}
-    
+      <View style={styles.headerContainer}>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>
+          Orders
+        </Text>
+
+        <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
+          Track and manage your orders
+        </Text>
+
+        <View
+          style={[
+            styles.headerDivider,
+            { backgroundColor: isDark ? "#1F2937" : "#E5E7EB" },
+          ]}
+        />
+      </View>
+
 
       {ORDERS.map((o) => {
         const statusStyle = getStatusStyle(o.status);
@@ -210,7 +226,7 @@ export default function Orders() {
 
 const styles = StyleSheet.create({
   container: {
-   
+
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 120,
@@ -295,4 +311,26 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontWeight: "700",
   },
+  headerContainer: {
+    marginBottom: 16,
+  },
+
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+
+  headerSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+
+  headerDivider: {
+    height: 1,
+    marginTop: 12,
+    borderRadius: 1,
+  },
+
 });
