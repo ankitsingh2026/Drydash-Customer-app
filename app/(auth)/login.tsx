@@ -1,90 +1,164 @@
+// app/(auth)/login.tsx
 import { router } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Image,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
-import { useTheme } from "../../context/ThemeContext";
+
 
 export default function Login() {
-  const { theme } = useTheme();
+  const btnScale = useRef(new Animated.Value(1)).current;
+  const logoScale = useRef(new Animated.Value(0.96)).current;
+  const [animating, setAnimating] = useState(false);
+
+  useEffect(() => {
+    // logo entrance (subtle)
+    Animated.spring(logoScale, {
+      toValue: 1,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  }, [logoScale]);
+
+  const pressLogin = () => {
+    if (animating) return;
+    setAnimating(true);
+
+    Animated.sequence([
+      Animated.spring(btnScale, {
+        toValue: 0.96,
+        useNativeDriver: true,
+      }),
+      Animated.spring(btnScale, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setAnimating(false);
+      // replace so user can't go back into auth screens
+      router.replace("/(customer)/(tabs)/home");
+    });
+  };
+
+  const goToRegister = () => {
+    if (animating) return;
+    // prefer replace to avoid stacking auth routes
+    router.replace("/register");
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Text style={[styles.logo, { color: theme.primary }]}>
-        DryDash
-      </Text>
-      <Text style={[styles.subtitle, { color: theme.subText }]}
-      className="underline text-2xl"
-      >
-        Customer Login
-      </Text>
+    <View style={styles.outer}>
+      {/* keep background on the outer view to avoid any white flash */}
+      <Animated.View style={[styles.container, { transform: [{ scale: logoScale }] }]}>
+        {/* LOGO */}
+        <Image
+          source={require("../../assets/images/logo/greenLogo.png")}
+          style={styles.logo}
+          resizeMode="contain"
+        />
 
-      <TextInput
-        placeholder="Phone or Email"
-        placeholderTextColor={theme.subText}
-        style={[styles.input, { backgroundColor: theme.card, color: theme.text }]}
-      />
+        {/* TITLE */}
+        <Text style={styles.subtitle}>Customer Login</Text>
 
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor={theme.subText}
-        secureTextEntry
-        style={[styles.input, { backgroundColor: theme.card, color: theme.text }]}
-      />
+        {/* INPUTS */}
+        <TextInput
+          placeholder="Phone or Email"
+          placeholderTextColor="#6B7280"
+          style={styles.input}
+          keyboardType={Platform.OS === "ios" ? "default" : "email-address"}
+        />
 
-      <TouchableOpacity
-        style={[styles.button, { backgroundColor: theme.primary }]}
-        onPress={() => router.replace("/(customer)/(tabs)/home")}
-      >
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+        <TextInput
+          placeholder="Password"
+          placeholderTextColor="#6B7280"
+          secureTextEntry
+          style={styles.input}
+        />
 
-      <TouchableOpacity onPress={() => router.push("/register")}>
-        <Text style={[styles.link, { color: theme.primary }]}>
-          Create Account
-        </Text>
-      </TouchableOpacity>
+        {/* CTA - only button animates */}
+        <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={styles.button}
+            onPress={pressLogin}
+            disabled={animating}
+          >
+            <Text style={styles.buttonText}>Login</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* FOOTER */}
+        <TouchableOpacity onPress={goToRegister} disabled={animating}>
+          <Text style={styles.link}>Create Account</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  outer: { flex: 1, backgroundColor: "#0B1F1A" }, // keep dark bg here
   container: {
     flex: 1,
     paddingHorizontal: 24,
     justifyContent: "center",
   },
+
   logo: {
-    fontSize: 32,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 6,
+    width: 160,
+    height: 120,
+    alignSelf: "center",
+    marginBottom: 8,
   },
+
   subtitle: {
+    color: "#9CA3AF",
     textAlign: "center",
-    marginBottom: 40,
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 18,
   },
+
   input: {
+    backgroundColor: "#112B24",
+    color: "#FFFFFF",
     borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
+    padding: 14,
+    marginBottom: 12,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#1F4038",
   },
+
   button: {
-    padding: 16,
+    backgroundColor: "#34D399",
+    height: 52,
     borderRadius: 16,
-    marginTop: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+    elevation: 6,
   },
+
   buttonText: {
-    textAlign: "center",
-    fontWeight: "700",
     color: "#000",
+    fontSize: 16,
+    fontWeight: "800",
   },
+
   link: {
+    color: "#34D399",
     textAlign: "center",
-    marginTop: 24,
+    marginTop: 22,
+    fontSize: 14,
+    fontWeight: "700",
   },
 });

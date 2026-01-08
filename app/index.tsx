@@ -6,7 +6,7 @@ export default function SplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace("/(auth)/login");
-    }, 2200); // 2.2 seconds
+    }, 3000); // 2.2 seconds
 
     return () => clearTimeout(timer);
   }, []);
@@ -15,7 +15,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={require("../assets/images/drydashlogo.png")}
+        source={require("../assets/images/drydash.png")}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -39,9 +39,10 @@ const styles = StyleSheet.create({
   logo: {
     width: 160,
     height: 160,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   slogan: {
+    paddingBottom:20,
     color: "#cbd5e1",
     fontSize: 16,
     letterSpacing: 0.8,

@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { ChevronRight, LogOut } from "lucide-react-native";
 import React from "react";
 import {
@@ -59,8 +60,26 @@ export default function Profile() {
             label={item.label}
             theme={theme}
             isLast={index === MENU_1.length - 1}
+            onPress={() => {
+              switch (item.label) {
+                case "Edit Profile":
+                  router.push("/edit-profile");
+                  break;
+                // case "Change Password":
+                //   router.push("/profile/change-password");
+                //   break;
+                // case "Payment Methods":
+                //   router.push("/profile/payments");
+                //   break;
+                // case "Notifications":
+                //   router.push("/profile/notifications");
+                //   break;
+              }
+            }}
           />
         ))}
+
+
       </View>
 
       {/* MENU CARD 2 */}
@@ -98,14 +117,17 @@ function MenuRow({
   label,
   theme,
   isLast,
+  onPress,
 }: {
   label: string;
   theme: any;
   isLast: boolean;
+  onPress?: () => void;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.75}
+      onPress={onPress}
       style={[
         styles.menuRow,
         !isLast && {
@@ -121,6 +143,7 @@ function MenuRow({
     </TouchableOpacity>
   );
 }
+
 
 /* ================= STYLES ================= */
 

@@ -4,12 +4,13 @@
     "slug": "Dry-Dash",
     "version": "1.0.0",
     "orientation": "portrait",
+    "backgroundColor": "#0B1F1A",
     "icon": "./assets/images/icon.png",
     "scheme": "drydash",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/drydashlogo.png",
+      "image": "./assets/images/drydash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0B1F1A"
     },
