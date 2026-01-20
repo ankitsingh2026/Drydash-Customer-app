@@ -1,4 +1,5 @@
 // app/screens/BookPickup.tsx
+import PickupMap from "@/components/maps/PickupMap.native";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -20,7 +21,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import MapView, { Marker } from "react-native-maps";
 import { useTheme } from "../../context/ThemeContext";
 
 const TIME_SLOTS = [
@@ -282,7 +282,7 @@ export default function BookPickup() {
             </View>
 
             {/* SERVICE TYPE */}
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
+            {/* <View style={[styles.card, { backgroundColor: theme.card }]}>
               <Text style={[styles.cardHeading, { color: theme.text }]}>
                 Service Type
               </Text>
@@ -316,7 +316,7 @@ export default function BookPickup() {
                   );
                 })}
               </View>
-            </View>
+            </View> */}
 
             <Text
               style={[
@@ -542,7 +542,7 @@ export default function BookPickup() {
                 <View
                   style={{ marginTop: 12, borderRadius: 8, overflow: "hidden" }}
                 >
-                  <MapView
+                  {/* <MapView
                     style={modalStyles.map}
                     initialRegion={{
                       latitude: location.latitude,
@@ -553,7 +553,12 @@ export default function BookPickup() {
                     onPress={(e) => setLocation(e.nativeEvent.coordinate)}
                   >
                     <Marker coordinate={location} />
-                  </MapView>
+                  </MapView> */}
+
+                  <PickupMap
+                    location={location}
+                    onSelect={(c) => setLocation(c)}
+                  />
                 </View>
 
                 <TouchableOpacity

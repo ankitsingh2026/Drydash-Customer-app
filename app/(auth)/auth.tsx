@@ -1,16 +1,22 @@
+import {
+  sendOtpApi,
+  updateUserApi,
+  verifyOtpApi,
+} from "@/features/auth/auth.api";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    Image,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
@@ -21,7 +27,8 @@ export default function AuthScreen() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
 
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
 
@@ -34,45 +41,75 @@ export default function AuthScreen() {
 
   /* ---------------- DUMMY LOGIC ---------------- */
 
-  const sendOtp = () => {
+  const sendOtp = async () => {
     if (!validatePhone(phone))
       return setError("Enter valid 10-digit mobile number");
 
-    setError(null);
-    setLoading(true);
-
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      await sendOtpApi(phone);
       setStep("OTP");
       setResendTimer(30);
-    }, 600);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const verifyOtp = () => {
+  const { saveTokens, setAuthUser } = useAuth();
+
+  const verifyOtp = async () => {
     if (otp.length !== 6) return setError("Enter valid 6-digit OTP");
 
-    setError(null);
-    setLoading(true);
+    try {
+      setLoading(true);
+      setError(null);
 
-    setTimeout(() => {
+      const res = await verifyOtpApi(phone, otp);
+
+      await saveTokens(res.tokens);
+
+      if (!res.isNewUser) {
+        await setAuthUser(res.user);
+        router.replace("/(customer)/(tabs)/home");
+      } else {
+        setStep("REGISTER");
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
       setLoading(false);
-      const userExists = phone.endsWith("5");
-      userExists
-        ? router.replace("/(customer)/(tabs)/home")
-        : setStep("REGISTER");
-    }, 600);
+    }
   };
 
-  const createAccount = () => {
-    if (!name.trim()) return setError("Full name is required");
+  const createAccount = async () => {
+    if (!firstName.trim()) return setError("First name is required");
 
-    setError(null);
-    setLoading(true);
+    if (!lastName.trim()) return setError("Last name is required");
 
-    setTimeout(() => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const updatedUser = await updateUserApi({
+        firstName,
+        lastName,
+        email,
+      });
+
+      await setAuthUser(updatedUser);
+
+      router.replace("/(customer)/(tabs)/home");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setFirstName("");
+      setLastName("");
+      setEmail("");
       setLoading(false);
-      setStep("SUCCESS");
-    }, 600);
+    }
   };
 
   /* Redirect after success */
@@ -189,12 +226,18 @@ export default function AuthScreen() {
                     {avatar ? "Photo added" : "Add profile photo"}
                   </Text>
                 </TouchableOpacity>
+                <Input
+                  icon="person-outline"
+                  placeholder="First name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                />
 
                 <Input
                   icon="person-outline"
-                  placeholder="Full name"
-                  value={name}
-                  onChangeText={setName}
+                  placeholder="Last name"
+                  value={lastName}
+                  onChangeText={setLastName}
                 />
 
                 <Input

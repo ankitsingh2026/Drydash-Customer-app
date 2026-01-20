@@ -1,4 +1,6 @@
 // app/(customer)/(tabs)/home/index.tsx
+import { useAuthContext } from "@/context/AuthContext";
+import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Truck } from "lucide-react-native";
@@ -60,6 +62,23 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Order[]>(ORDERS); // placeholder
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const { setAuthUser, logout } = useAuthContext();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const me = await getMeApi();
+        await setAuthUser(me);
+      } catch (err) {
+        // Token invalid / expired
+        await logout();
+        router.replace("/(auth)/auth");
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Swipe button animated value
   const swipeX = useRef(new Animated.Value(0)).current;

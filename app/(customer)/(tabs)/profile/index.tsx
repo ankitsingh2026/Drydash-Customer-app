@@ -1,6 +1,8 @@
+import { useAuthContext } from "@/context/AuthContext";
+import { getMeApi } from "@/features/auth/auth.api";
 import { router } from "expo-router";
 import { ChevronRight, LogOut } from "lucide-react-native";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -25,7 +27,48 @@ const MENU_2 = [
 ];
 
 export default function Profile() {
+  const { logout, setAuthUser } = useAuthContext();
+
+  const [profile, setProfile] = useState<{
+    firstName: string;
+    lastName: string;
+    walletBalance: number;
+    user: {
+      phone: string;
+      email?: string;
+    };
+  } | null>(null);
+
+  const [loading, setLoading] = useState(true);
   const { theme, isDark } = useTheme();
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const me = await getMeApi();
+
+        setProfile(me);
+
+        // Optional but recommended: keep AuthContext in sync
+        await setAuthUser({
+          id: me.user.id,
+          phone: me.user.phone,
+          email: me.user.email,
+          firstName: me.firstName,
+          lastName: me.lastName,
+          role: me.user.role,
+        });
+      } catch (e) {
+        // Token expired / invalid
+        await logout();
+        router.replace("/(auth)/auth");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   return (
     <ScrollView
@@ -38,17 +81,18 @@ export default function Profile() {
         <View style={styles.avatarWrapper}>
           <Image
             source={{
-              uri: "https://i.pravatar.cc/150?img=47",
+              uri: "https://i.pravatar.cc/150?img=12",
             }}
             style={styles.avatar}
           />
         </View>
 
         <Text style={[styles.name, { color: theme.text }]}>
-          Jane Doe
+          {profile ? `${profile.firstName} ${profile.lastName}` : " "}
         </Text>
+
         <Text style={[styles.email, { color: theme.subText }]}>
-          jane.doe@example.com
+          {profile?.user?.email ?? profile?.user?.phone}
         </Text>
       </View>
 
@@ -78,8 +122,6 @@ export default function Profile() {
             }}
           />
         ))}
-
-
       </View>
 
       {/* MENU CARD 2 */}
@@ -99,10 +141,12 @@ export default function Profile() {
         activeOpacity={0.9}
         style={[
           styles.logoutBtn,
-          {
-            backgroundColor: isDark ? "#3B1F1F" : "#FEE2E2",
-          },
+          { backgroundColor: isDark ? "#3B1F1F" : "#FEE2E2" },
         ]}
+        onPress={async () => {
+          await logout();
+          router.replace("/(auth)/auth");
+        }}
       >
         <LogOut size={18} color="#EF4444" />
         <Text style={styles.logoutText}>Log Out</Text>
@@ -136,14 +180,11 @@ function MenuRow({
         },
       ]}
     >
-      <Text style={[styles.menuText, { color: theme.text }]}>
-        {label}
-      </Text>
+      <Text style={[styles.menuText, { color: theme.text }]}>{label}</Text>
       <ChevronRight size={18} color={theme.subText} />
     </TouchableOpacity>
   );
 }
-
 
 /* ================= STYLES ================= */
 

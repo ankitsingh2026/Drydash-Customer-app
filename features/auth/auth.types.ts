@@ -6,8 +6,11 @@ export type RegisterPayload = {
 
 export type AuthUser = {
   id: string;
-  name: string;
   phone: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
 };
 
 export type AuthResponse = {
