@@ -1,5 +1,12 @@
-import { Stack, useLocalSearchParams } from "expo-router";
-import { LucideShovel, Minus, Plus, Shirt, Sparkles } from "lucide-react-native";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import {
+  ArrowLeft,
+  LucideShovel,
+  Minus,
+  Plus,
+  Shirt,
+  Sparkles,
+} from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -19,7 +26,7 @@ import { useTheme } from "../../../../context/ThemeContext";
 const TABS = [
   { key: "shoe", label: "Shoe Spa", icon: LucideShovel },
   { key: "laundry", label: "Laundry", icon: Shirt },
-  { key: "iron", label: "Ironing", icon: Sparkles },
+  { key: "iron", label: "Dry Clean", icon: Sparkles },
 ];
 
 type Item = {
@@ -39,32 +46,92 @@ export default function ServiceDetail() {
   const [open, setOpen] = useState(false);
 
   /* ---------- DATA ---------- */
-  const data = useMemo<Record<string, Item[]>>(() => ({
-    shoe: [
-      { id: "shoe-basic", title: "Basic Shoe Cleaning", price: 299, category: "Shoe Spa" },
-      { id: "shoe-premium", title: "Premium Shoe Care", price: 499, category: "Shoe Spa" },
-      { id: "shoe-polish", title: "Polish & Shine", price: 199, category: "Shoe Spa" },
-    ],
-    laundry: [
-      { id: "shirt", title: "Shirt", price: 199, category: "Laundry" },
-      { id: "tshirt", title: "T-Shirt", price: 149, category: "Laundry" },
-      { id: "jeans", title: "Jeans", price: 249, category: "Laundry" },
-    ],
-    iron: [
-      { id: "iron-shirt", title: "Shirt (Iron)", price: 59, category: "Ironing" },
-      { id: "iron-pant", title: "Pant (Iron)", price: 79, category: "Ironing" },
-      { id: "iron-kurta", title: "Kurta (Iron)", price: 99, category: "Ironing" },
-    ],
-  }), []);
+  const data = useMemo<Record<string, Item[]>>(
+    () => ({
+      shoe: [
+        {
+          id: "shoe-basic",
+          title: "Basic Shoe Cleaning",
+          price: 299,
+          category: "Shoe Spa",
+        },
+        {
+          id: "shoe-premium",
+          title: "Premium Shoe Care",
+          price: 499,
+          category: "Shoe Spa",
+        },
+        {
+          id: "shoe-polish",
+          title: "Polish & Shine",
+          price: 199,
+          category: "Shoe Spa",
+        },
+      ],
+      laundry: [
+        { id: "shirt", title: "Shirt", price: 199, category: "Laundry" },
+        { id: "tshirt", title: "T-Shirt", price: 149, category: "Laundry" },
+        { id: "jeans", title: "Jeans", price: 249, category: "Laundry" },
+      ],
+      iron: [
+        {
+          id: "iron-shirt",
+          title: "Shirt (Iron)",
+          price: 59,
+          category: "Ironing",
+        },
+        {
+          id: "iron-pant",
+          title: "Pant (Iron)",
+          price: 79,
+          category: "Ironing",
+        },
+        {
+          id: "iron-kurta",
+          title: "Kurta (Iron)",
+          price: 99,
+          category: "Ironing",
+        },
+      ],
+    }),
+    [],
+  );
 
   const activeTab = TABS[tab];
   const items = data[activeTab.key];
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-      {/* <TabBar /> */}
-
-      <Stack.Screen options={{ title: service?.toUpperCase() }} />
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          headerBackVisible: false,
+          title: service?.toUpperCase(),
+          headerStyle: {
+            backgroundColor: theme.background,
+          },
+          headerShadowVisible: false,
+          headerTitleAlign: "center",
+          headerTitleStyle: {
+            fontWeight: "800",
+            fontSize: 18,
+            color: theme.text,
+          },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={{
+                padding: 8,
+                marginLeft: 8,
+                borderRadius: 12,
+                backgroundColor: theme.card,
+              }}
+            >
+              <ArrowLeft size={20} color={theme.text} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
 
       {/* ---------- SEGMENTED TABS ---------- */}
       <View style={[styles.tabsWrap, { backgroundColor: theme.card }]}>
@@ -78,7 +145,13 @@ export default function ServiceDetail() {
               onPress={() => setTab(i)}
               style={[
                 styles.tab,
-                { backgroundColor: active ? theme.primary : "transparent" },
+                {
+                  backgroundColor: active
+                    ? theme.primary
+                    : isDark
+                      ? "#0F172A"
+                      : "#F1F5F9",
+                },
               ]}
             >
               <Icon size={16} color={active ? "#000" : theme.subText} />
@@ -108,6 +181,7 @@ export default function ServiceDetail() {
         keyExtractor={(i) => i.id}
         contentContainerStyle={{
           paddingBottom: 100 + insets.bottom,
+          gap: 20,
         }}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         renderItem={({ item }) => {
@@ -154,13 +228,10 @@ export default function ServiceDetail() {
                       price: item.price,
                     })
                   }
-                  style={[
-                    styles.addBtn,
-                    { backgroundColor: theme.primary },
-                  ]}
+                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
                 >
                   <Text style={{ fontWeight: "800", color: "#000" }}>
-                    Add
+                    ADD +
                   </Text>
                 </TouchableOpacity>
               ) : (
@@ -212,14 +283,15 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginVertical: 12,
     justifyContent: "space-between",
+    gap: 8, // 👈 ADD GAP HERE
   },
 
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 18,
-    alignItems: "center",
-  },
+tab: {
+  flex: 1,
+  paddingVertical: 10,
+  borderRadius: 18,
+  alignItems: "center",
+},
 
   category: {
     fontSize: 17,
@@ -233,6 +305,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 16,
     borderWidth: 1,
+    elevation: 2,
   },
 
   image: {

@@ -38,8 +38,9 @@ export const TabBar = ({
             {isDark ? <Sun size={18} color={theme.primary} /> : <Moon size={18} color={theme.primary} />}
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={onOpenNotifications} style={styles.iconBtn}>
-            <Bell size={20} />
+         <TouchableOpacity onPress={onOpenNotifications} style={styles.iconBtn}>
+  <Bell size={20} color={theme.text} />
+
 
             {unreadCount > 0 && (
               <View style={styles.badge}>

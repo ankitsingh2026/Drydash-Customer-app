@@ -5,7 +5,7 @@ import { Image, StyleSheet, Text, View } from "react-native";
 export default function SplashScreen() {
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/(auth)/login");
+      router.replace("/(auth)/auth");
     }, 3000); // 2.2 seconds
 
     return () => clearTimeout(timer);
@@ -21,10 +21,7 @@ export default function SplashScreen() {
       />
 
       {/* Slogan */}
-      <Text style={styles.slogan}
-      >
-        Smart Laundry. Seamless Life.
-      </Text>
+      <Text style={styles.slogan}>Smart Laundry. Seamless Life.</Text>
     </View>
   );
 }
@@ -42,7 +39,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   slogan: {
-    paddingBottom:20,
+    paddingBottom: 20,
     color: "#cbd5e1",
     fontSize: 16,
     letterSpacing: 0.8,

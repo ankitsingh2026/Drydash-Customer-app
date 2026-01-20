@@ -2,12 +2,12 @@
 import { Minus, Plus, X } from "lucide-react-native";
 import React from "react";
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
@@ -32,12 +32,10 @@ export default function CartSheet({
         <View style={[styles.sheet, { backgroundColor: theme.card }]}>
           {/* HEADER */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
-              Your Cart
-            </Text>
+            <Text style={[styles.title, { color: theme.text }]}>Your Cart</Text>
 
             <View style={styles.headerActions}>
-             {/* {items.length > 0 && (
+              {/* {items.length > 0 && (
                 <TouchableOpacity onPress={clear}>
                    <Trash2 size={18} color={theme.subText} />
                 </TouchableOpacity>
@@ -148,11 +146,7 @@ export default function CartSheet({
                   value={`- ₹${discount}`}
                   highlight={discount > 0}
                 />
-                <Row
-                  label="Total"
-                  value={`₹${total}`}
-                  bold
-                />
+                <Row label="Total" value={`₹${total}`} bold />
               </View>
             )}
 
@@ -160,14 +154,9 @@ export default function CartSheet({
             {items.length > 0 && (
               <TouchableOpacity
                 activeOpacity={0.9}
-                style={[
-                  styles.checkout,
-                  { backgroundColor: theme.primary },
-                ]}
+                style={[styles.checkout, { backgroundColor: theme.primary }]}
               >
-                <Text style={styles.checkoutText}>
-                  Checkout • ₹{total}
-                </Text>
+                <Text style={styles.checkoutText}>Checkout • ₹{total}</Text>
               </TouchableOpacity>
             )}
           </ScrollView>

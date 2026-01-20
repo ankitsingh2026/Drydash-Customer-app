@@ -12,7 +12,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useTheme } from "../../../../context/ThemeContext";
 // optional, only if you want the nicer gradient overlay:
@@ -69,7 +69,7 @@ export default function Home() {
 
   // Hero card entrance anims
   const heroAnims = useRef(
-    Array.from({ length: 3 }).map(() => new Animated.Value(0))
+    Array.from({ length: 3 }).map(() => new Animated.Value(0)),
   ).current;
 
   useEffect(() => {
@@ -91,8 +91,8 @@ export default function Home() {
             duration: 450,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
-          })
-        )
+          }),
+        ),
       ).start();
     }, 900);
 
@@ -114,7 +114,7 @@ export default function Home() {
           duration: 700,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -175,7 +175,7 @@ export default function Home() {
           }).start();
         }
       },
-    })
+    }),
   ).current;
 
   const getStatusStyle = (status: Order["status"]) => {
@@ -219,9 +219,7 @@ export default function Home() {
 
         {/* Header text */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-          <Text style={[styles.brand, { color: theme.primary }]}>
-            DRY DASH
-          </Text>
+          <Text style={[styles.brand, { color: theme.primary }]}>DRY DASH</Text>
           <Text style={[styles.heading, { color: theme.text }]}>
             Premium Laundry Care
           </Text>
@@ -312,7 +310,6 @@ export default function Home() {
                         : "Express Delivery < 24 Hrs"}
                   </Text>
                 </View>
-
               </Animated.View>
             );
           })}
@@ -408,7 +405,6 @@ export default function Home() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Quick Services
               </Text>
-             
             </View>
 
             <View style={styles.servicesRow}>
@@ -417,9 +413,7 @@ export default function Home() {
                   key={s.key}
                   style={[styles.serviceBox, { backgroundColor: theme.card }]}
                   activeOpacity={0.85}
-                  onPress={() =>
-                   router.push(`/(customer)/services/${s.key}`)
-                  }
+                  onPress={() => router.push(`/(customer)/services/${s.key}`)}
                 >
                   <View
                     style={[
@@ -434,15 +428,12 @@ export default function Home() {
                     />
                   </View>
 
-                  <Text
-                    style={[styles.serviceLabel, { color: theme.subText }]}
-                  >
+                  <Text style={[styles.serviceLabel, { color: theme.subText }]}>
                     {s.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
-
           </View>
         </Animated.View>
 
@@ -453,64 +444,19 @@ export default function Home() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Recent Activity
               </Text>
-              <TouchableOpacity onPress={() => router.push("/orders")}>
+              {/* <TouchableOpacity onPress={() => router.push("/orders")}>
                 <Text style={[styles.viewAll, { color: theme.primary }]}>
                   See All
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
 
             {/* Order list */}
             {loading
               ? // skeleton order cards
-              [0, 1].map((n) => (
-                <View
-                  key={n}
-                  style={[
-                    styles.orderCard,
-                    {
-                      backgroundColor: theme.card,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <SkeletonBox
-                    style={{
-                      width: "55%",
-                      height: 14,
-                      borderRadius: 8,
-                      marginBottom: 8,
-                    }}
-                  />
-                  <SkeletonBox
-                    style={{
-                      width: "80%",
-                      height: 12,
-                      borderRadius: 8,
-                      marginBottom: 12,
-                    }}
-                  />
+                [0, 1].map((n) => (
                   <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <SkeletonBox
-                      style={{ width: "35%", height: 18, borderRadius: 8 }}
-                    />
-                    <SkeletonBox
-                      style={{ width: 96, height: 36, borderRadius: 10 }}
-                    />
-                  </View>
-                </View>
-              ))
-              : messages.map((o) => {
-                const statusStyle = getStatusStyle(o.status);
-                return (
-                  <View
-                    key={o.id}
+                    key={n}
                     style={[
                       styles.orderCard,
                       {
@@ -519,81 +465,126 @@ export default function Home() {
                       },
                     ]}
                   >
-                    <View style={styles.orderRow}>
-                      <View>
-                        <Text style={[styles.orderId, { color: theme.text }]}>
-                          Order #{o.id}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.orderSubtitle,
-                            { color: theme.subText },
-                          ]}
-                        >
-                          {o.subtitle}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={[
-                          styles.statusPill,
-                          { backgroundColor: statusStyle.bg },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.statusText,
-                            { color: statusStyle.text },
-                          ]}
-                        >
-                          {o.status}
-                        </Text>
-                      </View>
+                    <SkeletonBox
+                      style={{
+                        width: "55%",
+                        height: 14,
+                        borderRadius: 8,
+                        marginBottom: 8,
+                      }}
+                    />
+                    <SkeletonBox
+                      style={{
+                        width: "80%",
+                        height: 12,
+                        borderRadius: 8,
+                        marginBottom: 12,
+                      }}
+                    />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <SkeletonBox
+                        style={{ width: "35%", height: 18, borderRadius: 8 }}
+                      />
+                      <SkeletonBox
+                        style={{ width: 96, height: 36, borderRadius: 10 }}
+                      />
                     </View>
-
-                    <View style={styles.orderFooter}>
-                      <Text
-                        style={[styles.orderTotal, { color: theme.text }]}
-                      >
-                        Total: {o.total}
-                      </Text>
-
-                      <View style={styles.orderActions}>
-                        {o.status === "Active" && (
-                          <TouchableOpacity
+                  </View>
+                ))
+              : messages.map((o) => {
+                  const statusStyle = getStatusStyle(o.status);
+                  return (
+                    <View
+                      key={o.id}
+                      style={[
+                        styles.orderCard,
+                        {
+                          backgroundColor: theme.card,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.orderRow}>
+                        <View>
+                          <Text style={[styles.orderId, { color: theme.text }]}>
+                            Order #{o.id}
+                          </Text>
+                          <Text
                             style={[
-                              styles.primarySmall,
-                              { backgroundColor: theme.primary },
+                              styles.orderSubtitle,
+                              { color: theme.subText },
                             ]}
-                            onPress={() => router.push(`/orders/${o.id}`)}
                           >
-                            <Text style={styles.primarySmallText}>Track</Text>
-                          </TouchableOpacity>
-                        )}
+                            {o.subtitle}
+                          </Text>
+                        </View>
 
-                        <TouchableOpacity
+                        <View
                           style={[
-                            styles.secondarySmall,
-                            {
-                              backgroundColor: isDark ? "#0F1720" : "#F3F4F6",
-                            },
+                            styles.statusPill,
+                            { backgroundColor: statusStyle.bg },
                           ]}
-                          onPress={() => router.push(`/orders/${o.id}`)}
                         >
                           <Text
                             style={[
-                              styles.secondarySmallText,
-                              { color: theme.text },
+                              styles.statusText,
+                              { color: statusStyle.text },
                             ]}
                           >
-                            View Details
+                            {o.status}
                           </Text>
-                        </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <View style={styles.orderFooter}>
+                        <Text
+                          style={[styles.orderTotal, { color: theme.text }]}
+                        >
+                          Total: {o.total}
+                        </Text>
+
+                        <View style={styles.orderActions}>
+                          {o.status === "Active" && (
+                            <TouchableOpacity
+                              style={[
+                                styles.primarySmall,
+                                { backgroundColor: theme.primary },
+                              ]}
+                              onPress={() => router.push(`/orders/${o.id}`)}
+                            >
+                              <Text style={styles.primarySmallText}>Track</Text>
+                            </TouchableOpacity>
+                          )}
+
+                          <TouchableOpacity
+                            style={[
+                              styles.secondarySmall,
+                              {
+                                backgroundColor: isDark ? "#0F1720" : "#F3F4F6",
+                              },
+                            ]}
+                            onPress={() => router.push(`/orders/${o.id}`)}
+                          >
+                            <Text
+                              style={[
+                                styles.secondarySmallText,
+                                { color: theme.text },
+                              ]}
+                            >
+                              View Details
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                );
-              })}
+                  );
+                })}
           </View>
         </Animated.View>
 
@@ -629,7 +620,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 20,
     justifyContent: "flex-end",
-
   },
 
   heroImage: {
@@ -645,8 +635,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.40)",
   },
 
-
-
   // tweak heroCard shadow to be slightly greenish
   heroCard: {
     width: CARD_WIDTH,
@@ -655,7 +643,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: "flex-end",
     borderWidth: 1,
-    padding: 0,               // 👈 IMPORTANT
+    padding: 0, // 👈 IMPORTANT
     overflow: "hidden",
   },
 
