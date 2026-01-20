@@ -1,4 +1,5 @@
 // app/screens/BookPickup.tsx
+import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Location from "expo-location";
@@ -35,6 +36,7 @@ const SAMPLE_ADDRESSES = [
     label: "Home",
     flat: "Flat 12B",
     line1: "123 Green Street",
+    street: "123 Green Street",
     city: "Mumbai",
     state: "Maharashtra",
     pincode: "400001",
@@ -44,6 +46,7 @@ const SAMPLE_ADDRESSES = [
     label: "Office",
     flat: "Office 502",
     line1: "Tower A, Business Park",
+    street: "Tower A, Business Park",
     city: "Mumbai",
     state: "Maharashtra",
     pincode: "400002",
@@ -63,7 +66,7 @@ export default function BookPickup() {
   const [slot, setSlot] = useState<number>(0);
 
   // ADDRESSES
-  const [addresses, setAddresses] = useState(SAMPLE_ADDRESSES);
+  const [addresses, setAddresses] = useState<Address[]>(SAMPLE_ADDRESSES);
   const [selectedAddressId, setSelectedAddressId] = useState(
     SAMPLE_ADDRESSES[0].id,
   );
