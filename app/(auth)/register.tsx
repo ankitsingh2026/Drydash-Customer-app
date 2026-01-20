@@ -1,10 +1,8 @@
-// app/(auth)/register.tsx
+import { useAuth } from "@/hooks/useAuth";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
-  Animated,
-  Easing,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,156 +11,140 @@ import {
 } from "react-native";
 
 export default function Register() {
-  // entry animation uses translateY only (no starting opacity 0)
-  const slide = useRef(new Animated.Value(16)).current;
-  const btnScale = useRef(new Animated.Value(1)).current;
-  const [animating, setAnimating] = useState(false);
+  const { register } = useAuth();
 
-  useEffect(() => {
-    // slide up with subtle easing — does not hide the background
-    Animated.timing(slide, {
-      toValue: 0,
-      duration: 420,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [slide]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const pressRegister = () => {
-    if (animating) return;
-    setAnimating(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    Animated.sequence([
-      Animated.timing(btnScale, {
-        toValue: 0.96,
-        duration: 140,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(btnScale, {
-        toValue: 1,
-        duration: 180,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setAnimating(false);
-      router.replace("/(customer)/(tabs)/home"); // no back
-    });
-  };
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const goToLogin = () => {
-    if (animating) return;
-    router.replace("/login");
+  const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
+
+  const onRegister = async () => {
+    setError(null);
+
+    if (!name.trim()) return setError("Name is required");
+    if (!validatePhone(phone))
+      return setError("Enter valid 10-digit mobile number");
+    if (password.length < 6)
+      return setError("Password must be at least 6 characters");
+    if (password !== confirmPassword) return setError("Passwords do not match");
+
+    try {
+      setLoading(true);
+      await register({ name, phone, password });
+      router.replace("/(customer)/(tabs)/home");
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={styles.outer}>
-      <Animated.View
-        style={[
-          styles.container,
-          {
-            transform: [{ translateY: slide }],
-          },
-        ]}
-      >
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join DryDash for premium laundry care</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Create Account</Text>
 
-        <TextInput
-          placeholder="Full Name"
-          placeholderTextColor="#6B7280"
-          style={styles.input}
-        />
+      <TextInput
+        placeholder="Full Name"
+        style={styles.input}
+        value={name}
+        onChangeText={setName}
+      />
 
-        <TextInput
-          placeholder="Email or Phone"
-          placeholderTextColor="#6B7280"
-          style={styles.input}
-          keyboardType={Platform.OS === "ios" ? "default" : "email-address"}
-        />
+      <TextInput
+        placeholder="Phone Number"
+        style={styles.input}
+        keyboardType="number-pad"
+        maxLength={10}
+        value={phone}
+        onChangeText={setPhone}
+      />
 
+      {/* Password */}
+      <View style={styles.passwordWrapper}>
         <TextInput
           placeholder="Password"
-          placeholderTextColor="#6B7280"
-          secureTextEntry
-          style={styles.input}
+          secureTextEntry={!showPassword}
+          style={styles.passwordInput}
+          value={password}
+          onChangeText={setPassword}
         />
-
-        <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={pressRegister}
-            disabled={animating}
-            style={styles.button}
-          >
-            <Text style={styles.buttonText}>Register</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <TouchableOpacity activeOpacity={0.8} onPress={goToLogin}>
-          <Text style={styles.link}>Back to Login</Text>
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Ionicons
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
+            size={22}
+            color="#9CA3AF"
+          />
         </TouchableOpacity>
-      </Animated.View>
+      </View>
+
+      {/* Confirm Password */}
+      <View style={styles.passwordWrapper}>
+        <TextInput
+          placeholder="Confirm Password"
+          secureTextEntry={!showConfirmPassword}
+          style={styles.passwordInput}
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+        />
+        <TouchableOpacity
+          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+        >
+          <Ionicons
+            name={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+            size={22}
+            color="#9CA3AF"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {error && <Text style={styles.error}>{error}</Text>}
+
+      <TouchableOpacity
+        style={styles.button}
+        disabled={loading}
+        onPress={onRegister}
+      >
+        <Text style={styles.buttonText}>
+          {loading ? "Creating..." : "Register"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: "#0B1F1A" }, // keep consistent dark bg
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: "center",
-  },
-
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    textAlign: "center",
-    marginBottom: 6,
-  },
-
-  subtitle: {
-    fontSize: 14,
-    color: "#9CA3AF",
-    textAlign: "center",
-    marginBottom: 28,
-  },
-
+  container: { flex: 1, padding: 24, justifyContent: "center" },
+  title: { fontSize: 28, fontWeight: "800", marginBottom: 20 },
   input: {
-    backgroundColor: "#112B24",
-    color: "#FFFFFF",
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 12,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#1F4038",
   },
-
+  passwordWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+  },
+  passwordInput: { flex: 1, paddingVertical: 14 },
+  error: { color: "red", textAlign: "center", marginBottom: 10 },
   button: {
     backgroundColor: "#34D399",
     height: 52,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    elevation: 6,
   },
-
-  buttonText: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-
-  link: {
-    color: "#34D399",
-    textAlign: "center",
-    marginTop: 18,
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  buttonText: { fontWeight: "800" },
 });
