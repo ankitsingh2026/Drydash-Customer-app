@@ -1,4 +1,3 @@
-// app/(customer)/(tabs)/home/index.tsx
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { Truck } from "lucide-react-native";
@@ -14,8 +13,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
-// optional, only if you want the nicer gradient overlay:
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.85;
@@ -28,10 +27,10 @@ type Order = {
 };
 
 const QUICK_SERVICES = [
-  { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles" },
-  { key: "Dry Clean", label: "Dry Clean", icon: "shirt" },
-  { key: "Laundry", label: "Laundry", icon: "water" },
-  { key: "On Site", label: "On Site", icon: "hammer" },
+  { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
+  { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
+  { key: "Laundry", label: "Laundry", icon: "water", featured: false },
+  { key: "On Site", label: "On Site", icon: "hammer", featured: false },
 ];
 
 const ORDERS: Order[] = [
@@ -55,28 +54,36 @@ const ORDERS: Order[] = [
   },
 ];
 
+const HERO_IMAGES = [
+  require("../../../../assets/images/hero/1st.png"),
+  require("../../../../assets/images/hero/2nd.jpg"),
+  require("../../../../assets/images/hero/premium.png"),
+];
+
 export default function Home() {
   const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<Order[]>(ORDERS); // placeholder
+  const [messages, setMessages] = useState<Order[]>(ORDERS);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Swipe button animated value
   const swipeX = useRef(new Animated.Value(0)).current;
   const dragX = useRef(new Animated.Value(0)).current;
-  const swipeContainerWidth = width - 32; // some space
+  const swipeContainerWidth = width - 32;
   const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
 
-  // Hero card entrance anims
   const heroAnims = useRef(
     Array.from({ length: 3 }).map(() => new Animated.Value(0)),
   ).current;
 
+  const sparkleAnim = useRef(new Animated.Value(0)).current;
+  const shoeSpaPulse = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
-    // simulate loading (in real app, swap with real API call)
+    // Simulate API call
     const t = setTimeout(() => {
       setLoading(false);
-      // fade in sections and hero card entrance
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
@@ -94,24 +101,60 @@ export default function Home() {
           }),
         ),
       ).start();
-    }, 900);
+    }, 1500); // Simulate 1.5s loading time
 
     return () => clearTimeout(t);
   }, []);
 
-  // simple pulsating skeleton loop
-  const pulse = useRef(new Animated.Value(0.7)).current;
+  // Auto-rotating carousel
+  useEffect(() => {
+    if (loading) return;
+
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        const next = (prev + 1) % 3;
+        scrollViewRef.current?.scrollTo({
+          x: next * (CARD_WIDTH + 16),
+          animated: true,
+        });
+        return next;
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [loading]);
+
+  // Sparkle animation
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, {
+        Animated.timing(sparkleAnim, {
           toValue: 1,
-          duration: 700,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(pulse, {
-          toValue: 0.7,
-          duration: 700,
+        Animated.timing(sparkleAnim, {
+          toValue: 0,
+          duration: 1500,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shoeSpaPulse, {
+          toValue: 1.08,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shoeSpaPulse, {
+          toValue: 1,
+          duration: 1200,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
@@ -119,7 +162,6 @@ export default function Home() {
   }, []);
 
   const onPressBook = () => {
-    // quick tap fallback
     Animated.sequence([
       Animated.timing(swipeX, {
         toValue: SWIPE_THRESHOLD,
@@ -137,7 +179,6 @@ export default function Home() {
     });
   };
 
-  // Pan responder for the swipe button
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -147,28 +188,25 @@ export default function Home() {
         dragX.setValue(0);
       },
       onPanResponderMove: (_, gestureState) => {
-        const dx = Math.max(0, gestureState.dx); // only allow right drag
+        const dx = Math.max(0, gestureState.dx);
         dragX.setValue(dx);
       },
       onPanResponderRelease: (_, gestureState) => {
         dragX.flattenOffset();
         const finalX = (dragX as any)._value || 0;
         if (finalX > SWIPE_THRESHOLD * 0.9) {
-          // complete
           Animated.timing(dragX, {
             toValue: SWIPE_THRESHOLD,
             duration: 160,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }).start(() => {
-            // navigate and reset after small delay
             router.push("/book-pickup");
             setTimeout(() => {
               dragX.setValue(0);
             }, 400);
           });
         } else {
-          // reset
           Animated.spring(dragX, {
             toValue: 0,
             useNativeDriver: true,
@@ -181,33 +219,20 @@ export default function Home() {
   const getStatusStyle = (status: Order["status"]) => {
     switch (status) {
       case "Active":
-        return { bg: "#0EA5A4", text: "#042F2E" }; // teal-ish active
+        return { bg: "#0EA5A4", text: "#042F2E" };
       case "Pending":
-        return { bg: "#F59E0B", text: "#3B2F00" }; // amber
+        return { bg: "#F59E0B", text: "#3B2F00" };
       case "Completed":
-        return { bg: "#10B981", text: "#042F1F" }; // green
+        return { bg: "#10B981", text: "#042F1F" };
       default:
         return { bg: theme.border, text: theme.text };
     }
   };
-  const HERO_IMAGES = [
-    require("../../../../assets/images/hero/1st.png"),
-    require("../../../../assets/images/hero/2nd.jpg"),
-    require("../../../../assets/images/hero/premium.png"),
-  ];
 
-  /* ---------------- Skeleton small component ---------------- */
-  const SkeletonBox = ({ style }: { style?: any }) => (
-    <Animated.View
-      style={[
-        {
-          backgroundColor: isDark ? "#0B1220" : "#F1F5F9",
-          opacity: pulse,
-        },
-        style,
-      ]}
-    />
-  );
+  // Show skeleton loader while loading
+  if (loading) {
+    return <HomeScreenSkeleton />;
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -217,22 +242,23 @@ export default function Home() {
       >
         <View style={{ height: 12 }} />
 
-        {/* Header text */}
-        <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-          <Text style={[styles.brand, { color: theme.primary }]}>DRY DASH</Text>
-          <Text style={[styles.heading, { color: theme.text }]}>
-            Premium Laundry Care
-          </Text>
-        </Animated.View>
+        {/* Header */}
 
-        {/* HERO CARDS */}
+        {/* HERO CAROUSEL */}
         <ScrollView
+          ref={scrollViewRef}
           horizontal
           pagingEnabled
           snapToInterval={CARD_WIDTH + 16}
           decelerationRate="fast"
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: 16 }}
+          onMomentumScrollEnd={(event) => {
+            const index = Math.round(
+              event.nativeEvent.contentOffset.x / (CARD_WIDTH + 16),
+            );
+            setCurrentIndex(index);
+          }}
         >
           {[0, 1, 2].map((i) => {
             const heroStyle = {
@@ -253,32 +279,7 @@ export default function Home() {
               opacity: heroAnims[i],
             };
 
-            return loading ? (
-              <View
-                key={i}
-                style={[
-                  styles.heroCard,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                    justifyContent: "center",
-                    alignItems: "center",
-                  },
-                ]}
-              >
-                <SkeletonBox
-                  style={{
-                    width: "80%",
-                    height: 18,
-                    borderRadius: 8,
-                    marginBottom: 10,
-                  }}
-                />
-                <SkeletonBox
-                  style={{ width: "90%", height: 22, borderRadius: 10 }}
-                />
-              </View>
-            ) : (
+            return (
               <Animated.View
                 key={i}
                 style={[
@@ -288,17 +289,12 @@ export default function Home() {
                 ]}
               >
                 <View style={styles.heroBg}>
-                  {/* IMAGE LAYER */}
                   <Animated.Image
                     source={HERO_IMAGES[i]}
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-
-                  {/* OVERLAY */}
                   <View style={styles.heroOverlay} />
-
-                  {/* CONTENT */}
                   <Text style={[styles.heroTag, { color: "#E6FFFA" }]}>
                     {i === 0 ? "FEATURED" : i === 1 ? "PREMIUM" : "FAST"}
                   </Text>
@@ -314,6 +310,27 @@ export default function Home() {
             );
           })}
         </ScrollView>
+
+        {/* Carousel Indicators */}
+        <View style={styles.indicatorContainer}>
+          {[0, 1, 2].map((i) => (
+            <Animated.View
+              key={i}
+              style={[
+                styles.indicator,
+                {
+                  backgroundColor:
+                    currentIndex === i
+                      ? theme.primary
+                      : isDark
+                        ? "#1F2937"
+                        : "#D1D5DB",
+                  width: currentIndex === i ? 24 : 8,
+                },
+              ]}
+            />
+          ))}
+        </View>
 
         {/* Swipe to Book */}
         <Animated.View
@@ -351,7 +368,6 @@ export default function Home() {
               </Text>
             </View>
 
-            {/* draggable button */}
             <Animated.View
               style={[
                 styles.swipeDraggable,
@@ -398,7 +414,7 @@ export default function Home() {
           </View>
         </Animated.View>
 
-        {/* Quick Services */}
+        {/* Quick Services - Shoe Spa Featured */}
         <Animated.View style={{ opacity: fadeAnim }}>
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -408,31 +424,67 @@ export default function Home() {
             </View>
 
             <View style={styles.servicesRow}>
-              {QUICK_SERVICES.map((s) => (
-                <TouchableOpacity
-                  key={s.key}
-                  style={[styles.serviceBox, { backgroundColor: theme.card }]}
-                  activeOpacity={0.85}
-                  onPress={() => router.push(`/(customer)/services/${s.key}`)}
-                >
-                  <View
+              {QUICK_SERVICES.map((s, index) => {
+                const isShoeSpa = s.key === "Shoe Spa";
+                return (
+                  <TouchableOpacity
+                    key={s.key}
                     style={[
-                      styles.serviceIconWrapper,
-                      { backgroundColor: isDark ? "#062B2A" : "#E6FFFA" },
+                      styles.serviceBox,
+                      {
+                        backgroundColor: isShoeSpa
+                          ? isDark
+                            ? "#0A3D3C"
+                            : "#D1FAE5"
+                          : theme.card,
+                      },
                     ]}
+                    activeOpacity={0.85}
+                    onPress={() => router.push(`/(customer)/services/${s.key}`)}
                   >
-                    <Ionicons
-                      name={s.icon as any}
-                      size={20}
-                      color={theme.primary}
-                    />
-                  </View>
+                    <Animated.View
+                      style={{
+                        transform: [
+                          {
+                            scale: isShoeSpa ? shoeSpaPulse : 1,
+                          },
+                        ],
+                      }}
+                    >
+                      <View
+                        style={[
+                          styles.serviceIconWrapper,
+                          {
+                            backgroundColor: isShoeSpa
+                              ? theme.primary
+                              : isDark
+                                ? "#062B2A"
+                                : "#E6FFFA",
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={s.icon as any}
+                          size={20}
+                          color={isShoeSpa ? "#000" : theme.primary}
+                        />
+                      </View>
+                    </Animated.View>
 
-                  <Text style={[styles.serviceLabel, { color: theme.subText }]}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.serviceLabel,
+                        {
+                          color: isShoeSpa ? theme.primary : theme.subText,
+                          fontWeight: isShoeSpa ? "800" : "600",
+                        },
+                      ]}
+                    >
+                      {s.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         </Animated.View>
@@ -444,147 +496,88 @@ export default function Home() {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
                 Recent Activity
               </Text>
-              {/* <TouchableOpacity onPress={() => router.push("/orders")}>
-                <Text style={[styles.viewAll, { color: theme.primary }]}>
-                  See All
-                </Text>
-              </TouchableOpacity> */}
             </View>
 
-            {/* Order list */}
-            {loading
-              ? // skeleton order cards
-                [0, 1].map((n) => (
-                  <View
-                    key={n}
-                    style={[
-                      styles.orderCard,
-                      {
-                        backgroundColor: theme.card,
-                        borderColor: theme.border,
-                      },
-                    ]}
-                  >
-                    <SkeletonBox
-                      style={{
-                        width: "55%",
-                        height: 14,
-                        borderRadius: 8,
-                        marginBottom: 8,
-                      }}
-                    />
-                    <SkeletonBox
-                      style={{
-                        width: "80%",
-                        height: 12,
-                        borderRadius: 8,
-                        marginBottom: 12,
-                      }}
-                    />
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <SkeletonBox
-                        style={{ width: "35%", height: 18, borderRadius: 8 }}
-                      />
-                      <SkeletonBox
-                        style={{ width: 96, height: 36, borderRadius: 10 }}
-                      />
+            {messages.map((o) => {
+              const statusStyle = getStatusStyle(o.status);
+              return (
+                <View
+                  key={o.id}
+                  style={[
+                    styles.orderCard,
+                    {
+                      backgroundColor: theme.card,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.orderRow}>
+                    <View>
+                      <Text style={[styles.orderId, { color: theme.text }]}>
+                        Order #{o.id}
+                      </Text>
+                      <Text
+                        style={[styles.orderSubtitle, { color: theme.subText }]}
+                      >
+                        {o.subtitle}
+                      </Text>
                     </View>
-                  </View>
-                ))
-              : messages.map((o) => {
-                  const statusStyle = getStatusStyle(o.status);
-                  return (
+
                     <View
-                      key={o.id}
                       style={[
-                        styles.orderCard,
-                        {
-                          backgroundColor: theme.card,
-                          borderColor: theme.border,
-                        },
+                        styles.statusPill,
+                        { backgroundColor: statusStyle.bg },
                       ]}
                     >
-                      <View style={styles.orderRow}>
-                        <View>
-                          <Text style={[styles.orderId, { color: theme.text }]}>
-                            Order #{o.id}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.orderSubtitle,
-                              { color: theme.subText },
-                            ]}
-                          >
-                            {o.subtitle}
-                          </Text>
-                        </View>
+                      <Text
+                        style={[styles.statusText, { color: statusStyle.text }]}
+                      >
+                        {o.status}
+                      </Text>
+                    </View>
+                  </View>
 
-                        <View
+                  <View style={styles.orderFooter}>
+                    <Text style={[styles.orderTotal, { color: theme.text }]}>
+                      Total: {o.total}
+                    </Text>
+
+                    <View style={styles.orderActions}>
+                      {o.status === "Active" && (
+                        <TouchableOpacity
                           style={[
-                            styles.statusPill,
-                            { backgroundColor: statusStyle.bg },
+                            styles.primarySmall,
+                            { backgroundColor: theme.primary },
+                          ]}
+                          onPress={() => router.push(`/orders/${o.id}`)}
+                        >
+                          <Text style={styles.primarySmallText}>Track</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        style={[
+                          styles.secondarySmall,
+                          {
+                            backgroundColor: isDark ? "#0F1720" : "#F3F4F6",
+                          },
+                        ]}
+                        onPress={() => router.push(`/orders/${o.id}`)}
+                      >
+                        <Text
+                          style={[
+                            styles.secondarySmallText,
+                            { color: theme.text },
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.statusText,
-                              { color: statusStyle.text },
-                            ]}
-                          >
-                            {o.status}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={styles.orderFooter}>
-                        <Text
-                          style={[styles.orderTotal, { color: theme.text }]}
-                        >
-                          Total: {o.total}
+                          View Details
                         </Text>
-
-                        <View style={styles.orderActions}>
-                          {o.status === "Active" && (
-                            <TouchableOpacity
-                              style={[
-                                styles.primarySmall,
-                                { backgroundColor: theme.primary },
-                              ]}
-                              onPress={() => router.push(`/orders/${o.id}`)}
-                            >
-                              <Text style={styles.primarySmallText}>Track</Text>
-                            </TouchableOpacity>
-                          )}
-
-                          <TouchableOpacity
-                            style={[
-                              styles.secondarySmall,
-                              {
-                                backgroundColor: isDark ? "#0F1720" : "#F3F4F6",
-                              },
-                            ]}
-                            onPress={() => router.push(`/orders/${o.id}`)}
-                          >
-                            <Text
-                              style={[
-                                styles.secondarySmallText,
-                                { color: theme.text },
-                              ]}
-                            >
-                              View Details
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
+                      </TouchableOpacity>
                     </View>
-                  );
-                })}
+                  </View>
+                </View>
+              );
+            })}
           </View>
         </Animated.View>
 
@@ -594,19 +587,12 @@ export default function Home() {
   );
 }
 
-/* ============== Styles ============== */
 const styles = StyleSheet.create({
   root: { flex: 1 },
-
-  scrollContent: {
-    paddingBottom: 160,
-    paddingTop: 8,
-  },
-
+  scrollContent: { paddingBottom: 160, paddingTop: 8 },
   header: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 12 },
   brand: { fontSize: 12, letterSpacing: 2, fontWeight: "700", marginBottom: 2 },
   heading: { fontSize: 26, fontWeight: "800" },
-
   heroTag: {
     fontSize: 12,
     fontWeight: "700",
@@ -621,7 +607,6 @@ const styles = StyleSheet.create({
     padding: 20,
     justifyContent: "flex-end",
   },
-
   heroImage: {
     position: "absolute",
     marginTop: 52,
@@ -629,13 +614,10 @@ const styles = StyleSheet.create({
     height: "109%",
     borderRadius: 0,
   },
-
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.40)",
   },
-
-  // tweak heroCard shadow to be slightly greenish
   heroCard: {
     width: CARD_WIDTH,
     height: 197,
@@ -643,15 +625,21 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     justifyContent: "flex-end",
     borderWidth: 1,
-    padding: 0, // 👈 IMPORTANT
+    padding: 0,
     overflow: "hidden",
   },
-
-  /* Swipe to book */
-  swipeContainerWrap: {
-    paddingHorizontal: 16,
-    marginTop: 20,
+  indicatorContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    gap: 6,
   },
+  indicator: {
+    height: 8,
+    borderRadius: 4,
+  },
+  swipeContainerWrap: { paddingHorizontal: 16, marginTop: 20 },
   sectionTitleSmall: { fontSize: 14, fontWeight: "800", marginBottom: 8 },
   swipeContainer: {
     height: 64,
@@ -669,7 +657,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   swipeHint: { fontWeight: "700", fontSize: 14 },
-
   swipeDraggable: {
     width: 48,
     height: 48,
@@ -681,31 +668,9 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
   },
-
-  ctaButton: {
-    marginHorizontal: 16,
-    marginTop: 24,
-    height: 56,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 10,
-    shadowOpacity: 0.35,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-  },
-  ctaText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#000",
-    letterSpacing: 0.4,
-  },
-
   offerCard: { margin: 16, padding: 18, borderRadius: 18, borderWidth: 1 },
   offerTag: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
   offerTitle: { fontSize: 18, fontWeight: "800", marginTop: 6 },
-
-  /* Quick services */
   section: { marginTop: 8, paddingHorizontal: 16 },
   sectionHeader: {
     flexDirection: "row",
@@ -714,15 +679,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionTitle: { fontSize: 18, fontWeight: "800" },
-  viewAll: { fontSize: 13, fontWeight: "700" },
-
   servicesRow: { flexDirection: "row", justifyContent: "space-between" },
   serviceBox: {
     width: "23%",
-    aspectRatio: 1,
+    aspectRatio: 0.85,
     borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
+    paddingVertical: 8,
   },
   serviceIconWrapper: {
     width: 44,
@@ -731,10 +695,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
+    position: "relative",
+  },
+  sparkleContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  sparkle1: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+  },
+  sparkle2: {
+    position: "absolute",
+    bottom: -2,
+    left: -2,
   },
   serviceLabel: { fontSize: 12, textAlign: "center" },
-
-  /* Orders list */
+  featuredBadge: {
+    fontSize: 9,
+    fontWeight: "700",
+    marginTop: 4,
+    letterSpacing: 0.5,
+  },
   orderCard: {
     borderRadius: 16,
     padding: 14,
@@ -748,10 +730,8 @@ const styles = StyleSheet.create({
   },
   orderId: { fontSize: 16, fontWeight: "700" },
   orderSubtitle: { marginTop: 6, fontSize: 12 },
-
   statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   statusText: { fontSize: 11, fontWeight: "700" },
-
   orderFooter: {
     marginTop: 12,
     flexDirection: "row",
@@ -759,7 +739,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   orderTotal: { fontSize: 14, fontWeight: "700" },
-
   orderActions: { flexDirection: "row", gap: 8 },
   primarySmall: {
     height: 40,
@@ -770,7 +749,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   primarySmallText: { fontWeight: "800", color: "#000" },
-
   secondarySmall: {
     height: 40,
     minWidth: 92,

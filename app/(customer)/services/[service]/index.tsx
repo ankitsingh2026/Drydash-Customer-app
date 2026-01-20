@@ -106,7 +106,7 @@ export default function ServiceDetail() {
         options={{
           headerShown: true,
           headerBackVisible: false,
-          title: service?.toUpperCase(),
+          title: "Quick Services".toUpperCase(),
           headerStyle: {
             backgroundColor: theme.background,
           },

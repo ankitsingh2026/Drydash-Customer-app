@@ -1,12 +1,16 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 
 type OrderStatus = "Active" | "Pending" | "Completed";
@@ -17,208 +21,237 @@ const ORDERS = [
     status: "Active" as OrderStatus,
     subtitle: "Pickup Scheduled: Today, 4 PM",
     total: "$38.50",
+    items: 5,
   },
   {
     id: "2480",
     status: "Pending" as OrderStatus,
     subtitle: "Scheduled: Mon, Nov 27",
     total: "$25.00",
+    items: 3,
   },
   {
     id: "2479",
     status: "Completed" as OrderStatus,
     subtitle: "Delivered: Nov 24, 2023",
     total: "$52.75",
-  },
-  {
-    id: "2478",
-    status: "Completed" as OrderStatus,
-    subtitle: "Delivered: Nov 20, 2023",
-    total: "$15.00",
+    items: 8,
   },
 ];
 
 export default function Orders() {
   const { theme, isDark } = useTheme();
+  const [loading, setLoading] = useState(true);
+
+  // Header animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  // Card animations
+  const cardAnims = useRef(ORDERS.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    // Simulate API loading
+    const timer = setTimeout(() => {
+      setLoading(false);
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      Animated.stagger(
+        120,
+        cardAnims.map((anim) =>
+          Animated.spring(anim, {
+            toValue: 1,
+            tension: 50,
+            friction: 7,
+            useNativeDriver: true,
+          }),
+        ),
+      ).start();
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return <OrdersScreenSkeleton />;
+  }
 
   const getStatusStyle = (status: OrderStatus) => {
     switch (status) {
       case "Active":
-        return {
-          bg: "#1E3A8A",
-          text: "#93C5FD",
-        };
+        return { bg: "#0EA5A4", icon: "navigate" as const };
       case "Pending":
-        return {
-          bg: "#3F3F22",
-          text: "#FACC15",
-        };
+        return { bg: "#F59E0B", icon: "time" as const };
       case "Completed":
-        return {
-          bg: "#064E3B",
-          text: "#6EE7B7",
-        };
+        return { bg: "#10B981", icon: "checkmark-done" as const };
     }
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* HEADER */}
-      <View style={styles.headerContainer}>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          Orders
-        </Text>
-
-        <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
-          Track and manage your orders
-        </Text>
-
-        <View
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* HEADER */}
+        <Animated.View
           style={[
-            styles.headerDivider,
-            { backgroundColor: isDark ? "#1F2937" : "#E5E7EB" },
+            styles.headerContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
           ]}
-        />
-      </View>
-
-
-      {ORDERS.map((o) => {
-        const statusStyle = getStatusStyle(o.status);
-
-        return (
-          <View
-            key={o.id}
-            style={[
-              styles.card,
-              { backgroundColor: theme.card },
-            ]}
-          >
-            {/* TOP ROW */}
-            <View style={styles.row}>
-              <Text style={[styles.orderId, { color: theme.text }]}>
-                Order #{o.id}
+        >
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={[styles.headerTitle, { color: theme.text }]}>
+                My Orders
               </Text>
-
-              <View
-                style={[
-                  styles.statusPill,
-                  { backgroundColor: statusStyle.bg },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    { color: statusStyle.text },
-                  ]}
-                >
-                  {o.status}
-                </Text>
-              </View>
+              <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
+                {ORDERS.length} total orders
+              </Text>
             </View>
 
-            {/* SUBTEXT */}
-            <Text
+            <View
               style={[
-                styles.subtitle,
-                { color: theme.subText },
+                styles.statsBox,
+                {
+                  backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
+                  borderColor: theme.border,
+                },
               ]}
             >
-              {o.subtitle}
-            </Text>
+              <Text style={[styles.statsNumber, { color: theme.primary }]}>
+                {ORDERS.filter((o) => o.status === "Active").length}
+              </Text>
+              <Text style={[styles.statsLabel, { color: theme.subText }]}>
+                Active
+              </Text>
+            </View>
+          </View>
 
-            {/* TOTAL */}
-            <Text
+          <View
+            style={[
+              styles.divider,
+              { backgroundColor: isDark ? "#1F2937" : "#E5E7EB" },
+            ]}
+          />
+        </Animated.View>
+
+        {/* FILTER TABS */}
+        <View style={styles.filterRow}>
+          {["All", "Active", "Pending", "Completed"].map((filter, idx) => (
+            <TouchableOpacity
+              key={filter}
               style={[
-                styles.total,
-                { color: theme.primary },
+                styles.filterTab,
+                {
+                  backgroundColor:
+                    idx === 0 ? theme.primary : isDark ? "#1F2937" : "#F3F4F6",
+                },
               ]}
             >
-              Total: {o.total}
-            </Text>
+              <Text
+                style={{
+                  fontWeight: idx === 0 ? "800" : "600",
+                  color: idx === 0 ? "#000" : theme.text,
+                }}
+              >
+                {filter}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-            {/* ACTIONS */}
-            <View style={styles.actionsRow}>
-              {o.status === "Active" && (
-                <TouchableOpacity
-                  style={[
-                    styles.primaryBtn,
-                    { backgroundColor: theme.primary },
-                  ]}
-                >
-                  <Text style={styles.primaryBtnText}>
-                    Track Delivery
-                  </Text>
-                </TouchableOpacity>
-              )}
+        {/* ORDERS */}
+        {ORDERS.map((o, index) => {
+          const status = getStatusStyle(o.status);
 
-              {o.status === "Pending" && (
-                <TouchableOpacity
+          return (
+            <Animated.View
+              key={o.id}
+              style={{
+                opacity: cardAnims[index],
+                transform: [
+                  {
+                    translateY: cardAnims[index].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => router.push(`/orders/${o.id}`)}
+              >
+                <View
                   style={[
-                    styles.secondaryBtn,
+                    styles.card,
                     {
-                      backgroundColor: isDark
-                        ? "#1F2937"
-                        : "#E5E7EB",
+                      backgroundColor: theme.card,
+                      borderLeftColor: status.bg,
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.secondaryBtnText,
-                      { color: theme.text },
-                    ]}
-                  >
-                    View Details
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {o.status === "Completed" && (
-                <>
-                  <TouchableOpacity
-                    style={[
-                      styles.primaryBtn,
-                      { backgroundColor: theme.primary },
-                    ]}
-                  >
-                    <Text style={styles.primaryBtnText}>
-                      Reorder
+                  <View style={styles.cardHeader}>
+                    <View style={styles.row}>
+                      <Ionicons
+                        name={status.icon}
+                        size={16}
+                        color={status.bg}
+                      />
+                      <Text
+                        style={{
+                          fontWeight: "700",
+                          color: status.bg,
+                          marginLeft: 6,
+                        }}
+                      >
+                        {o.status}
+                      </Text>
+                    </View>
+                    <Text style={{ color: theme.subText }}>
+                      {o.items} items
                     </Text>
-                  </TouchableOpacity>
+                  </View>
 
-                  <TouchableOpacity
-                    onPress={() =>
-                      router.push(`/orders/${o.id}`)
-                    }
-                    style={[
-                      styles.secondaryBtn,
-                      {
-                        backgroundColor: isDark
-                          ? "#1F2937"
-                          : "#E5E7EB",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.secondaryBtnText,
-                        { color: theme.text },
-                      ]}
-                    >
-                      View Details
+                  <View style={styles.cardBody}>
+                    <Text style={[styles.orderId, { color: theme.text }]}>
+                      Order #{o.id}
                     </Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </View>
-        );
-      })}
-    </ScrollView>
+                    <Text style={{ color: theme.subText }}>{o.subtitle}</Text>
+
+                    <View style={styles.totalRow}>
+                      <Text style={{ color: theme.subText }}>Total</Text>
+                      <Text style={{ fontWeight: "800", color: theme.primary }}>
+                        {o.total}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -226,111 +259,79 @@ export default function Orders() {
 
 const styles = StyleSheet.create({
   container: {
-
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 120,
-  },
-
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 16,
-  },
-
-  card: {
-    borderRadius: 18,
     padding: 16,
-    marginBottom: 14,
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
-
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  orderId: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-
-  statusText: {
-    fontSize: 11,
-    fontWeight: "700",
-  },
-
-  subtitle: {
-    marginTop: 6,
-    fontSize: 12,
-  },
-
-  total: {
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  actionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 14,
-  },
-
-  primaryBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  primaryBtnText: {
-    fontWeight: "800",
-    color: "#000",
-  },
-
-  secondaryBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  secondaryBtnText: {
-    fontWeight: "700",
+    paddingBottom: 120,
   },
   headerContainer: {
     marginBottom: 16,
   },
-
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    letterSpacing: 0.2,
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+  },
   headerSubtitle: {
     marginTop: 4,
     fontSize: 13,
-    fontWeight: "500",
   },
-
-  headerDivider: {
+  statsBox: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  statsNumber: {
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  statsLabel: {
+    fontSize: 11,
+  },
+  divider: {
     height: 1,
-    marginTop: 12,
-    borderRadius: 1,
+    marginTop: 16,
   },
-
+  filterRow: {
+    flexDirection: "row",
+    marginVertical: 16,
+  },
+  filterTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+  },
+  card: {
+    borderRadius: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    overflow: "hidden",
+  },
+  cardHeader: {
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  orderId: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  totalRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
 });
