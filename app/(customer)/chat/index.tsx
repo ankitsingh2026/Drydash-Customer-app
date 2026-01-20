@@ -12,7 +12,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import { useTheme } from "../../../../context/ThemeContext";
+import { useTheme } from "../../../context/ThemeContext";
 
 type Message = {
   id: string;
@@ -48,24 +48,23 @@ export default function Chat() {
 
   const flatRef = useRef<FlatList<Message> | null>(null);
 
-const sendMessage = () => {
-  if (!message.trim()) return;
+  const sendMessage = () => {
+    if (!message.trim()) return;
 
-  const newMsg: Message = {
-    id: Date.now().toString(),
-    text: message,
-    sender: "user",
-    time: "Now",
+    const newMsg: Message = {
+      id: Date.now().toString(),
+      text: message,
+      sender: "user",
+      time: "Now",
+    };
+
+    setMessages((prev) => [...prev, newMsg]);
+    setMessage("");
+
+    setTimeout(() => {
+      flatRef.current?.scrollToEnd({ animated: true });
+    }, 50);
   };
-
-  setMessages((prev) => [...prev, newMsg]);
-  setMessage("");
-
-  setTimeout(() => {
-    flatRef.current?.scrollToEnd({ animated: true });
-  }, 50);
-};
-
 
   const renderItem = ({ item }: { item: Message }) => {
     const isUser = item.sender === "user";
@@ -114,9 +113,13 @@ const sendMessage = () => {
       >
         {/* Dismiss keyboard when tapping outside */}
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={[styles.container, { backgroundColor: theme.background }]}>
+          <View
+            style={[styles.container, { backgroundColor: theme.background }]}
+          >
             {/* HEADER */}
-            <View style={[styles.header, { backgroundColor: theme.background }]}>
+            <View
+              style={[styles.header, { backgroundColor: theme.background }]}
+            >
               <Text style={[styles.headerTitle, { color: theme.text }]}>
                 Support Chat
               </Text>
@@ -140,7 +143,6 @@ const sendMessage = () => {
               }
             />
 
-
             {/* INPUT */}
             <View style={[styles.inputRow, { backgroundColor: theme.card }]}>
               <TextInput
@@ -151,7 +153,14 @@ const sendMessage = () => {
                 style={[styles.input, { color: theme.text }]}
                 onFocus={() =>
                   // scroll to bottom when input focused (inverted list => offset 0)
-                  setTimeout(() => flatRef.current?.scrollToOffset({ offset: 0, animated: true }), 50)
+                  setTimeout(
+                    () =>
+                      flatRef.current?.scrollToOffset({
+                        offset: 0,
+                        animated: true,
+                      }),
+                    50,
+                  )
                 }
                 returnKeyType="send"
                 onSubmitEditing={sendMessage}

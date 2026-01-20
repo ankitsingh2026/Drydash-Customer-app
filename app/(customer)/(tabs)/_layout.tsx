@@ -20,7 +20,6 @@ export default function TabsLayout() {
         onWalletPress={() => router.push("/(customer)/wallet")}
       />
 
-
       {/* TABS */}
       <Tabs
         screenOptions={{
@@ -67,7 +66,7 @@ export default function TabsLayout() {
             ),
           }}
         />
-
+        {/* 
         <Tabs.Screen
           name="chat/index"
           options={{
@@ -81,7 +80,7 @@ export default function TabsLayout() {
             ),
           }}
         />
-
+ */}
         <Tabs.Screen
           name="profile/index"
           options={{
@@ -98,10 +97,7 @@ export default function TabsLayout() {
       </Tabs>
 
       {/* NOTIFICATION SLIDER */}
-      <NotificationsTopSheet
-        visible={open}
-        onClose={() => setOpen(false)}
-      />
+      <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
     </View>
   );
 }
