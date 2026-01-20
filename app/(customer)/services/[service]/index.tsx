@@ -230,9 +230,7 @@ export default function ServiceDetail() {
                   }
                   style={[styles.addBtn, { backgroundColor: theme.primary }]}
                 >
-                  <Text style={{ fontWeight: "800", color: "#000" }}>
-                    ADD +
-                  </Text>
+                  <Text style={{ fontWeight: "800", color: "#000" }}>Add</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.qtyBox}>
@@ -286,12 +284,12 @@ const styles = StyleSheet.create({
     gap: 8, // 👈 ADD GAP HERE
   },
 
-tab: {
-  flex: 1,
-  paddingVertical: 10,
-  borderRadius: 18,
-  alignItems: "center",
-},
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 18,
+    alignItems: "center",
+  },
 
   category: {
     fontSize: 17,

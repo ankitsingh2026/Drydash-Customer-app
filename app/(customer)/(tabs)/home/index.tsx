@@ -28,10 +28,10 @@ type Order = {
 };
 
 const QUICK_SERVICES = [
-  { key: "shoe", label: "Shoe Spa", icon: "water" },
-  { key: "dry", label: "Dry Clean", icon: "cloud-upload" },
-  { key: "iron", label: "Laundry", icon: "hardware-chip" },
-  { key: "alter", label: "Alteration", icon: "hammer" },
+  { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles" },
+  { key: "Dry Clean", label: "Dry Clean", icon: "shirt" },
+  { key: "Laundry", label: "Laundry", icon: "water" },
+  { key: "On Site", label: "On Site", icon: "hammer" },
 ];
 
 const ORDERS: Order[] = [
