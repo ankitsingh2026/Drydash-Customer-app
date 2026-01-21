@@ -6,8 +6,9 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -37,9 +38,67 @@ export default function AuthScreen() {
 
   const [resendTimer, setResendTimer] = useState(0);
 
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const errorShake = useRef(new Animated.Value(0)).current;
+
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
 
-  /* ---------------- DUMMY LOGIC ---------------- */
+  // Animate on step change
+  useEffect(() => {
+    fadeAnim.setValue(0);
+    slideAnim.setValue(30);
+    scaleAnim.setValue(0.95);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 8,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [step]);
+
+  // Shake animation for errors
+  useEffect(() => {
+    if (error) {
+      Animated.sequence([
+        Animated.timing(errorShake, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(errorShake, {
+          toValue: -10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(errorShake, {
+          toValue: 10,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(errorShake, {
+          toValue: 0,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [error]);
 
   const sendOtp = async () => {
     if (!validatePhone(phone))
@@ -112,7 +171,6 @@ export default function AuthScreen() {
     }
   };
 
-  /* Redirect after success */
   useEffect(() => {
     if (step === "SUCCESS") {
       const t = setTimeout(() => {
@@ -122,7 +180,6 @@ export default function AuthScreen() {
     }
   }, [step]);
 
-  /* Resend timer */
   useEffect(() => {
     if (!resendTimer) return;
     const t = setInterval(() => {
@@ -135,10 +192,11 @@ export default function AuthScreen() {
     setAvatar("picked");
   };
 
-  /* ---------------- UI ---------------- */
-
   return (
     <View style={styles.outer}>
+      {/* Gradient overlay */}
+      <View style={styles.gradientOverlay} />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -149,20 +207,67 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* LOGO */}
-          <Image
-            source={require("../../assets/images/logo/greenLogo.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          {/* LOGO with animation */}
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
+            <Image
+              source={require("../../assets/images/logo/greenLogo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
-          {/* CARD */}
-          <View style={styles.card}>
+          {/* CARD with animation */}
+          <Animated.View
+            style={[
+              styles.card,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+              },
+            ]}
+          >
+            {/* Progress Indicator */}
+            <View style={styles.progressContainer}>
+              <View
+                style={[
+                  styles.progressDot,
+                  step !== "MOBILE" && styles.progressDotActive,
+                ]}
+              />
+              <View
+                style={[
+                  styles.progressLine,
+                  step === "REGISTER" || step === "SUCCESS"
+                    ? styles.progressLineActive
+                    : {},
+                ]}
+              />
+              <View
+                style={[
+                  styles.progressDot,
+                  (step === "REGISTER" || step === "SUCCESS") &&
+                    styles.progressDotActive,
+                ]}
+              />
+            </View>
+
             <Text style={styles.title}>
-              {step === "MOBILE" && "Login or Signup"}
+              {step === "MOBILE" && "Welcome Back"}
               {step === "OTP" && "Verify OTP"}
-              {step === "REGISTER" && "Create Account"}
-              {step === "SUCCESS" && "Welcome 🎉"}
+              {step === "REGISTER" && "Create Your Profile"}
+              {step === "SUCCESS" && "All Set! 🎉"}
+            </Text>
+
+            <Text style={styles.subtitle}>
+              {step === "MOBILE" && "Login or create a new account"}
+              {step === "OTP" && `Code sent to +91 ${phone}`}
+              {step === "REGISTER" && "Just a few more details"}
+              {step === "SUCCESS" && "Your account is ready"}
             </Text>
 
             {/* FORM */}
@@ -181,7 +286,7 @@ export default function AuthScreen() {
               <>
                 <Input
                   icon="keypad-outline"
-                  placeholder="Enter OTP"
+                  placeholder="Enter 6-digit OTP"
                   value={otp}
                   onChangeText={setOtp}
                   keyboardType="number-pad"
@@ -189,23 +294,31 @@ export default function AuthScreen() {
                 />
 
                 <View style={styles.otpActions}>
-                  <TouchableOpacity onPress={() => setStep("MOBILE")}>
-                    <Text style={styles.linkText}>
-                      <Ionicons name="chevron-back" size={14} /> Change number
-                    </Text>
+                  <TouchableOpacity
+                    onPress={() => setStep("MOBILE")}
+                    style={styles.linkButton}
+                  >
+                    <Ionicons name="chevron-back" size={16} color="#34D399" />
+                    <Text style={styles.linkText}>Change number</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     disabled={resendTimer > 0}
                     onPress={sendOtp}
+                    style={styles.linkButton}
                   >
+                    <Ionicons
+                      name="refresh-outline"
+                      size={16}
+                      color={resendTimer > 0 ? "#6B7280" : "#34D399"}
+                    />
                     <Text
                       style={[
                         styles.linkText,
-                        resendTimer > 0 && { opacity: 0.6 },
+                        resendTimer > 0 && { color: "#6B7280" },
                       ]}
                     >
-                      {resendTimer ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                      {resendTimer ? `${resendTimer}s` : "Resend"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -215,27 +328,33 @@ export default function AuthScreen() {
             {step === "REGISTER" && (
               <>
                 <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
-                  <View style={styles.avatarCircle}>
+                  <View
+                    style={[
+                      styles.avatarCircle,
+                      avatar && styles.avatarCircleActive,
+                    ]}
+                  >
                     <Ionicons
-                      name={avatar ? "checkmark" : "camera"}
-                      size={26}
-                      color={avatar ? "#34D399" : "#9CA3AF"}
+                      name={avatar ? "checkmark-circle" : "camera"}
+                      size={32}
+                      color={avatar ? "#34D399" : "#6B7280"}
                     />
                   </View>
                   <Text style={styles.avatarText}>
-                    {avatar ? "Photo added" : "Add profile photo"}
+                    {avatar ? "Photo selected ✓" : "Add profile photo"}
                   </Text>
                 </TouchableOpacity>
+
                 <Input
                   icon="person-outline"
-                  placeholder="First name"
+                  placeholder="First name *"
                   value={firstName}
                   onChangeText={setFirstName}
                 />
 
                 <Input
                   icon="person-outline"
-                  placeholder="Last name"
+                  placeholder="Last name *"
                   value={lastName}
                   onChangeText={setLastName}
                 />
@@ -252,18 +371,36 @@ export default function AuthScreen() {
 
             {step === "SUCCESS" && (
               <View style={styles.successBox}>
-                <Ionicons name="checkmark-circle" size={64} color="#34D399" />
-                <Text style={styles.successText}>
-                  Account created successfully
+                <View style={styles.successIconWrapper}>
+                  <Ionicons name="checkmark-circle" size={80} color="#34D399" />
+                </View>
+                <Text style={styles.successText}>Account Created!</Text>
+                <Text style={styles.successSubtext}>
+                  Redirecting you to home...
                 </Text>
               </View>
             )}
 
-            {error && <Text style={styles.error}>{error}</Text>}
+            {error && (
+              <Animated.View
+                style={[
+                  styles.errorContainer,
+                  { transform: [{ translateX: errorShake }] },
+                ]}
+              >
+                <Ionicons
+                  name="alert-circle"
+                  size={18}
+                  color="#EF4444"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.error}>{error}</Text>
+              </Animated.View>
+            )}
 
             {step !== "SUCCESS" && (
               <TouchableOpacity
-                style={[styles.button, loading && { opacity: 0.6 }]}
+                style={[styles.button, loading && styles.buttonLoading]}
                 disabled={loading}
                 onPress={
                   step === "MOBILE"
@@ -272,40 +409,64 @@ export default function AuthScreen() {
                       ? verifyOtp
                       : createAccount
                 }
+                activeOpacity={0.8}
               >
-                <Text style={styles.buttonText}>
-                  {loading
-                    ? "Please wait..."
-                    : step === "MOBILE"
-                      ? "Send OTP"
-                      : step === "OTP"
-                        ? "Verify"
-                        : "Create Account"}
-                </Text>
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <Text style={styles.buttonText}>Processing</Text>
+                    <View style={styles.loadingDots}>
+                      <View style={[styles.dot, styles.dot1]} />
+                      <View style={[styles.dot, styles.dot2]} />
+                      <View style={[styles.dot, styles.dot3]} />
+                    </View>
+                  </View>
+                ) : (
+                  <>
+                    <Text style={styles.buttonText}>
+                      {step === "MOBILE"
+                        ? "Send OTP"
+                        : step === "OTP"
+                          ? "Verify & Continue"
+                          : "Create Account"}
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color="#03241C"
+                      style={{ marginLeft: 8 }}
+                    />
+                  </>
+                )}
               </TouchableOpacity>
             )}
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
   );
 }
 
-/* ---------------- INPUT ---------------- */
+/* ---------------- INPUT COMPONENT ---------------- */
 
 function Input(props: any) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
-    <View style={styles.inputWrapper}>
+    <View
+      style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}
+    >
       <Ionicons
         name={props.icon}
-        size={18}
-        color="#9CA3AF"
-        style={{ marginRight: 10 }}
+        size={20}
+        color={isFocused ? "#34D399" : "#6B7280"}
+        style={{ marginRight: 12 }}
       />
       <TextInput
         {...props}
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor="#6B7280"
         style={styles.input}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
     </View>
   );
@@ -314,127 +475,269 @@ function Input(props: any) {
 /* ---------------- STYLES ---------------- */
 
 const styles = StyleSheet.create({
-  outer: { flex: 1, backgroundColor: "#071A15" },
+  outer: {
+    flex: 1,
+    backgroundColor: "#0A1612",
+  },
+
+  gradientOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 300,
+    backgroundColor: "rgba(52, 211, 153, 0.05)",
+  },
 
   scroll: {
     flexGrow: 1,
-    paddingHorizontal: 18,
-    paddingTop: 28,
-    paddingBottom: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
 
   logo: {
-    width: 140,
-    height: 88,
+    width: 160,
+    height: 100,
     alignSelf: "center",
-    marginTop: 40,
+    marginTop: 30,
+    marginBottom: 20,
   },
 
   card: {
-    padding: 14,
+    backgroundColor: "#0F2620",
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.1)",
+  },
 
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+  progressContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
 
-    marginTop: 40,
+  progressDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#1F3D33",
+    borderWidth: 2,
+    borderColor: "#2D5045",
+  },
+
+  progressDotActive: {
+    backgroundColor: "#34D399",
+    borderColor: "#34D399",
+  },
+
+  progressLine: {
+    width: 40,
+    height: 2,
+    backgroundColor: "#1F3D33",
+    marginHorizontal: 8,
+  },
+
+  progressLineActive: {
+    backgroundColor: "#34D399",
   },
 
   title: {
-    color: "#E6F6F0",
-    fontSize: 20,
+    color: "#F0FDF4",
+    fontSize: 26,
     fontWeight: "800",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 8,
+    letterSpacing: 0.3,
+  },
+
+  subtitle: {
+    color: "#9CA3AF",
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 28,
+    lineHeight: 20,
   },
 
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0F2C26",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#15382F",
+    backgroundColor: "#0A1F19",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    marginBottom: 14,
+    borderWidth: 2,
+    borderColor: "#1A3529",
+  },
+
+  inputWrapperFocused: {
+    borderColor: "#34D399",
+    backgroundColor: "#0D2620",
   },
 
   input: {
     flex: 1,
-    color: "#E6F6F0",
-    paddingVertical: 11,
-    fontSize: 15,
+    color: "#F0FDF4",
+    paddingVertical: 14,
+    fontSize: 16,
+    fontWeight: "500",
   },
 
   otpActions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
+    marginTop: 4,
+  },
+
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
 
   linkText: {
     color: "#34D399",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
+    marginLeft: 4,
   },
 
   avatarBox: {
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 24,
   },
 
   avatarCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 2,
-    borderColor: "#214F3F",
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#1F3D33",
+    borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0E2A22",
-    marginBottom: 6,
+    backgroundColor: "#0A1F19",
+    marginBottom: 12,
+  },
+
+  avatarCircleActive: {
+    borderColor: "#34D399",
+    borderStyle: "solid",
+    backgroundColor: "#0D2620",
   },
 
   avatarText: {
-    color: "#A8BDB0",
-    fontSize: 13,
+    color: "#9CA3AF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(239, 68, 68, 0.3)",
   },
 
   error: {
-    color: "#FCA5A5",
-    textAlign: "center",
-    marginBottom: 6,
+    color: "#EF4444",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
   },
 
   button: {
     backgroundColor: "#34D399",
-    height: 52,
-    borderRadius: 14,
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#000",
+    marginTop: 12,
+    flexDirection: "row",
+    shadowColor: "#34D399",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+
+  buttonLoading: {
+    opacity: 0.7,
   },
 
   buttonText: {
     fontWeight: "800",
-    fontSize: 16,
+    fontSize: 17,
     color: "#03241C",
+    letterSpacing: 0.5,
+  },
+
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  loadingDots: {
+    flexDirection: "row",
+    marginLeft: 8,
+  },
+
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#03241C",
+    marginHorizontal: 2,
+  },
+
+  dot1: {
+    opacity: 0.4,
+  },
+
+  dot2: {
+    opacity: 0.6,
+  },
+
+  dot3: {
+    opacity: 0.8,
   },
 
   successBox: {
     alignItems: "center",
-    marginTop: 10,
+    paddingVertical: 20,
+  },
+
+  successIconWrapper: {
+    marginBottom: 16,
   },
 
   successText: {
-    color: "#E6F6F0",
-    fontSize: 16,
-    marginTop: 8,
-    fontWeight: "700",
+    color: "#F0FDF4",
+    fontSize: 22,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+
+  successSubtext: {
+    color: "#9CA3AF",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
