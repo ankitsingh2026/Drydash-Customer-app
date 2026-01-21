@@ -2,7 +2,6 @@
 import PickupMap from "@/components/maps/PickupMap.native";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -62,6 +61,7 @@ export default function BookPickup() {
   const [addressType, setAddressType] = useState<"pickup" | "delivery">(
     "pickup",
   );
+  const [pickupType, setPickupType] = useState<"today" | "schedule">("today");
 
   // DATE
   const [date, setDate] = useState<Date>(new Date());
@@ -119,8 +119,10 @@ export default function BookPickup() {
         ? pickupAddr
         : deliveryAddresses.find((a) => a.id === selectedDeliveryAddressId);
 
-    const message = `Date: ${formatDateLabel(date)}
-Time: ${TIME_SLOTS[slot]}
+    const message = `Date: ${
+      pickupType === "today" ? "Today" : formatDateLabel(date)
+    }
+Time: ${pickupType === "today" ? "Next available slot" : TIME_SLOTS[slot]}
 Service: ${serviceType}
 
 Pickup: ${pickupAddr ? `${pickupAddr.flat}, ${pickupAddr.city}` : selectedAddressId}
@@ -129,6 +131,14 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
     Alert.alert("Booking Confirmed", message);
     router.back();
   };
+  useEffect(() => {
+    if (pickupType === "today") {
+      setDate(new Date());
+      setSlot(-1); // no slot selected
+    } else {
+      setSlot(0); // default first slot when scheduled
+    }
+  }, [pickupType]);
 
   // fetch current location + reverse geocode to populate address form
   const fetchCurrentLocation = async () => {
@@ -252,9 +262,6 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
 
             {/* TITLE */}
             <View style={styles.header}>
-              <Text style={[styles.kicker, { color: theme.primary }]}>
-                SCHEDULE SERVICE
-              </Text>
               <Text style={[styles.title, { color: theme.text }]}>
                 Pickup Details
               </Text>
@@ -266,78 +273,109 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
             {/* DATE */}
             <View style={[styles.card, { backgroundColor: theme.card }]}>
               <Text style={[styles.cardHeading, { color: theme.text }]}>
-                Pickup Date
+                Pickup Type
               </Text>
 
-              <TouchableOpacity
-                style={[
-                  styles.dateBox,
-                  { backgroundColor: isDark ? "#0B1220" : "#F7FAFC" },
-                ]}
-                onPress={() => setShowDatePicker(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color={theme.primary}
-                />
-                <Text style={{ marginLeft: 8, color: theme.text }}>
-                  {formatDateLabel(date)}
-                </Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                {/* TODAY */}
+                <TouchableOpacity
+                  onPress={() => setPickupType("today")}
+                  style={[
+                    styles.slot,
+                    {
+                      flex: 1,
+                      backgroundColor:
+                        pickupType === "today"
+                          ? theme.primary
+                          : isDark
+                            ? "#0B1220"
+                            : "#F7FAFC",
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={{
+                      fontWeight: "700",
+                      color: pickupType === "today" ? "#000" : theme.text,
+                      textAlign: "center",
+                    }}
+                  >
+                    Today
+                  </Text>
+                </TouchableOpacity>
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  minimumDate={new Date()}
-                  onChange={(_, d) => {
-                    setShowDatePicker(false);
-                    if (d) setDate(d);
-                  }}
-                />
-              )}
+                {/* SCHEDULED */}
+                <TouchableOpacity
+                  onPress={() => setPickupType("schedule")}
+                  style={[
+                    styles.slot,
+                    {
+                      flex: 1,
+                      backgroundColor:
+                        pickupType === "schedule"
+                          ? theme.primary
+                          : isDark
+                            ? "#0B1220"
+                            : "#F7FAFC",
+                    },
+                  ]}
+                  activeOpacity={0.85}
+                >
+                  <Text
+                    style={{
+                      fontWeight: "700",
+                      color: pickupType === "schedule" ? "#000" : theme.text,
+                      textAlign: "center",
+                    }}
+                  >
+                    Schedule Pickup
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* TIME */}
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <Text style={[styles.cardHeading, { color: theme.text }]}>
-                Pickup Time
-              </Text>
+            {pickupType === "schedule" && (
+              <View style={[styles.card, { backgroundColor: theme.card }]}>
+                <Text style={[styles.cardHeading, { color: theme.text }]}>
+                  Pickup Time
+                </Text>
 
-              <View style={styles.slotWrap}>
-                {TIME_SLOTS.map((t, i) => {
-                  const active = slot === i;
-                  return (
-                    <TouchableOpacity
-                      key={t}
-                      onPress={() => setSlot(i)}
-                      style={[
-                        styles.slot,
-                        {
-                          backgroundColor: active
-                            ? theme.primary
-                            : isDark
-                              ? "#0B1220"
-                              : "#F7FAFC",
-                        },
-                      ]}
-                      activeOpacity={0.85}
-                    >
-                      <Text
-                        style={{
-                          fontWeight: "700",
-                          color: active ? "#000" : theme.text,
-                        }}
+                {/* select time slot */}
+                <View style={styles.slotWrap}>
+                  {TIME_SLOTS.map((t, i) => {
+                    const active = slot === i;
+                    return (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => setSlot(i)}
+                        style={[
+                          styles.slot,
+                          {
+                            backgroundColor: active
+                              ? theme.primary
+                              : isDark
+                                ? "#0B1220"
+                                : "#F7FAFC",
+                          },
+                        ]}
+                        activeOpacity={0.85}
                       >
-                        {t}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                        <Text
+                          style={{
+                            fontWeight: "700",
+                            color: active ? "#000" : theme.text,
+                          }}
+                        >
+                          {t}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
+            )}
 
             <Text
               style={[
@@ -347,6 +385,29 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
             >
               {addressType === "pickup" ? "Pickup Address" : "Delivery Address"}
             </Text>
+            {/* ADD PICKUP ADDRESS BUTTON */}
+            {/* <TouchableOpacity
+              style={styles.addAddrBtn}
+              onPress={() => {
+                setAddModalOpen(true);
+                setAddressType("pickup");
+              }}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={18}
+                color={theme.primary}
+              />
+              <Text
+                style={{
+                  marginLeft: 10,
+                  color: theme.primary,
+                  fontWeight: "700",
+                }}
+              >
+                Add new address
+              </Text>
+            </TouchableOpacity> */}
           </>
         }
         renderItem={({ item }) => {
@@ -401,6 +462,30 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
         ListFooterComponent={
           <>
+            {/* ADD PICKUP ADDRESS BUTTON */}
+            <TouchableOpacity
+              style={styles.addAddrBtn}
+              onPress={() => {
+                setAddModalOpen(true);
+                setAddressType("pickup");
+              }}
+            >
+              <Ionicons
+                name="add-circle-outline"
+                size={18}
+                color={theme.primary}
+              />
+              <Text
+                style={{
+                  marginLeft: 10,
+                  color: theme.primary,
+                  fontWeight: "700",
+                }}
+              >
+                Add new address
+              </Text>
+            </TouchableOpacity>
+
             {/* DELIVERY ADDRESS SECTION */}
             <Text
               style={[styles.cardHeading, { color: theme.text, marginTop: 20 }]}
