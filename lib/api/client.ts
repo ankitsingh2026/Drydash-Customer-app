@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 export const apiClient = axios.create({
-  baseURL: "http://localhost:3000",
+  baseURL: "https://live.drydash.in",
   headers: { "Content-Type": "application/json" },
 });
 
