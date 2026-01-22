@@ -39,21 +39,27 @@ const QUICK_SERVICES = [
 const ORDERS: Order[] = [
   {
     id: "2481",
-    status: "Active",
-    subtitle: "Pickup Scheduled • Today 4 PM",
+    status: "Washing",
+    subtitle: "2 items • Cotton",
     total: "$38.50",
+    paid: false,
+    progress: 0.35,
   },
   {
     id: "2480",
-    status: "Pending",
-    subtitle: "Scheduled • Mon, Nov 27",
+    status: "In Transit",
+    subtitle: "3 items • Dry Clean",
     total: "$25.00",
+    paid: true,
+    progress: 0.8,
   },
   {
     id: "2479",
-    status: "Completed",
-    subtitle: "Delivered • Nov 24, 2023",
+    status: "Delivered",
+    subtitle: "Delivered • Nov 24",
     total: "$52.75",
+    paid: true,
+    progress: 1,
   },
 ];
 
@@ -237,23 +243,73 @@ export default function Home() {
     }),
   ).current;
 
-  const getStatusStyle = (status: Order["status"]) => {
-    switch (status) {
-      case "Active":
-        return { bg: "#0EA5A4", text: "#042F2E" };
-      case "Pending":
-        return { bg: "#F59E0B", text: "#3B2F00" };
-      case "Completed":
-        return { bg: "#10B981", text: "#042F1F" };
-      default:
-        return { bg: theme.border, text: theme.text };
-    }
+  const getStatusStyle = (status: Order["status"], theme: any) => {
+    // keep your existing getStatusStyle if you have it; fallback styles below
+    const map = {
+      Washing: { bg: "#E8F6FF", text: "#0369A1" },
+      "Picked Up": { bg: "#FFF7ED", text: "#9A3412" },
+      "In Transit": { bg: "#F3F4F6", text: "#374151" },
+      Delivered: { bg: "#ECFBF1", text: "#065F46" },
+      Cancelled: { bg: "#FEE2E2", text: "#991B1B" },
+      Processing: { bg: "#F5F3FF", text: "#5B21B6" },
+      default: {
+        bg: theme.primary + "20" || "#E5E7EB",
+        text: theme.text || "#111",
+      },
+    };
+    return map[status] || map.default;
   };
 
   // Show skeleton loader while loading
   if (loading) {
     return <HomeScreenSkeleton />;
   }
+
+  const renderStatusVisual = (o: Order) => {
+    let icon: any = "ellipse-outline";
+
+    if (o.status === "Washing") icon = "water-outline";
+    else if (o.status === "Picked Up") icon = "arrow-up-circle-outline";
+    else if (o.status === "In Transit") icon = "car-outline";
+    else if (o.status === "Delivered") icon = "checkmark-done-circle-outline";
+    else if (o.status === "Processing") icon = "time-outline";
+
+    const statusStyle = getStatusStyle(o.status, theme);
+    const progress = Math.max(0, Math.min(1, o.progress ?? 0));
+
+    return (
+      <View style={styles.statusContainer}>
+        <View style={styles.statusLeft}>
+          <View
+            style={[
+              styles.statusIconWrap,
+              { backgroundColor: statusStyle.bg, borderColor: theme.border },
+            ]}
+          >
+            <Ionicons name={icon} size={18} color={statusStyle.text} />
+          </View>
+
+          <View style={styles.statusTextBlock}>
+            <Text style={[styles.statusLabel, { color: theme.text }]}>
+              {o.status}
+            </Text>
+
+            <View style={styles.progressBar}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progress * 100}%`,
+                    backgroundColor: theme.primary,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -430,7 +486,7 @@ export default function Home() {
               LIMITED OFFER
             </Text>
             <Text style={[styles.offerTitle, { color: theme.text }]}>
-              First Order 20% OFF
+              Welcome 20% OFF
             </Text>
           </View>
         </Animated.View>
@@ -520,7 +576,7 @@ export default function Home() {
             </View>
 
             {messages.map((o) => {
-              const statusStyle = getStatusStyle(o.status);
+              const statusStyle = getStatusStyle(o.status, theme);
               return (
                 <View
                   key={o.id}
@@ -557,6 +613,8 @@ export default function Home() {
                       </Text>
                     </View>
                   </View>
+                  {/* Rich Status Visual */}
+                  <View style={{ marginTop: 12 }}>{renderStatusVisual(o)}</View>
 
                   <View style={styles.orderFooter}>
                     <Text style={[styles.orderTotal, { color: theme.text }]}>
@@ -564,7 +622,12 @@ export default function Home() {
                     </Text>
 
                     <View style={styles.orderActions}>
-                      {o.status === "Active" && (
+                      {[
+                        "Active",
+                        "In Transit",
+                        "Washing",
+                        "Processing",
+                      ].includes(o.status) && (
                         <TouchableOpacity
                           style={[
                             styles.primarySmall,
@@ -594,6 +657,31 @@ export default function Home() {
                           View Details
                         </Text>
                       </TouchableOpacity>
+
+                      {!o.paid ? (
+                        <TouchableOpacity
+                          style={[styles.payNowButton]}
+                          onPress={() => router.push(`/orders/${o.id}/pay`)}
+                        >
+                          <Text style={styles.payNowText}>Pay now</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={styles.paidBadge}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={14}
+                            color="#10B981"
+                          />
+                          <Text
+                            style={[
+                              styles.paidBadgeText,
+                              { color: theme.text },
+                            ]}
+                          >
+                            Paid
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -779,4 +867,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   secondarySmallText: { fontWeight: "700" },
+
+  statusContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  statusLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+
+  statusIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1,
+  },
+
+  statusTextBlock: { flex: 1 },
+
+  statusLabel: { fontWeight: "800", fontSize: 14 },
+
+  progressBar: {
+    marginTop: 8,
+    height: 6,
+    borderRadius: 6,
+    backgroundColor: "#E5E7EB",
+    overflow: "hidden",
+  },
+
+  progressFill: {
+    height: "100%",
+    borderRadius: 6,
+    width: "0%",
+  },
+
+  payNowButton: {
+    height: 40,
+    minWidth: 92,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    backgroundColor: "#FFB547",
+  },
+
+  payNowText: { fontWeight: "800", color: "#000" },
+
+  paidBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E6EEF2",
+  },
+
+  paidBadgeText: { marginLeft: 6, fontWeight: "700", fontSize: 12 },
 });
