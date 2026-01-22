@@ -24,7 +24,7 @@ const CARD_WIDTH = width * 0.85;
 
 type Order = {
   id: string;
-  status: "Active" | "Pending" | "Completed";
+  status: "Active" | "Completed";
   subtitle: string;
   total: string;
 };
@@ -264,6 +264,15 @@ export default function Home() {
   if (loading) {
     return <HomeScreenSkeleton />;
   }
+  const getUnifiedStatus = (status: string) => {
+    const activeStatuses = ["Washing", "Picked Up", "In Transit", "Processing"];
+    const completedStatuses = ["Delivered"];
+
+    if (activeStatuses.includes(status)) return "Active";
+    if (completedStatuses.includes(status)) return "Completed";
+
+    return "Active"; // fallback
+  };
 
   const renderStatusVisual = (o: Order) => {
     let icon: any = "ellipse-outline";
@@ -377,7 +386,7 @@ export default function Home() {
                   </Text>
                   <Text style={[styles.heroTitle, { color: "#FFFFFF" }]}>
                     {i === 0
-                      ? "24/7 Pickup & Delivery"
+                      ? "In 24 Hour Pickup & Delivery"
                       : i === 1
                         ? "Dry Cleaning & Steam Press"
                         : "Express Delivery < 24 Hrs"}
@@ -389,7 +398,7 @@ export default function Home() {
         </ScrollView>
 
         {/* Carousel Indicators */}
-        <View style={styles.indicatorContainer}>
+        {/* <View style={styles.indicatorContainer}>
           {[0, 1, 2].map((i) => (
             <Animated.View
               key={i}
@@ -405,10 +414,10 @@ export default function Home() {
                   width: currentIndex === i ? 24 : 8,
                 },
               ]}
-            />
+            /> 
           ))}
         </View>
-
+*/}
         {/* Swipe to Book */}
         <Animated.View
           style={[
@@ -483,10 +492,10 @@ export default function Home() {
             ]}
           >
             <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
-              LIMITED OFFER
+              WELCOME OFFER
             </Text>
             <Text style={[styles.offerTitle, { color: theme.text }]}>
-              Welcome 20% OFF
+              20% Off on Your First Order
             </Text>
           </View>
         </Animated.View>
@@ -593,57 +602,51 @@ export default function Home() {
                       <Text style={[styles.orderId, { color: theme.text }]}>
                         Order #{o.id}
                       </Text>
-                      <Text
-                        style={[styles.orderSubtitle, { color: theme.subText }]}
-                      >
-                        {o.subtitle}
-                      </Text>
                     </View>
 
-                    <View
-                      style={[
-                        styles.statusPill,
-                        { backgroundColor: statusStyle.bg },
-                      ]}
-                    >
-                      <Text
-                        style={[styles.statusText, { color: statusStyle.text }]}
-                      >
-                        {o.status}
-                      </Text>
-                    </View>
+                    {(() => {
+                      const unifiedStatus = getUnifiedStatus(o.status);
+                      const pillStyle =
+                        unifiedStatus === "Active"
+                          ? { bg: "#FEF3C7", text: "#92400E" } // amber
+                          : { bg: "#ECFDF5", text: "#065F46" }; // green
+
+                      return (
+                        <View
+                          style={[
+                            styles.statusPill,
+                            { backgroundColor: pillStyle.bg },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.statusText,
+                              { color: pillStyle.text },
+                            ]}
+                          >
+                            {unifiedStatus}
+                          </Text>
+                        </View>
+                      );
+                    })()}
                   </View>
                   {/* Rich Status Visual */}
                   <View style={{ marginTop: 12 }}>{renderStatusVisual(o)}</View>
 
                   <View style={styles.orderFooter}>
-                    <Text style={[styles.orderTotal, { color: theme.text }]}>
-                      Total: {o.total}
-                    </Text>
-
                     <View style={styles.orderActions}>
                       {[
                         "Active",
                         "In Transit",
                         "Washing",
                         "Processing",
-                      ].includes(o.status) && (
-                        <TouchableOpacity
-                          style={[
-                            styles.primarySmall,
-                            { backgroundColor: theme.primary },
-                          ]}
-                          onPress={() => router.push(`/orders/${o.id}`)}
-                        >
-                          <Text style={styles.primarySmallText}>Track</Text>
-                        </TouchableOpacity>
-                      )}
+                      ].includes(o.status)}
 
                       <TouchableOpacity
                         style={[
                           styles.secondarySmall,
                           {
-                            backgroundColor: isDark ? "#0F1720" : "#F3F4F6",
+                            backgroundColor: isDark ? "#0e1925" : "#c6ecd7",
                           },
                         ]}
                         onPress={() => router.push(`/orders/${o.id}`)}
@@ -672,14 +675,7 @@ export default function Home() {
                             size={14}
                             color="#10B981"
                           />
-                          <Text
-                            style={[
-                              styles.paidBadgeText,
-                              { color: theme.text },
-                            ]}
-                          >
-                            Paid
-                          </Text>
+                          <Text style={[styles.paidBadgeText]}>Paid</Text>
                         </View>
                       )}
                     </View>
@@ -905,27 +901,33 @@ const styles = StyleSheet.create({
   },
 
   payNowButton: {
-    height: 40,
-    minWidth: 92,
-    borderRadius: 10,
+    height: 38,
+    minWidth: 78,
+    borderRadius: 60,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    backgroundColor: "#FFB547",
+    paddingHorizontal: 8,
+    backgroundColor: "#12af80",
   },
 
-  payNowText: { fontWeight: "800", color: "#000" },
+  payNowText: { fontWeight: "600", color: "#000" },
 
   paidBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 2,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "#E6EEF2",
+    borderColor: "#d4e5ee",
+    backgroundColor: "#2c332d",
   },
 
-  paidBadgeText: { marginLeft: 6, fontWeight: "700", fontSize: 12 },
+  paidBadgeText: {
+    marginLeft: 6,
+    fontWeight: "700",
+    fontSize: 12,
+    color: "#fff",
+  },
 });

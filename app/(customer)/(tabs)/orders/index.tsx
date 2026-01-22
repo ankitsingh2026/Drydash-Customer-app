@@ -13,7 +13,7 @@ import {
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 
-type OrderStatus = "Active" | "Pending" | "Completed";
+type OrderStatus = "Active" | "Completed";
 
 const ORDERS = [
   {
@@ -23,13 +23,7 @@ const ORDERS = [
     total: "$38.50",
     items: 5,
   },
-  {
-    id: "2480",
-    status: "Pending" as OrderStatus,
-    subtitle: "Scheduled: Mon, Nov 27",
-    total: "$25.00",
-    items: 3,
-  },
+
   {
     id: "2479",
     status: "Completed" as OrderStatus,
@@ -94,8 +88,6 @@ export default function Orders() {
     switch (status) {
       case "Active":
         return { bg: "#0EA5A4", icon: "navigate" as const };
-      case "Pending":
-        return { bg: "#F59E0B", icon: "time" as const };
       case "Completed":
         return { bg: "#10B981", icon: "checkmark-done" as const };
     }
@@ -123,7 +115,7 @@ export default function Orders() {
                 My Orders
               </Text>
               <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
-                {ORDERS.length} total orders
+                Total Orders: {ORDERS.length}
               </Text>
             </View>
 
@@ -155,7 +147,7 @@ export default function Orders() {
 
         {/* FILTER TABS */}
         <View style={styles.filterRow}>
-          {["All", "Active", "Pending", "Completed"].map((filter, idx) => (
+          {["All", "Active", "Completed"].map((filter, idx) => (
             <TouchableOpacity
               key={filter}
               style={[
