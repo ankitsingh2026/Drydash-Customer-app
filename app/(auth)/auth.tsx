@@ -152,11 +152,19 @@ export default function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      const updatedUser = await updateUserApi({
-        firstName,
-        lastName,
-        email,
-      });
+      let details_obj: any = { firstName };
+
+      if (email) {
+        details_obj.email = email;
+      }
+
+      if (lastName) {
+        details_obj.lastName = lastName;
+      }
+
+      console.log("this is detailsssss", details_obj);
+
+      const updatedUser = await updateUserApi(details_obj);
 
       await setAuthUser(updatedUser);
 
