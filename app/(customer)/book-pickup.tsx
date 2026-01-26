@@ -8,7 +8,13 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 
 import {
+  createOrderApi,
+  getAddressApi,
+  saveAddressApi,
+} from "@/features/orders/orders.api";
+import {
   Alert,
+  Animated,
   Dimensions,
   Keyboard,
   KeyboardAvoidingView,
@@ -32,6 +38,11 @@ const TIME_SLOTS = [
   "5:00 – 8:00 PM",
   "9:00 – 12:00 PM",
 ];
+
+const ADDRESS_ITEM_HEIGHT = 72; // approx height of 1 address card
+const MAX_ADDRESS_VISIBLE = 2;
+
+const ADDRESS_LIST_MAX_HEIGHT = ADDRESS_ITEM_HEIGHT * MAX_ADDRESS_VISIBLE + 20;
 
 const SAMPLE_ADDRESSES: Address[] = [
   {
@@ -58,6 +69,31 @@ const SAMPLE_ADDRESSES: Address[] = [
 
 const SERVICE_TYPES = ["Shoe Spa", "Laundry", "Dry Clean"];
 
+const mapApiAddressToUI = (a: any): Address => {
+  return {
+    id: String(a.id),
+    label: a.label || "Other",
+
+    // UI expects flat + line1
+    flat: a.addressLine1 || "",
+    line1: a.addressLine1 || "",
+    street: a.addressLine1 || "",
+
+    landmark: a.landmark || "",
+    city: a.city || "",
+    state: a.state || "",
+    pincode: a.pincode || "",
+
+    latitude: Number(a.latitude || 0),
+    longitude: Number(a.longitude || 0),
+
+    isActive: a.isActive ?? true,
+
+    // keep this for filtering pickup/delivery
+    addressType: a.addressType,
+  } as any;
+};
+
 export default function BookPickup() {
   const { theme, isDark } = useTheme();
   const [note, setNote] = useState("");
@@ -78,15 +114,12 @@ export default function BookPickup() {
   const [slot, setSlot] = useState<number>(-1);
 
   // ADDRESSES (pickup)
-  const [addresses, setAddresses] = useState<Address[]>(SAMPLE_ADDRESSES);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>(
-    SAMPLE_ADDRESSES[0].id,
-  );
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
 
-  const [deliveryAddresses, setDeliveryAddresses] =
-    useState<Address[]>(SAMPLE_ADDRESSES);
+  const [deliveryAddresses, setDeliveryAddresses] = useState<Address[]>([]);
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] =
-    useState<string>(SAMPLE_ADDRESSES[0].id);
+    useState<string>("");
 
   // SERVICE TYPE
   const [serviceType, setServiceType] = useState<string>(SERVICE_TYPES[1]);
@@ -95,10 +128,25 @@ export default function BookPickup() {
   const [mapQuery, setMapQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAddress, setPreviewAddress] = useState<any>(null);
+
   const [addModalOpen, setAddModalOpen] = useState(false);
+
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const scaleAnim = React.useRef(new Animated.Value(0.7)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
   const [addressForm, setAddressForm] = useState({
+    label: "home",
+    contactName: "",
+    contactPhone: "",
     houseNo: "",
     street: "",
+    addressLine2: "",
     landmark: "",
     city: "",
     state: "",
@@ -113,6 +161,32 @@ export default function BookPickup() {
     longitude: 72.8777,
   });
 
+  const openAddressPreview = (addr: any) => {
+    setPreviewAddress(addr);
+    setPreviewOpen(true);
+  };
+
+  const openSuccessModal = (msg: string) => {
+    setSuccessMessage(msg);
+    setSuccessOpen(true);
+
+    scaleAnim.setValue(0.7);
+    fadeAnim.setValue(0);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 6,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   // helper: display "Today" when date is today
   const isToday = (d: Date) => {
     const now = new Date();
@@ -125,23 +199,110 @@ export default function BookPickup() {
   const formatDateLabel = (d: Date) =>
     isToday(d) ? "Today" : d.toDateString();
 
-  const confirmPickup = () => {
-    const pickupAddr = addresses.find((a) => a.id === selectedAddressId);
-    const deliveryAddr =
-      deliveryMode === "same"
-        ? pickupAddr
-        : deliveryAddresses.find((a) => a.id === selectedDeliveryAddressId);
-
-    const message = `Date: ${pickupType === "today" ? "Today" : formatDateLabel(date)}
-Time: ${pickupType === "today" ? "Next available slot" : TIME_SLOTS[slot]}
-Service: ${serviceType}
-
-Pickup: ${pickupAddr ? `${pickupAddr.flat}, ${pickupAddr.city}` : selectedAddressId}
-Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : selectedDeliveryAddressId}`;
-
-    Alert.alert("Booking Confirmed", message);
-    router.back();
+  const formatDateForApi = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   };
+
+  const confirmPickup = async () => {
+    if (confirmLoading) return; // ✅ prevent double click
+
+    try {
+      setConfirmLoading(true);
+
+      // ✅ pickup address must be selected
+      if (!selectedAddressId) {
+        Alert.alert("Missing Pickup Address", "Please select pickup address.");
+        return;
+      }
+
+      // ✅ delivery address id based on mode
+      const deliveryId =
+        deliveryMode === "same" ? selectedAddressId : selectedDeliveryAddressId;
+
+      if (!deliveryId) {
+        Alert.alert(
+          "Missing Delivery Address",
+          "Please select delivery address.",
+        );
+        return;
+      }
+
+      // ✅ date logic
+      const scheduledDate = pickupType === "today" ? new Date() : date;
+
+      // ✅ slot is optional (only when schedule)
+      const selectedSlot =
+        pickupType === "schedule" && slot !== -1 ? TIME_SLOTS[slot] : undefined;
+
+      // ✅ request body
+      const order_details: any = {
+        scheduledDate: formatDateForApi(scheduledDate),
+        pickupAddressId: selectedAddressId,
+        deliveryAddressId: deliveryId,
+      };
+
+      // optional fields
+      if (selectedSlot) order_details.slot = selectedSlot;
+      if (note?.trim()) order_details.note = note.trim();
+
+      // 🔥 API call
+      await createOrderApi(order_details);
+      if (pickupType === "today") {
+        openSuccessModal(
+          "Sit & relax 😌\nYour pickup will be collected shortly!",
+        );
+      } else {
+        openSuccessModal("Pickup scheduled successfully ✅");
+      }
+      router.back();
+    } catch (err: any) {
+      console.log("create order error:", err);
+      Alert.alert("Error", err?.message || "Failed to create order");
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  const getPickupAddr = async () => {
+    try {
+      const data = await getAddressApi();
+
+      const list = Array.isArray(data?.results) ? data.results : [];
+
+      // ✅ map API response to UI address format
+      const mappedList = list.map(mapApiAddressToUI);
+
+      // ✅ filter pickup + delivery
+      const pickupList = mappedList.filter(
+        (a: any) => a.addressType === "PICKUP",
+      );
+      const deliveryList = mappedList.filter(
+        (a: any) => a.addressType === "DELIVERY",
+      );
+
+      setAddresses(pickupList);
+      setDeliveryAddresses(deliveryList);
+
+      // auto select first pickup
+      setSelectedAddressId(pickupList?.[0]?.id || "");
+
+      // auto select first delivery
+      setSelectedDeliveryAddressId(deliveryList?.[0]?.id || "");
+    } catch (err) {
+      console.log("getPickupAddr error:", err);
+      setAddresses([]);
+      setDeliveryAddresses([]);
+      setSelectedAddressId("");
+      setSelectedDeliveryAddressId("");
+    }
+  };
+
+  useEffect(() => {
+    getPickupAddr();
+  }, []);
 
   useEffect(() => {
     if (pickupType === "today") {
@@ -165,7 +326,7 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         setLocLoading(false);
         Alert.alert(
           "Permission denied",
-          "Please allow location access from settings."
+          "Please allow location access from settings.",
         );
         return;
       }
@@ -189,7 +350,7 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         const g = geo[0];
         setAddressForm((p) => ({
           ...p,
-          houseNo:  "",
+          houseNo: "",
           street: g.streetNumber || g.name || "",
           landmark: g.district || "",
           city: g.city || g.subregion || "",
@@ -198,14 +359,12 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
           latitude: String(coords.latitude),
           longitude: String(coords.longitude),
         }));
-
-
       }
     } catch (e: any) {
       console.error("Location error:", e);
       Alert.alert(
         "Location error",
-        e?.message || "Unable to fetch current location"
+        e?.message || "Unable to fetch current location",
       );
     } finally {
       setLocLoading(false);
@@ -260,13 +419,16 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
     }
   };
 
-
   // auto-fetch when modal opens
   useEffect(() => {
     if (addModalOpen) {
       setAddressForm({
+        label: "home",
+        contactName: "",
+        contactPhone: "",
         houseNo: "",
         street: "",
+        addressLine2: "",
         landmark: "",
         city: "",
         state: "",
@@ -281,48 +443,53 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
   }, [addModalOpen]);
 
   // Save address from form into pickup or delivery list based on addressType
-  const saveAddress = () => {
-    const id = Date.now().toString();
-    const label = addressForm.houseNo?.trim()
-      ? addressForm.houseNo
-      : "Other";
+  const saveAddress = async () => {
+    try {
+      // label mapping for API
+      const label =
+        addressForm.label === "home"
+          ? "Home"
+          : addressForm.label === "work"
+            ? "Office"
+            : "Other";
 
-    const newAddress: Address = {
-      id,
-      label,
-      flat: addressForm.houseNo, // keep UI compatibility
-      line1: addressForm.street,
-      street: addressForm.street,
-      city: addressForm.city,
-      state: addressForm.state,
-      pincode: addressForm.pincode,
-      latitude: Number(addressForm.latitude),
-      longitude: Number(addressForm.longitude),
-      isActive: addressForm.isActive,
-    } as any;
+      const payload: any = {
+        label,
+        addressLine1: `${addressForm.houseNo}, ${addressForm.street}`.trim(),
+        landmark: addressForm.landmark,
+        city: addressForm.city,
+        state: addressForm.state,
+        country: "India",
+        pincode: addressForm.pincode,
+        latitude: Number(addressForm.latitude),
+        longitude: Number(addressForm.longitude),
 
+        // pickup/delivery based on which button opened modal
+        addressType: addressType === "pickup" ? "PICKUP" : "DELIVERY",
+      };
 
-    if (addressType === "pickup") {
-      setAddresses((p) => [...p, newAddress]);
-      setSelectedAddressId(id);
-    } else {
-      setDeliveryAddresses((p) => [...p, newAddress]);
-      setSelectedDeliveryAddressId(id);
+      // Optional fields only send if user entered
+      if (addressForm.contactName?.trim())
+        payload.contactName = addressForm.contactName.trim();
+      if (addressForm.contactPhone?.trim())
+        payload.contactPhone = addressForm.contactPhone.trim();
+      if (addressForm.addressLine2?.trim())
+        payload.addressLine2 = addressForm.addressLine2.trim();
+
+      // 🔥 API call
+      const saved = await saveAddressApi(payload);
+
+      // after saving, refresh list from backend
+      await getPickupAddr();
+
+      // close modal
+      setAddModalOpen(false);
+
+      Alert.alert("Success", "Address saved successfully!");
+    } catch (err: any) {
+      console.log("saveAddress error:", err);
+      Alert.alert("Error", err?.message || "Failed to save address");
     }
-
-    setAddModalOpen(false);
-    setAddressForm({
-      houseNo: "",
-      street: "",
-      landmark: "",
-      city: "",
-      state: "",
-      pincode: "",
-      latitude: "",
-      longitude: "",
-      isActive: true,
-    });
-
   };
 
   return (
@@ -452,7 +619,11 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
               onPress={() => setShowDatePicker(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="calendar-outline" size={22} color={theme.primary} />
+              <Ionicons
+                name="calendar-outline"
+                size={22}
+                color={theme.primary}
+              />
               <Text
                 style={{
                   marginLeft: 12,
@@ -539,12 +710,17 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="location" size={20} color={theme.primary} />
-            <Text style={[styles.cardHeading, { color: theme.text, marginLeft: 6, marginBottom: 0 }]}>
+            <Text
+              style={[
+                styles.cardHeading,
+                { color: theme.text, marginLeft: 6, marginBottom: 0 },
+              ]}
+            >
               Pickup Address
             </Text>
           </View>
 
-          <ScrollView
+          {/* <ScrollView
             style={styles.addressScroll}
             showsVerticalScrollIndicator={false}
             nestedScrollEnabled={true}
@@ -624,44 +800,174 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                 </TouchableOpacity>
               );
             })}
+          </ScrollView> */}
+
+          <ScrollView
+            style={[
+              styles.addressScroll,
+              {
+                maxHeight:
+                  addresses.length > 2 ? ADDRESS_LIST_MAX_HEIGHT : undefined,
+              },
+            ]}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          >
+            {addresses.length === 0 ? (
+              <TouchableOpacity
+                style={[styles.addAddrBtn, { marginTop: 10 }]}
+                onPress={() => {
+                  setAddModalOpen(true);
+                  setAddressType("pickup");
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add-circle" size={20} color={theme.primary} />
+                <Text
+                  style={{
+                    marginLeft: 8,
+                    color: theme.primary,
+                    fontWeight: "800",
+                    fontSize: 14,
+                  }}
+                >
+                  Add pickup address
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              addresses.map((item) => {
+                const selected = item.id === selectedAddressId;
+
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.addressItem,
+                      {
+                        backgroundColor: selected
+                          ? theme.primary
+                          : isDark
+                            ? "#1A2332"
+                            : "#F8FAFC",
+                        borderWidth: selected ? 0 : 1.5,
+                        borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                      },
+                    ]}
+                    onPress={() => setSelectedAddressId(item.id)}
+                    activeOpacity={0.8}
+                    onLongPress={() => openAddressPreview(item)}
+                    delayLongPress={300}
+                  >
+                    <View
+                      style={[
+                        styles.addressIconBox,
+                        {
+                          backgroundColor: selected
+                            ? "rgba(0,0,0,0.1)"
+                            : isDark
+                              ? "#0F1729"
+                              : "#E2E8F0",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={item.label === "Home" ? "home" : "briefcase"}
+                        size={18}
+                        color={selected ? "#000" : theme.primary}
+                      />
+                    </View>
+
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text
+                        style={{
+                          fontWeight: "800",
+                          fontSize: 15,
+                          color: selected ? "#000" : theme.text,
+                        }}
+                      >
+                        {item.label}
+                      </Text>
+
+                      <Text
+                        style={{
+                          color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
+                          marginTop: 4,
+                          fontSize: 13,
+                        }}
+                      >
+                        {item.line1}
+                      </Text>
+
+                      <Text
+                        style={{
+                          color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
+                          marginTop: 2,
+                          fontSize: 13,
+                        }}
+                      >
+                        {item.city}, {item.state} • {item.pincode}
+                      </Text>
+                    </View>
+
+                    {selected && (
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={24}
+                        color="#000"
+                      />
+                    )}
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </ScrollView>
 
-          <TouchableOpacity
-            style={styles.addAddrBtn}
-            onPress={() => {
-              setAddModalOpen(true);
-              setAddressType("pickup");
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="add-circle"
-              size={20}
-              color={theme.primary}
-            />
-            <Text
-              style={{
-                marginLeft: 8,
-                color: theme.primary,
-                fontWeight: "800",
-                fontSize: 14,
+          {addresses.length > 0 && (
+            <TouchableOpacity
+              style={styles.addAddrBtn}
+              onPress={() => {
+                setAddModalOpen(true);
+                setAddressType("pickup");
               }}
+              activeOpacity={0.8}
             >
-              Add new pickup address
-            </Text>
-          </TouchableOpacity>
+              <Ionicons name="add-circle" size={20} color={theme.primary} />
+              <Text
+                style={{
+                  marginLeft: 8,
+                  color: theme.primary,
+                  fontWeight: "800",
+                  fontSize: 14,
+                }}
+              >
+                Add new pickup address
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* DELIVERY ADDRESS SECTION */}
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="navigate" size={20} color={theme.primary} />
-            <Text style={[styles.cardHeading, { color: theme.text, marginLeft: 6, marginBottom: 0 }]}>
+            <Text
+              style={[
+                styles.cardHeading,
+                { color: theme.text, marginLeft: 6, marginBottom: 0 },
+              ]}
+            >
               Delivery Address
             </Text>
           </View>
 
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 12, marginBottom: 16 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 12,
+              marginTop: 12,
+              marginBottom: 16,
+            }}
+          >
             <TouchableOpacity
               onPress={() => setDeliveryMode("same")}
               style={{
@@ -669,7 +975,11 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                 paddingVertical: 14,
                 borderRadius: 12,
                 backgroundColor:
-                  deliveryMode === "same" ? theme.primary : isDark ? "#1A2332" : "#F0F4F8",
+                  deliveryMode === "same"
+                    ? theme.primary
+                    : isDark
+                      ? "#1A2332"
+                      : "#F0F4F8",
                 borderWidth: deliveryMode === "same" ? 0 : 1.5,
                 borderColor: isDark ? "#2D3748" : "#E2E8F0",
                 flexDirection: "row",
@@ -702,7 +1012,11 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                 paddingVertical: 14,
                 borderRadius: 12,
                 backgroundColor:
-                  deliveryMode === "other" ? theme.primary : isDark ? "#1A2332" : "#F0F4F8",
+                  deliveryMode === "other"
+                    ? theme.primary
+                    : isDark
+                      ? "#1A2332"
+                      : "#F0F4F8",
                 borderWidth: deliveryMode === "other" ? 0 : 1.5,
                 borderColor: isDark ? "#2D3748" : "#E2E8F0",
                 flexDirection: "row",
@@ -732,7 +1046,15 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
           {deliveryMode === "other" && (
             <>
               <ScrollView
-                style={styles.addressScroll}
+                style={[
+                  styles.addressScroll,
+                  {
+                    maxHeight:
+                      deliveryAddresses.length > 2
+                        ? ADDRESS_LIST_MAX_HEIGHT
+                        : undefined,
+                  },
+                ]}
                 showsVerticalScrollIndicator={false}
                 nestedScrollEnabled={true}
               >
@@ -754,6 +1076,8 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                         },
                       ]}
                       onPress={() => setSelectedDeliveryAddressId(item.id)}
+                      onLongPress={() => openAddressPreview(item)}
+                      delayLongPress={300}
                       activeOpacity={0.8}
                     >
                       <View
@@ -806,7 +1130,11 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                       </View>
 
                       {selected && (
-                        <Ionicons name="checkmark-circle" size={24} color="#000" />
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={24}
+                          color="#000"
+                        />
                       )}
                     </TouchableOpacity>
                   );
@@ -821,11 +1149,7 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons
-                  name="add-circle"
-                  size={20}
-                  color={theme.primary}
-                />
+                <Ionicons name="add-circle" size={20} color={theme.primary} />
                 <Text
                   style={{
                     marginLeft: 8,
@@ -845,7 +1169,12 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="document-text" size={20} color={theme.primary} />
-            <Text style={[styles.cardHeading, { color: theme.text, marginLeft: 6, marginBottom: 0 }]}>
+            <Text
+              style={[
+                styles.cardHeading,
+                { color: theme.text, marginLeft: 6, marginBottom: 0 },
+              ]}
+            >
               Special Instructions (Optional)
             </Text>
           </View>
@@ -870,18 +1199,30 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         </View>
 
         <TouchableOpacity
-          style={[styles.primaryBtn, { backgroundColor: theme.primary }]}
+          style={[
+            styles.primaryBtn,
+            {
+              backgroundColor: theme.primary,
+              opacity: confirmLoading ? 0.7 : 1,
+            },
+          ]}
           onPress={confirmPickup}
           activeOpacity={0.9}
+          disabled={confirmLoading}
         >
-          <Ionicons name="checkmark-circle" size={22} color="#000" />
-          <Text style={[styles.primaryText, { marginLeft: 8 }]}>Confirm Booking</Text>
+          <Ionicons
+            name={confirmLoading ? "sync" : "checkmark-circle"}
+            size={22}
+            color="#000"
+          />
+
+          <Text style={[styles.primaryText, { marginLeft: 8 }]}>
+            {confirmLoading ? "Booking..." : "Confirm Booking"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={[styles.cancel, { color: theme.subText }]}>
-            Cancel
-          </Text>
+          <Text style={[styles.cancel, { color: theme.subText }]}>Cancel</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -902,11 +1243,16 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                 {/* Header */}
                 <View style={modalStyles.header}>
                   <View>
-                    <Text style={[modalStyles.modalTitle, { color: theme.text }]}>
+                    <Text
+                      style={[modalStyles.modalTitle, { color: theme.text }]}
+                    >
                       Add New Address
                     </Text>
                     <Text
-                      style={[modalStyles.modalSubtitle, { color: theme.subText }]}
+                      style={[
+                        modalStyles.modalSubtitle,
+                        { color: theme.subText },
+                      ]}
                     >
                       {addressType === "pickup"
                         ? "Pickup Location"
@@ -944,7 +1290,11 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                       <Ionicons name="sync" size={18} color={theme.primary} />
                     ) : (
                       <TouchableOpacity onPress={searchOnMap}>
-                        <Ionicons name="arrow-forward-circle" size={30} color={theme.primary} />
+                        <Ionicons
+                          name="arrow-forward-circle"
+                          size={30}
+                          color={theme.primary}
+                        />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -984,6 +1334,89 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                   </TouchableOpacity>
                 </View>
 
+                {/* ADDRESS LABEL SELECTION */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    gap: 10,
+                    marginBottom: 12,
+                    marginTop: 14,
+                  }}
+                >
+                  {[
+                    { key: "home", text: "Home", icon: "home" },
+                    { key: "work", text: "Work", icon: "briefcase" },
+                    { key: "other", text: "Others", icon: "location" },
+                  ].map((item) => {
+                    const active = addressForm.label === item.key;
+
+                    return (
+                      <TouchableOpacity
+                        key={item.key}
+                        onPress={() =>
+                          setAddressForm((p) => ({
+                            ...p,
+                            label: item.key,
+                          }))
+                        }
+                        style={{
+                          flex: 1,
+                          paddingVertical: 12,
+                          borderRadius: 12,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: active
+                            ? theme.primary
+                            : isDark
+                              ? "#1A2332"
+                              : "#F0F4F8",
+                          borderWidth: active ? 0 : 1.5,
+                          borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons
+                          name={item.icon as any}
+                          size={18}
+                          color={active ? "#000" : theme.primary}
+                        />
+                        <Text
+                          style={{
+                            marginLeft: 6,
+                            fontWeight: "800",
+                            fontSize: 14,
+                            color: active ? "#000" : theme.text,
+                          }}
+                        >
+                          {item.text}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TextInput
+                  placeholder="Contact Name (Optional)"
+                  placeholderTextColor={theme.subText}
+                  value={addressForm.contactName}
+                  onChangeText={(t) =>
+                    setAddressForm((p) => ({ ...p, contactName: t }))
+                  }
+                  style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                />
+
+                <TextInput
+                  placeholder="Contact Phone (Optional)"
+                  placeholderTextColor={theme.subText}
+                  value={addressForm.contactPhone}
+                  keyboardType="phone-pad"
+                  onChangeText={(t) =>
+                    setAddressForm((p) => ({ ...p, contactPhone: t }))
+                  }
+                  style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                />
+
                 {/* FORM */}
                 <View style={{ marginTop: 10 }}>
                   <TextInput
@@ -1012,6 +1445,15 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
                     value={addressForm.landmark}
                     onChangeText={(t) =>
                       setAddressForm((p) => ({ ...p, landmark: t }))
+                    }
+                    style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                  />
+                  <TextInput
+                    placeholder="Address Line 2 (Optional)"
+                    placeholderTextColor={theme.subText}
+                    value={addressForm.addressLine2}
+                    onChangeText={(t) =>
+                      setAddressForm((p) => ({ ...p, addressLine2: t }))
                     }
                     style={[modalStyles.input, fieldStyle(theme, isDark)]}
                   />
@@ -1085,6 +1527,214 @@ Delivery: ${deliveryAddr ? `${deliveryAddr.flat}, ${deliveryAddr.city}` : select
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* PREVIEW ADDRESS MODAL */}
+      <Modal visible={previewOpen} transparent animationType="fade">
+        <TouchableWithoutFeedback onPress={() => setPreviewOpen(false)}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.6)",
+              justifyContent: "center",
+              padding: 20,
+            }}
+          >
+            <TouchableWithoutFeedback>
+              <View
+                style={{
+                  backgroundColor: theme.card,
+                  borderRadius: 18,
+                  padding: 18,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 18,
+                      fontWeight: "900",
+                      color: theme.text,
+                    }}
+                  >
+                    Address Preview
+                  </Text>
+
+                  <TouchableOpacity onPress={() => setPreviewOpen(false)}>
+                    <Ionicons name="close" size={22} color={theme.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {previewAddress ? (
+                  <>
+                    <Text
+                      style={{
+                        fontWeight: "800",
+                        fontSize: 16,
+                        color: theme.text,
+                      }}
+                    >
+                      {previewAddress.label}
+                    </Text>
+
+                    <Text
+                      style={{
+                        marginTop: 8,
+                        color: theme.subText,
+                        fontSize: 14,
+                      }}
+                    >
+                      {previewAddress.addressLine1 ||
+                        previewAddress.line1 ||
+                        previewAddress.street}
+                    </Text>
+
+                    {previewAddress.landmark ? (
+                      <Text
+                        style={{
+                          marginTop: 4,
+                          color: theme.subText,
+                          fontSize: 14,
+                        }}
+                      >
+                        Landmark: {previewAddress.landmark}
+                      </Text>
+                    ) : null}
+
+                    <Text
+                      style={{
+                        marginTop: 4,
+                        color: theme.subText,
+                        fontSize: 14,
+                      }}
+                    >
+                      {previewAddress.city}, {previewAddress.state} •{" "}
+                      {previewAddress.pincode}
+                    </Text>
+
+                    {previewAddress.contactName ? (
+                      <Text
+                        style={{
+                          marginTop: 10,
+                          color: theme.text,
+                          fontSize: 14,
+                        }}
+                      >
+                        Contact: {previewAddress.contactName}
+                      </Text>
+                    ) : null}
+
+                    {previewAddress.contactPhone ? (
+                      <Text
+                        style={{
+                          marginTop: 2,
+                          color: theme.text,
+                          fontSize: 14,
+                        }}
+                      >
+                        Phone: {previewAddress.contactPhone}
+                      </Text>
+                    ) : null}
+
+                    <TouchableOpacity
+                      onPress={() => setPreviewOpen(false)}
+                      style={{
+                        marginTop: 14,
+                        paddingVertical: 12,
+                        borderRadius: 12,
+                        backgroundColor: theme.primary,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ fontWeight: "900", color: "#000" }}>
+                        Close
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={{ color: theme.subText }}>
+                    No address selected
+                  </Text>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+      <Modal visible={successOpen} transparent animationType="fade">
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.6)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <Animated.View
+            style={{
+              width: "100%",
+              maxWidth: 320,
+              backgroundColor: theme.card,
+              borderRadius: 18,
+              padding: 18,
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+              alignItems: "center",
+            }}
+          >
+            {/* Animated Check */}
+            <View
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 36,
+                backgroundColor: theme.primary,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Ionicons name="checkmark" size={40} color="#000" />
+            </View>
+
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "900",
+                color: theme.text,
+                textAlign: "center",
+              }}
+            >
+              {successMessage}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => {
+                setSuccessOpen(false);
+                router.back();
+              }}
+              style={{
+                marginTop: 16,
+                width: "100%",
+                paddingVertical: 12,
+                borderRadius: 12,
+                backgroundColor: theme.primary,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              activeOpacity={0.9}
+            >
+              <Text style={{ fontWeight: "900", color: "#000" }}>Done</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1166,7 +1816,7 @@ const styles = StyleSheet.create({
   },
 
   addressScroll: {
-    maxHeight: 240,
+    // maxHeight: 240,
     marginBottom: 8,
   },
 
@@ -1279,7 +1929,7 @@ const modalStyles = StyleSheet.create({
 
   mapContainer: {
     height: SCREEN_HEIGHT * 0.5,
-    minHeight: 300,              // 👈 fallback
+    minHeight: 300, // 👈 fallback
     borderRadius: 16,
     overflow: "hidden",
     position: "relative",
@@ -1351,7 +2001,6 @@ const modalStyles = StyleSheet.create({
     elevation: 4, // 👈 softer Android shadow
   },
 
-
   mapSearchInput: {
     flex: 1,
     marginHorizontal: 8,
@@ -1359,6 +2008,4 @@ const modalStyles = StyleSheet.create({
     fontWeight: "600",
     paddingVertical: 6,
   },
-
-
 });

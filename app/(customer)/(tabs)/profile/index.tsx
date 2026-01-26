@@ -88,7 +88,9 @@ export default function Profile() {
         </View>
 
         <Text style={[styles.name, { color: theme.text }]}>
-          {profile ? `${profile.firstName} ${profile.lastName}` : " "}
+          {profile
+            ? `${profile.firstName} ${profile?.lastName ? profile?.lastName : ""}`
+            : " "}
         </Text>
 
         <Text style={[styles.email, { color: theme.subText }]}>
