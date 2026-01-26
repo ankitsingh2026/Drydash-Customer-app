@@ -3,6 +3,7 @@ import {
   updateUserApi,
   verifyOtpApi,
 } from "@/features/auth/auth.api";
+import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -37,6 +38,8 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const [resendTimer, setResendTimer] = useState(0);
+
+  const [tempToken, setTempToken] = useState<Tokens | null>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -128,7 +131,15 @@ export default function AuthScreen() {
 
       const res = await verifyOtpApi(phone, otp);
 
-      await saveTokens(res.tokens);
+      if (!res.isNewUser) {
+        await saveTokens(res.tokens);
+      }
+
+      console.log("this is first token==>>>", res.tokens);
+
+      setTempToken(res.tokens);
+
+      console.log("this is check==>>", res.isNewUser);
 
       if (!res.isNewUser) {
         await setAuthUser(res.user);
@@ -146,8 +157,6 @@ export default function AuthScreen() {
   const createAccount = async () => {
     if (!firstName.trim()) return setError("First name is required");
 
-    if (!lastName.trim()) return setError("Last name is required");
-
     try {
       setLoading(true);
       setError(null);
@@ -163,6 +172,16 @@ export default function AuthScreen() {
       }
 
       console.log("this is detailsssss", details_obj);
+
+      if (!tempToken) {
+        console.log("there is an error");
+        setError("Token missing!");
+        return;
+      }
+
+      console.log("this is the tempToken", tempToken);
+
+      await saveTokens(tempToken);
 
       const updatedUser = await updateUserApi(details_obj);
 

@@ -18,3 +18,13 @@ export type AuthResponse = {
   refreshToken: string;
   user: AuthUser;
 };
+
+export type TokenInfo = {
+  token: string;
+  expires: string;
+};
+
+export type Tokens = {
+  access: TokenInfo;
+  refresh: TokenInfo;
+};
