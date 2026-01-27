@@ -6,18 +6,29 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import NotificationsTopSheet from "../../../components/layout/NotificationsTopSheet";
 import { TabBar } from "../../../components/layout/TabBar";
+import { useTheme } from "../../../context/ThemeContext";
 
 export default function TabsLayout() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.background }, 
+      ]}
+    >
       {/* TOP BAR */}
       <TabBar
         onOpenNotifications={() => setOpen(true)}
         onWalletPress={() => router.push("/(customer)/wallet")}
+        style={{
+          backgroundColor: theme.card,
+          borderBottomColor: theme.border,
+        }}
       />
 
       {/* TABS */}
@@ -25,14 +36,15 @@ export default function TabsLayout() {
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: "#0B1F1A",
+            backgroundColor: theme.card,
             height: 60 + insets.bottom,
             paddingBottom: insets.bottom,
             paddingTop: 6,
-            borderTopWidth: 0,
+            borderTopWidth: 1,
+            borderTopColor: theme.border,
           },
-          tabBarActiveTintColor: "#34F5C5",
-          tabBarInactiveTintColor: "#94a3b8",
+          tabBarActiveTintColor: theme.primary, 
+          tabBarInactiveTintColor: isDark ? "#94a3b8" : "#64748b",
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: "600",
@@ -66,21 +78,7 @@ export default function TabsLayout() {
             ),
           }}
         />
-        {/* 
-        <Tabs.Screen
-          name="chat/index"
-          options={{
-            title: "Chat",
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? "chatbubble" : "chatbubble-outline"}
-                size={24}
-                color={color}
-              />
-            ),
-          }}
-        />
- */}
+
         <Tabs.Screen
           name="profile/index"
           options={{
@@ -96,7 +94,7 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      {/* NOTIFICATION SLIDER */}
+      {/* NOTIFICATIOn */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
     </View>
   );
