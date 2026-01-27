@@ -63,10 +63,49 @@ const ORDERS: Order[] = [
   },
 ];
 
-const HERO_IMAGES = [
-  require("../../../../assets/images/hero/1st.png"),
-  require("../../../../assets/images/hero/2nd.jpg"),
-  require("../../../../assets/images/hero/premium.png"),
+const HERO_SLIDES = [
+  {
+    key: "shoe-1",
+    tag: "SHOE SPA",
+    title: "Premium Shoe Cleaning",
+    subtitle: "Deep clean • Deodorize • Restore",
+    image: require("../../../../assets/images/hero/shoespa.png"),
+  },
+  {
+    key: "shoe-2",
+    tag: "SHOE CARE",
+    title: "Sneaker & Leather Care",
+    subtitle: "Whitening • Polishing • Protection",
+    image: require("../../../../assets/images/hero/shoespa1.jpg"),
+  },
+  {
+    key: "laundry-1",
+    tag: "LAUNDRY",
+    title: "Dry Cleaning & Steam Press",
+    subtitle: "Formal • Ethnic • Delicates",
+    image: require("../../../../assets/images/hero/shoespa1.jpg"),
+  },
+  {
+    key: "laundry-2",
+    tag: "PREMIUM",
+    title: "Luxury Garment Care",
+    subtitle: "Silk • Wool • Designer Wear",
+    image: require("../../../../assets/images/hero/shoespa1.jpg"),
+  },
+  {
+    key: "wash-1",
+    tag: "WASH & FOLD",
+    title: "Everyday Laundry",
+    subtitle: "Fresh • Hygienic • Affordable",
+    image: require("../../../../assets/images/hero/onsite.png"),
+  },
+  {
+    key: "onsite-1",
+    tag: "ON-SITE",
+    title: "Onsite Cleaning Service",
+    subtitle: "Carpets • Sofas • Mattresses",
+    image: require("../../../../assets/images/hero/onsite.png"),
+  },
 ];
 
 export default function Home() {
@@ -101,8 +140,9 @@ export default function Home() {
   const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
 
   const heroAnims = useRef(
-    Array.from({ length: 3 }).map(() => new Animated.Value(0)),
+    Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
   ).current;
+
 
   const sparkleAnim = useRef(new Animated.Value(0)).current;
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
@@ -139,7 +179,7 @@ export default function Home() {
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => {
-        const next = (prev + 1) % 3;
+        const next = (prev + 1) % HERO_SLIDES.length;
         scrollViewRef.current?.scrollTo({
           x: next * (CARD_WIDTH + 16),
           animated: true,
@@ -150,6 +190,17 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [loading]);
+
+  useEffect(() => {
+    heroAnims[currentIndex].setValue(0);
+
+    Animated.timing(heroAnims[currentIndex], {
+      toValue: 1,
+      duration: 350,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [currentIndex]);
 
   // Sparkle animation
   useEffect(() => {
@@ -346,7 +397,8 @@ export default function Home() {
             setCurrentIndex(index);
           }}
         >
-          {[0, 1, 2].map((i) => {
+          {HERO_SLIDES.map((slide, i) => {
+
             const heroStyle = {
               transform: [
                 {
@@ -374,50 +426,30 @@ export default function Home() {
                   { backgroundColor: theme.card, borderColor: theme.border },
                 ]}
               >
-                <View style={styles.heroBg}>
-                  <Animated.Image
-                    source={HERO_IMAGES[i]}
-                    style={styles.heroImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.heroOverlay} />
-                  <Text style={[styles.heroTag, { color: "#E6FFFA" }]}>
-                    {i === 0 ? "FEATURED" : i === 1 ? "PREMIUM" : "FAST"}
-                  </Text>
-                  <Text style={[styles.heroTitle, { color: "#FFFFFF" }]}>
-                    {i === 0
-                      ? "In 24 Hour Pickup & Delivery"
-                      : i === 1
-                        ? "Dry Cleaning & Steam Press"
-                        : "Express Delivery < 24 Hrs"}
-                  </Text>
+
+                <Animated.Image
+                  source={slide.image}
+                  style={styles.heroImage}
+                  resizeMode="cover"
+                />
+
+                <View style={styles.heroOverlay} />
+
+                <View style={styles.heroTextWrap}>
+                  <Text style={styles.heroTag}>{slide.tag}</Text>
+
+                  <Text style={styles.heroTitle}>{slide.title}</Text>
+
+                  {slide.subtitle && (
+                    <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
+                  )}
                 </View>
+
+
               </Animated.View>
             );
           })}
         </ScrollView>
-
-        {/* Carousel Indicators */}
-        {/* <View style={styles.indicatorContainer}>
-          {[0, 1, 2].map((i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.indicator,
-                {
-                  backgroundColor:
-                    currentIndex === i
-                      ? theme.primary
-                      : isDark
-                        ? "#1F2937"
-                        : "#D1D5DB",
-                  width: currentIndex === i ? 24 : 8,
-                },
-              ]}
-            /> 
-          ))}
-        </View>
-*/}
         {/* Swipe to Book */}
         <Animated.View
           style={[
@@ -698,13 +730,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 12 },
   brand: { fontSize: 12, letterSpacing: 2, fontWeight: "700", marginBottom: 2 },
   heading: { fontSize: 26, fontWeight: "800" },
-  heroTag: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 0,
-    letterSpacing: 1,
-  },
-  heroTitle: { fontSize: 22, fontWeight: "800", lineHeight: 28 },
+
   heroBg: {
     width: CARD_WIDTH,
     height: 220,
@@ -930,4 +956,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
   },
+  heroTextWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    margin: 1,
+    alignSelf: "flex-start",
+  },
+
+
+  heroTag: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 6,
+    color: "#E6FFFA",
+  },
+
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 28,
+    color: "#FFFFFF",
+  },
+
+  heroSubtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#D1FAE5",
+  },
+
 });
