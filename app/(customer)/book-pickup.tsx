@@ -1884,12 +1884,12 @@ export default function BookPickup() {
               }}
             >
               <Image
-                source={require("@/assets/images/logo/blackLogo.png")} // 👈 adjust path
+                source={require("@/assets/images/logo/greenLogo.png")} 
                 style={{
-                  width: 64,
-                  height: 64,
+                  width: 84,
+                  height: 84,
                   resizeMode: "contain",
-                  marginBottom: 8,
+             
                 }}
               />
 
