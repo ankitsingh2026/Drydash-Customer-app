@@ -32,12 +32,43 @@ type Order = {
   total: string;
 };
 
+// const QUICK_SERVICES = [
+//   { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
+//   { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
+//   { key: "Laundry", label: "Laundry", icon: "water", featured: false },
+//   { key: "On Site", label: "On Site", icon: "hammer", featured: false },
+// ];
 const QUICK_SERVICES = [
-  { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
-  { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
-  { key: "Laundry", label: "Laundry", icon: "water", featured: false },
-  { key: "On Site", label: "On Site", icon: "hammer", featured: false },
+  {
+    key: "Shoe Spa",
+    slug: "shoe",
+    label: "Shoe Spa",
+    icon: "sparkles",
+    featured: true,
+  },
+  {
+    key: "Dry Clean",
+    slug: "iron",
+    label: "Dry Clean",
+    icon: "shirt",
+    featured: false,
+  },
+  {
+    key: "Laundry",
+    slug: "laundry",
+    label: "Laundry",
+    icon: "water",
+    featured: false,
+  },
+  {
+    key: "On Site",
+    slug: "onsite",
+    label: "On Site",
+    icon: "hammer",
+    featured: false,
+  },
 ];
+
 
 const ORDERS: Order[] = [
   {
@@ -86,21 +117,7 @@ const HERO_SLIDES = [
     tag: "LAUNDRY",
     title: "Dry Cleaning & Steam Press",
     subtitle: "Formal • Ethnic • Delicates",
-    image: require("../../../../assets/images/hero/shoespa1.jpg"),
-  },
-  {
-    key: "laundry-2",
-    tag: "PREMIUM",
-    title: "Luxury Garment Care",
-    subtitle: "Silk • Wool • Designer Wear",
-    image: require("../../../../assets/images/hero/shoespa1.jpg"),
-  },
-  {
-    key: "wash-1",
-    tag: "WASH & FOLD",
-    title: "Everyday Laundry",
-    subtitle: "Fresh • Hygienic • Affordable",
-    image: require("../../../../assets/images/hero/onsite.png"),
+    image: require("../../../../assets/images/hero/laundry2.png"),
   },
   {
     key: "onsite-1",
@@ -108,6 +125,20 @@ const HERO_SLIDES = [
     title: "Onsite Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
     image: require("../../../../assets/images/hero/onsite.png"),
+  },
+  //   {
+  //   key: "wash-1",
+  //   tag: "WASH & FOLD",
+  //   title: "Everyday Laundry",
+  //   subtitle: "Fresh • Hygienic • Affordable",
+  //   image: require("../../../../assets/images/hero/onsite.png"),
+  // },
+    {
+    key: "laundry-2",
+    tag: "PREMIUM",
+    title: "Luxury Garment Care",
+    subtitle: "Silk • Wool • Designer Wear",
+    image: require("../../../../assets/images/hero/premium.png"),
   },
 ];
 
@@ -568,7 +599,8 @@ export default function Home() {
                         },
                       ]}
                       activeOpacity={0.85}
-                      onPress={() => router.push(`/(customer)/services/${s.key}`)}
+                      onPress={() => router.push(`/(customer)/services/${s.slug}`)
+}
                     >
                       <Animated.View
                         style={{

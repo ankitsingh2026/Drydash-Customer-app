@@ -142,6 +142,7 @@ export default function AuthScreen() {
       console.log("this is check==>>", res.isNewUser);
 
       if (!res.isNewUser) {
+        // console.log("this isss",res.user)
         await setAuthUser(res.user);
         router.replace("/(customer)/(tabs)/home");
       } else {
