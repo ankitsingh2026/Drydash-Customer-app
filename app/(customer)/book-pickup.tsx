@@ -12,6 +12,7 @@ import {
   getAddressApi,
   saveAddressApi,
 } from "@/features/orders/orders.api";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Alert,
   Animated,
@@ -161,6 +162,20 @@ export default function BookPickup() {
     longitude: 72.8777,
   });
 
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  const { firstName, lastName, id } = user;
+
+  console.log("this is valueeeess", user?.user?.id);
+
+  const auth_id = user?.user?.id;
+
+  const phone = `91` + user?.user?.phone; //need to look
+
+  console.log("this is phoneeee==>>", phone);
+
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
     setPreviewOpen(true);
@@ -239,9 +254,13 @@ export default function BookPickup() {
 
       // ✅ request body
       const order_details: any = {
-        scheduledDate: formatDateForApi(scheduledDate),
-        pickupAddressId: selectedAddressId,
-        deliveryAddressId: deliveryId,
+        firstName: firstName,
+        lastName: lastName,
+        contact: phone,
+        appCustomerId: auth_id,
+        tempPickupAdresssId: selectedAddressId,
+        tempDeliveryAddressId: deliveryId,
+        date: formatDateForApi(scheduledDate),
       };
 
       // optional fields
@@ -268,7 +287,8 @@ export default function BookPickup() {
 
   const getPickupAddr = async () => {
     try {
-      const data = await getAddressApi();
+      console.log("this is the iddddd-->>>", id);
+      const data = await getAddressApi(auth_id);
 
       const list = Array.isArray(data?.results) ? data.results : [];
 
