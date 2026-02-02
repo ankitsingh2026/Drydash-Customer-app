@@ -194,7 +194,8 @@ export default function OrderReceipt() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 24,
+    flex: 1,
+    paddingBottom: 0,
   },
   loader: {
     flex: 1,
