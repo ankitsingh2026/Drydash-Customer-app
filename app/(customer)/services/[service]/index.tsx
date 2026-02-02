@@ -45,6 +45,12 @@ export default function ServiceDetail() {
   const [tab, setTab] = useState(0);
   const [open, setOpen] = useState(false);
 
+  React.useEffect(() => {
+  const index = TABS.findIndex(t => t.key === service);
+  if (index !== -1) setTab(index);
+}, [service]);
+
+
   /* ---------- DATA ---------- */
   const data = useMemo<Record<string, Item[]>>(
     () => ({

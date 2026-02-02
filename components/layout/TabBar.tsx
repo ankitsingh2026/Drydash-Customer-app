@@ -3,8 +3,8 @@ import { Bell, CreditCard, Moon, Sun } from "lucide-react-native";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../../context/ThemeContext";
 import { useNotifications } from "../../context/NotificationContext";
+import { useTheme } from "../../context/ThemeContext";
 type TabBarProps = {
   onOpenNotifications: () => void;
   onWalletPress: () => void;
@@ -38,8 +38,8 @@ export const TabBar = ({
             {isDark ? <Sun size={18} color={theme.primary} /> : <Moon size={18} color={theme.primary} />}
           </TouchableOpacity>
 
-         <TouchableOpacity onPress={onOpenNotifications} style={styles.iconBtn}>
-  <Bell size={20} color={theme.text} />
+          <TouchableOpacity onPress={onOpenNotifications} style={styles.iconBtn}>
+            <Bell size={20} color={theme.text} />
 
 
             {unreadCount > 0 && (

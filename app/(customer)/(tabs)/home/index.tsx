@@ -3,8 +3,11 @@ import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { Truck } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
 import {
   Animated,
   Dimensions,
@@ -29,12 +32,43 @@ type Order = {
   total: string;
 };
 
+// const QUICK_SERVICES = [
+//   { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
+//   { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
+//   { key: "Laundry", label: "Laundry", icon: "water", featured: false },
+//   { key: "On Site", label: "On Site", icon: "hammer", featured: false },
+// ];
 const QUICK_SERVICES = [
-  { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
-  { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
-  { key: "Laundry", label: "Laundry", icon: "water", featured: false },
-  { key: "On Site", label: "On Site", icon: "hammer", featured: false },
+  {
+    key: "Shoe Spa",
+    slug: "shoe",
+    label: "Shoe Spa",
+    icon: "sparkles",
+    featured: true,
+  },
+  {
+    key: "Dry Clean",
+    slug: "iron",
+    label: "Dry Clean",
+    icon: "shirt",
+    featured: false,
+  },
+  {
+    key: "Laundry",
+    slug: "laundry",
+    label: "Laundry",
+    icon: "water",
+    featured: false,
+  },
+  {
+    key: "On Site",
+    slug: "onsite",
+    label: "On Site",
+    icon: "hammer",
+    featured: false,
+  },
 ];
+
 
 const ORDERS: Order[] = [
   {
@@ -63,10 +97,49 @@ const ORDERS: Order[] = [
   },
 ];
 
-const HERO_IMAGES = [
-  require("../../../../assets/images/hero/1st.png"),
-  require("../../../../assets/images/hero/2nd.jpg"),
-  require("../../../../assets/images/hero/premium.png"),
+const HERO_SLIDES = [
+  {
+    key: "shoe-1",
+    tag: "SHOE SPA",
+    title: "Premium Shoe Cleaning",
+    subtitle: "Deep clean • Deodorize • Restore",
+    image: require("../../../../assets/images/hero/shoespa.png"),
+  },
+  {
+    key: "shoe-2",
+    tag: "SHOE CARE",
+    title: "Sneaker & Leather Care",
+    subtitle: "Whitening • Polishing • Protection",
+    image: require("../../../../assets/images/hero/shoespa1.jpg"),
+  },
+  {
+    key: "laundry-1",
+    tag: "LAUNDRY",
+    title: "Dry Cleaning & Steam Press",
+    subtitle: "Formal • Ethnic • Delicates",
+    image: require("../../../../assets/images/hero/laundry2.png"),
+  },
+  {
+    key: "onsite-1",
+    tag: "ON-SITE",
+    title: "Onsite Cleaning Service",
+    subtitle: "Carpets • Sofas • Mattresses",
+    image: require("../../../../assets/images/hero/onsite.png"),
+  },
+  //   {
+  //   key: "wash-1",
+  //   tag: "WASH & FOLD",
+  //   title: "Everyday Laundry",
+  //   subtitle: "Fresh • Hygienic • Affordable",
+  //   image: require("../../../../assets/images/hero/onsite.png"),
+  // },
+    {
+    key: "laundry-2",
+    tag: "PREMIUM",
+    title: "Luxury Garment Care",
+    subtitle: "Silk • Wool • Designer Wear",
+    image: require("../../../../assets/images/hero/premium.png"),
+  },
 ];
 
 export default function Home() {
@@ -76,6 +149,7 @@ export default function Home() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   const { setAuthUser, logout } = useAuthContext();
 
@@ -101,8 +175,9 @@ export default function Home() {
   const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
 
   const heroAnims = useRef(
-    Array.from({ length: 3 }).map(() => new Animated.Value(0)),
+    Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
   ).current;
+
 
   const sparkleAnim = useRef(new Animated.Value(0)).current;
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
@@ -139,7 +214,7 @@ export default function Home() {
 
     const interval = setInterval(() => {
       setCurrentIndex((prev) => {
-        const next = (prev + 1) % 3;
+        const next = (prev + 1) % HERO_SLIDES.length;
         scrollViewRef.current?.scrollTo({
           x: next * (CARD_WIDTH + 16),
           animated: true,
@@ -150,6 +225,17 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [loading]);
+
+  useEffect(() => {
+    heroAnims[currentIndex].setValue(0);
+
+    Animated.timing(heroAnims[currentIndex], {
+      toValue: 1,
+      duration: 350,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [currentIndex]);
 
   // Sparkle animation
   useEffect(() => {
@@ -321,374 +407,363 @@ export default function Home() {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={{ height: 12 }} />
+    <SafeAreaProvider>
 
-        {/* Header */}
-
-        {/* HERO CAROUSEL */}
+      <StatusBar
+        style={isDark ? "light" : "dark"}
+        backgroundColor={theme.background}
+        translucent={false} // safer: content won't draw under status bar
+      />
+      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
         <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          snapToInterval={CARD_WIDTH + 16}
-          decelerationRate="fast"
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
-          onMomentumScrollEnd={(event) => {
-            const index = Math.round(
-              event.nativeEvent.contentOffset.x / (CARD_WIDTH + 16),
-            );
-            setCurrentIndex(index);
-          }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          {[0, 1, 2].map((i) => {
-            const heroStyle = {
-              transform: [
-                {
-                  scale: heroAnims[i].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.98, 1],
-                  }),
-                },
-                {
-                  translateY: heroAnims[i].interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [12, 0],
-                  }),
-                },
-              ],
-              opacity: heroAnims[i],
-            };
+          <View style={{ height: 12 }} />
 
-            return (
-              <Animated.View
-                key={i}
-                style={[
-                  styles.heroCard,
-                  heroStyle,
-                  { backgroundColor: theme.card, borderColor: theme.border },
-                ]}
-              >
-                <View style={styles.heroBg}>
+
+          {/* HERO CAROUSEL */}
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            snapToInterval={CARD_WIDTH + 16}
+            decelerationRate="fast"
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16 }}
+            onMomentumScrollEnd={(event) => {
+              const index = Math.round(
+                event.nativeEvent.contentOffset.x / (CARD_WIDTH + 16),
+              );
+              setCurrentIndex(index);
+            }}
+          >
+            {HERO_SLIDES.map((slide, i) => {
+
+              const heroStyle = {
+                transform: [
+                  {
+                    scale: heroAnims[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.98, 1],
+                    }),
+                  },
+                  {
+                    translateY: heroAnims[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [12, 0],
+                    }),
+                  },
+                ],
+                opacity: heroAnims[i],
+              };
+
+              return (
+                <Animated.View
+                  key={i}
+                  style={[
+                    styles.heroCard,
+                    heroStyle,
+                    { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
+                >
+
                   <Animated.Image
-                    source={HERO_IMAGES[i]}
+                    source={slide.image}
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
+
                   <View style={styles.heroOverlay} />
-                  <Text style={[styles.heroTag, { color: "#E6FFFA" }]}>
-                    {i === 0 ? "FEATURED" : i === 1 ? "PREMIUM" : "FAST"}
-                  </Text>
-                  <Text style={[styles.heroTitle, { color: "#FFFFFF" }]}>
-                    {i === 0
-                      ? "In 24 Hour Pickup & Delivery"
-                      : i === 1
-                        ? "Dry Cleaning & Steam Press"
-                        : "Express Delivery < 24 Hrs"}
-                  </Text>
-                </View>
-              </Animated.View>
-            );
-          })}
-        </ScrollView>
 
-        {/* Carousel Indicators */}
-        {/* <View style={styles.indicatorContainer}>
-          {[0, 1, 2].map((i) => (
-            <Animated.View
-              key={i}
-              style={[
-                styles.indicator,
-                {
-                  backgroundColor:
-                    currentIndex === i
-                      ? theme.primary
-                      : isDark
-                        ? "#1F2937"
-                        : "#D1D5DB",
-                  width: currentIndex === i ? 24 : 8,
-                },
-              ]}
-            /> 
-          ))}
-        </View>
-*/}
-        {/* Swipe to Book */}
-        <Animated.View
-          style={[
-            styles.swipeContainerWrap,
-            {
-              opacity: fadeAnim,
-              transform: [
-                {
-                  translateY: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [18, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <Text style={[styles.sectionTitleSmall, { color: theme.text }]}>
-            Quick Action
-          </Text>
+                  <View style={styles.heroTextWrap}>
+                    <Text style={styles.heroTag}>{slide.tag}</Text>
 
-          <View
+                    <Text style={styles.heroTitle}>{slide.title}</Text>
+
+                    {slide.subtitle && (
+                      <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
+                    )}
+                  </View>
+
+
+                </Animated.View>
+              );
+            })}
+          </ScrollView>
+          {/* Swipe to Book */}
+          <Animated.View
             style={[
-              styles.swipeContainer,
+              styles.swipeContainerWrap,
               {
-                backgroundColor: isDark ? "#071018" : "#F3F4F6",
-                borderColor: theme.border,
+                opacity: fadeAnim,
+                transform: [
+                  {
+                    translateY: fadeAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [18, 0],
+                    }),
+                  },
+                ],
               },
             ]}
           >
-            <View style={styles.swipeTextWrap}>
-              <Text style={[styles.swipeHint, { color: theme.subText }]}>
-                Swipe to Book Pickup
-              </Text>
-            </View>
+            <Text style={[styles.sectionTitleSmall, { color: theme.text }]}>
+              Quick Action
+            </Text>
 
-            <Animated.View
+            <View
               style={[
-                styles.swipeDraggable,
+                styles.swipeContainer,
                 {
-                  transform: [{ translateX: dragX }],
-                  backgroundColor: theme.primary,
+                  backgroundColor: isDark ? "#071018" : "#F3F4F6",
+                  borderColor: theme.border,
                 },
               ]}
-              {...panResponder.panHandlers}
             >
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={onPressBook}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+              <View style={styles.swipeTextWrap}>
+                <Text style={[styles.swipeHint, { color: theme.subText }]}>
+                  Swipe to Book Pickup
+                </Text>
+              </View>
+
+              <Animated.View
+                style={[
+                  styles.swipeDraggable,
+                  {
+                    transform: [{ translateX: dragX }],
+                    backgroundColor: theme.primary,
+                  },
+                ]}
+                {...panResponder.panHandlers}
               >
-                <Truck size={20} color="#000" />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        </Animated.View>
+                <TouchableOpacity
+                  activeOpacity={0.9}
+                  onPress={onPressBook}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Truck size={20} color="#000" />
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
+          </Animated.View>
 
-        {/* Offer Card */}
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <View
-            style={[
-              styles.offerCard,
-              {
-                backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
-                borderColor: "#D4AF37",
-              },
-            ]}
-          >
-            <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
-              WELCOME OFFER
-            </Text>
-            <Text style={[styles.offerTitle, { color: theme.text }]}>
-              20% Off on Your First Order
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Quick Services - Shoe Spa Featured */}
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Quick Services
+          {/* Offer Card */}
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <View
+              style={[
+                styles.offerCard,
+                {
+                  backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
+                  borderColor: "#D4AF37",
+                },
+              ]}
+            >
+              <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
+                WELCOME OFFER
+              </Text>
+              <Text style={[styles.offerTitle, { color: theme.text }]}>
+                20% Off on Your First Order
               </Text>
             </View>
+          </Animated.View>
 
-            <View style={styles.servicesRow}>
-              {QUICK_SERVICES.map((s, index) => {
-                const isShoeSpa = s.key === "Shoe Spa";
-                return (
-                  <TouchableOpacity
-                    key={s.key}
-                    style={[
-                      styles.serviceBox,
-                      {
-                        backgroundColor: isShoeSpa
-                          ? isDark
-                            ? "#0A3D3C"
-                            : "#D1FAE5"
-                          : theme.card,
-                      },
-                    ]}
-                    activeOpacity={0.85}
-                    onPress={() => router.push(`/(customer)/services/${s.key}`)}
-                  >
-                    <Animated.View
-                      style={{
-                        transform: [
-                          {
-                            scale: isShoeSpa ? shoeSpaPulse : 1,
-                          },
-                        ],
-                      }}
+          {/* Quick Services - Shoe Spa Featured */}
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Quick Services
+                </Text>
+              </View>
+
+              <View style={styles.servicesRow}>
+                {QUICK_SERVICES.map((s, index) => {
+                  const isShoeSpa = s.key === "Shoe Spa";
+                  return (
+                    <TouchableOpacity
+                      key={s.key}
+                      style={[
+                        styles.serviceBox,
+                        {
+                          backgroundColor: isShoeSpa
+                            ? isDark
+                              ? "#0A3D3C"
+                              : "#D1FAE5"
+                            : theme.card,
+                        },
+                      ]}
+                      activeOpacity={0.85}
+                      onPress={() => router.push(`/(customer)/services/${s.slug}`)
+}
                     >
-                      <View
+                      <Animated.View
+                        style={{
+                          transform: [
+                            {
+                              scale: isShoeSpa ? shoeSpaPulse : 1,
+                            },
+                          ],
+                        }}
+                      >
+                        <View
+                          style={[
+                            styles.serviceIconWrapper,
+                            {
+                              backgroundColor: isShoeSpa
+                                ? theme.primary
+                                : isDark
+                                  ? "#062B2A"
+                                  : "#E6FFFA",
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name={s.icon as any}
+                            size={20}
+                            color={isShoeSpa ? "#000" : theme.primary}
+                          />
+                        </View>
+                      </Animated.View>
+
+                      <Text
                         style={[
-                          styles.serviceIconWrapper,
+                          styles.serviceLabel,
                           {
-                            backgroundColor: isShoeSpa
-                              ? theme.primary
-                              : isDark
-                                ? "#062B2A"
-                                : "#E6FFFA",
+                            color: isShoeSpa ? theme.primary : theme.subText,
+                            fontWeight: isShoeSpa ? "800" : "600",
                           },
                         ]}
                       >
-                        <Ionicons
-                          name={s.icon as any}
-                          size={20}
-                          color={isShoeSpa ? "#000" : theme.primary}
-                        />
-                      </View>
-                    </Animated.View>
-
-                    <Text
-                      style={[
-                        styles.serviceLabel,
-                        {
-                          color: isShoeSpa ? theme.primary : theme.subText,
-                          fontWeight: isShoeSpa ? "800" : "600",
-                        },
-                      ]}
-                    >
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </Animated.View>
-
-        {/* Recent Activity */}
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <View style={[styles.section, { marginTop: 6 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Recent Activity
-              </Text>
-            </View>
-
-            {messages.map((o) => {
-              const statusStyle = getStatusStyle(o.status, theme);
-              return (
-                <View
-                  key={o.id}
-                  style={[
-                    styles.orderCard,
-                    {
-                      backgroundColor: theme.card,
-                      borderColor: theme.border,
-                    },
-                  ]}
-                >
-                  <View style={styles.orderRow}>
-                    <View>
-                      <Text style={[styles.orderId, { color: theme.text }]}>
-                        Order #{o.id}
+                        {s.label}
                       </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Recent Activity */}
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <View style={[styles.section, { marginTop: 6 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Recent Activity
+                </Text>
+              </View>
+
+              {messages.map((o) => {
+                const statusStyle = getStatusStyle(o.status, theme);
+                return (
+                  <View
+                    key={o.id}
+                    style={[
+                      styles.orderCard,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                  >
+                    <View style={styles.orderRow}>
+                      <View>
+                        <Text style={[styles.orderId, { color: theme.text }]}>
+                          Order #{o.id}
+                        </Text>
+                      </View>
+
+                      {(() => {
+                        const unifiedStatus = getUnifiedStatus(o.status);
+                        const pillStyle =
+                          unifiedStatus === "Active"
+                            ? { bg: "#FEF3C7", text: "#92400E" } // amber
+                            : { bg: "#ECFDF5", text: "#065F46" }; // green
+
+                        return (
+                          <View
+                            style={[
+                              styles.statusPill,
+                              { backgroundColor: pillStyle.bg },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: pillStyle.text },
+                              ]}
+                            >
+                              {unifiedStatus}
+                            </Text>
+                          </View>
+                        );
+                      })()}
                     </View>
+                    {/* Rich Status Visual */}
+                    <View style={{ marginTop: 12 }}>{renderStatusVisual(o)}</View>
 
-                    {(() => {
-                      const unifiedStatus = getUnifiedStatus(o.status);
-                      const pillStyle =
-                        unifiedStatus === "Active"
-                          ? { bg: "#FEF3C7", text: "#92400E" } // amber
-                          : { bg: "#ECFDF5", text: "#065F46" }; // green
+                    <View style={styles.orderFooter}>
+                      <View style={styles.orderActions}>
+                        {[
+                          "Active",
+                          "In Transit",
+                          "Washing",
+                          "Processing",
+                        ].includes(o.status)}
 
-                      return (
-                        <View
+                        <TouchableOpacity
                           style={[
-                            styles.statusPill,
-                            { backgroundColor: pillStyle.bg },
+                            styles.secondarySmall,
+                            {
+                              backgroundColor: isDark ? "#0e1925" : "#c6ecd7",
+                            },
                           ]}
+                          onPress={() => router.push(`/orders/${o.id}`)}
                         >
                           <Text
                             style={[
-                              styles.statusText,
-                              { color: pillStyle.text },
+                              styles.secondarySmallText,
+                              { color: theme.text },
                             ]}
                           >
-                            {unifiedStatus}
+                            View Details
                           </Text>
-                        </View>
-                      );
-                    })()}
-                  </View>
-                  {/* Rich Status Visual */}
-                  <View style={{ marginTop: 12 }}>{renderStatusVisual(o)}</View>
-
-                  <View style={styles.orderFooter}>
-                    <View style={styles.orderActions}>
-                      {[
-                        "Active",
-                        "In Transit",
-                        "Washing",
-                        "Processing",
-                      ].includes(o.status)}
-
-                      <TouchableOpacity
-                        style={[
-                          styles.secondarySmall,
-                          {
-                            backgroundColor: isDark ? "#0e1925" : "#c6ecd7",
-                          },
-                        ]}
-                        onPress={() => router.push(`/orders/${o.id}`)}
-                      >
-                        <Text
-                          style={[
-                            styles.secondarySmallText,
-                            { color: theme.text },
-                          ]}
-                        >
-                          View Details
-                        </Text>
-                      </TouchableOpacity>
-
-                      {!o.paid ? (
-                        <TouchableOpacity
-                          style={[styles.payNowButton]}
-                          onPress={() => router.push(`/orders/${o.id}/pay`)}
-                        >
-                          <Text style={styles.payNowText}>Pay now</Text>
                         </TouchableOpacity>
-                      ) : (
-                        <View style={styles.paidBadge}>
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={14}
-                            color="#10B981"
-                          />
-                          <Text style={[styles.paidBadgeText]}>Paid</Text>
-                        </View>
-                      )}
+
+                        {!o.paid ? (
+                          <TouchableOpacity
+                            style={[styles.payNowButton]}
+                            onPress={() => router.push(`/orders/${o.id}/pay`)}
+                          >
+                            <Text style={styles.payNowText}>Pay now</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.paidBadge}>
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={14}
+                              color="#10B981"
+                            />
+                            <Text style={[styles.paidBadgeText]}>Paid</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   </View>
-                </View>
-              );
-            })}
-          </View>
-        </Animated.View>
+                );
+              })}
+            </View>
+          </Animated.View>
 
-        <View style={{ height: 60 }} />
-      </ScrollView>
-    </View>
+          <View style={{ height: 60 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
@@ -698,13 +773,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 12 },
   brand: { fontSize: 12, letterSpacing: 2, fontWeight: "700", marginBottom: 2 },
   heading: { fontSize: 26, fontWeight: "800" },
-  heroTag: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 0,
-    letterSpacing: 1,
-  },
-  heroTitle: { fontSize: 22, fontWeight: "800", lineHeight: 28 },
+
   heroBg: {
     width: CARD_WIDTH,
     height: 220,
@@ -930,4 +999,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#fff",
   },
+  heroTextWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    margin: 1,
+    alignSelf: "flex-start",
+  },
+
+
+  heroTag: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginBottom: 6,
+    color: "#E6FFFA",
+  },
+
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 28,
+    color: "#FFFFFF",
+  },
+
+  heroSubtitle: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#D1FAE5",
+  },
+
 });

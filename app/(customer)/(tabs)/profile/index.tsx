@@ -5,11 +5,10 @@ import { ChevronRight, LogOut } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useTheme } from "../../../../context/ThemeContext";
 
@@ -17,7 +16,6 @@ const MENU_1 = [
   { label: "Edit Profile" },
   { label: "Change Password" },
   { label: "Payment Methods" },
-  { label: "Notifications" },
 ];
 
 const MENU_2 = [
@@ -71,10 +69,14 @@ export default function Profile() {
   }, []);
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.background }}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.background,
+        paddingHorizontal: 16,
+        paddingTop: 24,
+        paddingBottom: 120,
+      }}
     >
       {/* PROFILE HEADER */}
       <View style={styles.header}>
@@ -111,15 +113,10 @@ export default function Profile() {
                 case "Edit Profile":
                   router.push("/edit-profile");
                   break;
-                // case "Change Password":
-                //   router.push("/profile/change-password");
-                //   break;
-                // case "Payment Methods":
-                //   router.push("/profile/payments");
-                //   break;
-                // case "Notifications":
-                //   router.push("/profile/notifications");
-                //   break;
+
+                case "Payment Methods":
+                  router.push("/wallet");
+                  break;
               }
             }}
           />
@@ -134,9 +131,23 @@ export default function Profile() {
             label={item.label}
             theme={theme}
             isLast={index === MENU_2.length - 1}
+            onPress={() => {
+              switch (item.label) {
+                case "Help & Support":
+                  router.push("/support");
+                  break;
+                case "Privacy Policy":
+                  router.push("/privacy-policy");
+                  break;
+                case "Terms of Service":
+                  router.push("/terms");
+                  break;
+              }
+            }}
           />
         ))}
       </View>
+
 
       {/* LOGOUT */}
       <TouchableOpacity
@@ -145,15 +156,17 @@ export default function Profile() {
           styles.logoutBtn,
           { backgroundColor: isDark ? "#3B1F1F" : "#FEE2E2" },
         ]}
+        // MENU 2
         onPress={async () => {
           await logout();
           router.replace("/(auth)/auth");
         }}
+
       >
         <LogOut size={18} color="#EF4444" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
