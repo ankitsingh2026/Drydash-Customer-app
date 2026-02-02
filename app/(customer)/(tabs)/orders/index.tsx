@@ -1,6 +1,14 @@
+import { getOrdersApi } from "@/features/orders/orders.api";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Easing,
@@ -13,85 +21,127 @@ import {
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 
+/* ================= TYPES ================= */
+
 type OrderStatus = "Active" | "Completed";
+type FilterType = "All" | "Active" | "Completed";
 
-const ORDERS = [
-  {
-    id: "2481",
-    status: "Active" as OrderStatus,
-    subtitle: "Pickup Scheduled: Today, 4 PM",
-    total: "$38.50",
-    items: 5,
-  },
-
-  {
-    id: "2479",
-    status: "Completed" as OrderStatus,
-    subtitle: "Delivered: Nov 24, 2023",
-    total: "$52.75",
-    items: 8,
-  },
-];
+/* ================= COMPONENT ================= */
 
 export default function Orders() {
   const { theme, isDark } = useTheme();
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
-  // Header animation
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("All");
+
+  const cardAnims = useRef<Animated.Value[]>([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  // Card animations
-  const cardAnims = useRef(ORDERS.map(() => new Animated.Value(0))).current;
+  if (!user) return null;
+
+  const phone = `91${user?.user?.phone}`;
+
+  /* ================= HELPERS ================= */
+
+  const mapStatus = (status: string): OrderStatus =>
+    status === "delivered" ? "Completed" : "Active";
+
+  const getStatusStyle = (status: OrderStatus) => {
+    if (status === "Completed") {
+      return { bg: "#10B981", icon: "checkmark-done" as const };
+    }
+    return { bg: "#0EA5A4", icon: "navigate" as const };
+  };
+
+  const formatOrderDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+
+    const datePart = date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+
+    const timePart = date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    return `${datePart} • ${timePart}`;
+  };
+
+  /* ================= FILTERED ORDERS (NO FUNCTIONS) ================= */
+
+  const filteredOrders = useMemo(() => {
+    if (activeFilter === "All") return orders;
+    return orders.filter((o) => mapStatus(o.status) === activeFilter);
+  }, [orders, activeFilter]);
+
+  /* ================= API ================= */
+
+  const getCustomerOrders = async () => {
+    try {
+      setLoading(true);
+      const res = await getOrdersApi(phone);
+      setOrders(res?.orders || []);
+    } catch (e) {
+      console.log("Order fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      getCustomerOrders();
+    }, []),
+  );
+
+  /* ================= ANIMATIONS ================= */
 
   useEffect(() => {
-    // Simulate API loading
-    const timer = setTimeout(() => {
-      setLoading(false);
+    // Ensure animation value exists for each item
+    cardAnims.current = filteredOrders.map(
+      (_, i) => cardAnims.current[i] || new Animated.Value(0),
+    );
 
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.stagger(
+      120,
+      cardAnims.current.map((anim) =>
+        Animated.spring(anim, {
           toValue: 1,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
+          tension: 50,
+          friction: 8,
           useNativeDriver: true,
         }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 600,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-
-      Animated.stagger(
-        120,
-        cardAnims.map((anim) =>
-          Animated.spring(anim, {
-            toValue: 1,
-            tension: 50,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-        ),
-      ).start();
-    }, 1200);
-
-    return () => clearTimeout(timer);
-  }, []);
+      ),
+    ).start();
+  }, [filteredOrders]);
 
   if (loading) {
     return <OrdersScreenSkeleton />;
   }
 
-  const getStatusStyle = (status: OrderStatus) => {
-    switch (status) {
-      case "Active":
-        return { bg: "#0EA5A4", icon: "navigate" as const };
-      case "Completed":
-        return { bg: "#10B981", icon: "checkmark-done" as const };
-    }
-  };
+  /* ================= UI ================= */
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -115,7 +165,7 @@ export default function Orders() {
                 My Orders
               </Text>
               <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
-                Total Orders: {ORDERS.length}
+                Total Orders: {orders.length}
               </Text>
             </View>
 
@@ -129,7 +179,7 @@ export default function Orders() {
               ]}
             >
               <Text style={[styles.statsNumber, { color: theme.primary }]}>
-                {ORDERS.filter((o) => o.status === "Active").length}
+                {orders.filter((o) => o.status !== "delivered").length}
               </Text>
               <Text style={[styles.statsLabel, { color: theme.subText }]}>
                 Active
@@ -147,41 +197,51 @@ export default function Orders() {
 
         {/* FILTER TABS */}
         <View style={styles.filterRow}>
-          {["All", "Active", "Completed"].map((filter, idx) => (
-            <TouchableOpacity
-              key={filter}
-              style={[
-                styles.filterTab,
-                {
-                  backgroundColor:
-                    idx === 0 ? theme.primary : isDark ? "#1F2937" : "#F3F4F6",
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  fontWeight: idx === 0 ? "800" : "600",
-                  color: idx === 0 ? "#000" : theme.text,
-                }}
+          {(["All", "Active", "Completed"] as FilterType[]).map((filter) => {
+            const isActive = activeFilter === filter;
+
+            return (
+              <TouchableOpacity
+                key={filter}
+                onPress={() => setActiveFilter(filter)}
+                style={[
+                  styles.filterTab,
+                  {
+                    backgroundColor: isActive
+                      ? theme.primary
+                      : isDark
+                        ? "#1F2937"
+                        : "#F3F4F6",
+                  },
+                ]}
               >
-                {filter}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text
+                  style={{
+                    fontWeight: isActive ? "800" : "600",
+                    color: isActive ? "#000" : theme.text,
+                  }}
+                >
+                  {filter}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* ORDERS */}
-        {ORDERS.map((o, index) => {
-          const status = getStatusStyle(o.status);
+        {filteredOrders.map((o, index) => {
+          const anim = cardAnims.current[index] || new Animated.Value(1);
+          const uiStatus = mapStatus(o.status);
+          const status = getStatusStyle(uiStatus);
 
           return (
             <Animated.View
-              key={o.id}
+              key={o._id}
               style={{
-                opacity: cardAnims[index],
+                opacity: anim,
                 transform: [
                   {
-                    translateY: cardAnims[index].interpolate({
+                    translateY: anim.interpolate({
                       inputRange: [0, 1],
                       outputRange: [20, 0],
                     }),
@@ -191,7 +251,7 @@ export default function Orders() {
             >
               <TouchableOpacity
                 activeOpacity={0.9}
-                onPress={() => router.push(`/orders/${o.id}`)}
+                onPress={() => router.push(`/orders/${o.order_id}`)}
               >
                 <View
                   style={[
@@ -216,24 +276,33 @@ export default function Orders() {
                           marginLeft: 6,
                         }}
                       >
-                        {o.status}
+                        {uiStatus}
                       </Text>
                     </View>
+
                     <Text style={{ color: theme.subText }}>
-                      {o.items} items
+                      {o.items.length} items
                     </Text>
                   </View>
 
                   <View style={styles.cardBody}>
                     <Text style={[styles.orderId, { color: theme.text }]}>
-                      Order #{o.id}
+                      Order #{o.order_id}
                     </Text>
-                    <Text style={{ color: theme.subText }}>{o.subtitle}</Text>
+
+                    <Text style={{ color: theme.subText }}>
+                      Placed on {formatOrderDateTime(o.createdAt)}
+                    </Text>
 
                     <View style={styles.totalRow}>
                       <Text style={{ color: theme.subText }}>Total</Text>
-                      <Text style={{ fontWeight: "800", color: theme.primary }}>
-                        {o.total}
+                      <Text
+                        style={{
+                          fontWeight: "800",
+                          color: theme.primary,
+                        }}
+                      >
+                        ₹{o.price}
                       </Text>
                     </View>
                   </View>
@@ -255,7 +324,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   headerContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   headerTop: {
     flexDirection: "row",

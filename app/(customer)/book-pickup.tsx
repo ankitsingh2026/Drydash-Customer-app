@@ -13,6 +13,7 @@ import {
   getAddressApi,
   saveAddressApi,
 } from "@/features/orders/orders.api";
+import { useAuth } from "@/hooks/useAuth";
 import * as Haptics from "expo-haptics";
 import {
   Alert,
@@ -143,11 +144,24 @@ export default function BookPickup() {
 
   const scrollRef = React.useRef<ScrollView>(null);
 
-
   const [location, setLocation] = useState({
     latitude: 19.076,
     longitude: 72.8777,
   });
+
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  const { firstName, lastName, id } = user;
+
+  console.log("this is valueeeess", user?.user?.id);
+
+  const auth_id = user?.user?.id;
+
+  const phone = `91` + user?.user?.phone; //need to look
+
+  console.log("this is phoneeee==>>", phone);
 
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
@@ -193,24 +207,22 @@ export default function BookPickup() {
     setTimeout(() => {
       setSuccessOpen(false);
       goBackSafe();
-
     }, 2500);
-
   };
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       () => {
         setKeyboardVisible(true);
-      }
+      },
     );
 
     const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
       () => {
         setKeyboardVisible(false);
-      }
+      },
     );
 
     return () => {
@@ -270,9 +282,13 @@ export default function BookPickup() {
 
       // ✅ request body
       const order_details: any = {
-        scheduledDate: formatDateForApi(scheduledDate),
-        pickupAddressId: selectedAddressId,
-        deliveryAddressId: deliveryId,
+        firstName: firstName,
+        lastName: lastName,
+        contact: phone,
+        appCustomerId: auth_id,
+        tempPickupAdresssId: selectedAddressId,
+        tempDeliveryAddressId: deliveryId,
+        date: formatDateForApi(scheduledDate),
       };
 
       // optional fields
@@ -299,7 +315,8 @@ export default function BookPickup() {
 
   const getPickupAddr = async () => {
     try {
-      const data = await getAddressApi();
+      console.log("this is the iddddd-->>>", id);
+      const data = await getAddressApi(auth_id);
 
       const list = Array.isArray(data?.results) ? data.results : [];
 
@@ -523,20 +540,13 @@ export default function BookPickup() {
     }
   };
 
-
-
-
   return (
     <View style={[styles.safe, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         style={[styles.safe, { backgroundColor: theme.background }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={
-          Platform.OS === "ios" ? 75 + insets.top : 0
-        }
-
+        keyboardVerticalOffset={Platform.OS === "ios" ? 75 + insets.top : 0}
       >
-
         <View
           style={[
             styles.stackHeader,
@@ -544,7 +554,6 @@ export default function BookPickup() {
               paddingTop: insets.top,
               backgroundColor: theme.background,
               borderBottomColor: isDark ? "#1f2933" : "#e5e7eb",
-
             },
           ]}
         >
@@ -574,9 +583,6 @@ export default function BookPickup() {
             { paddingTop: 35 + insets.top + 0 }, // 👈 space for fixed header
           ]}
         >
-
-
-
           {/* TITLE */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: theme.text }]}>
@@ -1095,7 +1101,9 @@ export default function BookPickup() {
                           </Text>
                           <Text
                             style={{
-                              color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
+                              color: selected
+                                ? "rgba(0,0,0,0.7)"
+                                : theme.subText,
                               marginTop: 4,
                               fontSize: 13,
                             }}
@@ -1104,7 +1112,9 @@ export default function BookPickup() {
                           </Text>
                           <Text
                             style={{
-                              color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
+                              color: selected
+                                ? "rgba(0,0,0,0.7)"
+                                : theme.subText,
                               marginTop: 2,
                               fontSize: 13,
                             }}
@@ -1190,10 +1200,13 @@ export default function BookPickup() {
               >
                 {note || "Tap to add special instructions..."}
               </Text>
-              <Ionicons name="chevron-forward" size={20} color={theme.subText} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={theme.subText}
+              />
             </View>
           </TouchableOpacity>
-
 
           {/* ADD THIS NEW MODAL - FLOATING NOTES MODAL */}
           <Modal
@@ -1206,17 +1219,34 @@ export default function BookPickup() {
               style={modalStyles.backdrop}
               behavior={Platform.OS === "ios" ? "padding" : "height"}
             >
-              <TouchableWithoutFeedback onPress={() => setNotesModalOpen(false)}>
+              <TouchableWithoutFeedback
+                onPress={() => setNotesModalOpen(false)}
+              >
                 <View style={modalStyles.backdrop}>
                   <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View style={[modalStyles.notesModal, { backgroundColor: theme.card }]}>
+                    <View
+                      style={[
+                        modalStyles.notesModal,
+                        { backgroundColor: theme.card },
+                      ]}
+                    >
                       {/* Header */}
                       <View style={modalStyles.header}>
                         <View>
-                          <Text style={[modalStyles.modalTitle, { color: theme.text }]}>
+                          <Text
+                            style={[
+                              modalStyles.modalTitle,
+                              { color: theme.text },
+                            ]}
+                          >
                             Special Instructions
                           </Text>
-                          <Text style={[modalStyles.modalSubtitle, { color: theme.subText }]}>
+                          <Text
+                            style={[
+                              modalStyles.modalSubtitle,
+                              { color: theme.subText },
+                            ]}
+                          >
                             Add any special requests or notes
                           </Text>
                         </View>
@@ -1264,7 +1294,13 @@ export default function BookPickup() {
                         >
                           Quick Suggestions
                         </Text>
-                        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
+                        >
                           {[
                             "Call before arrival",
                             "Ring doorbell twice",
@@ -1357,7 +1393,11 @@ export default function BookPickup() {
                           }}
                           activeOpacity={0.9}
                         >
-                          <Ionicons name="checkmark-circle" size={20} color="#000" />
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={20}
+                            color="#000"
+                          />
                           <Text
                             style={{
                               marginLeft: 8,
@@ -1410,13 +1450,15 @@ export default function BookPickup() {
               },
             ]}
           >
-            <Ionicons name="close-circle-outline" size={20} color={theme.text} />
+            <Ionicons
+              name="close-circle-outline"
+              size={20}
+              color={theme.text}
+            />
             <Text style={[styles.cancelText, { color: theme.text }]}>
               Cancel Booking
             </Text>
           </TouchableOpacity>
-
-
         </ScrollView>
 
         {/* ADD ADDRESS MODAL */}
@@ -1426,7 +1468,9 @@ export default function BookPickup() {
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={[modalStyles.modal, { backgroundColor: theme.card }]}>
+              <View
+                style={[modalStyles.modal, { backgroundColor: theme.card }]}
+              >
                 <ScrollView
                   contentContainerStyle={{ paddingBottom: 24 }}
                   keyboardShouldPersistTaps="handled"
@@ -1658,7 +1702,10 @@ export default function BookPickup() {
                         onChangeText={(t) =>
                           setAddressForm((p) => ({ ...p, city: t }))
                         }
-                        style={[modalStyles.inputHalf, fieldStyle(theme, isDark)]}
+                        style={[
+                          modalStyles.inputHalf,
+                          fieldStyle(theme, isDark),
+                        ]}
                       />
                       <TextInput
                         placeholder="State"
@@ -1667,7 +1714,10 @@ export default function BookPickup() {
                         onChangeText={(t) =>
                           setAddressForm((p) => ({ ...p, state: t }))
                         }
-                        style={[modalStyles.inputHalf, fieldStyle(theme, isDark)]}
+                        style={[
+                          modalStyles.inputHalf,
+                          fieldStyle(theme, isDark),
+                        ]}
                       />
                     </View>
 
@@ -1688,14 +1738,20 @@ export default function BookPickup() {
                         placeholderTextColor={theme.subText}
                         value={addressForm.latitude}
                         editable={false}
-                        style={[modalStyles.inputHalf, fieldStyle(theme, isDark)]}
+                        style={[
+                          modalStyles.inputHalf,
+                          fieldStyle(theme, isDark),
+                        ]}
                       />
                       <TextInput
                         placeholder="Longitude"
                         placeholderTextColor={theme.subText}
                         value={addressForm.longitude}
                         editable={false}
-                        style={[modalStyles.inputHalf, fieldStyle(theme, isDark)]}
+                        style={[
+                          modalStyles.inputHalf,
+                          fieldStyle(theme, isDark),
+                        ]}
                       />
                     </View>
                   </View>
@@ -1876,23 +1932,18 @@ export default function BookPickup() {
                 borderRadius: 18,
                 padding: 18,
                 opacity: fadeAnim,
-                transform: [
-                  { scale: scaleAnim },
-                  { translateY: slideAnim },
-                ],
+                transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
                 alignItems: "center",
               }}
             >
               <Image
-                source={require("@/assets/images/logo/greenLogo.png")} 
+                source={require("@/assets/images/logo/greenLogo.png")}
                 style={{
                   width: 84,
                   height: 84,
                   resizeMode: "contain",
-             
                 }}
               />
-
 
               {/* Animated Check */}
               <Animated.View
@@ -1909,7 +1960,6 @@ export default function BookPickup() {
               >
                 <Ionicons name="checkmark" size={40} color="#000" />
               </Animated.View>
-
 
               <Text
                 style={{
@@ -1944,10 +1994,7 @@ export default function BookPickup() {
           </View>
         </Modal>
       </KeyboardAvoidingView>
-
     </View>
-
-
   );
 }
 
@@ -1962,8 +2009,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   container: {
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 30,
-    flexGrow: 1  // This is key!
+    paddingBottom: Platform.OS === "ios" ? 40 : 30,
+    flexGrow: 1, // This is key!
   },
   stackHeader: {
     position: "absolute",
@@ -1977,10 +2024,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     zIndex: 100,
     borderBottomWidth: 1,
-      elevation: 8,               // 👈 keeps above scroll
-
+    elevation: 8, // 👈 keeps above scroll
   },
-
 
   headerTitle: { fontSize: 17, fontWeight: "800" },
   header: { marginBottom: 10 },
@@ -2135,7 +2180,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-
 });
 
 /* ---------- modal ---------- */
@@ -2149,7 +2193,7 @@ const modalStyles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: Platform.OS === "ios" ? 40 : 20,
     maxHeight: SCREEN_HEIGHT * 0.7,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -10 },
@@ -2173,7 +2217,6 @@ const modalStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-
   },
 
   modalTitle: {
