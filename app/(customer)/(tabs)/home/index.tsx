@@ -106,7 +106,7 @@ const HERO_SLIDES = [
     tag: "SHOE SPA",
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
-    image: require("../../../../assets/images/hero/shoespa.png"),
+    image: require("../../../../assets/images/hero/hero_shoespa.jpg"),
   },
   {
     key: "shoe-2",
@@ -127,7 +127,7 @@ const HERO_SLIDES = [
     tag: "ON-SITE",
     title: "Onsite Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
-    image: require("../../../../assets/images/hero/onsite.png"),
+    image: require("../../../../assets/images/hero/hero_onsite.jpg"),
   },
   //   {
   //   key: "wash-1",
