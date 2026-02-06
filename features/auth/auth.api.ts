@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api/client";
+import axios from "axios";
 
 export const sendOtpApi = async (phone: string) => {
   await apiClient.post("/v1/auth/send-otp", { phone });
@@ -24,4 +25,10 @@ export const updateUserApi = async (payload: {
 export const getMeApi = async () => {
   const { data } = await apiClient.get("/v1/customers/me");
   return data;
+};
+
+export const refreshTokenApi = (refreshToken: string) => {
+  return axios.post("https://live.drydash.in/v1/auth/refresh-tokens", {
+    refreshToken,
+  });
 };

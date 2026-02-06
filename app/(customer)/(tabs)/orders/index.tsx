@@ -1,4 +1,5 @@
 import { getOrdersApi } from "@/features/orders/orders.api";
+import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
@@ -24,7 +25,7 @@ import { useTheme } from "../../../../context/ThemeContext";
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
-type FilterType = "All" | "Active" | "Completed";
+type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 
 /* ================= COMPONENT ================= */
 
@@ -35,6 +36,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
+  const [pickups, setPickups] = useState<any[]>([]);
 
   const cardAnims = useRef<Animated.Value[]>([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -42,7 +44,9 @@ export default function Orders() {
 
   if (!user) return null;
 
-  const phone = `91${user?.user?.phone}`;
+  const phone = `91${user?.user?.phone ? user?.user?.phone : user?.phone}`;
+
+  console.log("this is the phoneeee===>>>", phone);
 
   /* ================= HELPERS ================= */
 
@@ -77,9 +81,24 @@ export default function Orders() {
   /* ================= FILTERED ORDERS (NO FUNCTIONS) ================= */
 
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "All") return orders;
-    return orders.filter((o) => mapStatus(o.status) === activeFilter);
-  }, [orders, activeFilter]);
+    if (activeFilter === "Awaiting") {
+      return pickups.map((p) => ({
+        ...p,
+        type: "pickup",
+      }));
+    }
+
+    if (activeFilter === "All") {
+      return [
+        ...orders.map((o) => ({ ...o, type: "order" })),
+        ...pickups.map((p) => ({ ...p, type: "pickup" })),
+      ];
+    }
+
+    return orders
+      .filter((o) => mapStatus(o.status) === activeFilter)
+      .map((o) => ({ ...o, type: "order" }));
+  }, [orders, pickups, activeFilter]);
 
   /* ================= API ================= */
 
@@ -95,9 +114,48 @@ export default function Orders() {
     }
   };
 
+  const getCustomerPickupList = async () => {
+    try {
+      const res = await getCustomerPickups(
+        user?.user?.phone,
+        "pending,assigned",
+      );
+      setPickups(res?.pickups || []);
+    } catch (err) {
+      console.log("Pickup fetch error", err);
+    }
+  };
+
+  /* ================= DUMMY PICKUP ACTION APIs ================= */
+
+  const cancelPickupApi = async (pickupId: string) => {
+    console.log("🚨 Cancel pickup clicked:", pickupId);
+
+    // TODO: replace with real API later
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("✅ Pickup cancelled (dummy)");
+        resolve(true);
+      }, 500);
+    });
+  };
+
+  const reschedulePickupApi = async (pickupId: string) => {
+    console.log("📅 Reschedule pickup clicked:", pickupId);
+
+    // TODO: replace with real API later
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log("✅ Navigate to reschedule screen (dummy)");
+        resolve(true);
+      }, 500);
+    });
+  };
+
   useFocusEffect(
     useCallback(() => {
       getCustomerOrders();
+      getCustomerPickupList();
     }, []),
   );
 
@@ -197,40 +255,180 @@ export default function Orders() {
 
         {/* FILTER TABS */}
         <View style={styles.filterRow}>
-          {(["All", "Active", "Completed"] as FilterType[]).map((filter) => {
-            const isActive = activeFilter === filter;
+          {(["All", "Active", "Completed", "Awaiting"] as FilterType[]).map(
+            (filter) => {
+              const isActive = activeFilter === filter;
 
-            return (
-              <TouchableOpacity
-                key={filter}
-                onPress={() => setActiveFilter(filter)}
-                style={[
-                  styles.filterTab,
-                  {
-                    backgroundColor: isActive
-                      ? theme.primary
-                      : isDark
-                        ? "#1F2937"
-                        : "#F3F4F6",
-                  },
-                ]}
-              >
-                <Text
-                  style={{
-                    fontWeight: isActive ? "800" : "600",
-                    color: isActive ? "#000" : theme.text,
-                  }}
+              return (
+                <TouchableOpacity
+                  key={filter}
+                  onPress={() => setActiveFilter(filter)}
+                  style={[
+                    styles.filterTab,
+                    {
+                      backgroundColor: isActive
+                        ? theme.primary
+                        : isDark
+                          ? "#1F2937"
+                          : "#F3F4F6",
+                    },
+                  ]}
                 >
-                  {filter}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text
+                    style={{
+                      fontWeight: isActive ? "800" : "600",
+                      color: isActive ? "#000" : theme.text,
+                    }}
+                  >
+                    {filter}
+                  </Text>
+                </TouchableOpacity>
+              );
+            },
+          )}
         </View>
 
         {/* ORDERS */}
-        {filteredOrders.map((o, index) => {
+        {filteredOrders.map((o: any, index: number) => {
           const anim = cardAnims.current[index] || new Animated.Value(1);
+
+          /* ================= PICKUP CARD (AWAITING) ================= */
+          if (o.type === "pickup") {
+            return (
+              <Animated.View
+                key={o._id}
+                style={{
+                  opacity: anim,
+                  transform: [
+                    {
+                      translateY: anim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [20, 0],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <View
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: theme.card,
+                      borderLeftColor: "#8B5CF6",
+                    },
+                  ]}
+                >
+                  {/* HEADER */}
+                  <View style={styles.cardHeader}>
+                    <View style={styles.row}>
+                      <Ionicons name="cube-outline" size={16} color="#8B5CF6" />
+                      <Text
+                        style={{
+                          fontWeight: "800",
+                          color: "#8B5CF6",
+                          marginLeft: 6,
+                        }}
+                      >
+                        Pickup Scheduled
+                      </Text>
+                    </View>
+
+                    <Text style={{ color: theme.subText }}>
+                      {formatOrderDateTime(o.pickup_date)}
+                    </Text>
+                  </View>
+
+                  {/* BODY */}
+                  <View style={styles.cardBody}>
+                    <Text style={[styles.orderId, { color: theme.text }]}>
+                      Pickup Request
+                    </Text>
+
+                    {/* ADDRESS */}
+                    <Text style={{ color: theme.subText, marginTop: 4 }}>
+                      📍 {o.Address}
+                    </Text>
+
+                    {/* NOTE */}
+                    {o.note ? (
+                      <Text
+                        style={{
+                          color: theme.primary,
+                          marginTop: 8,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Note: {o.note}
+                      </Text>
+                    ) : null}
+
+                    {/* ACTION BUTTONS */}
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        marginTop: 16,
+                        gap: 10,
+                      }}
+                    >
+                      {/* RESCHEDULE */}
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: isDark ? "#10B981" : "#F3F4F6",
+                          paddingVertical: 12,
+                          borderRadius: 10,
+                          alignItems: "center",
+                        }}
+                        onPress={() => {
+                          reschedulePickupApi(o._id);
+                          console.log("👉 Navigate to reschedule screen");
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontWeight: "700",
+                            color: theme.text,
+                          }}
+                        >
+                          Reschedule
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* CANCEL */}
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: "#b84747",
+                          paddingVertical: 12,
+                          borderRadius: 10,
+                          alignItems: "center",
+                        }}
+                        onPress={async () => {
+                          await cancelPickupApi(o._id);
+
+                          // remove from UI instantly (optimistic)
+                          setPickups((prev) =>
+                            prev.filter((p) => p._id !== o._id),
+                          );
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontWeight: "800",
+                            color: "#fff",
+                          }}
+                        >
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+            );
+          }
+
+          /* ================= ORDER CARD ================= */
           const uiStatus = mapStatus(o.status);
           const status = getStatusStyle(uiStatus);
 
@@ -262,6 +460,7 @@ export default function Orders() {
                     },
                   ]}
                 >
+                  {/* HEADER */}
                   <View style={styles.cardHeader}>
                     <View style={styles.row}>
                       <Ionicons
@@ -281,10 +480,11 @@ export default function Orders() {
                     </View>
 
                     <Text style={{ color: theme.subText }}>
-                      {o.items.length} items
+                      {o.items?.length || 0} items
                     </Text>
                   </View>
 
+                  {/* BODY */}
                   <View style={styles.cardBody}>
                     <Text style={[styles.orderId, { color: theme.text }]}>
                       Order #{o.order_id}
@@ -358,10 +558,10 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: "row",
-    marginVertical: 16,
+    marginVertical: 10,
   },
   filterTab: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,

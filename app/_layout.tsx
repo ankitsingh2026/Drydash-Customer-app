@@ -6,6 +6,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CartProvider } from "../context/CartContext";
 import { ThemeProvider } from "../context/ThemeContext";
 
+import { setupInterceptors } from "../lib/api/interceptors";
+
+// ✅ REGISTER INTERCEPTOR ONCE
+setupInterceptors();
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>

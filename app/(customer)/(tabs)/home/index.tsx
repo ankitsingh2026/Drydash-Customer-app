@@ -6,7 +6,11 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Truck } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import {
   Animated,
@@ -27,7 +31,7 @@ const CARD_WIDTH = width * 0.85;
 
 type Order = {
   id: string;
-  status: "Active" | "Completed";
+  status: "Active" | "Completed" | "Awaiting";
   subtitle: string;
   total: string;
 };
@@ -68,7 +72,6 @@ const QUICK_SERVICES = [
     featured: false,
   },
 ];
-
 
 const ORDERS: Order[] = [
   {
@@ -133,7 +136,7 @@ const HERO_SLIDES = [
   //   subtitle: "Fresh • Hygienic • Affordable",
   //   image: require("../../../../assets/images/hero/onsite.png"),
   // },
-    {
+  {
     key: "laundry-2",
     tag: "PREMIUM",
     title: "Luxury Garment Care",
@@ -152,6 +155,28 @@ export default function Home() {
   const insets = useSafeAreaInsets();
 
   const { setAuthUser, logout } = useAuthContext();
+
+  // const { user } = useAuth();
+
+  // if (!user) return null;
+
+  // const phone = `91${user?.user?.phone}`;
+
+  // const [activity, setActivity] = useState<any>([]);
+
+  // const setOrdersAndPickups = async () => {
+  //   const data = await getOrdersApi(phone);
+
+  //   setActivity(data);
+  // };
+
+  // useFocusEffect(
+  //   useCallback(() => {
+  //     setOrdersAndPickups();
+  //   }, []),
+  // );
+
+  // console.log("this is the activityeeeeee==>>", activity);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -177,7 +202,6 @@ export default function Home() {
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
   ).current;
-
 
   const sparkleAnim = useRef(new Animated.Value(0)).current;
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
@@ -353,9 +377,11 @@ export default function Home() {
   const getUnifiedStatus = (status: string) => {
     const activeStatuses = ["Washing", "Picked Up", "In Transit", "Processing"];
     const completedStatuses = ["Delivered"];
+    const pickupStatuses = ["Pickup"];
 
     if (activeStatuses.includes(status)) return "Active";
     if (completedStatuses.includes(status)) return "Completed";
+    if (pickupStatuses.includes(status)) return "Awaiting";
 
     return "Active"; // fallback
   };
@@ -408,19 +434,19 @@ export default function Home() {
 
   return (
     <SafeAreaProvider>
-
       <StatusBar
         style={isDark ? "light" : "dark"}
         backgroundColor={theme.background}
         translucent={false} // safer: content won't draw under status bar
       />
-      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: theme.background }]}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           <View style={{ height: 12 }} />
-
 
           {/* HERO CAROUSEL */}
           <ScrollView
@@ -439,7 +465,6 @@ export default function Home() {
             }}
           >
             {HERO_SLIDES.map((slide, i) => {
-
               const heroStyle = {
                 transform: [
                   {
@@ -467,7 +492,6 @@ export default function Home() {
                     { backgroundColor: theme.card, borderColor: theme.border },
                   ]}
                 >
-
                   <Animated.Image
                     source={slide.image}
                     style={styles.heroImage}
@@ -485,8 +509,6 @@ export default function Home() {
                       <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
                     )}
                   </View>
-
-
                 </Animated.View>
               );
             })}
@@ -599,8 +621,9 @@ export default function Home() {
                         },
                       ]}
                       activeOpacity={0.85}
-                      onPress={() => router.push(`/(customer)/services/${s.slug}`)
-}
+                      onPress={() =>
+                        router.push(`/(customer)/services/${s.slug}`)
+                      }
                     >
                       <Animated.View
                         style={{
@@ -651,7 +674,7 @@ export default function Home() {
 
           {/* Recent Activity */}
           <Animated.View style={{ opacity: fadeAnim }}>
-            <View style={[styles.section, { marginTop: 6 }]}>
+            <View style={[styles.section, { marginTop: 20 }]}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Recent Activity
@@ -680,10 +703,14 @@ export default function Home() {
 
                       {(() => {
                         const unifiedStatus = getUnifiedStatus(o.status);
-                        const pillStyle =
-                          unifiedStatus === "Active"
-                            ? { bg: "#FEF3C7", text: "#92400E" } // amber
-                            : { bg: "#ECFDF5", text: "#065F46" }; // green
+                        let pillStyle;
+                        if (unifiedStatus === "Active") {
+                          pillStyle = { bg: "#FEF3C7", text: "#92400E" }; // amber
+                        } else if (unifiedStatus === "Completed") {
+                          pillStyle = { bg: "#ECFDF5", text: "#065F46" }; // green
+                        } else if (unifiedStatus === "Awaiting") {
+                          pillStyle = { bg: "#E0E7FF", text: "#3730A3" }; // blue/purple
+                        }
 
                         return (
                           <View
@@ -705,7 +732,9 @@ export default function Home() {
                       })()}
                     </View>
                     {/* Rich Status Visual */}
-                    <View style={{ marginTop: 12 }}>{renderStatusVisual(o)}</View>
+                    <View style={{ marginTop: 12 }}>
+                      {renderStatusVisual(o)}
+                    </View>
 
                     <View style={styles.orderFooter}>
                       <View style={styles.orderActions}>
@@ -1006,7 +1035,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
 
-
   heroTag: {
     fontSize: 12,
     fontWeight: "700",
@@ -1028,5 +1056,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#D1FAE5",
   },
-
 });

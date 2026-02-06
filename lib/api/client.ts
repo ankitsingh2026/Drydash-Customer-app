@@ -7,6 +7,12 @@ export const apiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+export const oldApiClient = axios.create({
+  baseURL: "https://api.drydash.in/api/v1",
+  // baseURL: "http://localhost:5001/api",
+  headers: { "Content-Type": "application/json" },
+});
+
 apiClient.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
