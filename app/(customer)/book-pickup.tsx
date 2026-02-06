@@ -157,9 +157,11 @@ export default function BookPickup() {
 
   console.log("this is valueeeess", user?.user?.id);
 
-  const auth_id = user?.user?.id;
+  console.log("this is valueeeess", user?.id);
 
-  const phone = `91` + user?.user?.phone; //need to look
+  const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+
+  const phone = `91` + user?.user?.phone ? user?.user?.phone : user?.phone; //need to look
 
   console.log("this is phoneeee==>>", phone);
 
