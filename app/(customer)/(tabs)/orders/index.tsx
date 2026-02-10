@@ -1,3 +1,4 @@
+import RecentActivityCarousel from "@/components/RecentActivityCarousel"; // adjust path
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,13 +43,42 @@ export default function Orders() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  if (!user) return null;
+  if (!user) return <OrdersScreenSkeleton />;
 
   const phone = `91${user?.user?.phone ? user?.user?.phone : user?.phone}`;
 
   console.log("this is the phoneeee===>>>", phone);
 
   /* ================= HELPERS ================= */
+
+  const activityTimeline = useMemo(() => {
+    return [...orders, ...pickups]
+      .map((item) => ({
+        id: item.order_id || item._id,
+
+        // 🔥 MAP YOUR BACKEND STATUS HERE
+        status:
+          item.status === "assigned"
+            ? "Picked Up"
+            : item.status === "in_transit"
+              ? "In Transit"
+              : item.status === "processing"
+                ? "Processing"
+                : item.status === "washing"
+                  ? "Washing"
+                  : null,
+
+        progress:
+          item.status === "assigned"
+            ? 0.4
+            : item.status === "in_transit"
+              ? 0.7
+              : item.status === "processing"
+                ? 0.9
+                : 0.3,
+      }))
+      .filter(Boolean); // remove null
+  }, [orders, pickups]);
 
   const mapStatus = (status: string): OrderStatus =>
     status === "delivered" ? "Completed" : "Active";
@@ -158,6 +188,20 @@ export default function Orders() {
       getCustomerPickupList();
     }, []),
   );
+
+  const timeline = useMemo(() => {
+    return [...orders, ...pickups]
+      .map((item) => ({
+        ...item,
+        activityDate: item.createdAt || item.pickup_date,
+        type: item.order_id ? "order" : "pickup",
+      }))
+      .sort(
+        (a, b) =>
+          new Date(b.activityDate).getTime() -
+          new Date(a.activityDate).getTime(),
+      );
+  }, [orders, pickups]);
 
   /* ================= ANIMATIONS ================= */
 
@@ -512,6 +556,9 @@ export default function Orders() {
           );
         })}
       </ScrollView>
+
+      <RecentActivityCarousel messages={activityTimeline} />
+
     </View>
   );
 }
@@ -521,7 +568,7 @@ export default function Orders() {
 const styles = StyleSheet.create({
   container: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 180,
   },
   headerContainer: {
     marginBottom: 12,

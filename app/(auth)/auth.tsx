@@ -279,7 +279,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                    styles.progressDotActive,
+                  styles.progressDotActive,
                 ]}
               />
             </View>
@@ -292,11 +292,12 @@ export default function AuthScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              {step === "MOBILE" && "Login or create a new account"}
-              {step === "OTP" && `Code sent to +91 ${phone}`}
-              {step === "REGISTER" && "Just a few more details"}
-              {step === "SUCCESS" && "Your account is ready"}
+              {step === "MOBILE" && "Use your WhatsApp number to continue."}
+              {step === "OTP" && `OTP sent to WhatsApp • +91 ${phone}`}
+              {step === "REGISTER" && "Just a few details to finish setup."}
+              {step === "SUCCESS" && "Your account is ready!"}
             </Text>
+
 
             {/* FORM */}
             {step === "MOBILE" && (
