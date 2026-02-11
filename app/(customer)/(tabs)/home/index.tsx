@@ -36,12 +36,6 @@ type Order = {
   total: string;
 };
 
-// const QUICK_SERVICES = [
-//   { key: "Shoe Spa", label: "Shoe Spa", icon: "sparkles", featured: true },
-//   { key: "Dry Clean", label: "Dry Clean", icon: "shirt", featured: false },
-//   { key: "Laundry", label: "Laundry", icon: "water", featured: false },
-//   { key: "On Site", label: "On Site", icon: "hammer", featured: false },
-// ];
 const QUICK_SERVICES = [
   {
     key: "Shoe Spa",
@@ -65,9 +59,9 @@ const QUICK_SERVICES = [
     featured: false,
   },
   {
-    key: "On Site",
-    slug: "onsite",
-    label: "On Site",
+    key: "Doorstep",
+    slug: "doorstep",
+    label: "Doorstep",
     icon: "hammer",
     featured: false,
   },
@@ -106,7 +100,7 @@ const HERO_SLIDES = [
     tag: "SHOE SPA",
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
-    image: require("../../../../assets/images/hero/shoespa.png"),
+    image: require("../../../../assets/images/hero/hero_shoespa.jpg"),
   },
   {
     key: "shoe-2",
@@ -125,9 +119,9 @@ const HERO_SLIDES = [
   {
     key: "onsite-1",
     tag: "ON-SITE",
-    title: "Onsite Cleaning Service",
+    title: "Doorstep Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
-    image: require("../../../../assets/images/hero/onsite.png"),
+    image: require("../../../../assets/images/hero/hero_onsite.jpg"),
   },
   //   {
   //   key: "wash-1",
@@ -245,7 +239,7 @@ export default function Home() {
         });
         return next;
       });
-    }, 4000);
+    }, 6000);
 
     return () => clearInterval(interval);
   }, [loading]);
@@ -353,85 +347,12 @@ export default function Home() {
     }),
   ).current;
 
-  const getStatusStyle = (status: Order["status"], theme: any) => {
-    // keep your existing getStatusStyle if you have it; fallback styles below
-    const map = {
-      Washing: { bg: "#E8F6FF", text: "#0369A1" },
-      "Picked Up": { bg: "#FFF7ED", text: "#9A3412" },
-      "In Transit": { bg: "#F3F4F6", text: "#374151" },
-      Delivered: { bg: "#ECFBF1", text: "#065F46" },
-      Cancelled: { bg: "#FEE2E2", text: "#991B1B" },
-      Processing: { bg: "#F5F3FF", text: "#5B21B6" },
-      default: {
-        bg: theme.primary + "20" || "#E5E7EB",
-        text: theme.text || "#111",
-      },
-    };
-    return map[status] || map.default;
-  };
-
+ 
   // Show skeleton loader while loading
   if (loading) {
     return <HomeScreenSkeleton />;
   }
-  const getUnifiedStatus = (status: string) => {
-    const activeStatuses = ["Washing", "Picked Up", "In Transit", "Processing"];
-    const completedStatuses = ["Delivered"];
-    const pickupStatuses = ["Pickup"];
-
-    if (activeStatuses.includes(status)) return "Active";
-    if (completedStatuses.includes(status)) return "Completed";
-    if (pickupStatuses.includes(status)) return "Awaiting";
-
-    return "Active"; // fallback
-  };
-
-  const renderStatusVisual = (o: Order) => {
-    let icon: any = "ellipse-outline";
-
-    if (o.status === "Washing") icon = "water-outline";
-    else if (o.status === "Picked Up") icon = "arrow-up-circle-outline";
-    else if (o.status === "In Transit") icon = "car-outline";
-    else if (o.status === "Delivered") icon = "checkmark-done-circle-outline";
-    else if (o.status === "Processing") icon = "time-outline";
-
-    const statusStyle = getStatusStyle(o.status, theme);
-    const progress = Math.max(0, Math.min(1, o.progress ?? 0));
-
-    return (
-      <View style={styles.statusContainer}>
-        <View style={styles.statusLeft}>
-          <View
-            style={[
-              styles.statusIconWrap,
-              { backgroundColor: statusStyle.bg, borderColor: theme.border },
-            ]}
-          >
-            <Ionicons name={icon} size={18} color={statusStyle.text} />
-          </View>
-
-          <View style={styles.statusTextBlock}>
-            <Text style={[styles.statusLabel, { color: theme.text }]}>
-              {o.status}
-            </Text>
-
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${progress * 100}%`,
-                    backgroundColor: theme.primary,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
+ 
   return (
     <SafeAreaProvider>
       <StatusBar
@@ -442,28 +363,27 @@ export default function Home() {
       <SafeAreaView
         style={[styles.root, { backgroundColor: theme.background }]}
       >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+        <View
+       style={styles.scrollContent}
         >
           <View style={{ height: 12 }} />
 
           {/* HERO CAROUSEL */}
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            snapToInterval={CARD_WIDTH + 16}
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16 }}
-            onMomentumScrollEnd={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / (CARD_WIDTH + 16),
-              );
-              setCurrentIndex(index);
-            }}
-          >
+           <ScrollView
+      ref={scrollViewRef}
+      horizontal
+      pagingEnabled
+      snapToInterval={CARD_WIDTH + 16}
+      decelerationRate="fast"
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ paddingHorizontal: 16 }}
+      onMomentumScrollEnd={(event) => {
+        const index = Math.round(
+          event.nativeEvent.contentOffset.x / (CARD_WIDTH + 16)
+        );
+        setCurrentIndex(index);
+      }}
+    >
             {HERO_SLIDES.map((slide, i) => {
               const heroStyle = {
                 transform: [
@@ -592,6 +512,9 @@ export default function Home() {
               <Text style={[styles.offerTitle, { color: theme.text }]}>
                 20% Off on Your First Order
               </Text>
+              <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
+                <Text style={styles.claimText}>Claim Now</Text>
+              </TouchableOpacity>
             </View>
           </Animated.View>
 
@@ -600,7 +523,7 @@ export default function Home() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Quick Services
+                  Service Catalog
                 </Text>
               </View>
 
@@ -672,125 +595,10 @@ export default function Home() {
             </View>
           </Animated.View>
 
-          {/* Recent Activity */}
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <View style={[styles.section, { marginTop: 20 }]}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Recent Activity
-                </Text>
-              </View>
 
-              {messages.map((o) => {
-                const statusStyle = getStatusStyle(o.status, theme);
-                return (
-                  <View
-                    key={o.id}
-                    style={[
-                      styles.orderCard,
-                      {
-                        backgroundColor: theme.card,
-                        borderColor: theme.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.orderRow}>
-                      <View>
-                        <Text style={[styles.orderId, { color: theme.text }]}>
-                          Order #{o.id}
-                        </Text>
-                      </View>
-
-                      {(() => {
-                        const unifiedStatus = getUnifiedStatus(o.status);
-                        let pillStyle;
-                        if (unifiedStatus === "Active") {
-                          pillStyle = { bg: "#FEF3C7", text: "#92400E" }; // amber
-                        } else if (unifiedStatus === "Completed") {
-                          pillStyle = { bg: "#ECFDF5", text: "#065F46" }; // green
-                        } else if (unifiedStatus === "Awaiting") {
-                          pillStyle = { bg: "#E0E7FF", text: "#3730A3" }; // blue/purple
-                        }
-
-                        return (
-                          <View
-                            style={[
-                              styles.statusPill,
-                              { backgroundColor: pillStyle.bg },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.statusText,
-                                { color: pillStyle.text },
-                              ]}
-                            >
-                              {unifiedStatus}
-                            </Text>
-                          </View>
-                        );
-                      })()}
-                    </View>
-                    {/* Rich Status Visual */}
-                    <View style={{ marginTop: 12 }}>
-                      {renderStatusVisual(o)}
-                    </View>
-
-                    <View style={styles.orderFooter}>
-                      <View style={styles.orderActions}>
-                        {[
-                          "Active",
-                          "In Transit",
-                          "Washing",
-                          "Processing",
-                        ].includes(o.status)}
-
-                        <TouchableOpacity
-                          style={[
-                            styles.secondarySmall,
-                            {
-                              backgroundColor: isDark ? "#0e1925" : "#c6ecd7",
-                            },
-                          ]}
-                          onPress={() => router.push(`/orders/${o.id}`)}
-                        >
-                          <Text
-                            style={[
-                              styles.secondarySmallText,
-                              { color: theme.text },
-                            ]}
-                          >
-                            View Details
-                          </Text>
-                        </TouchableOpacity>
-
-                        {!o.paid ? (
-                          <TouchableOpacity
-                            style={[styles.payNowButton]}
-                            onPress={() => router.push(`/orders/${o.id}/pay`)}
-                          >
-                            <Text style={styles.payNowText}>Pay now</Text>
-                          </TouchableOpacity>
-                        ) : (
-                          <View style={styles.paidBadge}>
-                            <Ionicons
-                              name="checkmark-circle"
-                              size={14}
-                              color="#10B981"
-                            />
-                            <Text style={[styles.paidBadgeText]}>Paid</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </Animated.View>
 
           <View style={{ height: 60 }} />
-        </ScrollView>
+        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -798,7 +606,8 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingBottom: 160, paddingTop: 8 },
+  scrollContent: {  
+  paddingTop: 2, },
   header: { paddingHorizontal: 16, paddingTop: 8, marginBottom: 12 },
   brand: { fontSize: 12, letterSpacing: 2, fontWeight: "700", marginBottom: 2 },
   heading: { fontSize: 26, fontWeight: "800" },
@@ -875,6 +684,25 @@ const styles = StyleSheet.create({
   offerTag: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
   offerTitle: { fontSize: 18, fontWeight: "800", marginTop: 6 },
   section: { marginTop: 8, paddingHorizontal: 16 },
+  claimBtn: {
+    backgroundColor: "#D4AF37",
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+
+    shadowColor: "#D4AF37",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  claimText: {
+    color: "#0B1F1A",
+    fontWeight: "800",
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -968,66 +796,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  statusLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
 
-  statusIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 1,
-  },
-
-  statusTextBlock: { flex: 1 },
-
-  statusLabel: { fontWeight: "800", fontSize: 14 },
-
-  progressBar: {
-    marginTop: 8,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: "#E5E7EB",
-    overflow: "hidden",
-  },
-
-  progressFill: {
-    height: "100%",
-    borderRadius: 6,
-    width: "0%",
-  },
-
-  payNowButton: {
-    height: 38,
-    minWidth: 78,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 8,
-    backgroundColor: "#12af80",
-  },
-
-  payNowText: { fontWeight: "600", color: "#000" },
-
-  paidBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#d4e5ee",
-    backgroundColor: "#2c332d",
-  },
-
-  paidBadgeText: {
-    marginLeft: 6,
-    fontWeight: "700",
-    fontSize: 12,
-    color: "#fff",
-  },
   heroTextWrap: {
     paddingHorizontal: 16,
     paddingVertical: 12,

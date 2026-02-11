@@ -46,8 +46,8 @@ export default function WalletPage() {
   const [cards, setCards] = useState<
     { id: string; brand: string; last4: string; expiry: string }[]
   >([]);
-  const [upiId, setUpiId] = useState<string>(""); 
-  
+  const [upiId, setUpiId] = useState<string>("");
+
   const [showCardsSection, setShowCardsSection] = useState(true);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export default function WalletPage() {
     setLoading(true);
 
     try {
-     
+
       const resp = await fetch("/api/wallet/topup/phonepe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,7 +93,7 @@ export default function WalletPage() {
       }
 
       const payload = await resp.json();
-    
+
       if (payload.upiUri) {
         const opened = await openUrlSafe(payload.upiUri);
         if (!opened) {
@@ -105,15 +105,51 @@ export default function WalletPage() {
       } else if (payload.intentUri) {
         await openUrlSafe(payload.intentUri);
       } else if (payload.checkoutUrl) {
-        
+
         await openUrlSafe(payload.checkoutUrl);
       } else {
         throw new Error("No action available from server response");
       }
 
-   
+
     } catch (err: any) {
       Alert.alert("Top up failed", err.message || "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleTopUpWithPayU() {
+
+    const amt = Number(amount);
+
+    if (!amt || amt <= 0) {
+      Alert.alert("Invalid amount");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+
+      const resp = await fetch("/api/wallet/topup/payu", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: amt }),
+      });
+
+      const data = await resp.json();
+
+      if (!data.paymentUrl) {
+        throw new Error("Payment URL missing");
+      }
+
+      await Linking.openURL(data.paymentUrl);
+
+    } catch (err: any) {
+
+      Alert.alert("Payment failed", err.message);
+
     } finally {
       setLoading(false);
     }
@@ -167,7 +203,7 @@ export default function WalletPage() {
       }
     }
 
-   
+
   }
 
   // ======= Card save / show UI =======
@@ -231,7 +267,8 @@ export default function WalletPage() {
             <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.topUpBtn, { backgroundColor: theme.primary }]}
-              onPress={handleTopUpWithPhonePe}
+              // onPress={handleTopUpWithPhonePe}
+              onPress={handleTopUpWithPayU}
             >
               <Plus size={16} color="#000" />
               <Text style={styles.topUpText}>Top Up (PhonePe)</Text>
