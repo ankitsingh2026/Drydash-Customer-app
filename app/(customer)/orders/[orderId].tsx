@@ -1,4 +1,7 @@
+import PaymentWebView from "@/components/payments/PaymentWebView";
 import { getSingleOrderDetailssApi } from "@/features/orders/orders.api";
+import { createOrderPaymentApi } from "@/features/payment/payment.api";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useState } from "react";
@@ -17,12 +20,57 @@ export default function OrderReceipt() {
   const orderId =
     typeof params.orderId === "string" ? params.orderId : undefined;
 
+  console.log("this is the orderId", orderId);
+
   const { theme } = useTheme();
 
   const [singleOrderDetails, setSingleOrderDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentData, setPaymentData] = useState<any>(null);
+  const [showPaymentWebview, setShowPaymentWebview] = useState(false);
+
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  console.log("this is userrrr==>>", user);
+
+  const User = user?.user ? user?.user : user;
+
+  const email = User?.email;
+
+  console.log("this is the email===>>", email);
+
+  const paymentObj = {
+    orderId,
+    paymentMode: "upi",
+    email,
+  };
 
   /* ================= API ================= */
+
+  const handlePayNow = async () => {
+    try {
+      const res = await createOrderPaymentApi(paymentObj);
+
+      console.log("this is the ressss", res);
+
+      let data = res?.paymentData;
+
+      console.log("this is the dataaaa===>>>>>", data);
+
+      if (!data?.hash) {
+        alert("Payment init failed");
+        return;
+      }
+
+      setPaymentData(data);
+      setShowPaymentWebview(true);
+    } catch (e) {
+      console.log(e);
+      alert("Payment error");
+    }
+  };
 
   const getSingleOrderDetails = async () => {
     if (!orderId) return;
@@ -70,6 +118,28 @@ export default function OrderReceipt() {
       <View style={[styles.loader, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.text }}>Order not found</Text>
       </View>
+    );
+  }
+
+  /* ================= ADD STEP 4 HERE ================= */
+
+  console.log("this is the paymentDatab 1222", showPaymentWebview, orderId);
+
+  if (showPaymentWebview && paymentData && orderId) {
+    return (
+      <PaymentWebView
+        paymentData={paymentData}
+        orderId={orderId}
+        onSuccess={() => {
+          setShowPaymentWebview(false);
+          alert("Payment successful ✅");
+          getSingleOrderDetails();
+        }}
+        onFailure={() => {
+          setShowPaymentWebview(false);
+          alert("Payment failed");
+        }}
+      />
     );
   }
 
@@ -136,7 +206,7 @@ export default function OrderReceipt() {
             </Text>
           </View>
         ) : (
-          <view></view>
+          <View></View>
         )}
 
         <View style={styles.detailBlock}>
@@ -185,6 +255,23 @@ export default function OrderReceipt() {
             ₹{singleOrderDetails.price.toFixed(2)}
           </Text>
         </View>
+
+        {singleOrderDetails.paymentStatus !== "paid" && (
+          <TouchableOpacity
+            onPress={handlePayNow}
+            style={{
+              marginTop: 20,
+              backgroundColor: theme.primary,
+              paddingVertical: 14,
+              borderRadius: 12,
+              alignItems: "center",
+            }}
+          >
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
+              Pay Now ₹{singleOrderDetails.price.toFixed(2)}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </ScrollView>
   );

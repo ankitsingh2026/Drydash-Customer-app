@@ -1,5 +1,5 @@
 // app/screens/BookPickup.tsx
-import PickupMap from "@/components/maps/PickupMap.native";
+import PickupMap from "@/components/maps/PickupMap.web";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -155,13 +155,17 @@ export default function BookPickup() {
 
   const { firstName, lastName, id } = user;
 
-  console.log("this is valueeeess", user?.user?.id);
+  console.log("this is userrrr==>>", user);
 
-  console.log("this is valueeeess", user?.id);
+  const User = user?.user ? user?.user : user;
 
-  const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+  console.log("this is valueeeess", User?.id);
 
-  const phone = `91` + user?.user?.phone ? user?.user?.phone : user?.phone; //need to look
+  console.log("this is valueeeess", User?.id);
+
+  const auth_id = User?.id;
+
+  const phone = `91` + User?.phone;
 
   console.log("this is phoneeee==>>", phone);
 
@@ -1538,15 +1542,15 @@ export default function BookPickup() {
                     </View>
 
                     <PickupMap
-                      location={location}
-                      onSelect={(c) => {
-                        setLocation(c);
-                        setAddressForm((p) => ({
-                          ...p,
-                          latitude: String(c.latitude),
-                          longitude: String(c.longitude),
-                        }));
-                      }}
+                    // location={location}
+                    // onSelect={(c) => {
+                    //   setLocation(c);
+                    //   setAddressForm((p) => ({
+                    //     ...p,
+                    //     latitude: String(c.latitude),
+                    //     longitude: String(c.longitude),
+                    //   }));
+                    // }}
                     />
 
                     <TouchableOpacity

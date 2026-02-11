@@ -46,8 +46,8 @@ export const setupInterceptors = () => {
           const newRefreshToken = res.data.refreshToken;
 
           await AsyncStorage.multiSet([
-            ["accessToken", newAccessToken],
-            ["refreshToken", newRefreshToken],
+            ["accessToken", newAccessToken.access.token],
+            ["refreshToken", newRefreshToken.refresh.token],
           ]);
 
           apiClient.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
