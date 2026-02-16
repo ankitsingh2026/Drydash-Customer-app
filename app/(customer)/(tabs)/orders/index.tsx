@@ -1,4 +1,3 @@
-import RecentActivityCarousel from "@/components/RecentActivityCarousel"; // adjust path
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -557,8 +556,7 @@ export default function Orders() {
         })}
       </ScrollView>
 
-<!--       <RecentActivityCarousel messages={activityTimeline} />
- -->
+
     </View>
   );
 }
