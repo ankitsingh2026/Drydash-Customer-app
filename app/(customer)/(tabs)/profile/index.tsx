@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../../context/ThemeContext";
 
 const MENU_1 = [
@@ -69,7 +70,7 @@ export default function Profile() {
   }, []);
 
   return (
-    <View
+    <SafeAreaView
       style={{
         flex: 1,
         backgroundColor: theme.background,
@@ -166,7 +167,7 @@ export default function Profile() {
         <LogOut size={18} color="#EF4444" />
         <Text style={styles.logoutText}>Log Out</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -206,13 +207,13 @@ function MenuRow({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 16,
-    paddingTop: 24,
-    paddingBottom: 120,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
 
   header: {
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 10,
   },
 
   avatarWrapper: {
@@ -261,8 +262,8 @@ const styles = StyleSheet.create({
   },
 
   logoutBtn: {
-    marginTop: 20,
-    height: 52,
+    marginTop: 5,
+    height: 45,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",

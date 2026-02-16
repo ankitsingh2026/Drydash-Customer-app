@@ -29,12 +29,6 @@ import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.85;
 
-type Order = {
-  id: string;
-  status: "Active" | "Completed" | "Awaiting";
-  subtitle: string;
-  total: string;
-};
 
 const QUICK_SERVICES = [
   {
@@ -67,32 +61,6 @@ const QUICK_SERVICES = [
   },
 ];
 
-const ORDERS: Order[] = [
-  {
-    id: "2481",
-    status: "Washing",
-    subtitle: "2 items • Cotton",
-    total: "$38.50",
-    paid: false,
-    progress: 0.35,
-  },
-  {
-    id: "2480",
-    status: "In Transit",
-    subtitle: "3 items • Dry Clean",
-    total: "$25.00",
-    paid: true,
-    progress: 0.8,
-  },
-  {
-    id: "2479",
-    status: "Delivered",
-    subtitle: "Delivered • Nov 24",
-    total: "$52.75",
-    paid: true,
-    progress: 1,
-  },
-];
 
 const HERO_SLIDES = [
   {
@@ -100,49 +68,51 @@ const HERO_SLIDES = [
     tag: "SHOE SPA",
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
-    image: require("../../../../assets/images/hero/hero_shoespa.jpg"),
+    image: {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero_shoespa.jpg",
+    },
   },
   {
     key: "shoe-2",
     tag: "SHOE CARE",
     title: "Sneaker & Leather Care",
     subtitle: "Whitening • Polishing • Protection",
-    image: require("../../../../assets/images/hero/shoespa1.jpg"),
+    image: {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/shoespa1.jpg",
+    },
   },
   {
     key: "laundry-1",
     tag: "LAUNDRY",
     title: "Dry Cleaning & Steam Press",
     subtitle: "Formal • Ethnic • Delicates",
-    image: require("../../../../assets/images/hero/laundry2.png"),
+    image: {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/laundry2.jpg",
+    },
   },
   {
     key: "onsite-1",
     tag: "ON-SITE",
     title: "Doorstep Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
-    image: require("../../../../assets/images/hero/hero_onsite.jpg"),
+    image: {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero_onsite.jpg",
+    },
   },
-  //   {
-  //   key: "wash-1",
-  //   tag: "WASH & FOLD",
-  //   title: "Everyday Laundry",
-  //   subtitle: "Fresh • Hygienic • Affordable",
-  //   image: require("../../../../assets/images/hero/onsite.png"),
-  // },
   {
     key: "laundry-2",
     tag: "PREMIUM",
     title: "Luxury Garment Care",
     subtitle: "Silk • Wool • Designer Wear",
-    image: require("../../../../assets/images/hero/premium.png"),
+    image: {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/premium.jpg",
+    },
   },
 ];
 
 export default function Home() {
   const { theme, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
-  const [messages, setMessages] = useState<Order[]>(ORDERS);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -150,27 +120,6 @@ export default function Home() {
 
   const { setAuthUser, logout } = useAuthContext();
 
-  // const { user } = useAuth();
-
-  // if (!user) return null;
-
-  // const phone = `91${user?.user?.phone}`;
-
-  // const [activity, setActivity] = useState<any>([]);
-
-  // const setOrdersAndPickups = async () => {
-  //   const data = await getOrdersApi(phone);
-
-  //   setActivity(data);
-  // };
-
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     setOrdersAndPickups();
-  //   }, []),
-  // );
-
-  // console.log("this is the activityeeeeee==>>", activity);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -434,6 +383,7 @@ export default function Home() {
             })}
           </ScrollView>
           {/* Swipe to Book */}
+          
           <Animated.View
             style={[
               styles.swipeContainerWrap,
@@ -468,55 +418,8 @@ export default function Home() {
                   Swipe to Book Pickup
                 </Text>
               </View>
-
-              <Animated.View
-                style={[
-                  styles.swipeDraggable,
-                  {
-                    transform: [{ translateX: dragX }],
-                    backgroundColor: theme.primary,
-                  },
-                ]}
-                {...panResponder.panHandlers}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={onPressBook}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Truck size={20} color="#000" />
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-          </Animated.View>
-
           {/* Offer Card */}
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <View
-              style={[
-                styles.offerCard,
-                {
-                  backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
-                  borderColor: "#D4AF37",
-                },
-              ]}
-            >
-              <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
-                WELCOME OFFER
-              </Text>
-              <Text style={[styles.offerTitle, { color: theme.text }]}>
-                20% Off on Your First Order
-              </Text>
-              <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
-                <Text style={styles.claimText}>Claim Now</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
+       
 
           {/* Quick Services - Shoe Spa Featured */}
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -595,7 +498,28 @@ export default function Home() {
             </View>
           </Animated.View>
 
-
+      
+          <Animated.View style={{ opacity: fadeAnim }}>
+            <View
+              style={[
+                styles.offerCard,
+                {
+                  backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
+                  borderColor: "#D4AF37",
+                },
+              ]}
+            >
+              <Text style={[styles.offerTag, { color: "#D4AF37" }]}>
+                WELCOME OFFER
+              </Text>
+              <Text style={[styles.offerTitle, { color: theme.text }]}>
+                20% Off on Your First Order
+              </Text>
+              <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
+                <Text style={styles.claimText}>Claim Now</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
 
           <View style={{ height: 60 }} />
         </View>
