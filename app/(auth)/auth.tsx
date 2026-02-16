@@ -6,9 +6,12 @@ import {
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
+import * as Application from "expo-application";
+import * as Contacts from "expo-contacts";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -20,6 +23,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
@@ -49,6 +53,97 @@ export default function AuthScreen() {
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
 
+  // ============ AUTO-FETCH PHONE NUMBER ============
+  useEffect(() => {
+    autoFetchPhoneNumber();
+  }, []);
+
+  const autoFetchPhoneNumber = async () => {
+    try {
+      // Method 1: Try to get from device (Android only)
+      if (Platform.OS === "android") {
+        const phoneNumber = await Application.getAndroidId(); // This won't give phone, but shows the pattern
+        // You'd need native module for actual phone number
+      }
+
+      // Method 2: Use contact picker as fallback
+      // This will be called manually by user if auto-fetch fails
+    } catch (error) {
+      console.log("Auto-fetch phone failed:", error);
+    }
+  };
+
+  const pickPhoneFromContacts = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please grant contacts permission to auto-fill your number"
+        );
+        return;
+      }
+
+      // Get device owner contact (usually first contact on many devices)
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+      });
+
+      if (data.length > 0 && data[0].phoneNumbers) {
+        const phoneNumber = data[0].phoneNumbers[0].number?.replace(/\D/g, "");
+        if (phoneNumber && phoneNumber.length === 10) {
+          setPhone(phoneNumber);
+        }
+      }
+    } catch (error) {
+      console.log("Contact picker error:", error);
+    }
+  };
+
+  // ============ AUTO-FILL USER DETAILS ============
+  const autoFillUserDetails = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Grant contacts permission to auto-fill your details"
+        );
+        return;
+      }
+
+      // Get user's own contact (ME card on iOS, primary contact on Android)
+      const { data } = await Contacts.getContactsAsync({
+        fields: [
+          Contacts.Fields.Name,
+          Contacts.Fields.FirstName,
+          Contacts.Fields.LastName,
+          Contacts.Fields.Emails,
+          Contacts.Fields.Image,
+        ],
+      });
+
+      if (data.length > 0) {
+        const userContact = data[0];
+
+        if (userContact.firstName) {
+          setFirstName(userContact.firstName);
+        }
+        if (userContact.lastName) {
+          setLastName(userContact.lastName);
+        }
+        if (userContact.emails && userContact.emails.length > 0) {
+          setEmail(userContact.emails[0].email || "");
+        }
+        if (userContact.image) {
+          setAvatar(userContact.image.uri);
+        }
+      }
+    } catch (error) {
+      console.log("Auto-fill details error:", error);
+    }
+  };
+
   // Animate on step change
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -73,6 +168,11 @@ export default function AuthScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+
+    // Auto-fill user details when reaching REGISTER step
+    if (step === "REGISTER") {
+      autoFillUserDetails();
+    }
   }, [step]);
 
   // Shake animation for errors
@@ -122,14 +222,15 @@ export default function AuthScreen() {
 
   const { saveTokens, setAuthUser } = useAuth();
 
-  const verifyOtp = async () => {
-    if (otp.length !== 6) return setError("Enter valid 6-digit OTP");
+  const verifyOtp = async (otpValue?: string) => {
+    const otpToVerify = otpValue || otp;
+    if (otpToVerify.length !== 6) return setError("Enter valid 6-digit OTP");
 
     try {
       setLoading(true);
       setError(null);
 
-      const res = await verifyOtpApi(phone, otp);
+      const res = await verifyOtpApi(phone, otpToVerify);
 
       if (!res.isNewUser) {
         await saveTokens(res.tokens);
@@ -142,7 +243,6 @@ export default function AuthScreen() {
       console.log("this is check==>>", res.isNewUser);
 
       if (!res.isNewUser) {
-        // console.log("this isss",res.user)
         await setAuthUser(res.user);
         router.replace("/(customer)/(tabs)/home");
       } else {
@@ -154,6 +254,17 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
+
+  // Auto-verify OTP when it reaches 6 digits (for manual entry)
+  useEffect(() => {
+    if (otp.length === 6 && step === "OTP") {
+      // Small delay to allow user to see what they typed
+      const timer = setTimeout(() => {
+        verifyOtp(otp);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [otp]);
 
   const createAccount = async () => {
     if (!firstName.trim()) return setError("First name is required");
@@ -221,7 +332,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <View style={styles.outer}>
+    <SafeAreaView style={styles.outer}>
       {/* Gradient overlay */}
       <View style={styles.gradientOverlay} />
 
@@ -279,7 +390,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                  styles.progressDotActive,
+                    styles.progressDotActive,
                 ]}
               />
             </View>
@@ -298,17 +409,27 @@ export default function AuthScreen() {
               {step === "SUCCESS" && "Your account is ready!"}
             </Text>
 
-
             {/* FORM */}
             {step === "MOBILE" && (
-              <Input
-                icon="call-outline"
-                placeholder="Mobile number"
-                value={phone}
-                onChangeText={setPhone}
-                keyboardType="number-pad"
-                maxLength={10}
-              />
+              <>
+                <Input
+                  icon="call-outline"
+                  placeholder="Mobile number"
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="number-pad"
+                  maxLength={10}
+                  textContentType="telephoneNumber" // iOS autofill
+                />
+                {/* Auto-fill button */}
+                <TouchableOpacity
+                  onPress={pickPhoneFromContacts}
+                  style={styles.autoFillButton}
+                >
+                  <Ionicons name="download-outline" size={16} color="#34D399" />
+                  <Text style={styles.autoFillText}>Auto-fill my number</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {step === "OTP" && (
@@ -320,7 +441,19 @@ export default function AuthScreen() {
                   onChangeText={setOtp}
                   keyboardType="number-pad"
                   maxLength={6}
+                  textContentType="oneTimeCode" // iOS auto-fill OTP
+                  autoComplete="sms-otp" // Android auto-fill OTP
                 />
+
+                {/* Auto-read indicator */}
+                <View style={styles.autoReadIndicator}>
+                  <Ionicons name="shield-checkmark" size={14} color="#34D399" />
+                  <Text style={styles.autoReadText}>
+                    {Platform.OS === "ios"
+                      ? "OTP will be auto-suggested from Messages"
+                      : "OTP will be auto-filled from SMS"}
+                  </Text>
+                </View>
 
                 <View style={styles.otpActions}>
                   <TouchableOpacity
@@ -356,6 +489,18 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
+                {/* Auto-fill button */}
+                <TouchableOpacity
+                  onPress={autoFillUserDetails}
+                  style={styles.autoFillBanner}
+                >
+                  <Ionicons name="sparkles" size={18} color="#34D399" />
+                  <Text style={styles.autoFillBannerText}>
+                    Auto-fill from contacts
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color="#34D399" />
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
                   <View
                     style={[
@@ -379,13 +524,17 @@ export default function AuthScreen() {
                   placeholder="First name *"
                   value={firstName}
                   onChangeText={setFirstName}
+                  textContentType="givenName"
+                  autoComplete="name-given"
                 />
 
                 <Input
                   icon="person-outline"
-                  placeholder="Last name *"
+                  placeholder="Last name"
                   value={lastName}
                   onChangeText={setLastName}
+                  textContentType="familyName"
+                  autoComplete="name-family"
                 />
 
                 <Input
@@ -394,6 +543,8 @@ export default function AuthScreen() {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
                 />
               </>
             )}
@@ -435,8 +586,8 @@ export default function AuthScreen() {
                   step === "MOBILE"
                     ? sendOtp
                     : step === "OTP"
-                      ? verifyOtp
-                      : createAccount
+                    ? () => verifyOtp()
+                    : createAccount
                 }
                 activeOpacity={0.8}
               >
@@ -455,8 +606,8 @@ export default function AuthScreen() {
                       {step === "MOBILE"
                         ? "Send OTP"
                         : step === "OTP"
-                          ? "Verify & Continue"
-                          : "Create Account"}
+                        ? "Verify & Continue"
+                        : "Create Account"}
                     </Text>
                     <Ionicons
                       name="arrow-forward"
@@ -471,7 +622,7 @@ export default function AuthScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -619,6 +770,57 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     fontWeight: "500",
+  },
+
+  autoFillButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+
+  autoFillText: {
+    color: "#34D399",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 6,
+  },
+
+  autoReadIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+
+  autoReadText: {
+    color: "#34D399",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+
+  autoFillBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(52, 211, 153, 0.1)",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(52, 211, 153, 0.3)",
+  },
+
+  autoFillBannerText: {
+    color: "#34D399",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 8,
+    marginRight: 8,
+    flex: 1,
   },
 
   otpActions: {

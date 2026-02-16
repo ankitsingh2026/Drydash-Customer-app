@@ -1,4 +1,3 @@
-import RecentActivityCarousel from "@/components/RecentActivityCarousel"; // adjust path
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
@@ -557,7 +556,7 @@ export default function Orders() {
         })}
       </ScrollView>
 
-      <RecentActivityCarousel messages={activityTimeline} />
+      {/* <RecentActivityCarousel messages={activityTimeline} /> */}
 
     </View>
   );
@@ -579,21 +578,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: "800",
   },
   headerSubtitle: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: 10,
   },
   statsBox: {
-    padding: 12,
+    padding: 5,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
   },
   statsNumber: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: "800",
   },
   statsLabel: {
@@ -601,11 +600,11 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginTop: 16,
+    marginTop: 10,
   },
   filterRow: {
     flexDirection: "row",
-    marginVertical: 10,
+    marginVertical: 5,
   },
   filterTab: {
     paddingHorizontal: 15,
