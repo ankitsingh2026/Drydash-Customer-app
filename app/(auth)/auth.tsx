@@ -390,7 +390,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                    styles.progressDotActive,
+                  styles.progressDotActive,
                 ]}
               />
             </View>
@@ -408,6 +408,7 @@ export default function AuthScreen() {
               {step === "REGISTER" && "Just a few details to finish setup."}
               {step === "SUCCESS" && "Your account is ready!"}
             </Text>
+
 
             {/* FORM */}
             {step === "MOBILE" && (
