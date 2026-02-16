@@ -418,32 +418,8 @@ export default function Home() {
                   Swipe to Book Pickup
                 </Text>
               </View>
-
-              <Animated.View
-                style={[
-                  styles.swipeDraggable,
-                  {
-                    transform: [{ translateX: dragX }],
-                    backgroundColor: theme.primary,
-                  },
-                ]}
-                {...panResponder.panHandlers}
-              >
-                <TouchableOpacity
-                  activeOpacity={0.9}
-                  onPress={onPressBook}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Truck size={20} color="#000" />
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-          </Animated.View>
+          {/* Offer Card */}
+       
 
           {/* Quick Services - Shoe Spa Featured */}
           <Animated.View style={{ opacity: fadeAnim }}>
