@@ -6,10 +6,9 @@ import {
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import * as Application from "expo-application";
-import * as Contacts from "expo-contacts";
+import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-hint";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -21,7 +20,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -53,97 +52,6 @@ export default function AuthScreen() {
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
 
-  // ============ AUTO-FETCH PHONE NUMBER ============
-  useEffect(() => {
-    autoFetchPhoneNumber();
-  }, []);
-
-  const autoFetchPhoneNumber = async () => {
-    try {
-      // Method 1: Try to get from device (Android only)
-      if (Platform.OS === "android") {
-        const phoneNumber = await Application.getAndroidId(); // This won't give phone, but shows the pattern
-        // You'd need native module for actual phone number
-      }
-
-      // Method 2: Use contact picker as fallback
-      // This will be called manually by user if auto-fetch fails
-    } catch (error) {
-      console.log("Auto-fetch phone failed:", error);
-    }
-  };
-
-  const pickPhoneFromContacts = async () => {
-    try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please grant contacts permission to auto-fill your number"
-        );
-        return;
-      }
-
-      // Get device owner contact (usually first contact on many devices)
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers],
-      });
-
-      if (data.length > 0 && data[0].phoneNumbers) {
-        const phoneNumber = data[0].phoneNumbers[0].number?.replace(/\D/g, "");
-        if (phoneNumber && phoneNumber.length === 10) {
-          setPhone(phoneNumber);
-        }
-      }
-    } catch (error) {
-      console.log("Contact picker error:", error);
-    }
-  };
-
-  // ============ AUTO-FILL USER DETAILS ============
-  const autoFillUserDetails = async () => {
-    try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Grant contacts permission to auto-fill your details"
-        );
-        return;
-      }
-
-      // Get user's own contact (ME card on iOS, primary contact on Android)
-      const { data } = await Contacts.getContactsAsync({
-        fields: [
-          Contacts.Fields.Name,
-          Contacts.Fields.FirstName,
-          Contacts.Fields.LastName,
-          Contacts.Fields.Emails,
-          Contacts.Fields.Image,
-        ],
-      });
-
-      if (data.length > 0) {
-        const userContact = data[0];
-
-        if (userContact.firstName) {
-          setFirstName(userContact.firstName);
-        }
-        if (userContact.lastName) {
-          setLastName(userContact.lastName);
-        }
-        if (userContact.emails && userContact.emails.length > 0) {
-          setEmail(userContact.emails[0].email || "");
-        }
-        if (userContact.image) {
-          setAvatar(userContact.image.uri);
-        }
-      }
-    } catch (error) {
-      console.log("Auto-fill details error:", error);
-    }
-  };
-
   // Animate on step change
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -169,11 +77,67 @@ export default function AuthScreen() {
       }),
     ]).start();
 
-    // Auto-fill user details when reaching REGISTER step
-    if (step === "REGISTER") {
-      autoFillUserDetails();
-    }
   }, [step]);
+
+  useEffect(()=>{
+    handleGetPhoneNumbers()
+  }, [])
+
+
+
+
+  //auto number detection
+  const handleGetPhoneNumbers = async () => {
+
+    if (Platform.OS === 'ios') {
+      Alert.alert(
+        'Manual Entry Required',
+        'iOS does not allow automatic phone number retrieval. Please enter your number manually.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'OK',
+            onPress: (text) => {
+              if (text) {
+                
+              }
+            },
+          },
+        ],
+        {
+          type: 'plain-text',
+          textInput: {
+            placeholder: 'Phone number',
+            keyboardType: 'phone-pad',
+          },
+        }
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Android: Get phone numbers
+    try {
+
+      const number = await showPhoneNumberHint({
+        showGuidanceDialog: true,
+      });
+
+      if (number) {
+        setPhone(number)
+      } else {
+          Alert.alert(`this is the number in else block ${number}`)
+      }
+
+    } catch (error) {
+
+
+    } finally {
+    }
+  };
 
   // Shake animation for errors
   useEffect(() => {
@@ -219,6 +183,7 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
+
 
   const { saveTokens, setAuthUser } = useAuth();
 
@@ -419,17 +384,10 @@ export default function AuthScreen() {
                   value={phone}
                   onChangeText={setPhone}
                   keyboardType="number-pad"
-                  maxLength={10}
+                  maxLength={13}
                   textContentType="telephoneNumber" // iOS autofill
                 />
-                {/* Auto-fill button */}
-                <TouchableOpacity
-                  onPress={pickPhoneFromContacts}
-                  style={styles.autoFillButton}
-                >
-                  <Ionicons name="download-outline" size={16} color="#34D399" />
-                  <Text style={styles.autoFillText}>Auto-fill my number</Text>
-                </TouchableOpacity>
+  
               </>
             )}
 
@@ -490,19 +448,7 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
-                {/* Auto-fill button */}
-                <TouchableOpacity
-                  onPress={autoFillUserDetails}
-                  style={styles.autoFillBanner}
-                >
-                  <Ionicons name="sparkles" size={18} color="#34D399" />
-                  <Text style={styles.autoFillBannerText}>
-                    Auto-fill from contacts
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color="#34D399" />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
+           <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
                   <View
                     style={[
                       styles.avatarCircle,
@@ -587,8 +533,8 @@ export default function AuthScreen() {
                   step === "MOBILE"
                     ? sendOtp
                     : step === "OTP"
-                    ? () => verifyOtp()
-                    : createAccount
+                      ? () => verifyOtp()
+                      : createAccount
                 }
                 activeOpacity={0.8}
               >
@@ -607,8 +553,8 @@ export default function AuthScreen() {
                       {step === "MOBILE"
                         ? "Send OTP"
                         : step === "OTP"
-                        ? "Verify & Continue"
-                        : "Create Account"}
+                          ? "Verify & Continue"
+                          : "Create Account"}
                     </Text>
                     <Ionicons
                       name="arrow-forward"
