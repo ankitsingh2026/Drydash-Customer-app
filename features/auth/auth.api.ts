@@ -1,8 +1,8 @@
 import { apiClient } from "@/lib/api/client";
 import axios from "axios";
 
-export const sendOtpApi = async (phone: string) => {
-  await apiClient.post("/v1/auth/send-otp", { phone });
+export const sendOtpApi = async (phone: string, hash: string) => {
+  await apiClient.post("/v1/auth/send-otp", { phone, hash });
 };
 
 export const verifyOtpApi = async (phone: string, otp: string) => {
