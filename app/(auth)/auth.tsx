@@ -5,11 +5,11 @@ import {
 } from "@/features/auth/auth.api";
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
+import { useSmsUserConsent } from '@eabdullazyanov/react-native-sms-user-consent';
 import { Ionicons } from "@expo/vector-icons";
-import * as Application from "expo-application";
-import * as Contacts from "expo-contacts";
+import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-hint";
 import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
@@ -21,10 +21,10 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
+import OtpVerify from 'react-native-otp-verify';
 import { SafeAreaView } from "react-native-safe-area-context";
-
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
 export default function AuthScreen() {
@@ -36,6 +36,7 @@ export default function AuthScreen() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [hash, setHash] = useState<string[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,7 @@ export default function AuthScreen() {
   const [resendTimer, setResendTimer] = useState(0);
 
   const [tempToken, setTempToken] = useState<Tokens | null>(null);
+  const phoneInputRef = useRef<TextInput>(null);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -52,97 +54,7 @@ export default function AuthScreen() {
   const errorShake = useRef(new Animated.Value(0)).current;
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
-
-  // ============ AUTO-FETCH PHONE NUMBER ============
-  useEffect(() => {
-    autoFetchPhoneNumber();
-  }, []);
-
-  const autoFetchPhoneNumber = async () => {
-    try {
-      // Method 1: Try to get from device (Android only)
-      if (Platform.OS === "android") {
-        const phoneNumber = await Application.getAndroidId(); // This won't give phone, but shows the pattern
-        // You'd need native module for actual phone number
-      }
-
-      // Method 2: Use contact picker as fallback
-      // This will be called manually by user if auto-fetch fails
-    } catch (error) {
-      console.log("Auto-fetch phone failed:", error);
-    }
-  };
-
-  const pickPhoneFromContacts = async () => {
-    try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Please grant contacts permission to auto-fill your number"
-        );
-        return;
-      }
-
-      // Get device owner contact (usually first contact on many devices)
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers],
-      });
-
-      if (data.length > 0 && data[0].phoneNumbers) {
-        const phoneNumber = data[0].phoneNumbers[0].number?.replace(/\D/g, "");
-        if (phoneNumber && phoneNumber.length === 10) {
-          setPhone(phoneNumber);
-        }
-      }
-    } catch (error) {
-      console.log("Contact picker error:", error);
-    }
-  };
-
-  // ============ AUTO-FILL USER DETAILS ============
-  const autoFillUserDetails = async () => {
-    try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission Required",
-          "Grant contacts permission to auto-fill your details"
-        );
-        return;
-      }
-
-      // Get user's own contact (ME card on iOS, primary contact on Android)
-      const { data } = await Contacts.getContactsAsync({
-        fields: [
-          Contacts.Fields.Name,
-          Contacts.Fields.FirstName,
-          Contacts.Fields.LastName,
-          Contacts.Fields.Emails,
-          Contacts.Fields.Image,
-        ],
-      });
-
-      if (data.length > 0) {
-        const userContact = data[0];
-
-        if (userContact.firstName) {
-          setFirstName(userContact.firstName);
-        }
-        if (userContact.lastName) {
-          setLastName(userContact.lastName);
-        }
-        if (userContact.emails && userContact.emails.length > 0) {
-          setEmail(userContact.emails[0].email || "");
-        }
-        if (userContact.image) {
-          setAvatar(userContact.image.uri);
-        }
-      }
-    } catch (error) {
-      console.log("Auto-fill details error:", error);
-    }
-  };
+  const retrievedCode = useSmsUserConsent();
 
   // Animate on step change
   useEffect(() => {
@@ -169,12 +81,87 @@ export default function AuthScreen() {
       }),
     ]).start();
 
-    // Auto-fill user details when reaching REGISTER step
-    if (step === "REGISTER") {
-      autoFillUserDetails();
-    }
   }, [step]);
 
+
+
+  useEffect(() => {
+    setHGasing()
+    handleGetPhoneNumbers()
+  }, [])
+
+  const setHGasing = async () => {
+    const hashes = await OtpVerify.getHash();
+    // Alert.alert('Release Hash', hashes.join('\n')); // Added temporarily
+    setHash(hashes);
+  }
+
+  //auto number detection
+  const handleGetPhoneNumbers = async () => {
+    if (Platform.OS === 'ios') {
+      Alert.alert(
+        'Manual Entry Required',
+        'iOS does not allow automatic phone number retrieval. Please enter your number manually.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'OK', onPress: (text) => { } },
+        ],
+        {
+          type: 'plain-text',
+          textInput: {
+            placeholder: 'Phone number',
+            keyboardType: 'phone-pad',
+          },
+        }
+      );
+      return;
+    }
+    // const isEmulator = await DeviceInfo.isEmulator();
+    // if (isEmulator) {
+    //   console.log('Skipping phone hint on emulator');
+    //   return; // User just types it manually
+    // }
+    try {
+      const number = await showPhoneNumberHint({
+        showGuidanceDialog: true,
+      });
+
+      if (number) {
+        // Strip everything except digits
+        const digits = number.replace(/\D/g, '');
+
+        let cleanNumber = '';
+
+        if (digits.length === 12 && digits.startsWith('91')) {
+          cleanNumber = digits.slice(2);
+        } else if (digits.length === 11 && digits.startsWith('0')) {
+          cleanNumber = digits.slice(1);
+        } else if (digits.length === 10) {
+          cleanNumber = digits;
+        } else {
+          // Fallback: just take the last 10 digits
+          cleanNumber = digits.slice(-10);
+        }
+
+        if (cleanNumber.length === 10) {
+          setPhone(cleanNumber);
+          setTimeout(() => {
+            phoneInputRef.current?.blur(); // dismiss keyboard briefly
+          }, 100);
+        } else {
+          Alert.alert(
+            'Could not read number',
+            `Got: "${number}". Please type manually.`
+          );
+        }
+      } else {
+        // User cancelled the hint dialog – do nothing or show a message
+        // console.log('Phone hint cancelled');
+      }
+    } catch (error) {
+      Alert.alert('Phone Hint Error', String(error));
+    }
+  };
   // Shake animation for errors
   useEffect(() => {
     if (error) {
@@ -210,7 +197,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
       setError(null);
-      await sendOtpApi(phone);
+      await sendOtpApi(phone, hash[0]);   // just phone, not +91${phone}
       setStep("OTP");
       setResendTimer(30);
     } catch (e: any) {
@@ -219,6 +206,18 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
+
+
+
+  // Auto-fill OTP when SMS is intercepted
+  useEffect(() => {
+    if (retrievedCode && retrievedCode.length === 6) {
+      setOtp(retrievedCode);
+    }
+  }, [retrievedCode]);
+
+
+
 
   const { saveTokens, setAuthUser } = useAuth();
 
@@ -230,8 +229,7 @@ export default function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      const res = await verifyOtpApi(phone, otpToVerify);
-
+      const res = await verifyOtpApi(phone, otpToVerify);   // no +91
       if (!res.isNewUser) {
         await saveTokens(res.tokens);
       }
@@ -258,9 +256,8 @@ export default function AuthScreen() {
   // Auto-verify OTP when it reaches 6 digits (for manual entry)
   useEffect(() => {
     if (otp.length === 6 && step === "OTP") {
-      // Small delay to allow user to see what they typed
       const timer = setTimeout(() => {
-        verifyOtp(otp);
+        verifyOtp(otp); // ✅ you pass `otp` here, this is fine
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -403,8 +400,8 @@ export default function AuthScreen() {
             </Text>
 
             <Text style={styles.subtitle}>
-              {step === "MOBILE" && "Use your WhatsApp number to continue."}
-              {step === "OTP" && `OTP sent to WhatsApp • +91 ${phone}`}
+              {step === "MOBILE" && "Use your Mobile number to continue."}
+              {step === "OTP" && `OTP sent to Mobile • +91 ${phone}`}
               {step === "REGISTER" && "Just a few details to finish setup."}
               {step === "SUCCESS" && "Your account is ready!"}
             </Text>
@@ -413,23 +410,40 @@ export default function AuthScreen() {
             {/* FORM */}
             {step === "MOBILE" && (
               <>
-                <Input
-                  icon="call-outline"
-                  placeholder="Mobile number"
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="number-pad"
-                  maxLength={10}
-                  textContentType="telephoneNumber" // iOS autofill
-                />
-                {/* Auto-fill button */}
-                <TouchableOpacity
-                  onPress={pickPhoneFromContacts}
-                  style={styles.autoFillButton}
-                >
-                  <Ionicons name="download-outline" size={16} color="#34D399" />
-                  <Text style={styles.autoFillText}>Auto-fill my number</Text>
-                </TouchableOpacity>
+                <View style={styles.phoneRow}>
+                  <View style={styles.countryCodeBox}>
+                    <Text style={styles.countryCode}>+91</Text>
+                  </View>
+                  <View style={styles.phoneInputWrapper}>
+                    <TextInput
+                      ref={phoneInputRef}
+                      style={styles.phoneInput}
+                      placeholder="Mobile number"
+                      placeholderTextColor="#6B7280"
+                      value={phone}
+                      onChangeText={(text) => {
+                        // Allow only digits, max 10
+                        const digits = text.replace(/\D/g, '').slice(0, 10);
+                        setPhone(digits);
+                      }}
+                      keyboardType="number-pad"
+                      maxLength={10}
+                      textContentType="telephoneNumber"
+                      autoFocus={true}
+                    />
+                  </View>
+                </View>
+
+                {Platform.OS === 'android' && (
+                  <TouchableOpacity
+                    style={styles.hintButton}
+                    onPress={handleGetPhoneNumbers}
+                  >
+                    <Ionicons name="phone-portrait-outline" size={16} color="#34D399" />
+                    <Text style={styles.hintButtonText}>Use saved number</Text>
+                  </TouchableOpacity>
+                )}
+
               </>
             )}
 
@@ -439,11 +453,16 @@ export default function AuthScreen() {
                   icon="keypad-outline"
                   placeholder="Enter 6-digit OTP"
                   value={otp}
-                  onChangeText={setOtp}
+                  onChangeText={(text) => {
+                    const digits = text.replace(/\D/g, '').slice(0, 6); // force digits only
+                    setOtp(digits);
+                  }}
                   keyboardType="number-pad"
                   maxLength={6}
-                  textContentType="oneTimeCode" // iOS auto-fill OTP
-                  autoComplete="sms-otp" // Android auto-fill OTP
+                  textContentType="oneTimeCode"
+                  autoComplete="sms-otp"
+                  editable={!loading} // ← make sure loading state isn't blocking input
+                  selectTextOnFocus
                 />
 
                 {/* Auto-read indicator */}
@@ -490,18 +509,6 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
-                {/* Auto-fill button */}
-                <TouchableOpacity
-                  onPress={autoFillUserDetails}
-                  style={styles.autoFillBanner}
-                >
-                  <Ionicons name="sparkles" size={18} color="#34D399" />
-                  <Text style={styles.autoFillBannerText}>
-                    Auto-fill from contacts
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color="#34D399" />
-                </TouchableOpacity>
-
                 <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
                   <View
                     style={[
@@ -587,8 +594,8 @@ export default function AuthScreen() {
                   step === "MOBILE"
                     ? sendOtp
                     : step === "OTP"
-                    ? () => verifyOtp()
-                    : createAccount
+                      ? () => verifyOtp()
+                      : createAccount
                 }
                 activeOpacity={0.8}
               >
@@ -607,8 +614,8 @@ export default function AuthScreen() {
                       {step === "MOBILE"
                         ? "Send OTP"
                         : step === "OTP"
-                        ? "Verify & Continue"
-                        : "Create Account"}
+                          ? "Verify & Continue"
+                          : "Create Account"}
                     </Text>
                     <Ionicons
                       name="arrow-forward"
@@ -629,15 +636,16 @@ export default function AuthScreen() {
 
 /* ---------------- INPUT COMPONENT ---------------- */
 
-function Input(props: any) {
+function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props }: any) {
   const [isFocused, setIsFocused] = useState(false);
+
 
   return (
     <View
       style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}
     >
       <Ionicons
-        name={props.icon}
+        name={icon}
         size={20}
         color={isFocused ? "#34D399" : "#6B7280"}
         style={{ marginRight: 12 }}
@@ -646,8 +654,14 @@ function Input(props: any) {
         {...props}
         placeholderTextColor="#6B7280"
         style={styles.input}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onFocus={() => {
+          setIsFocused(true);
+          onFocusProp?.();
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          onBlurProp?.();
+        }}
       />
     </View>
   );
@@ -971,5 +985,50 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     fontSize: 14,
     fontWeight: "500",
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    marginBottom: 14,
+  },
+  countryCodeBox: {
+    backgroundColor: '#0A1F19',
+    borderWidth: 2,
+    borderColor: '#1A3529',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  countryCode: {
+    color: '#F0FDF4',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  phoneInputWrapper: {
+    flex: 1,
+    backgroundColor: '#0A1F19',
+    borderWidth: 2,
+    borderColor: '#1A3529',
+    borderRadius: 16,
+  },
+  phoneInput: {
+    color: '#F0FDF4',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  hintButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  hintButtonText: {
+    color: '#34D399',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

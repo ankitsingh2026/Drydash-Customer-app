@@ -15,7 +15,7 @@ export default function SplashScreen() {
     <View style={styles.container}>
       {/* Logo */}
       <Image
-        source={require("../assets/images/drydash.png")}
+        source={require("../assets/images/drydashlogo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
