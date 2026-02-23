@@ -143,12 +143,36 @@ export default function AuthScreen() {
           cleanNumber = digits.slice(-10);
         }
 
+        // if (cleanNumber.length === 10) {
+        //   // setPhone(cleanNumber);
+        //   //   setTimeout(() => {
+        //   //     phoneInputRef.current?.blur(); // dismiss keyboard briefly
+        //   //   }, 100);
+        //   // }
+
+        //   setPhone(cleanNumber);
+
+        //   setTimeout(() => {
+        //     phoneInputRef.current?.blur();
+
+        //     if (validatePhone(cleanNumber)) {
+        //       sendOtp();  //  Auto trigger
+        //     }
+        //   }, 300);
+        // }
+
         if (cleanNumber.length === 10) {
           setPhone(cleanNumber);
+
           setTimeout(() => {
-            phoneInputRef.current?.blur(); // dismiss keyboard briefly
-          }, 100);
-        } else {
+            phoneInputRef.current?.blur();
+
+            if (validatePhone(cleanNumber)) {
+              sendOtp(cleanNumber);   // ✅ pass directly
+            }
+          }, 200);
+        }
+        else {
           Alert.alert(
             'Could not read number',
             `Got: "${number}". Please type manually.`
@@ -159,7 +183,7 @@ export default function AuthScreen() {
         // console.log('Phone hint cancelled');
       }
     } catch (error) {
-      Alert.alert('Phone Hint Error', String(error));
+      //  Alert.alert('Phone Hint Error', String(error));
     }
   };
   // Shake animation for errors
@@ -190,14 +214,36 @@ export default function AuthScreen() {
     }
   }, [error]);
 
-  const sendOtp = async () => {
-    if (!validatePhone(phone))
+  // const sendOtp = async () => {
+  //   if (!validatePhone(phone))
+  //     return setError("Enter valid 10-digit mobile number");
+
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     await sendOtpApi(phone, hash[0]);   // just phone, not +91${phone}
+  //     setStep("OTP");
+  //     setResendTimer(30);
+  //   } catch (e: any) {
+  //     setError(e.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const sendOtp = async (phoneValue?: string) => {
+    const mobile = phoneValue || phone;
+
+    if (!validatePhone(mobile)) {
       return setError("Enter valid 10-digit mobile number");
+    }
 
     try {
       setLoading(true);
       setError(null);
-      await sendOtpApi(phone, hash[0]);   // just phone, not +91${phone}
+
+      await sendOtpApi(mobile, hash[0]);
+
       setStep("OTP");
       setResendTimer(30);
     } catch (e: any) {
@@ -206,7 +252,6 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
-
 
 
   // Auto-fill OTP when SMS is intercepted
