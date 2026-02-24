@@ -52,6 +52,7 @@ export default function AuthScreen() {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const errorShake = useRef(new Animated.Value(0)).current;
+  const userIsTyping = useRef(false);
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
   const retrievedCode = useSmsUserConsent();
@@ -86,107 +87,59 @@ export default function AuthScreen() {
 
 
   useEffect(() => {
-    setHGasing()
-    handleGetPhoneNumbers()
-  }, [])
+    setHGasing().then((hashes) => {
+      handleGetPhoneNumbers(hashes);  // pass fresh hash
+    });
+  }, []);
 
   const setHGasing = async () => {
     const hashes = await OtpVerify.getHash();
-    // Alert.alert('Release Hash', hashes.join('\n')); // Added temporarily
     setHash(hashes);
-  }
+    return hashes; // ✅ return so caller can use immediately
+  };
 
-  //auto number detection
-  const handleGetPhoneNumbers = async () => {
-    if (Platform.OS === 'ios') {
-      Alert.alert(
-        'Manual Entry Required',
-        'iOS does not allow automatic phone number retrieval. Please enter your number manually.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'OK', onPress: (text) => { } },
-        ],
-        {
-          type: 'plain-text',
-          textInput: {
-            placeholder: 'Phone number',
-            keyboardType: 'phone-pad',
-          },
-        }
-      );
-      return;
-    }
-    // const isEmulator = await DeviceInfo.isEmulator();
-    // if (isEmulator) {
-    //   console.log('Skipping phone hint on emulator');
-    //   return; // User just types it manually
-    // }
+  const handleGetPhoneNumbers = async (freshHashes?: string[]) => {
+    if (Platform.OS === 'ios') return; // not suport 
+
     try {
-      const number = await showPhoneNumberHint({
-        showGuidanceDialog: true,
-      });
+      const number = await showPhoneNumberHint({ showGuidanceDialog: true });
 
-      if (number) {
-        // Strip everything except digits
-        const digits = number.replace(/\D/g, '');
+      if (!number) return; // user cancelled
 
-        let cleanNumber = '';
+      const digits = number.replace(/\D/g, '');
 
-        if (digits.length === 12 && digits.startsWith('91')) {
-          cleanNumber = digits.slice(2);
-        } else if (digits.length === 11 && digits.startsWith('0')) {
-          cleanNumber = digits.slice(1);
-        } else if (digits.length === 10) {
-          cleanNumber = digits;
-        } else {
-          // Fallback: just take the last 10 digits
-          cleanNumber = digits.slice(-10);
-        }
+      let cleanNumber = '';
+      if (digits.length === 12 && digits.startsWith('91')) {
+        cleanNumber = digits.slice(2);
+      } else if (digits.length === 11 && digits.startsWith('0')) {
+        cleanNumber = digits.slice(1);
+      } else if (digits.length === 10) {
+        cleanNumber = digits;
+      } else {
+        cleanNumber = digits.slice(-10);
+      }
 
-        // if (cleanNumber.length === 10) {
-        //   // setPhone(cleanNumber);
-        //   //   setTimeout(() => {
-        //   //     phoneInputRef.current?.blur(); // dismiss keyboard briefly
-        //   //   }, 100);
-        //   // }
-
-        //   setPhone(cleanNumber);
-
-        //   setTimeout(() => {
-        //     phoneInputRef.current?.blur();
-
-        //     if (validatePhone(cleanNumber)) {
-        //       sendOtp();  //  Auto trigger
-        //     }
-        //   }, 300);
-        // }
-
-        if (cleanNumber.length === 10) {
+      if (cleanNumber.length === 10) {
+        if (!userIsTyping.current) {
+          // Auto-fill only if user hasn't started typing
           setPhone(cleanNumber);
-
           setTimeout(() => {
             phoneInputRef.current?.blur();
-
             if (validatePhone(cleanNumber)) {
-              sendOtp(cleanNumber);   // ✅ pass directly
+              sendOtp(cleanNumber, freshHashes?.[0]);
             }
           }, 200);
         }
-        else {
-          Alert.alert(
-            'Could not read number',
-            `Got: "${number}". Please type manually.`
-          );
-        }
+        // If userIsTyping, do NOTHING — let them type
       } else {
-        // User cancelled the hint dialog – do nothing or show a message
-        // console.log('Phone hint cancelled');
+        Alert.alert('Could not read number', `Got: "${number}". Please type manually.`);
       }
     } catch (error) {
-      //  Alert.alert('Phone Hint Error', String(error));
+      // silently fail, user can type manually
     }
   };
-  // Shake animation for errors
+
+
   useEffect(() => {
     if (error) {
       Animated.sequence([
@@ -214,25 +167,11 @@ export default function AuthScreen() {
     }
   }, [error]);
 
-  // const sendOtp = async () => {
-  //   if (!validatePhone(phone))
-  //     return setError("Enter valid 10-digit mobile number");
 
-  //   try {
-  //     setLoading(true);
-  //     setError(null);
-  //     await sendOtpApi(phone, hash[0]);   // just phone, not +91${phone}
-  //     setStep("OTP");
-  //     setResendTimer(30);
-  //   } catch (e: any) {
-  //     setError(e.message);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  const sendOtp = async (phoneValue?: string) => {
+  const sendOtp = async (phoneValue?: string, hashValue?: string) => {
     const mobile = phoneValue || phone;
+    // console.log('sendOtp called with mobile:', mobile);
+    const hashToUse = hashValue || hash[0];
 
     if (!validatePhone(mobile)) {
       return setError("Enter valid 10-digit mobile number");
@@ -241,9 +180,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
       setError(null);
-
-      await sendOtpApi(mobile, hash[0]);
-
+      await sendOtpApi(mobile, hashToUse);
       setStep("OTP");
       setResendTimer(30);
     } catch (e: any) {
@@ -302,7 +239,7 @@ export default function AuthScreen() {
   useEffect(() => {
     if (otp.length === 6 && step === "OTP") {
       const timer = setTimeout(() => {
-        verifyOtp(otp); // ✅ you pass `otp` here, this is fine
+        verifyOtp(otp);
       }, 300);
       return () => clearTimeout(timer);
     }
@@ -467,7 +404,7 @@ export default function AuthScreen() {
                       placeholderTextColor="#6B7280"
                       value={phone}
                       onChangeText={(text) => {
-                        // Allow only digits, max 10
+                        userIsTyping.current = true;
                         const digits = text.replace(/\D/g, '').slice(0, 10);
                         setPhone(digits);
                       }}
@@ -637,7 +574,7 @@ export default function AuthScreen() {
                 disabled={loading}
                 onPress={
                   step === "MOBILE"
-                    ? sendOtp
+                    ? () => sendOtp()
                     : step === "OTP"
                       ? () => verifyOtp()
                       : createAccount
