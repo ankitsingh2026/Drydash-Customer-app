@@ -161,9 +161,8 @@ export default function BookPickup() {
 
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
 
-  const phone = `91` + user?.user?.phone ? user?.user?.phone : user?.phone; //need to look
+  const phone = '91' + user?.user?.phone  //need to look
 
-  console.log("this is phoneeee==>>", phone);
 
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
@@ -372,6 +371,8 @@ export default function BookPickup() {
 
       const { status } = await Location.requestForegroundPermissionsAsync();
 
+      console.log("this is the statussss==>>",status)
+
       if (status !== "granted") {
         setLocLoading(false);
         Alert.alert(
@@ -394,7 +395,11 @@ export default function BookPickup() {
 
       setLocation(coords);
 
+      console.log("this is loc",loc)
+
       const geo = await Location.reverseGeocodeAsync(coords);
+
+      console.log("this is geo",geo)
 
       if (geo && geo.length > 0) {
         const g = geo[0];
@@ -1527,7 +1532,7 @@ export default function BookPickup() {
                       {searchLoading ? (
                         <Ionicons name="sync" size={18} color={theme.primary} />
                       ) : (
-                        <TouchableOpacity onPress={searchOnMap}>
+                       <TouchableOpacity onPress={searchOnMap}>
                           <Ionicons
                             name="arrow-forward-circle"
                             size={30}
@@ -1537,7 +1542,7 @@ export default function BookPickup() {
                       )}
                     </View>
 
-                    <PickupMap
+                    {/* <PickupMap
                       location={location}
                       onSelect={(c) => {
                         setLocation(c);
@@ -1547,7 +1552,7 @@ export default function BookPickup() {
                           longitude: String(c.longitude),
                         }));
                       }}
-                    />
+                    /> */}
 
                     <TouchableOpacity
                       onPress={fetchCurrentLocation}
@@ -1564,7 +1569,7 @@ export default function BookPickup() {
                       <Ionicons
                         name={locLoading ? "sync" : "locate"}
                         size={18}
-                        color="#000"
+                        color="#000" 
                       />
                       <Text style={modalStyles.currentLocText}>
                         {locLoading ? "Fetching..." : "Use Current Location"}

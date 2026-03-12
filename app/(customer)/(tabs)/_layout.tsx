@@ -5,7 +5,6 @@ import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
-import { TabBar } from "../../../components/layout/TabBar";
 import { useTheme } from "../../../context/ThemeContext";
 
 export default function TabsLayout() {
@@ -22,14 +21,7 @@ export default function TabsLayout() {
       ]}
     >
       {/* TOP BAR */}
-      <TabBar
-        onOpenNotifications={() => setOpen(true)}
-        onWalletPress={() => router.push("/(customer)/wallet")}
-        style={{
-          backgroundColor: theme.card,
-          borderBottomColor: theme.border,
-        }}
-      />
+     
 
       {/* TABS */}
       <Tabs
@@ -95,7 +87,6 @@ export default function TabsLayout() {
       </Tabs>
 
       {/* NOTIFICATIOn */}
-      <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
     </View>
   );
 }

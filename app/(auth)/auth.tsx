@@ -169,7 +169,10 @@ export default function AuthScreen() {
 
 
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
-    const mobile = phoneValue || phone;
+    const mobile = phone;
+
+    // console.log("this is the mobileeeee=====>>>>>",mobile)
+    // Alert.alert("chcek pyone :::  ",mobile)
     // console.log('sendOtp called with mobile:', mobile);
     const hashToUse = hashValue || hash[0];
 
@@ -229,7 +232,11 @@ export default function AuthScreen() {
         setStep("REGISTER");
       }
     } catch (e: any) {
-      setError(e.message);
+      if (e.message?.toLowerCase().includes("otp")) {
+        setError("Wrong OTP. Please try again.");
+      } else {
+        setError("OTP verification failed.");
+      }
     } finally {
       setLoading(false);
     }
@@ -407,6 +414,11 @@ export default function AuthScreen() {
                         userIsTyping.current = true;
                         const digits = text.replace(/\D/g, '').slice(0, 10);
                         setPhone(digits);
+
+                        // auto sent otp
+                        if (digits.length === 10 && validatePhone(digits) && !loading) {
+                          sendOtp(digits);
+                        }
                       }}
                       keyboardType="number-pad"
                       maxLength={10}
@@ -438,6 +450,8 @@ export default function AuthScreen() {
                   onChangeText={(text) => {
                     const digits = text.replace(/\D/g, '').slice(0, 6); // force digits only
                     setOtp(digits);
+                    setError(null);
+
                   }}
                   keyboardType="number-pad"
                   maxLength={6}
