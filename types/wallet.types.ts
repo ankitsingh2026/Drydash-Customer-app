@@ -1,24 +1,20 @@
-// ─────────────────────────────────────────────────────────────
-// wallet.types.ts  –  Wallet + Razorpay integration types
-// ─────────────────────────────────────────────────────────────
 
-// ── Wallet balance ────────────────────────────────────────────
 export interface WalletBalance {
   balance: number;
   currency: string; // "INR"
   lastUpdated: string; // ISO date string
 }
 
-// ── Saved card (from your /api/wallet/cards endpoint) ─────────
+
 export interface SavedCard {
   id: string;
-  brand: string; // "visa" | "mastercard" | "rupay" etc.
+  brand: string; 
   last4: string;
-  expiry: string; // "MM/YY"
-  tokenId?: string; // Razorpay token id for recurring
+  expiry: string;
+  tokenId?: string; 
 }
 
-// ── Transaction ───────────────────────────────────────────────
+
 export type TransactionType = "credit" | "debit";
 export type TransactionStatus = "success" | "failed" | "pending" | "refunded";
 
@@ -26,21 +22,21 @@ export interface WalletTransaction {
   id: string;
   type: TransactionType;
   status: TransactionStatus;
-  amount: number; // in ₹
+  amount: number;
   description: string;
-  createdAt: string; // ISO date string
+  createdAt: string;
   razorpayPaymentId?: string;
   razorpayOrderId?: string;
 }
 
-// ── Razorpay — Create Order ───────────────────────────────────
 
-/** POST /api/wallet/topup/razorpay  →  request body */
+
+
 export interface RazorpayCreateOrderRequest {
   amount: number; // in ₹  (backend converts to paise)
 }
 
-/** POST /api/wallet/topup/razorpay  →  response */
+
 export interface RazorpayCreateOrderResponse {
   orderId: string; // rzp order id  e.g. "order_xxxxxxxxxx"
   amount: number; // in paise
@@ -48,7 +44,6 @@ export interface RazorpayCreateOrderResponse {
   keyId: string; // rzp_live_xxxxxxxxxx  (safe to send to client)
 }
 
-// ── Razorpay — Checkout options (passed to RazorpayCheckout.open) ──
 export interface RazorpayCheckoutOptions {
   description: string;
   image?: string;
