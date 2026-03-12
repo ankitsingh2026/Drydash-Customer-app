@@ -10,10 +10,11 @@ import {
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -34,6 +35,8 @@ type Item = {
   title: string;
   price: number;
   category: string;
+  image: string;
+
 };
 
 export default function ServiceDetail() {
@@ -46,9 +49,9 @@ export default function ServiceDetail() {
   const [open, setOpen] = useState(false);
 
   React.useEffect(() => {
-  const index = TABS.findIndex(t => t.key === service);
-  if (index !== -1) setTab(index);
-}, [service]);
+    const index = TABS.findIndex(t => t.key === service);
+    if (index !== -1) setTab(index);
+  }, [service]);
 
 
   /* ---------- DATA ---------- */
@@ -60,24 +63,43 @@ export default function ServiceDetail() {
           title: "Basic Shoe Cleaning",
           price: 299,
           category: "Shoe Spa",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
         {
           id: "shoe-premium",
           title: "Premium Shoe Care",
           price: 499,
           category: "Shoe Spa",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
         {
           id: "shoe-polish",
           title: "Polish & Shine",
           price: 199,
           category: "Shoe Spa",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
       ],
       laundry: [
-        { id: "shirt", title: "Shirt", price: 199, category: "Laundry" },
-        { id: "tshirt", title: "T-Shirt", price: 149, category: "Laundry" },
-        { id: "jeans", title: "Jeans", price: 249, category: "Laundry" },
+        {
+          id: "shirt", title: "Shirt", price: 199, category: "Laundry",
+
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
+        },
+        {
+          id: "tshirt", title: "T-Shirt", price: 149, category: "Laundry",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
+        },
+        {
+          id: "jeans", title: "Jeans", price: 249, category: "Laundry",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
+        },
       ],
       iron: [
         {
@@ -85,18 +107,24 @@ export default function ServiceDetail() {
           title: "Shirt (Iron)",
           price: 59,
           category: "Ironing",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
         {
           id: "iron-pant",
           title: "Pant (Iron)",
           price: 79,
           category: "Ironing",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
         {
           id: "iron-kurta",
           title: "Kurta (Iron)",
           price: 99,
           category: "Ironing",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+
         },
       ],
     }),
@@ -187,9 +215,9 @@ export default function ServiceDetail() {
         keyExtractor={(i) => i.id}
         contentContainerStyle={{
           paddingBottom: 100 + insets.bottom,
-          gap: 20,
+          gap: 10,
         }}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
         renderItem={({ item }) => {
           const qty = cart.getQty(item.id);
           return (
@@ -203,16 +231,12 @@ export default function ServiceDetail() {
               ]}
             >
               {/* IMAGE PLACEHOLDER */}
-              <View
-                style={[
-                  styles.image,
-                  { backgroundColor: isDark ? "#0B1220" : "#E5E7EB" },
-                ]}
-              >
-                <Text style={{ color: theme.subText, fontSize: 12 }}>
-                  Image
-                </Text>
-              </View>
+
+              <Image
+                source={{ uri: item.image }}
+                style={styles.image}
+                resizeMode="cover"
+              />
 
               {/* TEXT */}
               <View style={{ flex: 1 }}>
@@ -306,20 +330,20 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 16,
+    padding: 5,
+    borderRadius: 10,
     borderWidth: 1,
     elevation: 2,
   },
 
-  image: {
-    width: 54,
-    height: 54,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
+  // image: {
+  //   width: 50,
+  //   height: 50,
+  //   borderRadius: 12,
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   marginRight: 12,
+  // },
 
   itemTitle: {
     fontSize: 15,
@@ -355,4 +379,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontWeight: "800",
   },
+  
+image: {
+  width: 56,
+  height: 56,
+  borderRadius: 12,
+  marginRight: 12,
+  backgroundColor: "#E5E7EB", // fallback while loading
+}
 });

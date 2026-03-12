@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 import { Appearance } from "react-native";
-import { DarkTheme, LightTheme } from "../constants/colors";
+import { DarkTheme } from "../constants/colors";
 
 type ThemeType = typeof DarkTheme;
 
@@ -18,7 +18,7 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const toggleTheme = () => setIsDark((prev) => !prev);
 
-  const theme = isDark ? DarkTheme : LightTheme;
+  const theme = isDark ? DarkTheme : DarkTheme;
 
   return (
     <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>

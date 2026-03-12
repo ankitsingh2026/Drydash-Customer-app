@@ -15,15 +15,24 @@
       "backgroundColor": "#0B1F1A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+       "config": {
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
+      }
     },
     "android": {
-      "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE",
-        "ACCESS_BACKGROUND_LOCATION"
-      ],
+        "versionCode": 1,
+        "permissions": [
+          "ACCESS_FINE_LOCATION",
+          "ACCESS_COARSE_LOCATION",
+          "FOREGROUND_SERVICE",
+          "ACCESS_BACKGROUND_LOCATION"
+        ],
+          "config": {
+          "googleMaps": {
+            "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
+          }
+        },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,7 +41,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.drydash.customer"
+      "package": "com.drydash.newCustomer"
     },
     "web": {
       "output": "static",
