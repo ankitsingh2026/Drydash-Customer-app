@@ -20,9 +20,11 @@ export const saveAddressApi = async (payload: any) => {
 };
 
 export const getOrdersApi = async (phoneNumber: any) => {
+  console.log("phoneNumber", phoneNumber);
   const { data } = await oldApiClient.get(
     `/app/getCustomerOrders/${phoneNumber}`,
   );
+  console.log("thi is the all data: : : ", data);
   return data;
 };
 

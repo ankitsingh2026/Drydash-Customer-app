@@ -8,11 +8,12 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
+  useState
 } from "react";
 import {
   Animated,
   Easing,
+  LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,7 +28,105 @@ import { useTheme } from "../../../../context/ThemeContext";
 type OrderStatus = "Active" | "Completed";
 type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 
-/* ================= COMPONENT ================= */
+const FILTERS: FilterType[] = ["All", "Active", "Completed", "Awaiting"];
+
+/* ================= SLIDING TAB BAR ================= */
+
+function SlidingFilterTabs({
+  active,
+  onChange,
+  theme,
+  isDark,
+}: {
+  active: FilterType;
+  onChange: (f: FilterType) => void;
+  theme: any;
+  isDark: boolean;
+}) {
+  // Store each tab's x + width
+  const [tabLayouts, setTabLayouts] = useState<{ x: number; width: number }[]>(
+    [],
+  );
+  const slideX = useRef(new Animated.Value(0)).current;
+  const slideW = useRef(new Animated.Value(60)).current;
+
+  const activeIndex = FILTERS.indexOf(active);
+
+  useEffect(() => {
+    const layout = tabLayouts[activeIndex];
+    if (!layout) return;
+    Animated.parallel([
+      Animated.spring(slideX, {
+        toValue: layout.x,
+        tension: 55,
+        friction: 9,
+        useNativeDriver: false,
+      }),
+      Animated.spring(slideW, {
+        toValue: layout.width,
+        tension: 55,
+        friction: 9,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [activeIndex, tabLayouts]);
+
+  return (
+    <View
+      style={[
+        styles.tabBarWrapper,
+        {
+          backgroundColor: isDark ? "#0F1720" : "#F1F5F9",
+        },
+      ]}
+    >
+      {/* Sliding pill */}
+      <Animated.View
+        style={[
+          styles.slidingPill,
+          {
+            left: slideX,
+            width: slideW,
+            backgroundColor: "#0EA5A4",
+          },
+        ]}
+      />
+
+      {FILTERS.map((filter, i) => {
+        const isActive = active === filter;
+        return (
+          <TouchableOpacity
+            key={filter}
+            activeOpacity={0.8}
+            onLayout={(e: LayoutChangeEvent) => {
+              const { x, width } = e.nativeEvent.layout;
+              setTabLayouts((prev) => {
+                const next = [...prev];
+                next[i] = { x, width };
+                return next;
+              });
+            }}
+            onPress={() => onChange(filter)}
+            style={styles.tabItem}
+          >
+            <Text
+              style={{
+                fontWeight: isActive ? "800" : "600",
+                fontSize: 13,
+                color: isActive ? "#fff" : isDark ? "#9CA3AF" : "#6B7280",
+                zIndex: 2,
+              }}
+            >
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+/* ================= MAIN COMPONENT ================= */
 
 export default function Orders() {
   const { theme, isDark } = useTheme();
@@ -44,40 +143,14 @@ export default function Orders() {
 
   if (!user) return <OrdersScreenSkeleton />;
 
-  const phone = `91${user?.user?.phone ? user?.user?.phone : user?.phone}`;
+  // ✅ FIX: safely build phone, avoid double "91"
+  const rawPhone =
+    user?.user?.phone ?? user?.phone ?? "";
+  const phone = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
 
-  console.log("this is the phoneeee===>>>", phone);
+  console.log("📱 Phone for API:", phone);
 
   /* ================= HELPERS ================= */
-
-  const activityTimeline = useMemo(() => {
-    return [...orders, ...pickups]
-      .map((item) => ({
-        id: item.order_id || item._id,
-
-        // 🔥 MAP YOUR BACKEND STATUS HERE
-        status:
-          item.status === "assigned"
-            ? "Picked Up"
-            : item.status === "in_transit"
-              ? "In Transit"
-              : item.status === "processing"
-                ? "Processing"
-                : item.status === "washing"
-                  ? "Washing"
-                  : null,
-
-        progress:
-          item.status === "assigned"
-            ? 0.4
-            : item.status === "in_transit"
-              ? 0.7
-              : item.status === "processing"
-                ? 0.9
-                : 0.3,
-      }))
-      .filter(Boolean); // remove null
-  }, [orders, pickups]);
 
   const mapStatus = (status: string): OrderStatus =>
     status === "delivered" ? "Completed" : "Active";
@@ -91,39 +164,31 @@ export default function Orders() {
 
   const formatOrderDateTime = (dateString: string) => {
     const date = new Date(dateString);
-
     const datePart = date.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-
     const timePart = date.toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
-
     return `${datePart} • ${timePart}`;
   };
 
-  /* ================= FILTERED ORDERS (NO FUNCTIONS) ================= */
+  /* ================= FILTERED ORDERS ================= */
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === "Awaiting") {
-      return pickups.map((p) => ({
-        ...p,
-        type: "pickup",
-      }));
+      return pickups.map((p) => ({ ...p, type: "pickup" }));
     }
-
     if (activeFilter === "All") {
       return [
         ...orders.map((o) => ({ ...o, type: "order" })),
         ...pickups.map((p) => ({ ...p, type: "pickup" })),
       ];
     }
-
     return orders
       .filter((o) => mapStatus(o.status) === activeFilter)
       .map((o) => ({ ...o, type: "order" }));
@@ -135,9 +200,16 @@ export default function Orders() {
     try {
       setLoading(true);
       const res = await getOrdersApi(phone);
-      setOrders(res?.orders || []);
+
+      // ✅ FIX: log the raw response so you can see what shape it is
+      console.log("📦 Orders API raw response:", JSON.stringify(res));
+
+      // Try multiple common shapes
+      const fetched = res?.orders ?? res?.data?.orders ?? res?.data ?? [];
+      console.log(`✅ Parsed ${fetched.length} orders`);
+      setOrders(fetched);
     } catch (e) {
-      console.log("Order fetch error:", e);
+      console.log("❌ Order fetch error:", e);
     } finally {
       setLoading(false);
     }
@@ -146,39 +218,25 @@ export default function Orders() {
   const getCustomerPickupList = async () => {
     try {
       const res = await getCustomerPickups(
-        user?.user?.phone,
+        user?.user?.phone ?? user?.phone,
         "pending,assigned",
       );
-      setPickups(res?.pickups || []);
+      console.log("🚚 Pickups API raw response:", JSON.stringify(res));
+      const fetched = res?.pickups ?? res?.data?.pickups ?? res?.data ?? [];
+      setPickups(fetched);
     } catch (err) {
-      console.log("Pickup fetch error", err);
+      console.log("❌ Pickup fetch error:", err);
     }
   };
 
-  /* ================= DUMMY PICKUP ACTION APIs ================= */
-
   const cancelPickupApi = async (pickupId: string) => {
-    console.log("🚨 Cancel pickup clicked:", pickupId);
-
-    // TODO: replace with real API later
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("✅ Pickup cancelled (dummy)");
-        resolve(true);
-      }, 500);
-    });
+    // TODO: replace with real API
+    return new Promise((resolve) => setTimeout(() => resolve(true), 500));
   };
 
   const reschedulePickupApi = async (pickupId: string) => {
-    console.log("📅 Reschedule pickup clicked:", pickupId);
-
-    // TODO: replace with real API later
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("✅ Navigate to reschedule screen (dummy)");
-        resolve(true);
-      }, 500);
-    });
+    // TODO: replace with real API
+    return new Promise((resolve) => setTimeout(() => resolve(true), 500));
   };
 
   useFocusEffect(
@@ -188,24 +246,9 @@ export default function Orders() {
     }, []),
   );
 
-  const timeline = useMemo(() => {
-    return [...orders, ...pickups]
-      .map((item) => ({
-        ...item,
-        activityDate: item.createdAt || item.pickup_date,
-        type: item.order_id ? "order" : "pickup",
-      }))
-      .sort(
-        (a, b) =>
-          new Date(b.activityDate).getTime() -
-          new Date(a.activityDate).getTime(),
-      );
-  }, [orders, pickups]);
-
   /* ================= ANIMATIONS ================= */
 
   useEffect(() => {
-    // Ensure animation value exists for each item
     cardAnims.current = filteredOrders.map(
       (_, i) => cardAnims.current[i] || new Animated.Value(0),
     );
@@ -226,7 +269,7 @@ export default function Orders() {
     ]).start();
 
     Animated.stagger(
-      120,
+      100,
       cardAnims.current.map((anim) =>
         Animated.spring(anim, {
           toValue: 1,
@@ -238,9 +281,23 @@ export default function Orders() {
     ).start();
   }, [filteredOrders]);
 
-  if (loading) {
-    return <OrdersScreenSkeleton />;
-  }
+  if (loading) return <OrdersScreenSkeleton />;
+
+  /* ================= EMPTY STATE ================= */
+
+  const renderEmpty = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={{ fontSize: 40 }}>📭</Text>
+      <Text style={[styles.emptyTitle, { color: theme.text }]}>
+        No orders here
+      </Text>
+      <Text style={{ color: theme.subText, textAlign: "center" }}>
+        {activeFilter === "Awaiting"
+          ? "No scheduled pickups"
+          : `No ${activeFilter.toLowerCase()} orders found`}
+      </Text>
+    </View>
+  );
 
   /* ================= UI ================= */
 
@@ -254,10 +311,7 @@ export default function Orders() {
         <Animated.View
           style={[
             styles.headerContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
           <View style={styles.headerTop}>
@@ -296,50 +350,26 @@ export default function Orders() {
           />
         </Animated.View>
 
-        {/* FILTER TABS */}
-        <View style={styles.filterRow}>
-          {(["All", "Active", "Completed", "Awaiting"] as FilterType[]).map(
-            (filter) => {
-              const isActive = activeFilter === filter;
+        {/* ✅ SLIDING FILTER TABS */}
+        <SlidingFilterTabs
+          active={activeFilter}
+          onChange={setActiveFilter}
+          theme={theme}
+          isDark={isDark}
+        />
 
-              return (
-                <TouchableOpacity
-                  key={filter}
-                  onPress={() => setActiveFilter(filter)}
-                  style={[
-                    styles.filterTab,
-                    {
-                      backgroundColor: isActive
-                        ? theme.primary
-                        : isDark
-                          ? "#1F2937"
-                          : "#F3F4F6",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={{
-                      fontWeight: isActive ? "800" : "600",
-                      color: isActive ? "#000" : theme.text,
-                    }}
-                  >
-                    {filter}
-                  </Text>
-                </TouchableOpacity>
-              );
-            },
-          )}
-        </View>
+        {/* EMPTY STATE */}
+        {filteredOrders.length === 0 && renderEmpty()}
 
-        {/* ORDERS */}
+        {/* ORDER CARDS */}
         {filteredOrders.map((o: any, index: number) => {
           const anim = cardAnims.current[index] || new Animated.Value(1);
 
-          /* ================= PICKUP CARD (AWAITING) ================= */
+          /* PICKUP CARD */
           if (o.type === "pickup") {
             return (
               <Animated.View
-                key={o._id}
+                key={o._id || index}
                 style={{
                   opacity: anim,
                   transform: [
@@ -355,13 +385,9 @@ export default function Orders() {
                 <View
                   style={[
                     styles.card,
-                    {
-                      backgroundColor: theme.card,
-                      borderLeftColor: "#8B5CF6",
-                    },
+                    { backgroundColor: theme.card, borderLeftColor: "#8B5CF6" },
                   ]}
                 >
-                  {/* HEADER */}
                   <View style={styles.cardHeader}>
                     <View style={styles.row}>
                       <Ionicons name="cube-outline" size={16} color="#8B5CF6" />
@@ -375,24 +401,18 @@ export default function Orders() {
                         Pickup Scheduled
                       </Text>
                     </View>
-
                     <Text style={{ color: theme.subText }}>
                       {formatOrderDateTime(o.pickup_date)}
                     </Text>
                   </View>
 
-                  {/* BODY */}
                   <View style={styles.cardBody}>
                     <Text style={[styles.orderId, { color: theme.text }]}>
                       Pickup Request
                     </Text>
-
-                    {/* ADDRESS */}
                     <Text style={{ color: theme.subText, marginTop: 4 }}>
                       📍 {o.Address}
                     </Text>
-
-                    {/* NOTE */}
                     {o.note ? (
                       <Text
                         style={{
@@ -405,60 +425,48 @@ export default function Orders() {
                       </Text>
                     ) : null}
 
-                    {/* ACTION BUTTONS */}
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        marginTop: 16,
-                        gap: 10,
-                      }}
-                    >
-                      {/* RESCHEDULE */}
+                    <View style={{ flexDirection: "row", marginTop: 16, gap: 10 }}>
                       <TouchableOpacity
-                        style={{
-                          flex: 1,
-                          backgroundColor: isDark ? "#10B981" : "#F3F4F6",
-                          paddingVertical: 12,
-                          borderRadius: 10,
-                          alignItems: "center",
-                        }}
+                        style={[
+                          styles.actionBtn,
+                          { backgroundColor: isDark ? "#10B981" : "#ECFDF5" },
+                        ]}
                         onPress={() => {
                           reschedulePickupApi(o._id);
-                          console.log("👉 Navigate to reschedule screen");
+                          router.push(`/pickups/reschedule/${o._id}`);
                         }}
                       >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={14}
+                          color={isDark ? "#fff" : "#10B981"}
+                        />
                         <Text
                           style={{
                             fontWeight: "700",
-                            color: theme.text,
+                            color: isDark ? "#fff" : "#10B981",
+                            marginLeft: 4,
                           }}
                         >
                           Reschedule
                         </Text>
                       </TouchableOpacity>
 
-                      {/* CANCEL */}
                       <TouchableOpacity
-                        style={{
-                          flex: 1,
-                          backgroundColor: "#b84747",
-                          paddingVertical: 12,
-                          borderRadius: 10,
-                          alignItems: "center",
-                        }}
+                        style={[styles.actionBtn, { backgroundColor: "#FEE2E2" }]}
                         onPress={async () => {
                           await cancelPickupApi(o._id);
-
-                          // remove from UI instantly (optimistic)
                           setPickups((prev) =>
                             prev.filter((p) => p._id !== o._id),
                           );
                         }}
                       >
+                        <Ionicons name="close-circle-outline" size={14} color="#DC2626" />
                         <Text
                           style={{
                             fontWeight: "800",
-                            color: "#fff",
+                            color: "#DC2626",
+                            marginLeft: 4,
                           }}
                         >
                           Cancel
@@ -471,13 +479,13 @@ export default function Orders() {
             );
           }
 
-          /* ================= ORDER CARD ================= */
+          /* ORDER CARD */
           const uiStatus = mapStatus(o.status);
           const status = getStatusStyle(uiStatus);
 
           return (
             <Animated.View
-              key={o._id}
+              key={o._id || index}
               style={{
                 opacity: anim,
                 transform: [
@@ -491,26 +499,25 @@ export default function Orders() {
               }}
             >
               <TouchableOpacity
-                activeOpacity={0.9}
+                activeOpacity={0.88}
                 onPress={() => router.push(`/orders/${o.order_id}`)}
               >
                 <View
                   style={[
                     styles.card,
-                    {
-                      backgroundColor: theme.card,
-                      borderLeftColor: status.bg,
-                    },
+                    { backgroundColor: theme.card, borderLeftColor: status.bg },
                   ]}
                 >
-                  {/* HEADER */}
                   <View style={styles.cardHeader}>
                     <View style={styles.row}>
-                      <Ionicons
-                        name={status.icon}
-                        size={16}
-                        color={status.bg}
-                      />
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: status.bg + "22" },
+                        ]}
+                      >
+                        <Ionicons name={status.icon} size={13} color={status.bg} />
+                      </View>
                       <Text
                         style={{
                           fontWeight: "700",
@@ -521,30 +528,29 @@ export default function Orders() {
                         {uiStatus}
                       </Text>
                     </View>
-
-                    <Text style={{ color: theme.subText }}>
-                      {o.items?.length || 0} items
-                    </Text>
+                    <View style={styles.row}>
+                      <Ionicons
+                        name="shirt-outline"
+                        size={13}
+                        color={theme.subText}
+                      />
+                      <Text style={{ color: theme.subText, marginLeft: 4 }}>
+                        {o.items?.length || 0} items
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* BODY */}
                   <View style={styles.cardBody}>
                     <Text style={[styles.orderId, { color: theme.text }]}>
                       Order #{o.order_id}
                     </Text>
-
-                    <Text style={{ color: theme.subText }}>
+                    <Text style={{ color: theme.subText, fontSize: 12 }}>
                       Placed on {formatOrderDateTime(o.createdAt)}
                     </Text>
 
                     <View style={styles.totalRow}>
                       <Text style={{ color: theme.subText }}>Total</Text>
-                      <Text
-                        style={{
-                          fontWeight: "800",
-                          color: theme.primary,
-                        }}
-                      >
+                      <Text style={{ fontWeight: "800", color: theme.primary }}>
                         ₹{o.price}
                       </Text>
                     </View>
@@ -555,8 +561,6 @@ export default function Orders() {
           );
         })}
       </ScrollView>
-
-
     </View>
   );
 }
@@ -577,21 +581,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 28,
     fontWeight: "800",
   },
   headerSubtitle: {
     marginTop: 4,
-    fontSize: 10,
+    fontSize: 13,
   },
   statsBox: {
-    padding: 5,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
   },
   statsNumber: {
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "800",
   },
   statsLabel: {
@@ -599,28 +603,48 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginTop: 10,
+    marginTop: 16,
   },
-  filterRow: {
+
+  /* Sliding tabs */
+  tabBarWrapper: {
     flexDirection: "row",
-    marginVertical: 5,
+    borderRadius: 30,
+    padding: 4,
+    marginVertical: 12,
+    position: "relative",
   },
-  filterTab: {
-    paddingHorizontal: 15,
+  slidingPill: {
+    position: "absolute",
+    top: 4,
+    bottom: 4,
+    borderRadius: 26,
+    zIndex: 1,
+  },
+  tabItem: {
+    flex: 1,
     paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
+    alignItems: "center",
+    zIndex: 2,
   },
+
+  /* Cards */
   card: {
     borderRadius: 16,
-    marginBottom: 16,
+    marginBottom: 14,
     borderLeftWidth: 4,
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   cardHeader: {
-    padding: 16,
+    padding: 14,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
   },
   cardBody: {
     paddingHorizontal: 16,
@@ -629,6 +653,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  statusDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
   orderId: {
     fontSize: 16,
@@ -639,5 +670,23 @@ const styles = StyleSheet.create({
     marginTop: 10,
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 60,
+    gap: 10,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
   },
 });

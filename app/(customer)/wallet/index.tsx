@@ -15,7 +15,11 @@ import {
 import { useTheme } from "../../../context/ThemeContext";
 
 
-
+import type {
+  RazorpayPaymentSuccess,
+  RazorpayPaymentError,
+  RazorpayCreateOrderResponse,
+} from "../../../types/wallet.types";
 
 export default function WalletPage() {
   const { theme } = useTheme();

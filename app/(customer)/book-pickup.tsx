@@ -1,5 +1,4 @@
 // app/screens/BookPickup.tsx
-import PickupMap from "@/components/maps/PickupMap.web";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -161,13 +160,7 @@ export default function BookPickup() {
 
   console.log("this is valueeeess", User?.id);
 
-  console.log("this is valueeeess", User?.id);
-
-  const auth_id = User?.id;
-
-  const phone = `91` + User?.phone;
-
-  console.log("this is phoneeee==>>", phone);
+  const phone = "91" + user?.user?.phone; //need to look
 
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
@@ -376,6 +369,8 @@ export default function BookPickup() {
 
       const { status } = await Location.requestForegroundPermissionsAsync();
 
+      console.log("this is the statussss==>>", status);
+
       if (status !== "granted") {
         setLocLoading(false);
         Alert.alert(
@@ -398,7 +393,11 @@ export default function BookPickup() {
 
       setLocation(coords);
 
+      console.log("this is loc", loc);
+
       const geo = await Location.reverseGeocodeAsync(coords);
+
+      console.log("this is geo", geo);
 
       if (geo && geo.length > 0) {
         const g = geo[0];
@@ -1541,17 +1540,17 @@ export default function BookPickup() {
                       )}
                     </View>
 
-                    <PickupMap
-                    // location={location}
-                    // onSelect={(c) => {
-                    //   setLocation(c);
-                    //   setAddressForm((p) => ({
-                    //     ...p,
-                    //     latitude: String(c.latitude),
-                    //     longitude: String(c.longitude),
-                    //   }));
-                    // }}
-                    />
+                    {/* <PickupMap
+                      location={location}
+                      onSelect={(c) => {
+                        setLocation(c);
+                        setAddressForm((p) => ({
+                          ...p,
+                          latitude: String(c.latitude),
+                          longitude: String(c.longitude),
+                        }));
+                      }}
+                    /> */}
 
                     <TouchableOpacity
                       onPress={fetchCurrentLocation}
