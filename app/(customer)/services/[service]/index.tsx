@@ -63,7 +63,7 @@ export default function ServiceDetail() {
           title: "Basic Shoe Cleaning",
           price: 299,
           category: "Shoe Spa",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/sheo-spa/shoe_1.jpg",
 
         },
         {
@@ -71,7 +71,7 @@ export default function ServiceDetail() {
           title: "Premium Shoe Care",
           price: 499,
           category: "Shoe Spa",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/sheo-spa/shoe_2.jpg",
 
         },
         {
@@ -79,7 +79,7 @@ export default function ServiceDetail() {
           title: "Polish & Shine",
           price: 199,
           category: "Shoe Spa",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/sheo-spa/shoe_3.jpg",
 
         },
       ],
@@ -87,17 +87,17 @@ export default function ServiceDetail() {
         {
           id: "shirt", title: "Shirt", price: 199, category: "Laundry",
 
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/laundry/laundry_1.jpg",
 
         },
         {
           id: "tshirt", title: "T-Shirt", price: 149, category: "Laundry",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/laundry/laundry_2.jpg",
 
         },
         {
           id: "jeans", title: "Jeans", price: 249, category: "Laundry",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/laundry/laundry_3.jpg",
 
         },
       ],
@@ -107,7 +107,7 @@ export default function ServiceDetail() {
           title: "Shirt (Iron)",
           price: 59,
           category: "Ironing",
-          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/sheo-spa/leather.jpg",
+          image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/laundry/laundry_2.jpg",
 
         },
         {
