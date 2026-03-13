@@ -5,7 +5,7 @@ import type {
   RazorpayVerifyResponse,
 } from "./wallet.types";
 
-// ── Create Razorpay order ──────────────────────────
+// ── Create Razorpay ──────────────────────────
 export async function createRazorpayOrder(
   amount: number
 ): Promise<RazorpayCreateOrderResponse> {
@@ -19,7 +19,7 @@ export async function createRazorpayOrder(
   return resp.json();
 }
 
-// ── Verify payment signature ───────────────────────
+//  signature ───────────────────────
 export async function verifyRazorpayPayment(
   payload: RazorpayVerifyRequest
 ): Promise<RazorpayVerifyResponse> {
