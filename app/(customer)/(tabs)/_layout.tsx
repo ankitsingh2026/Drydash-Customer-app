@@ -36,7 +36,7 @@ export default function TabsLayout() {
             borderTopColor: theme.border,
           },
           tabBarActiveTintColor: theme.primary, 
-          tabBarInactiveTintColor: isDark ? "#94a3b8" : "#64748b",
+          tabBarInactiveTintColor: isDark ? "#94a3b8" : "#94a3b8",
           tabBarLabelStyle: {
             fontSize: 10,
             fontWeight: "600",

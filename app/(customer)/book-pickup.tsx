@@ -557,7 +557,7 @@ export default function BookPickup() {
             {
               paddingTop: insets.top,
               backgroundColor: theme.background,
-              borderBottomColor: isDark ? "#1f2933" : "#e5e7eb",
+              borderBottomColor: isDark ? "#1f2933" : "#1f2933",
             },
           ]}
         >
@@ -615,9 +615,9 @@ export default function BookPickup() {
                         ? theme.primary
                         : isDark
                           ? "#1A2332"
-                          : "#F0F4F8",
+                          : "#1A2332",
                     borderWidth: pickupType === "today" ? 0 : 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                    borderColor: isDark ? "#2D3748" : "#2D3748",
                   },
                 ]}
                 activeOpacity={0.8}
@@ -652,7 +652,7 @@ export default function BookPickup() {
                           ? "#1A2332"
                           : "#F0F4F8",
                     borderWidth: pickupType === "schedule" ? 0 : 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                    borderColor: isDark ? "#2D3748" : "#2D3748",
                   },
                 ]}
                 activeOpacity={0.8}
@@ -687,9 +687,9 @@ export default function BookPickup() {
                 style={[
                   styles.dateBox,
                   {
-                    backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+                    backgroundColor: isDark ? "#1A2332" : "#1A2332",
                     borderWidth: 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                    borderColor: isDark ? "#2D3748" : "#2D3748",
                   },
                 ]}
                 onPress={() => setShowDatePicker(true)}
@@ -755,7 +755,7 @@ export default function BookPickup() {
                               ? "#1A2332"
                               : "#F0F4F8",
                           borderWidth: active ? 0 : 1.5,
-                          borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                          borderColor: isDark ? "#2D3748" : "#2D3748",
                         },
                       ]}
                       activeOpacity={0.8}
@@ -844,7 +844,7 @@ export default function BookPickup() {
                               ? "#1A2332"
                               : "#F8FAFC",
                           borderWidth: selected ? 0 : 1.5,
-                          borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                          borderColor: isDark ? "#2D3748" : "#2D3748",
                         },
                       ]}
                       onPress={() => setSelectedAddressId(item.id)}
@@ -860,7 +860,7 @@ export default function BookPickup() {
                               ? "rgba(0,0,0,0.1)"
                               : isDark
                                 ? "#0F1729"
-                                : "#E2E8F0",
+                                : "#0F1729",
                           },
                         ]}
                       >
@@ -975,7 +975,7 @@ export default function BookPickup() {
                         ? "#1A2332"
                         : "#F0F4F8",
                   borderWidth: deliveryMode === "same" ? 0 : 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                  borderColor: isDark ? "#2D3748" : "#2D3748",
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1012,7 +1012,7 @@ export default function BookPickup() {
                         ? "#1A2332"
                         : "#F0F4F8",
                   borderWidth: deliveryMode === "other" ? 0 : 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                  borderColor: isDark ? "#2D3748" : "#2D3748",
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1066,7 +1066,7 @@ export default function BookPickup() {
                                 ? "#1A2332"
                                 : "#F8FAFC",
                             borderWidth: selected ? 0 : 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                            borderColor: isDark ? "#2D3748" : "#2D3748",
                           },
                         ]}
                         onPress={() => setSelectedDeliveryAddressId(item.id)}
@@ -1188,9 +1188,9 @@ export default function BookPickup() {
               style={[
                 styles.notePreview,
                 {
-                  backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+                  backgroundColor: isDark ? "#1A2332" : "#1A2332",
                   borderWidth: 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                  borderColor: isDark ? "#2D3748" : "#2D3748",
                 },
               ]}
             >
@@ -1259,7 +1259,7 @@ export default function BookPickup() {
                           onPress={() => setNotesModalOpen(false)}
                           style={[
                             modalStyles.closeBtn,
-                            { backgroundColor: isDark ? "#1A2332" : "#F0F4F8" },
+                            { backgroundColor: isDark ? "#1A2332" : "#1A2332" },
                           ]}
                           activeOpacity={0.8}
                         >
@@ -1278,10 +1278,10 @@ export default function BookPickup() {
                         style={[
                           styles.floatingNoteInput,
                           {
-                            backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+                            backgroundColor: isDark ? "#1A2332" : "#1A2332",
                             color: theme.text,
                             borderWidth: 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                            borderColor: isDark ? "#2D3748" : "#2D3748",
                           },
                         ]}
                       />
@@ -1324,9 +1324,9 @@ export default function BookPickup() {
                                 paddingHorizontal: 12,
                                 paddingVertical: 8,
                                 borderRadius: 20,
-                                backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+                                backgroundColor: isDark ? "#1A2332" : "#1A2332",
                                 borderWidth: 1,
-                                borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                                borderColor: isDark ? "#2D3748" : "#2D3748",
                               }}
                               activeOpacity={0.7}
                             >
@@ -1362,9 +1362,9 @@ export default function BookPickup() {
                             flex: 1,
                             paddingVertical: 14,
                             borderRadius: 12,
-                            backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+                            backgroundColor: isDark ? "#1A2332" : "#1A2332",
                             borderWidth: 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                            borderColor: isDark ? "#2D3748" : "#2D3748",
                             alignItems: "center",
                             justifyContent: "center",
                           }}
@@ -1449,8 +1449,8 @@ export default function BookPickup() {
             style={[
               styles.cancelBtn,
               {
-                backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                backgroundColor: isDark ? "#1A2332" : "#1A2332",
+                borderColor: isDark ? "#2D3748" : "#2D3748",
               },
             ]}
           >
@@ -1504,7 +1504,7 @@ export default function BookPickup() {
                       onPress={() => setAddModalOpen(false)}
                       style={[
                         modalStyles.closeBtn,
-                        { backgroundColor: isDark ? "#1A2332" : "#F0F4F8" },
+                        { backgroundColor: isDark ? "#1A2332" : "#1A2332" },
                       ]}
                       activeOpacity={0.8}
                     >
@@ -1612,7 +1612,7 @@ export default function BookPickup() {
                                 ? "#1A2332"
                                 : "#F0F4F8",
                             borderWidth: active ? 0 : 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                            borderColor: isDark ? "#2D3748" : "#2D3748",
                           }}
                           activeOpacity={0.85}
                         >
@@ -2003,10 +2003,10 @@ export default function BookPickup() {
 }
 
 const fieldStyle = (theme: any, isDark: boolean) => ({
-  backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
+  backgroundColor: isDark ? "#1A2332" : "#1A2332",
   color: theme.text,
   borderWidth: 1.5,
-  borderColor: isDark ? "#2D3748" : "#E2E8F0",
+  borderColor: isDark ? "#2D3748" : "#2D3748",
 });
 
 const styles = StyleSheet.create({

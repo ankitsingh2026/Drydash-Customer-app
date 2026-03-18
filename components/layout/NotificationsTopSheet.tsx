@@ -34,7 +34,7 @@ export default function NotificationsTopSheet({
 
   const unreadBg = isDark
     ? "rgba(52,211,153,0.12)"
-    : "rgba(52,211,153,0.16)";
+    : "rgba(52,211,153,0.12)";
 
   /** Animate + mark read when opened */
   useEffect(() => {

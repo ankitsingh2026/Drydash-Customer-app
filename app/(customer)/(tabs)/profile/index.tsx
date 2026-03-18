@@ -148,7 +148,7 @@ export default function Profile() {
         activeOpacity={0.9}
         style={[
           styles.logoutBtn,
-          { backgroundColor: isDark ? "#3B1F1F" : "#FEE2E2" },
+          { backgroundColor: isDark ? "#3B1F1F" : "#3B1F1F" },
         ]}
         // MENU 2
         onPress={async () => {

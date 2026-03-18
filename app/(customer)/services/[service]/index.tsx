@@ -184,7 +184,7 @@ export default function ServiceDetail() {
                     ? theme.primary
                     : isDark
                       ? "#0F172A"
-                      : "#F1F5F9",
+                      : "#0F172A",
                 },
               ]}
             >

@@ -127,7 +127,7 @@ function SlidingFilterTabs({
       <View
         style={[
           styles.tabBarWrapper,
-          { backgroundColor: isDark ? "#0F1720" : "#F1F5F9" },
+          { backgroundColor: isDark ? "#0F1720" : "#0F1720" },
         ]}
       >
         <Animated.View
@@ -157,7 +157,7 @@ function SlidingFilterTabs({
                 style={{
                   fontWeight: isActive ? "800" : "600",
                   fontSize: 13,
-                  color: isActive ? "#fff" : isDark ? "#9CA3AF" : "#6B7280",
+                  color: isActive ? "#fff" : isDark ? "#9CA3AF" : "#9CA3AF",
                   zIndex: 2,
                 }}
               >
@@ -345,7 +345,7 @@ export default function Orders() {
               style={[
                 styles.statsBox,
                 {
-                  backgroundColor: isDark ? "#0F1720" : "#F8FAFC",
+                  backgroundColor: isDark ? "#0F1720" : "#0F1720",
                   borderColor: theme.border,
                 },
               ]}
@@ -361,7 +361,7 @@ export default function Orders() {
           <View
             style={[
               styles.divider,
-              { backgroundColor: isDark ? "#1F2937" : "#E5E7EB" },
+              { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
             ]}
           />
         </Animated.View>
@@ -431,7 +431,7 @@ export default function Orders() {
                     <View
                       style={[
                         styles.dateBadge,
-                        { backgroundColor: isDark ? "#1F2937" : "#F3F4F6" },
+                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
                       ]}
                     >
                       <Text style={{ fontSize: 11, color: theme.subText }}>
@@ -467,7 +467,7 @@ export default function Orders() {
                       <View
                         style={[
                           styles.noteBadge,
-                          { backgroundColor: isDark ? "#1F2937" : "#F0FDF4" },
+                          { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
                         ]}
                       >
                         <Ionicons
@@ -496,7 +496,7 @@ export default function Orders() {
                         style={[
                           styles.actionBtn,
                           {
-                            backgroundColor: isDark ? "#065F46" : "#ECFDF5",
+                            backgroundColor: isDark ? "#065F46" : "#065F46",
                             borderWidth: 1,
                             borderColor: "#10B981",
                           },
@@ -526,7 +526,7 @@ export default function Orders() {
                         style={[
                           styles.actionBtn,
                           {
-                            backgroundColor: isDark ? "#450A0A" : "#FEF2F2",
+                            backgroundColor: isDark ? "#450A0A" : "#450A0A",
                             borderWidth: 1,
                             borderColor: "#EF4444",
                           },
@@ -605,7 +605,7 @@ export default function Orders() {
                     <View
                       style={[
                         styles.itemPill,
-                        { backgroundColor: isDark ? "#1F2937" : "#F3F4F6" },
+                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
                       ]}
                     >
                       <Ionicons
@@ -651,7 +651,7 @@ export default function Orders() {
                     <View
                       style={[
                         styles.innerDivider,
-                        { backgroundColor: isDark ? "#1F2937" : "#F3F4F6" },
+                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
                       ]}
                     />
 
@@ -683,7 +683,7 @@ export default function Orders() {
                   <View
                     style={[
                       styles.tapHint,
-                      { borderTopColor: isDark ? "#1F2937" : "#F3F4F6" },
+                      { borderTopColor: isDark ? "#1F2937" : "#1F2937" },
                     ]}
                   >
                     <Text style={{ fontSize: 11, color: theme.subText }}>

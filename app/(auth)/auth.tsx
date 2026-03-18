@@ -167,8 +167,7 @@ export default function AuthScreen() {
   }, [error]);
 
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
-    const mobile = phone;
-
+    const mobile = phoneValue || phone;
     // console.log("this is the mobileeeee=====>>>>>",mobile)
     // Alert.alert("chcek pyone :::  ",mobile)
     // console.log('sendOtp called with mobile:', mobile);
@@ -370,7 +369,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                    styles.progressDotActive,
+                  styles.progressDotActive,
                 ]}
               />
             </View>

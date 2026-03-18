@@ -7,7 +7,7 @@
     "backgroundColor": "#0B1F1A",
     "icon": "./assets/images/icon.png",
     "scheme": "drydash",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/drydash.png",

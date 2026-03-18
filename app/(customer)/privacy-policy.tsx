@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
             <StatusBar
-                barStyle={theme.background === "#FFFFFF" ? "dark-content" : "light-content"}
+                barStyle={theme.background === "#FFFFFF" ? "dark-content" : "dark-content"}
                 backgroundColor={theme.background}
             />
 

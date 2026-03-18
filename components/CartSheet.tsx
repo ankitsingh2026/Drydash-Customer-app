@@ -69,7 +69,7 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: isDark ? "#0B1220" : "#F8FAFC",
+                    backgroundColor: isDark ? "#0B1220" : "#0B1220",
                   },
                 ]}
               >
@@ -77,7 +77,7 @@ export default function CartSheet({
                 <View
                   style={[
                     styles.thumb,
-                    { backgroundColor: isDark ? "#1E293B" : "#E5E7EB" },
+                    { backgroundColor: isDark ? "#1E293B" : "#1E293B" },
                   ]}
                 >
                   <Text style={{ fontSize: 11, color: theme.subText }}>

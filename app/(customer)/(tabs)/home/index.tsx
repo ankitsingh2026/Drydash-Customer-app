@@ -374,8 +374,8 @@ export default function Home() {
               styles.pickupCard,
               {
                 opacity: fadeAnim,
-                backgroundColor: isDark ? "#0D1F1C" : "#F0FDF4",
-                borderColor: isDark ? "#1A3330" : "#A7F3D0",
+                backgroundColor: isDark ? "#0D1F1C" : "#0D1F1C",
+                borderColor: isDark ? "#1A3330" : "#1A3330",
                 transform: [
                   {
                     translateY: fadeAnim.interpolate({
@@ -403,13 +403,13 @@ export default function Home() {
             </View>
 
             {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor: isDark ? "#1A3330" : "#A7F3D0" }]} />
+            <View style={[styles.pickupDivider, { backgroundColor: isDark ? "#1A3330" : "#1A3330" }]} />
 
             {/* Swipe to Book */}
             <View
               style={[
                 styles.swipeContainer,
-                { backgroundColor: isDark ? "#071018" : "#112B25" },
+                { backgroundColor: isDark ? "#071018" : "#071018" },
               ]}
             >
               <Animated.View
@@ -455,8 +455,8 @@ export default function Home() {
                       style={[
                         styles.serviceCard,
                         {
-                          backgroundColor: isDark ? "#0D1F1C" : "#F0FDF4",
-                          borderColor: isDark ? "#1A3330" : "#A7F3D0",
+                          backgroundColor: isDark ? "#0D1F1C" : "#0D1F1C",
+                          borderColor: isDark ? "#1A3330" : "#1A3330",
                         },
                       ]}
                       activeOpacity={0.85}
@@ -470,7 +470,7 @@ export default function Home() {
                         <View
                           style={[
                             styles.serviceIconWrapper,
-                            { backgroundColor: isDark ? "#0A3D3C" : "#CCFBF1" },
+                            { backgroundColor: isDark ? "#0A3D3C" : "#0A3D3C" },
                           ]}
                         >
                           <Ionicons

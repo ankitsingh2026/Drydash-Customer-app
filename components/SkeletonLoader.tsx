@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
-  StyleSheet,
-  View,
   Dimensions,
   Easing,
+  StyleSheet,
+  View,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 
@@ -111,8 +111,8 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
     outputRange: [-width, width],
   });
 
-  const baseColor = isDark ? "#1F2937" : "#E5E7EB";
-  const shimmerColor = isDark ? "#374151" : "#F3F4F6";
+  const baseColor = isDark ? "#1F2937" : "#1F2937";
+  const shimmerColor = isDark ? "#374151" : "#374151";
 
   return (
     <View
@@ -205,7 +205,7 @@ export const OrdersScreenSkeleton = () => {
       <View
         style={[
           styles.divider,
-          { backgroundColor: isDark ? "#1F2937" : "#E5E7EB" },
+          { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
         ]}
       />
 
