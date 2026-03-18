@@ -10,7 +10,9 @@ export const createOrderApi = async (order_details: order_details) => {
 };
 
 export const getAddressApi = async (id: any) => {
+  console.log("i am calleddddd--->>", id);
   const { data } = await apiClient.get(`/v1/addresses?customerid=${id}`);
+  console.log("this is the dataa--->>>>>", data);
   return data;
 };
 

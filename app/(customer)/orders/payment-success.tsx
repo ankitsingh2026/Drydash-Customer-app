@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
-    Animated,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
 
@@ -24,7 +24,11 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     Animated.sequence([
-      Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
       Animated.spring(scale, {
         toValue: 1,
         friction: 4,
@@ -36,13 +40,9 @@ export default function PaymentSuccess() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
-
       {/* SUCCESS ICON */}
       <Animated.View
-        style={[
-          styles.iconCircle,
-          { transform: [{ scale }], opacity: fade },
-        ]}
+        style={[styles.iconCircle, { transform: [{ scale }], opacity: fade }]}
       >
         <Ionicons name="checkmark" size={64} color="#fff" />
       </Animated.View>
@@ -53,7 +53,7 @@ export default function PaymentSuccess() {
           Payment Successful!
         </Text>
         <Text style={[styles.sub, { color: theme.subText }]}>
-          Your order has been confirmed
+          Your payment has been received !
         </Text>
 
         {/* DETAILS CARD */}
@@ -61,7 +61,7 @@ export default function PaymentSuccess() {
           <Row label="Order ID" value={`#${orderId}`} theme={theme} />
           <Row label="Amount Paid" value={`₹${amount}`} theme={theme} />
           {paymentId ? (
-            <Row label="Payment ID" value={paymentId} theme={theme} />
+            <Row label="Payment ID   " value={paymentId} theme={theme} />
           ) : null}
         </View>
       </Animated.View>
@@ -89,7 +89,6 @@ export default function PaymentSuccess() {
           </Text>
         </TouchableOpacity>
       </View>
-
     </View>
   );
 }

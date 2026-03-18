@@ -28,6 +28,7 @@ export const getMeApi = async () => {
 };
 
 export const refreshTokenApi = (refreshToken: string) => {
+  console.log("i am beign called refresh token api");
   return axios.post("https://live.drydash.in/v1/auth/refresh-tokens", {
     refreshToken,
   });

@@ -1,5 +1,4 @@
 // app/screens/BookPickup.tsx
-import PickupMap from "@/components/maps/PickupMap.native";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -8,6 +7,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import PickupMap from "@/components/maps/PickupMap.native";
 import {
   createOrderApi,
   getAddressApi,
@@ -155,14 +155,11 @@ export default function BookPickup() {
 
   const { firstName, lastName, id } = user;
 
-  console.log("this is valueeeess", user?.user?.id);
-
-  console.log("this is valueeeess", user?.id);
+  console.log("this is valueeeess", user);
 
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
 
-  const phone = '91' + user?.user?.phone  //need to look
-
+  const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
 
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
@@ -316,7 +313,7 @@ export default function BookPickup() {
 
   const getPickupAddr = async () => {
     try {
-      console.log("this is the iddddd-->>>", id);
+      console.log("this is the iddddd-->>>", auth_id);
       const data = await getAddressApi(auth_id);
 
       const list = Array.isArray(data?.results) ? data.results : [];
@@ -371,7 +368,7 @@ export default function BookPickup() {
 
       const { status } = await Location.requestForegroundPermissionsAsync();
 
-      console.log("this is the statussss==>>",status)
+      console.log("this is the statussss==>>", status);
 
       if (status !== "granted") {
         setLocLoading(false);
@@ -395,11 +392,11 @@ export default function BookPickup() {
 
       setLocation(coords);
 
-      console.log("this is loc",loc)
+      console.log("this is loc", loc);
 
       const geo = await Location.reverseGeocodeAsync(coords);
 
-      console.log("this is geo",geo)
+      console.log("this is geo", geo);
 
       if (geo && geo.length > 0) {
         const g = geo[0];
@@ -1532,7 +1529,7 @@ export default function BookPickup() {
                       {searchLoading ? (
                         <Ionicons name="sync" size={18} color={theme.primary} />
                       ) : (
-                       <TouchableOpacity onPress={searchOnMap}>
+                        <TouchableOpacity onPress={searchOnMap}>
                           <Ionicons
                             name="arrow-forward-circle"
                             size={30}
@@ -1542,7 +1539,7 @@ export default function BookPickup() {
                       )}
                     </View>
 
-                    {/* <PickupMap
+                    <PickupMap
                       location={location}
                       onSelect={(c) => {
                         setLocation(c);
@@ -1552,7 +1549,7 @@ export default function BookPickup() {
                           longitude: String(c.longitude),
                         }));
                       }}
-                    /> */}
+                    />
 
                     <TouchableOpacity
                       onPress={fetchCurrentLocation}
@@ -1569,7 +1566,7 @@ export default function BookPickup() {
                       <Ionicons
                         name={locLoading ? "sync" : "locate"}
                         size={18}
-                        color="#000" 
+                        color="#000"
                       />
                       <Text style={modalStyles.currentLocText}>
                         {locLoading ? "Fetching..." : "Use Current Location"}
