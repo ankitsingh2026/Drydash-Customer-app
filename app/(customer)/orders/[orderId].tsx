@@ -1,12 +1,12 @@
-import PaymentWebView from "@/components/payments/PaymentWebView";
 import { getSingleOrderDetailssApi } from "@/features/orders/orders.api";
-<<<<<<< HEAD
-import { createOrderPaymentApi } from "@/features/payment/payment.api";
-=======
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
+import {
+  razorpayPaymentInitiate,
+  verifyRazorpayPayment,
+} from "@/features/payment/payment.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import { CircleCheckBig } from "lucide-react-native";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -44,40 +44,20 @@ interface OrderDetails {
 
 export default function OrderReceipt() {
   const params = useLocalSearchParams();
-  const orderId = typeof params.orderId === "string" ? params.orderId : undefined;
+  const orderId =
+    typeof params.orderId === "string" ? params.orderId : undefined;
 
-  console.log("this is the orderId", orderId);
+  console.log("this is the orderId okay", orderId);
 
   const { theme } = useTheme();
   const { user } = useAuth();
 
-  const [singleOrderDetails, setSingleOrderDetails] = useState<OrderDetails | null>(null);
+  const [singleOrderDetails, setSingleOrderDetails] =
+    useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
-  const [paymentData, setPaymentData] = useState<any>(null);
-  const [showPaymentWebview, setShowPaymentWebview] = useState(false);
-
-  const { user } = useAuth();
-
-  if (!user) return null;
-
-  console.log("this is userrrr==>>", user);
-
-  const User = user?.user ? user?.user : user;
-
-  const email = User?.email;
-
-  console.log("this is the email===>>", email);
-
-  const paymentObj = {
-    orderId,
-    paymentMode: "upi",
-    email,
-  };
-=======
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [showPaymentWebView, setShowPaymentWebView] = useState(false);
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
+  const [razorpayData, setRazorpayData] = useState<any>(null);
 
   // Safely extract user info
   if (!user) return null;
@@ -86,48 +66,63 @@ export default function OrderReceipt() {
   const phone = User?.phone ?? User?.mobile ?? "9999999999";
   const name = User?.name ?? User?.fullName ?? "Test User";
 
-<<<<<<< HEAD
-  const handlePayNow = async () => {
+  // ---------- Payment Handlers ----------
+  const handleRazorpayPayNow = async () => {
     try {
-      const res = await createOrderPaymentApi(paymentObj);
+      setPaymentLoading(true);
 
-      console.log("this is the ressss", res);
+      console.log("this si the id==>>", orderId);
 
-      let data = res?.paymentData;
+      const res = await razorpayPaymentInitiate(orderId);
 
-      console.log("this is the dataaaa===>>>>>", data);
-
-      if (!data?.hash) {
-        alert("Payment init failed");
-        return;
+      if (!res?.data?.success) {
+        throw new Error("Payment initiation failed");
       }
 
-      setPaymentData(data);
-      setShowPaymentWebview(true);
-    } catch (e) {
-      console.log(e);
-      alert("Payment error");
+      setRazorpayData(res.data);
+
+      setShowPaymentWebView(true);
+    } catch (error) {
+      console.log("payment initiate error", error);
+    } finally {
+      setPaymentLoading(false);
     }
   };
+  const handlePaymentSuccess = async (data: any) => {
+    try {
+      setPaymentLoading(true);
 
-=======
-  // ---------- Payment Handlers ----------
-  const handleRazorpayPayNow = () => {
-    setPaymentLoading(true);
-    setShowPaymentWebView(true);
-  };
+      const verifyRes = await verifyRazorpayPayment({
+        razorpay_order_id: data.orderId,
+        razorpay_payment_id: data.paymentId,
+        razorpay_signature: data.signature,
+      });
 
-  const handlePaymentSuccess = (paymentId: string) => {
-    setShowPaymentWebView(false);
-    setPaymentLoading(false);
-    router.replace({
-      pathname: "/(customer)/orders/payment-success",
-      params: {
-        orderId,
-        amount: String(singleOrderDetails?.price),
-        paymentId,
-      },
-    });
+      if (!verifyRes?.success) {
+        throw new Error("Verification failed");
+      }
+
+      router.replace({
+        pathname: "/(customer)/orders/payment-success",
+        params: {
+          orderId,
+          amount: String(singleOrderDetails?.price),
+          paymentId: data.paymentId,
+        },
+      });
+    } catch (error) {
+      router.replace({
+        pathname: "/(customer)/orders/payment-failure",
+        params: {
+          orderId,
+          amount: String(singleOrderDetails?.price),
+          reason: "Payment verification failed",
+        },
+      });
+    } finally {
+      setPaymentLoading(false);
+      setShowPaymentWebView(false);
+    }
   };
 
   const handlePaymentFailure = (reason: string) => {
@@ -150,7 +145,6 @@ export default function OrderReceipt() {
   };
 
   // ---------- Data Fetching ----------
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
   const getSingleOrderDetails = async () => {
     if (!orderId) return;
     try {
@@ -170,7 +164,7 @@ export default function OrderReceipt() {
   useFocusEffect(
     useCallback(() => {
       getSingleOrderDetails();
-    }, [orderId])
+    }, [orderId]),
   );
 
   // ---------- Loading / Error States ----------
@@ -190,41 +184,11 @@ export default function OrderReceipt() {
     );
   }
 
-<<<<<<< HEAD
-  /* ================= ADD STEP 4 HERE ================= */
-
-  console.log("this is the paymentDatab 1222", showPaymentWebview, orderId);
-
-  if (showPaymentWebview && paymentData && orderId) {
-    return (
-      <PaymentWebView
-        paymentData={paymentData}
-        orderId={orderId}
-        onSuccess={() => {
-          setShowPaymentWebview(false);
-          alert("Payment successful ✅");
-          getSingleOrderDetails();
-        }}
-        onFailure={() => {
-          setShowPaymentWebview(false);
-          alert("Payment failed");
-        }}
-      />
-    );
-  }
-
-  /* ================= DERIVED DATA ================= */
-
   const status =
-    singleOrderDetails.status === "delivered" ? "Completed" : "Active";
-
-  /* ================= UI ================= */
-=======
-  const status = singleOrderDetails.status === "delivered" ? "Completed" : "Active";
+    singleOrderDetails.status === "processing" ? "Active" : "Completed";
   const isPaid = singleOrderDetails?.payment?.status === "success";
   const subtotal = calculateSubtotal(singleOrderDetails?.items);
   const discountProvided = subtotal - singleOrderDetails?.price;
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
 
   // ---------- UI ----------
   return (
@@ -244,16 +208,20 @@ export default function OrderReceipt() {
           <Text style={[styles.headerTitle, { color: theme.text }]}>
             Order #{orderId} Receipt
           </Text>
-          <Ionicons name="person-circle-outline" size={26} color={theme.subText || theme.text} />
+          <Ionicons
+            name="person-circle-outline"
+            size={26}
+            color={theme.subText || theme.text}
+          />
         </View>
 
         {/* TEST BANNER */}
-        <View style={styles.testBanner}>
+        {/* <View style={styles.testBanner}>
           <Ionicons name="flask-outline" size={14} color="#92400e" />
           <Text style={styles.testBannerText}>
             TEST MODE — card: 4111 1111 1111 1111 | CVV: 123 | OTP: 1234
           </Text>
-        </View>
+        </View> */}
 
         {/* CARD */}
         <View style={[styles.card, { backgroundColor: theme.card }]}>
@@ -272,18 +240,14 @@ export default function OrderReceipt() {
               {new Date(singleOrderDetails.createdAt).toLocaleString("en-US")}
             </Text>
           </View>
-<<<<<<< HEAD
-        ) : (
-          <View></View>
-        )}
-=======
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
 
           {singleOrderDetails.status === "delivered" && (
             <View style={styles.detailBlock}>
               <Text style={styles.label}>Delivery Date</Text>
               <Text style={[styles.value, { color: theme.text }]}>
-                {new Date(singleOrderDetails?.statusHistory?.delivered!).toLocaleString("en-US")}
+                {new Date(
+                  singleOrderDetails?.statusHistory?.delivered!,
+                ).toLocaleString("en-US")}
               </Text>
             </View>
           )}
@@ -295,10 +259,17 @@ export default function OrderReceipt() {
             </Text>
           </View>
 
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Items</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Items
+          </Text>
           {(singleOrderDetails.items || []).map((item, index) => (
             <View key={index} style={styles.rowBetween}>
-              <Text style={[styles.itemText, { color: theme.subText || theme.text }]}>
+              <Text
+                style={[
+                  styles.itemText,
+                  { color: theme.subText || theme.text },
+                ]}
+              >
                 {item.heading} × {item.quantity}
               </Text>
               <Text style={[styles.itemPrice, { color: theme.text }]}>
@@ -307,7 +278,9 @@ export default function OrderReceipt() {
             </View>
           ))}
 
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Cost Breakdown</Text>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Cost Breakdown
+          </Text>
           <View style={styles.rowBetween}>
             <Text style={styles.muted}>Subtotal</Text>
             <Text style={styles.muted}>₹{subtotal.toFixed(2)}</Text>
@@ -317,10 +290,32 @@ export default function OrderReceipt() {
             <Text style={styles.muted}>₹{discountProvided.toFixed(2)}</Text>
           </View>
 
+          {isPaid ? (
+            <>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Payment Details
+              </Text>
+              <View style={styles.rowBetween}>
+                <Text style={styles.muted}>Payment Id</Text>
+                <Text style={styles.muted}>
+                  {singleOrderDetails?.payment?.paymentId}
+                </Text>
+              </View>
+              <View style={styles.rowBetween}>
+                <Text style={styles.muted}>Payment Mode</Text>
+                <Text style={styles.muted}>
+                  {(singleOrderDetails?.payment?.paymentMode).toUpperCase()}
+                </Text>
+              </View>
+            </>
+          ) : null}
+
           <View style={styles.divider} />
 
           <View style={styles.rowBetween}>
-            <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
+            <Text style={[styles.totalLabel, { color: theme.text }]}>
+              Total
+            </Text>
             <Text style={[styles.totalValue, { color: theme.text }]}>
               ₹{singleOrderDetails.price.toFixed(2)}
             </Text>
@@ -333,7 +328,10 @@ export default function OrderReceipt() {
               disabled={paymentLoading}
               style={[
                 styles.payBtn,
-                { backgroundColor: theme.primary, opacity: paymentLoading ? 0.6 : 1 },
+                {
+                  backgroundColor: theme.primary,
+                  opacity: paymentLoading ? 0.6 : 1,
+                },
               ]}
             >
               {paymentLoading ? (
@@ -345,65 +343,42 @@ export default function OrderReceipt() {
               )}
             </TouchableOpacity>
           ) : (
-            <View style={[styles.payBtn, { backgroundColor: theme.primary, opacity: 0.5 }]}>
-              <Text style={styles.payBtnText}>
-                ✅ Paid ₹{singleOrderDetails.price.toFixed(2)}
-              </Text>
+            <View
+              style={[
+                styles.payBtn,
+                { backgroundColor: theme.primary, opacity: 0.5 },
+              ]}
+            >
+              <View style={styles.payBtnContent}>
+                <CircleCheckBig size={18} color="#0c0101" />
+                <Text style={styles.payBtnText}>
+                  Paid ₹{singleOrderDetails.price.toFixed(2)}
+                </Text>
+              </View>
             </View>
           )}
         </View>
       </ScrollView>
 
-<<<<<<< HEAD
-        <View style={styles.rowBetween}>
-          <Text style={styles.muted}>Discount</Text>
-          <Text style={styles.muted}>₹{discountProvided.toFixed(2)}</Text>
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.rowBetween}>
-          <Text style={[styles.totalLabel, { color: theme.text }]}>Total</Text>
-          <Text style={[styles.totalValue, { color: theme.text }]}>
-            ₹{singleOrderDetails.price.toFixed(2)}
-          </Text>
-        </View>
-
-        {singleOrderDetails.paymentStatus !== "paid" && (
-          <TouchableOpacity
-            onPress={handlePayNow}
-            style={{
-              marginTop: 20,
-              backgroundColor: theme.primary,
-              paddingVertical: 14,
-              borderRadius: 12,
-              alignItems: "center",
-            }}
-          >
-            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 16 }}>
-              Pay Now ₹{singleOrderDetails.price.toFixed(2)}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </ScrollView>
-=======
       {/* Payment WebView Modal */}
       <Modal visible={showPaymentWebView} animationType="slide">
-        <RazorpayWebView
-          amount={singleOrderDetails.price}
-          orderId={orderId!}
-          email={email}
-          phone={phone}
-          name={name}
-          themeColor={theme.primary}
-          onSuccess={handlePaymentSuccess}
-          onFailure={handlePaymentFailure}
-          onCancel={handlePaymentCancel}
-        />
+        {razorpayData && (
+          <RazorpayWebView
+            amount={razorpayData.amount}
+            orderId={razorpayData.orderId}
+            razorpayOrderId={razorpayData.razorpayOrderId}
+            razorpayKey={razorpayData.key}
+            email={email}
+            phone={phone}
+            name={name}
+            themeColor={theme.primary}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onCancel={handlePaymentCancel}
+          />
+        )}
       </Modal>
     </>
->>>>>>> 9323aae2f07c7faa1817a307a7be4355de27fc8a
   );
 }
 
@@ -521,6 +496,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  payBtnContent: {
+    flexDirection: "row", // ✅ horizontal
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6, // ✅ spacing (or use marginRight)
+  },
+
   payBtnText: {
     color: "#0c0101",
     fontWeight: "700",

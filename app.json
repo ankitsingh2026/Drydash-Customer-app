@@ -16,23 +16,23 @@
     },
     "ios": {
       "supportsTablet": true,
-       "config": {
+      "config": {
         "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
       }
     },
     "android": {
-        "versionCode": 1,
-        "permissions": [
-          "ACCESS_FINE_LOCATION",
-          "ACCESS_COARSE_LOCATION",
-          "FOREGROUND_SERVICE",
-          "ACCESS_BACKGROUND_LOCATION"
-        ],
-          "config": {
-          "googleMaps": {
-            "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
-          }
-        },
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "ACCESS_BACKGROUND_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -61,7 +61,13 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow DryDash to access your location for pickup address"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

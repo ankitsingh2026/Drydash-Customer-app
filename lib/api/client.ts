@@ -9,7 +9,7 @@ export const apiClient = axios.create({
 
 export const oldApiClient = axios.create({
   baseURL: "https://test.drydash.in/api", // old backend
-  // baseURL: "http://localhost:5001/api",
+  // baseURL: "http://localhost:5001/api/",
   headers: { "Content-Type": "application/json" },
 });
 

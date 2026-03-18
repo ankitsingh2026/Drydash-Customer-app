@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import PickupMap from "@/components/maps/PickupMap.native";
 import {
   createOrderApi,
   getAddressApi,
@@ -154,13 +155,11 @@ export default function BookPickup() {
 
   const { firstName, lastName, id } = user;
 
-  console.log("this is userrrr==>>", user);
+  console.log("this is valueeeess", user);
 
-  const User = user?.user ? user?.user : user;
+  const auth_id = user?.user?.id ? user?.user?.id : user?.id;
 
-  console.log("this is valueeeess", User?.id);
-
-  const phone = "91" + user?.user?.phone; //need to look
+  const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
 
   const openAddressPreview = (addr: any) => {
     setPreviewAddress(addr);
@@ -314,7 +313,7 @@ export default function BookPickup() {
 
   const getPickupAddr = async () => {
     try {
-      console.log("this is the iddddd-->>>", id);
+      console.log("this is the iddddd-->>>", auth_id);
       const data = await getAddressApi(auth_id);
 
       const list = Array.isArray(data?.results) ? data.results : [];
@@ -1540,7 +1539,7 @@ export default function BookPickup() {
                       )}
                     </View>
 
-                    {/* <PickupMap
+                    <PickupMap
                       location={location}
                       onSelect={(c) => {
                         setLocation(c);
@@ -1550,7 +1549,7 @@ export default function BookPickup() {
                           longitude: String(c.longitude),
                         }));
                       }}
-                    /> */}
+                    />
 
                     <TouchableOpacity
                       onPress={fetchCurrentLocation}

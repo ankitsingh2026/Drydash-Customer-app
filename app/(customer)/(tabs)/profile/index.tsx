@@ -3,20 +3,14 @@ import { getMeApi } from "@/features/auth/auth.api";
 import { router } from "expo-router";
 import { ChevronRight, LogOut } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../../context/ThemeContext";
 
 const MENU_1 = [
   { label: "Edit Profile" },
-  { label: "Change Password" },
-  { label: "Payment Methods" },
+  // { label: "Change Password" },
+  // { label: "Payment Methods" },
 ];
 
 const MENU_2 = [
@@ -149,7 +143,6 @@ export default function Profile() {
         ))}
       </View>
 
-
       {/* LOGOUT */}
       <TouchableOpacity
         activeOpacity={0.9}
@@ -162,7 +155,6 @@ export default function Profile() {
           await logout();
           router.replace("/(auth)/auth");
         }}
-
       >
         <LogOut size={18} color="#EF4444" />
         <Text style={styles.logoutText}>Log Out</Text>
