@@ -32,7 +32,7 @@
 //           coordinate={location}
 //           draggable
 //           onDragEnd={(e) => onSelect(e.nativeEvent.coordinate)}
-//         />      
+//         />
 //         </MapView>
 //     </View>
 //   );
@@ -60,9 +60,8 @@ export default function PickupMap({
   location: { latitude: number; longitude: number };
   onSelect: (c: { latitude: number; longitude: number }) => void;
 }) {
-
-  console.log("Map component rendered==>>>")
-  console.log("Map component rendered location==>>>",location)
+  console.log("Map component rendered==>>>");
+  console.log("Map component rendered location==>>>", location);
   return (
     <View style={styles.container}>
       <MapView
