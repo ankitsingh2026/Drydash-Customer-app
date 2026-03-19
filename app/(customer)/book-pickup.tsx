@@ -573,6 +573,7 @@ export default function BookPickup() {
               paddingTop: insets.top,
               backgroundColor: theme.background,
               borderBottomColor: "#1f2933",
+              
             },
           ]}
         >
@@ -583,13 +584,13 @@ export default function BookPickup() {
           <Text
             style={[
               styles.headerTitle,
-              { color: theme.text, marginLeft: -12 }, // optical centering
+              { color: theme.text, marginLeft: -12  }, // optical centering
             ]}
           >
             Book Pickup
           </Text>
 
-          <View style={{ width: 26 }} />
+          <View style={{ width: 28 }} />
         </View>
 
         <ScrollView
@@ -663,7 +664,7 @@ export default function BookPickup() {
                       pickupType === "schedule"
                         ? theme.primary
 
-                          : "#F0F4F8",
+                          : "#1A2332",
                     borderWidth: pickupType === "schedule" ? 0 : 1.5,
                     borderColor:  "#2D3748",
                   },
@@ -765,7 +766,7 @@ export default function BookPickup() {
                           backgroundColor: active
                             ? theme.primary
                            
-                              : "#F0F4F8",
+                              : "#1A2332",
                           borderWidth: active ? 0 : 1.5,
                           borderColor: "#2D3748",
                         },
@@ -853,7 +854,7 @@ export default function BookPickup() {
                           backgroundColor: selected
                             ? theme.primary
                          
-                              : "#F8FAFC",
+                              : "#1A2332",
                           borderWidth: selected ? 0 : 1.5,
                           borderColor: "#2D3748",
                         },
@@ -982,7 +983,7 @@ export default function BookPickup() {
                     deliveryMode === "same"
                       ? theme.primary
                    
-                        : "#F0F4F8",
+                        : "#1A2332",
                   borderWidth: deliveryMode === "same" ? 0 : 1.5,
                   borderColor: "#2D3748",
                   flexDirection: "row",
@@ -1018,7 +1019,7 @@ export default function BookPickup() {
                     deliveryMode === "other"
                       ? theme.primary
                       
-                        : "#F0F4F8",
+                        : "#1A2332",
                   borderWidth: deliveryMode === "other" ? 0 : 1.5,
                   borderColor: "#2D3748",
                   flexDirection: "row",
@@ -1071,7 +1072,7 @@ export default function BookPickup() {
                             backgroundColor: selected
                               ? theme.primary
                             
-                                : "#F8FAFC",
+                                : "#1A2332",
                             borderWidth: selected ? 0 : 1.5,
                             borderColor: "#2D3748",
                           },
@@ -1615,7 +1616,7 @@ export default function BookPickup() {
                             backgroundColor: active
                               ? theme.primary
                            
-                                : "#F0F4F8",
+                                : "#1A2332",
                             borderWidth: active ? 0 : 1.5,
                             borderColor: "#2D3748",
                           }}
@@ -2026,7 +2027,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 75,
+    height: 85,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -2297,7 +2298,7 @@ const modalStyles = StyleSheet.create({
   },
   mapSearchBox: {
     position: "absolute",
-    top: 10,
+    top: 15,
     left: 12,
     right: 12,
     zIndex: 20,
@@ -2307,7 +2308,7 @@ const modalStyles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
 
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     height: 44,
 
     borderWidth: 1,

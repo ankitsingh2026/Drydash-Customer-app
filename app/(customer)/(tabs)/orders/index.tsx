@@ -496,9 +496,9 @@ export default function Orders() {
                         style={[
                           styles.actionBtn,
                           {
-                            backgroundColor: isDark ? "#065F46" : "#065F46",
+                            backgroundColor:"#268059",
                             borderWidth: 1,
-                            borderColor: "#10B981",
+                            borderColor: "#102B25",
                           },
                         ]}
                         onPress={() => {
@@ -509,12 +509,12 @@ export default function Orders() {
                         <Ionicons
                           name="calendar-outline"
                           size={14}
-                          color="#10B981"
+                          color="#fff"
                         />
                         <Text
                           style={{
                             fontWeight: "700",
-                            color: "#10B981",
+                            color: "#fff",
                             marginLeft: 6,
                           }}
                         >
@@ -526,8 +526,7 @@ export default function Orders() {
                         style={[
                           styles.actionBtn,
                           {
-                            backgroundColor: isDark ? "#450A0A" : "#450A0A",
-                            borderWidth: 1,
+                            backgroundColor: "#9e3946",
                             borderColor: "#EF4444",
                           },
                         ]}
@@ -541,12 +540,12 @@ export default function Orders() {
                         <Ionicons
                           name="close-circle-outline"
                           size={14}
-                          color="#EF4444"
+                          color="#fff"
                         />
                         <Text
                           style={{
                             fontWeight: "800",
-                            color: "#EF4444",
+                            color: "#fff",
                             marginLeft: 6,
                           }}
                         >
@@ -708,8 +707,8 @@ export default function Orders() {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 0 },
-  headerContainer: { marginBottom: 12 },
+  container: { padding: 16, marginTop: 20 },
+  headerContainer: { marginBottom: 0 },
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -718,14 +717,14 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: "800" },
   headerSubtitle: { marginTop: 4, fontSize: 13 },
   statsBox: {
-    padding: 12,
+    padding: 8,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
   },
-  statsNumber: { fontSize: 20, fontWeight: "800" },
+  statsNumber: { fontSize: 16, fontWeight: "800" },
   statsLabel: { fontSize: 11 },
-  divider: { height: 1, marginTop: 16 },
+  divider: { height: 1, marginTop: 10 },
 
   /* Tabs */
   tabBarWrapper: {

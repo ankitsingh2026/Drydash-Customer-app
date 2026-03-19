@@ -1,7 +1,7 @@
 // components/layout/TabBar.tsx
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
-import { Bell, Wallet } from "lucide-react-native";
+import { Bell } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -31,7 +31,7 @@ function getGreeting() {
 }
 
 export const TabBar = ({ onOpenNotifications, onWalletPress }: TabBarProps) => {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
   const { setAuthUser, logout } = useAuthContext();
@@ -61,9 +61,7 @@ export const TabBar = ({ onOpenNotifications, onWalletPress }: TabBarProps) => {
     fetchProfile();
   }, []);
 
-  const displayName = profile
-    ? `${profile.firstName}${profile.lastName ? ` ${profile.lastName}` : ""}`
-    : "";
+ const displayName = profile?.firstName || "";
 
   return (
     <View
@@ -91,14 +89,14 @@ export const TabBar = ({ onOpenNotifications, onWalletPress }: TabBarProps) => {
 
         {/* RIGHT — Icons */}
         <View style={styles.right}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             activeOpacity={0.75}
             onPress={onWalletPress}
             style={styles.iconBtn}
             hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
           >
             <Wallet  size={20} color={theme.text} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* <TouchableOpacity
             activeOpacity={0.75}
