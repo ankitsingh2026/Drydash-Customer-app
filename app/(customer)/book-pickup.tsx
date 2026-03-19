@@ -228,6 +228,17 @@ export default function BookPickup() {
       keyboardWillHide.remove();
     };
   }, []);
+
+  // debounce inside map for searching==>>
+  useEffect(() => {
+    if (!mapQuery.trim()) return;
+
+    const timer = setTimeout(() => {
+      searchOnMap();
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [mapQuery]);
+
   // helper: display "Today" when date is today
   const isToday = (d: Date) => {
     const now = new Date();
@@ -422,8 +433,12 @@ export default function BookPickup() {
       setLocLoading(false);
     }
   };
-  const searchOnMap = async () => {
-    if (!mapQuery.trim()) return;
+  const searchOnMap = async (query?: string) => {
+    // if (!mapQuery.trim()) return;
+
+    const q = query ?? mapQuery;
+
+    if (!q.trim()) return;
 
     try {
       setSearchLoading(true);
@@ -1522,14 +1537,14 @@ export default function BookPickup() {
                         placeholderTextColor={theme.subText}
                         value={mapQuery}
                         onChangeText={setMapQuery}
-                        onSubmitEditing={searchOnMap}
+                        // onSubmitEditing={searchOnMap}
                         returnKeyType="search"
                         style={[modalStyles.mapSearchInput, { color: "#000" }]}
                       />
                       {searchLoading ? (
                         <Ionicons name="sync" size={18} color={theme.primary} />
                       ) : (
-                        <TouchableOpacity onPress={searchOnMap}>
+                        <TouchableOpacity onPress={() => searchOnMap(mapQuery)}>
                           <Ionicons
                             name="arrow-forward-circle"
                             size={30}
