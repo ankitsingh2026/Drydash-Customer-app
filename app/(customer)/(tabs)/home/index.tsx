@@ -1,10 +1,10 @@
 // app/(customer)/(tabs)/home/index.tsx
+import FloatingOfferCard from "@/components/FloatingOfferCard";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
@@ -295,7 +295,7 @@ export default function Home() {
 
   return (
     <SafeAreaProvider>
-       <TabBar
+      <TabBar
         onOpenNotifications={() => setOpen(true)}
         onWalletPress={() => router.push("/(customer)/wallet")}
         style={{
@@ -501,7 +501,7 @@ export default function Home() {
           </Animated.View>
 
           {/* ── WELCOME OFFER ── */}
-          {offerVisible && (
+          {/* {offerVisible && (
 
             <Animated.View
               style={[
@@ -514,23 +514,19 @@ export default function Home() {
                 tint="dark"
                 style={styles.floatingOfferCard}
               >
-                {/* Gold % circle */}
                 <View style={styles.offerIconWrap}>
                   <Text style={styles.offerPercent}>20%</Text>
                 </View>
 
-                {/* Text */}
                 <View style={styles.offerTextWrap}>
                   <Text style={styles.offerTitle}>Welcome Offer</Text>
                   <Text style={styles.offerSubtitle}>Get 20% OFF on your first booking</Text>
                 </View>
 
-                {/* Claim */}
                 <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
                   <Text style={styles.claimText}>CLAIM</Text>
                 </TouchableOpacity>
 
-                {/* Dismiss × */}
                 <TouchableOpacity
                   onPress={dismissOffer}
                   style={styles.offerClose}
@@ -541,12 +537,28 @@ export default function Home() {
               </BlurView>
             </Animated.View>
 
-          )}
+          )} */}
 
           <View style={{ height: 80 }} />
         </ScrollView>
+
+      
       </SafeAreaView>
-            <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+
+  <FloatingOfferCard
+          visible={offerVisible}
+          title="Welcome Offer"
+          subtitle="Get 20% OFF on your first booking"
+          imageUri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg"
+          ctaText="CLAIM"
+          onPress={() => {
+            setOfferVisible(false);
+            router.push("/book-pickup");
+          }}
+          onClose={() => setOfferVisible(false)}
+        />
+        <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+
 
     </SafeAreaProvider>
   );
@@ -556,43 +568,6 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingTop: 0 },
 
-  /* Header */
-  // header: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   justifyContent: "space-between",
-  //   paddingHorizontal: 16,
-  //   paddingVertical: 0,
-  //   marginBottom: 1,
-  // },
-  // headerLeft: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   flex: 1,
-  // },
-  // avatar: {
-  //   width: 38,
-  //   height: 38,
-  //   borderRadius: 19,
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  // },
-  // greeting: { fontSize: 11, fontWeight: "500" },
-  // greetingName: { fontSize: 14, fontWeight: "800" },
-  // brand: { fontSize: 18, fontWeight: "900", letterSpacing: 0.5 },
-  // headerRight: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   gap: 4,
-  //   flex: 1,
-  //   justifyContent: "flex-end",
-  // },
-  // iconBtn: {
-  //   width: 4,
-  //   height: 34,
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  // },
 
   /* Hero */
   heroCard: {
@@ -627,7 +602,7 @@ const styles = StyleSheet.create({
   },
   heroTextWrap: {
     padding: 10,
-    
+
   },
   heroTitle: {
     fontSize: 20,
@@ -676,86 +651,6 @@ const styles = StyleSheet.create({
   pickupRow: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  floatingOfferCardWrap: {
-    position: "absolute",
-    bottom: 0,
-    left: 16,
-    right: 16,
-    borderRadius: 10,
-    overflow: "hidden",       // ← clips BlurView to rounded corners
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.75,
-    shadowRadius: 12,
-    zIndex: 40,
-    borderWidth: 0.5,
-    borderColor: "#fff",   // gold border on wrapper, not BlurView
-  },
-
-  floatingOfferCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  offerIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 20,
-    backgroundColor: "#D4AF37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  offerPercent: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#fff",
-  },
-  offerTextWrap: {
-    flex: 1,
-  },
-  offerTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  offerSubtitle: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#fff",
-  },
-  claimBtn: {
-    backgroundColor: "#F0FDF4",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#F0FDF4",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  claimText: {
-    color: "#fffff",
-    fontWeight: "800",
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
-  offerClose: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
   },
   pickupDivider: {
     height: 1,
@@ -838,5 +733,5 @@ const styles = StyleSheet.create({
   },
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   serviceSubtitle: { fontSize: 11, fontWeight: "500" },
- 
+
 });
