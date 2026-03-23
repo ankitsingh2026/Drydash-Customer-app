@@ -5,9 +5,9 @@ import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -26,7 +26,6 @@ import {
 } from "react-native-safe-area-context";
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
-
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32; // full width cards with 16px padding each side
 
@@ -123,7 +122,7 @@ function getGreeting() {
 }
 
 export default function Home() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -185,14 +184,7 @@ export default function Home() {
     return () => clearTimeout(t);
   }, []);
 
-  const dismissOffer = () => {
-    Animated.timing(offerSlide, {
-      toValue: 120,
-      duration: 260,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => setOfferVisible(false));
-  }
+
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -240,20 +232,17 @@ export default function Home() {
   }, []);
 
   const onPressBook = () => {
-    Animated.sequence([
-      Animated.timing(dragX, {
-        toValue: SWIPE_THRESHOLD,
-        duration: 220,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(dragX, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    Animated.timing(dragX, {
+      toValue: SWIPE_THRESHOLD,
+      duration: 200,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    }).start(() => {
       router.push("/book-pickup");
+      // Reset AFTER navigation, not before
+      setTimeout(() => {
+        Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+      }, 600);
     });
   };
 
@@ -272,23 +261,44 @@ export default function Home() {
       onPanResponderRelease: (_, gestureState) => {
         dragX.flattenOffset();
         const finalX = (dragX as any)._value || 0;
+
         if (finalX > SWIPE_THRESHOLD * 0.9) {
+          // ✅ Animate to full end, navigate, THEN reset after screen transition
           Animated.timing(dragX, {
             toValue: SWIPE_THRESHOLD,
-            duration: 160,
+            duration: 120,
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           }).start(() => {
             router.push("/book-pickup");
-            setTimeout(() => dragX.setValue(0), 400);
+            setTimeout(() => {
+              Animated.spring(dragX, {
+                toValue: 0,
+                useNativeDriver: true,
+                damping: 15,
+                stiffness: 180,
+              }).start();
+            }, 600); // after screen transition completes
           });
         } else {
-          Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+          // Not enough — spring back smoothly
+          Animated.spring(dragX, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 15,
+            stiffness: 180,
+            mass: 0.6,
+          }).start();
         }
       },
     }),
   ).current;
 
+  useFocusEffect(
+    useCallback(() => {
+      dragX.setValue(0);
+    }, [])
+  );
   if (loading) return <HomeScreenSkeleton />;
 
   const PRIMARY = theme.primary; // teal/green
@@ -304,7 +314,7 @@ export default function Home() {
         }}
       />
       <StatusBar
-        style={isDark ? "dark" : "dark"}
+        style={"dark"}
         backgroundColor={theme.background}
         translucent={false}
       />
@@ -374,8 +384,8 @@ export default function Home() {
               styles.pickupCard,
               {
                 opacity: fadeAnim,
-                backgroundColor: isDark ? "#0D1F1C" : "#0D1F1C",
-                borderColor: isDark ? "#1A3330" : "#1A3330",
+                backgroundColor : "#0D1F1C",
+                borderColor:"#1A3330",
                 transform: [
                   {
                     translateY: fadeAnim.interpolate({
@@ -403,13 +413,13 @@ export default function Home() {
             </View>
 
             {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor: isDark ? "#1A3330" : "#1A3330" }]} />
+            <View style={[styles.pickupDivider, { backgroundColor:  "#1A3330" }]} />
 
             {/* Swipe to Book */}
             <View
               style={[
                 styles.swipeContainer,
-                { backgroundColor: isDark ? "#071018" : "#071018" },
+                { backgroundColor : "#071018" },
               ]}
             >
               <Animated.View
@@ -455,8 +465,8 @@ export default function Home() {
                       style={[
                         styles.serviceCard,
                         {
-                          backgroundColor: isDark ? "#0D1F1C" : "#0D1F1C",
-                          borderColor: isDark ? "#1A3330" : "#1A3330",
+                          backgroundColor: "#0D1F1C",
+                          borderColor: "#1A3330",
                         },
                       ]}
                       activeOpacity={0.85}
@@ -470,7 +480,7 @@ export default function Home() {
                         <View
                           style={[
                             styles.serviceIconWrapper,
-                            { backgroundColor: isDark ? "#0A3D3C" : "#0A3D3C" },
+                            { backgroundColor: "#0A3D3C" },
                           ]}
                         >
                           <Ionicons
@@ -542,22 +552,22 @@ export default function Home() {
           <View style={{ height: 80 }} />
         </ScrollView>
 
-      
+
       </SafeAreaView>
 
-  <FloatingOfferCard
-          visible={offerVisible}
-          title="Welcome Offer"
-          subtitle="Get 20% OFF on your first booking"
-          imageUri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg"
-          ctaText="CLAIM"
-          onPress={() => {
-            setOfferVisible(false);
-            router.push("/book-pickup");
-          }}
-          onClose={() => setOfferVisible(false)}
-        />
-        <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+      <FloatingOfferCard
+        visible={offerVisible}
+        title="Welcome Offer"
+        subtitle="Get 20% OFF on your first booking"
+        imageUri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg"
+        ctaText="CLAIM"
+        onPress={() => {
+          setOfferVisible(false);
+          router.push("/book-pickup");
+        }}
+        onClose={() => setOfferVisible(false)}
+      />
+      <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
 
 
     </SafeAreaProvider>

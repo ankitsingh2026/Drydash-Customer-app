@@ -3,6 +3,7 @@ import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, {
   useCallback,
@@ -23,7 +24,6 @@ import {
 } from "react-native";
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
-
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
@@ -34,29 +34,10 @@ const FILTERS: FilterType[] = ["All", "Active", "Completed", "Awaiting"];
 const getOrderId = (o: any): string | undefined =>
   o?.order_id ?? o?.orderId ?? o?.id ?? o?._id;
 
-/* ================= STATUS CONFIG ================= */
-// Each status has its own color + icon + label
 
-// const STATUS_CONFIG = {
-//   pending:    { bg: "#F59E0B", icon: "time-outline"          as const, label: "Pending"     },
-//   processing: { bg: "#3B82F6", icon: "settings-outline"      as const, label: "Processing"  },
-//   intransit:  { bg: "#8B5CF6", icon: "car-outline"           as const, label: "In Transit"  },
-//   delivered:  { bg: "#10B981", icon: "checkmark-done-outline" as const, label: "Delivered"   },
-//   cancelled:  { bg: "#EF4444", icon: "close-circle-outline"  as const, label: "Cancelled"   },
-// };
 
 const STATUS_CONFIG = {
   active: { bg: "#10B981", icon: "time-outline" as const, label: "Active" },
-  // processing: {
-  //   bg: "#3B82F6",
-  //   icon: "settings-outline" as const,
-  //   label: "Processing",
-  // },
-  // intransit: {
-  //   bg: "#8B5CF6",
-  //   icon: "car-outline" as const,
-  //   label: "In Transit",
-  // },
   delivered: {
     bg: "#3B82F6",
     icon: "checkmark-done-outline" as const,
@@ -80,23 +61,18 @@ const mapFilterStatus = (status: string): OrderStatus =>
   status === "delivered" ? "Completed" : "Active";
 
 /* ================= SCROLLABLE SLIDING TAB BAR ================= */
-
 function SlidingFilterTabs({
-  active,
-  onChange,
-  theme,
-  isDark,
+  active, onChange, theme, isDark,
 }: {
   active: FilterType;
   onChange: (f: FilterType) => void;
   theme: any;
   isDark: boolean;
 }) {
-  const [tabLayouts, setTabLayouts] = useState<{ x: number; width: number }[]>(
-    [],
-  );
+  const [tabLayouts, setTabLayouts] = useState<{ x: number; width: number }[]>([]);
   const slideX = useRef(new Animated.Value(0)).current;
   const slideW = useRef(new Animated.Value(60)).current;
+  const labelAnims = useRef(FILTERS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
   const activeIndex = FILTERS.indexOf(active);
 
   useEffect(() => {
@@ -105,16 +81,24 @@ function SlidingFilterTabs({
     Animated.parallel([
       Animated.spring(slideX, {
         toValue: layout.x,
-        tension: 55,
-        friction: 9,
-        useNativeDriver: false,
+        tension: 60,
+        friction: 10,
+        useNativeDriver: false, // width/left can't use native driver
       }),
       Animated.spring(slideW, {
         toValue: layout.width,
-        tension: 55,
-        friction: 9,
+        tension: 60,
+        friction: 10,
         useNativeDriver: false,
       }),
+      // Crossfade labels
+      ...FILTERS.map((_, idx) =>
+        Animated.timing(labelAnims[idx], {
+          toValue: idx === activeIndex ? 1 : 0,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ),
     ]).start();
   }, [activeIndex, tabLayouts]);
 
@@ -124,18 +108,33 @@ function SlidingFilterTabs({
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 2 }}
     >
-      <View
-        style={[
-          styles.tabBarWrapper,
-          { backgroundColor: isDark ? "#0F1720" : "#0F1720" },
-        ]}
-      >
+      <View style={[styles.tabBarWrapper, { backgroundColor: isDark ? "#0F1720" : "#0F1720" }]}>
+
+        {/* ── Sliding gradient pill ── */}
         <Animated.View
           style={[
             styles.slidingPill,
-            { left: slideX, width: slideW, backgroundColor: "#0EA5A4" },
+            {
+              left: slideX,
+              width: slideW,
+              overflow: "hidden",
+              shadowColor: "#56BFAB",
+              shadowOpacity: 0.45,
+              shadowRadius: 10,
+              shadowOffset: { width: 0, height: 3 },
+              elevation: 6,
+            },
           ]}
-        />
+        >
+          <LinearGradient
+            colors={["#56BFAB", "#005B47"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+
+        {/* ── Tab labels ── */}
         {FILTERS.map((filter, i) => {
           const isActive = active === filter;
           return (
@@ -153,16 +152,21 @@ function SlidingFilterTabs({
               onPress={() => onChange(filter)}
               style={styles.tabItem}
             >
-              <Text
-                style={{
-                  fontWeight: isActive ? "800" : "600",
-                  fontSize: 13,
-                  color: isActive ? "#fff" : isDark ? "#9CA3AF" : "#9CA3AF",
-                  zIndex: 2,
-                }}
-              >
-                {filter}
-              </Text>
+              {/* Explicit elevated wrapper so text always sits above pill on Android */}
+              <View style={{ zIndex: 10, elevation: 10 }}>
+                <Animated.Text
+                  style={{
+                    fontWeight: isActive ? "800" : "600",
+                    fontSize: 13,
+                    color: labelAnims[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["#6B7280", "#ffffff"],
+                    }),
+                  }}
+                >
+                  {filter}
+                </Animated.Text>
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -170,7 +174,6 @@ function SlidingFilterTabs({
     </ScrollView>
   );
 }
-
 /* ================= MAIN COMPONENT ================= */
 
 export default function Orders() {
@@ -399,7 +402,7 @@ export default function Orders() {
                 <View
                   style={[
                     styles.card,
-                    { backgroundColor: theme.card, borderLeftColor: "#8B5CF6" },
+                    { backgroundColor: theme.card, borderLeftColor: "#fcc601" },
                   ]}
                 >
                   {/* Header */}
@@ -415,13 +418,13 @@ export default function Orders() {
                         <Ionicons
                           name="cube-outline"
                           size={13}
-                          color="#8B5CF6"
+                          color="#fcc601"
                         />
                       </View>
                       <Text
                         style={{
-                          fontWeight: "800",
-                          color: "#8B5CF6",
+                          fontWeight: "600",
+                          color: "#fcc601",
                           marginLeft: 8,
                         }}
                       >
@@ -489,69 +492,47 @@ export default function Orders() {
                     ) : null}
 
                     {/* Action buttons */}
-                    <View
-                      style={{ flexDirection: "row", marginTop: 14, gap: 10 }}
-                    >
+                    <View style={{ flexDirection: "row", marginTop: 14, gap: 8 }}>
+
+                      {/* Reschedule — subtle teal ghost */}
                       <TouchableOpacity
-                        style={[
-                          styles.actionBtn,
-                          {
-                            backgroundColor:"#268059",
-                            borderWidth: 1,
-                            borderColor: "#102B25",
-                          },
-                        ]}
+                        style={styles.actionBtn}
+                        activeOpacity={0.82}
                         onPress={() => {
                           reschedulePickupApi(o._id);
                           router.push(`/pickups/reschedule/${o._id}`);
                         }}
                       >
-                        <Ionicons
-                          name="calendar-outline"
-                          size={14}
-                          color="#fff"
+                        <LinearGradient
+                          colors={["#56BFAB", "#005B47"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={[StyleSheet.absoluteFill, { borderRadius: 10 }]}
                         />
-                        <Text
-                          style={{
-                            fontWeight: "700",
-                            color: "#fff",
-                            marginLeft: 6,
-                          }}
-                        >
-                          Reschedule
-                        </Text>
+                        <Ionicons name="calendar-outline" size={13} color="#fff" />
+                        <Text style={styles.actionBtnText}>Reschedule</Text>
                       </TouchableOpacity>
 
+                      {/* Cancel — muted slate, NOT red */}
                       <TouchableOpacity
-                        style={[
-                          styles.actionBtn,
-                          {
-                            backgroundColor: "#9e3946",
-                            borderColor: "#EF4444",
-                          },
-                        ]}
+                        style={[styles.actionBtn, styles.cancelBtn]}
+                        activeOpacity={0.82}
                         onPress={async () => {
                           await cancelPickupApi(o._id);
-                          setPickups((prev) =>
-                            prev.filter((p) => p._id !== o._id),
-                          );
+                          setPickups((prev) => prev.filter((p) => p._id !== o._id));
                         }}
                       >
-                        <Ionicons
-                          name="close-circle-outline"
-                          size={14}
-                          color="#fff"
+                        <LinearGradient
+                          colors={["#ad5555", "#591f1f"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={[StyleSheet.absoluteFill, { borderRadius: 8 }]}
                         />
-                        <Text
-                          style={{
-                            fontWeight: "800",
-                            color: "#fff",
-                            marginLeft: 6,
-                          }}
-                        >
-                          Cancel
-                        </Text>
+                        <Ionicons name="close-outline" size={13} color="#fff" />
+                        <Text style={[styles.actionBtnText, { color: "#fff" }]}>Cancel</Text>
                       </TouchableOpacity>
+
+
                     </View>
                   </View>
                 </View>
@@ -738,6 +719,8 @@ const styles = StyleSheet.create({
     top: 4,
     bottom: 4,
     borderRadius: 26,
+    elevation: 1,      // ← keep low so text stays above
+
     zIndex: 1,
   },
   tabItem: {
@@ -745,6 +728,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: "center",
     zIndex: 2,
+    position: "relative",   // ← makes zIndex work on Android
   },
 
   /* Cards */
@@ -828,10 +812,25 @@ const styles = StyleSheet.create({
   actionBtn: {
     flex: 1,
     flexDirection: "row",
-    paddingVertical: 10,
-    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+    letterSpacing: 0.2,
+  },
+  cancelBtn: {
+    backgroundColor: "#a64e4e",   // dark muted slate
+    borderWidth: 1,
+    borderColor: "#2D3A47",       // very subtle border
+    overflow: "visible",
   },
 
   emptyContainer: { alignItems: "center", paddingVertical: 60, gap: 10 },

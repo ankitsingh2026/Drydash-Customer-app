@@ -1,4 +1,6 @@
 // components/CartSheet.tsx
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { Minus, Plus, X } from "lucide-react-native";
 import React from "react";
 import {
@@ -26,6 +28,9 @@ export default function CartSheet({
   const discount = subtotal >= 1000 ? Math.round(subtotal * 0.1) : 0;
   const total = subtotal - discount;
 
+  const handleBookPickup = () => {
+    router.push("/book-pickup")
+  }
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -152,11 +157,18 @@ export default function CartSheet({
 
             {/* CHECKOUT */}
             {items.length > 0 && (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={[styles.checkout, { backgroundColor: theme.primary }]}
+              <TouchableOpacity activeOpacity={0.9} style={styles.checkout}
+                onPress={handleBookPickup}
               >
-                <Text style={styles.checkoutText}>Checkout • ₹{total}</Text>
+                <LinearGradient
+                  colors={["#56BFAB", "#005B47"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Text
+
+                  style={styles.checkoutText}>Book Your Pickup</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -182,7 +194,7 @@ function Row({
     <View style={styles.totRow}>
       <Text
         style={{
-          color: highlight ? "#16A34A" : "#64748B",
+          color: "#fff",
           fontWeight: bold ? "900" : "600",
         }}
       >
@@ -190,7 +202,7 @@ function Row({
       </Text>
       <Text
         style={{
-          color: highlight ? "#16A34A" : "#0F172A",
+          color: "#fff",
           fontWeight: bold ? "900" : "700",
         }}
       >
@@ -280,16 +292,18 @@ const styles = StyleSheet.create({
   },
 
   checkout: {
-    height: 56,
+    height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16,
+    overflow: "hidden",   // ← add this
+
   },
 
   checkoutText: {
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
-    color: "#000",
+    color: "#fff",
   },
 });
