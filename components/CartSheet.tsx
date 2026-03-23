@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { Minus, Plus, X } from "lucide-react-native";
 import React from "react";
 import {
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -13,7 +14,6 @@ import {
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
-
 export default function CartSheet({
   visible,
   onClose,
@@ -22,7 +22,7 @@ export default function CartSheet({
   onClose: () => void;
 }) {
   const { items, addItem, removeItem, clear } = useCart();
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
   const discount = subtotal >= 1000 ? Math.round(subtotal * 0.1) : 0;
@@ -74,21 +74,25 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: isDark ? "#0B1220" : "#0B1220",
+                    backgroundColor: "#0B1220",
                   },
                 ]}
               >
                 {/* IMAGE PLACEHOLDER */}
-                <View
-                  style={[
-                    styles.thumb,
-                    { backgroundColor: isDark ? "#1E293B" : "#1E293B" },
-                  ]}
-                >
-                  <Text style={{ fontSize: 11, color: theme.subText }}>
-                    IMG
-                  </Text>
-                </View>
+                {i.image ? (
+                  <Image
+                    source={{ uri: i.image }}
+                    style={styles.thumb}
+                    resizeMode="cover"
+                    onError={() => console.log("Image failed")}
+                  />
+                ) : (
+                  <View style={[styles.thumb, { backgroundColor: "#1E293B" }]}>
+                    <Text style={{ fontSize: 11, color: theme.subText }}>
+                      IMG
+                    </Text>
+                  </View>
+                )}
 
                 {/* INFO */}
                 <View style={{ flex: 1 }}>
@@ -132,6 +136,7 @@ export default function CartSheet({
                         id: i.id,
                         title: i.title,
                         price: i.price,
+                        image: i.image,
                       })
                     }
                     style={styles.qtyBtn}

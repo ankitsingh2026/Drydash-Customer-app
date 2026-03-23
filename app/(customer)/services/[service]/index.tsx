@@ -10,7 +10,6 @@ import {
 } from "lucide-react-native";
 import React, { useMemo, useRef, useState } from "react";
 import { Animated, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
@@ -688,31 +687,31 @@ export default function ServiceDetail() {
             >
               {/* IMAGE PLACEHOLDER */}
 
-            {brokenImages.has(item.id) ? (
-  /* ── Placeholder ── */
-  <View style={[styles.imagePlaceholder, { backgroundColor: theme.card }]}>
-    <View style={styles.placeholderIconWrap}>
-      <Text style={styles.placeholderEmoji}>
-        {item.category === "Shoe Spa" ? "👟"
-          : item.category === "Laundry" ? "👕"
-          : item.category === "DryClean" ? "✨"
-          : "🧺"}
-      </Text>
-    </View>
-    <Text style={[styles.placeholderLabel, { color: theme.subText }]} numberOfLines={1}>
-      {item.title.split(" ")[0]}
-    </Text>
-  </View>
-) : (
-  <Image
-    source={{ uri: item.image }}
-    style={styles.image}
-    resizeMode="cover"
-    onError={() =>
-      setBrokenImages((prev) => new Set([...prev, item.id]))
-    }
-  />
-)}
+              {brokenImages.has(item.id) ? (
+                /* ── Placeholder ── */
+                <View style={[styles.imagePlaceholder, { backgroundColor: theme.card }]}>
+                  <View style={styles.placeholderIconWrap}>
+                    <Text style={styles.placeholderEmoji}>
+                      {item.category === "Shoe Spa" ? "👟"
+                        : item.category === "Laundry" ? "👕"
+                          : item.category === "DryClean" ? "✨"
+                            : "🧺"}
+                    </Text>
+                  </View>
+                  <Text style={[styles.placeholderLabel, { color: theme.subText }]} numberOfLines={1}>
+                    {item.title.split(" ")[0]}
+                  </Text>
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.image}
+                  resizeMode="cover"
+                  onError={() =>
+                    setBrokenImages((prev) => new Set([...prev, item.id]))
+                  }
+                />
+              )}
 
               {/* TEXT */}
               <View style={{ flex: 1 }}>
@@ -732,6 +731,7 @@ export default function ServiceDetail() {
                       id: item.id,
                       title: item.title,
                       price: item.price,
+                      image: item.image,
                     })
                   }
                   style={[styles.addBtn, { backgroundColor: theme.primary }]}
@@ -757,6 +757,7 @@ export default function ServiceDetail() {
                         id: item.id,
                         title: item.title,
                         price: item.price,
+                        image: item.image,
                       })
                     }
                     style={styles.qtyBtn}
@@ -830,30 +831,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     elevation: 2,
   },
-imagePlaceholder: {
-  width: 56,
-  height: 56,
-  borderRadius: 12,
-  marginRight: 12,
-  alignItems: "center",
-  justifyContent: "center",
-  borderWidth: 1,
-  borderColor: "#1A3330",
-  borderStyle: "dashed",
-  gap: 2,
-},
-placeholderIconWrap: {
-  alignItems: "center",
-  justifyContent: "center",
-},
-placeholderEmoji: {
-  fontSize: 20,
-},
-placeholderLabel: {
-  fontSize: 8,
-  fontWeight: "600",
-  letterSpacing: 0.2,
-},
+  imagePlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#1A3330",
+    borderStyle: "dashed",
+    gap: 2,
+  },
+  placeholderIconWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  placeholderEmoji: {
+    fontSize: 20,
+  },
+  placeholderLabel: {
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
   // image: {
   //   width: 50,
   //   height: 50,

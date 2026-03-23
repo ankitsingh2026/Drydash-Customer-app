@@ -8,6 +8,7 @@ export type CartItem = {
   image?: any; // require(...) or uri
   qty: number;
   meta?: any;
+  
 };
 
 type CartCtx = {

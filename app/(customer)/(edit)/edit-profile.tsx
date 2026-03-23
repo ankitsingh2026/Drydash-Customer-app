@@ -1,10 +1,11 @@
-import { router } from "expo-router";
+import { getAddressApi } from "@/features/orders/orders.api";
+import { useAuth } from "@/hooks/useAuth";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Briefcase,
   Home,
-  MapPin,
-  Plus,
+  MapPin
 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -18,13 +19,11 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
-
 type Address = {
   id: string;
   type: "Home" | "Work" | "Other";
   value: string;
 };
-
 export default function EditProfile() {
   const { theme } = useTheme();
 
@@ -36,12 +35,12 @@ export default function EditProfile() {
     Animated.parallel([
       Animated.timing(fade, {
         toValue: 1,
-        duration: 280,
+        duration: 80,
         useNativeDriver: true,
       }),
       Animated.timing(slide, {
         toValue: 0,
-        duration: 280,
+        duration: 180,
         useNativeDriver: true,
       }),
     ]).start();
@@ -49,18 +48,7 @@ export default function EditProfile() {
 
   /** EXIT */
   const goBack = () => {
-    Animated.parallel([
-      Animated.timing(fade, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slide, {
-        toValue: 24,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => router.back());
+    router.back(); // instant navigation
   };
 
   /** ANDROID BACK */
@@ -74,23 +62,58 @@ export default function EditProfile() {
     );
     return () => sub.remove();
   }, []);
+  
+  const params = useLocalSearchParams();
 
-  const [name, setName] = useState("Jane Doe");
-  const [phone, setPhone] = useState("9876543210");
+  const [name, setName] = useState(params.name as string || "");
+  const [phone, setPhone] = useState(params.phone as string || "");
 
-  const [addresses] = useState<Address[]>([
-    { id: "1", type: "Home", value: "221B Baker Street, London" },
-    { id: "2", type: "Work", value: "Canary Wharf, London" },
-  ]);
+const [addresses, setAddresses] = useState<any[]>([]);
+const { user } = useAuth();
 
+const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+
+useEffect(() => {
+  const fetchAddresses = async () => {
+    try {
+      const data = await getAddressApi(auth_id);
+
+      const list = Array.isArray(data?.results) ? data.results : [];
+
+      const mapped = list.map((a: any) => ({
+        id: String(a.id),
+        type:
+          a.label === "Home"
+            ? "Home"
+            : a.label === "Office"
+            ? "Work"
+            : "Other",
+        value: `${a.addressLine1}, ${a.city}, ${a.state}`,
+      }));
+
+      setAddresses(mapped);
+    } catch (err) {
+      console.log("Address fetch error:", err);
+    }
+  };
+
+  if (auth_id) fetchAddresses();
+}, [auth_id]);
   return (
     <Animated.View
       style={[
         styles.root,
         {
           backgroundColor: theme.background,
-          opacity: fade,
-          transform: [{ translateY: slide }],
+          transform: [
+            { translateY: slide },
+            {
+              scale: fade.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.98, 1],
+              })
+            }
+          ],
         },
       ]}
     >
@@ -143,7 +166,7 @@ export default function EditProfile() {
               </View>
             ))}
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               activeOpacity={0.85}
               style={[styles.addAddress, { borderColor: theme.border }]}
             >
@@ -151,7 +174,7 @@ export default function EditProfile() {
               <Text style={[styles.addText, { color: theme.primary }]}>
                 Add New Address
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </Section>
         </Card>
 
@@ -220,7 +243,7 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
 
   header: {
-    marginTop:40,
+    marginTop: 40,
     height: 56,
     flexDirection: "row",
     alignItems: "center",

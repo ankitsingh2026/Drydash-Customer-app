@@ -33,7 +33,7 @@ export default function Profile() {
   } | null>(null);
 
   const [loading, setLoading] = useState(true);
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -106,7 +106,13 @@ export default function Profile() {
             onPress={() => {
               switch (item.label) {
                 case "Edit Profile":
-                  router.push("/edit-profile");
+                  router.push({
+                    pathname: "/edit-profile",
+                    params: {
+                      name: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`,
+                      phone: profile?.user?.phone ?? "",
+                    },
+                  });
                   break;
 
                 case "Payment Methods":
@@ -148,7 +154,7 @@ export default function Profile() {
         activeOpacity={0.9}
         style={[
           styles.logoutBtn,
-          { backgroundColor: isDark ? "#3B1F1F" : "#3B1F1F" },
+          { backgroundColor: "#3B1F1F" },
         ]}
         // MENU 2
         onPress={async () => {
