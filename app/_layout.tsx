@@ -8,10 +8,11 @@ import { ThemeProvider } from "../context/ThemeContext";
 
 import { setupInterceptors } from "../lib/api/interceptors";
 
-// ✅ REGISTER INTERCEPTOR ONCE
 setupInterceptors();
 
 export default function RootLayout() {
+ 
+
   return (
     <SafeAreaProvider>
       <AuthProvider>

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Dry-Dash",
-    "slug": "Dry-Dash",
+    "name": "DryDash",
+    "slug": "DryDash",
     "version": "1.0.0",
     "orientation": "portrait",
     "backgroundColor": "#0B1F1A",
@@ -26,7 +26,7 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
-        "ACCESS_BACKGROUND_LOCATION"
+        // "ACCESS_BACKGROUND_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -65,7 +65,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow DryDash to access your location for pickup address"
+           "locationWhenInUsePermission": "Allow DryDash to access your location to select pickup address"
         }
       ]
     ],

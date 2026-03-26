@@ -1,127 +1,110 @@
-// components/layout/TabBar.tsx
-import { useAuthContext } from "@/context/AuthContext";
-import { getMeApi } from "@/features/auth/auth.api";
+import * as Location from "expo-location";
 import { Bell } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
-
-type Profile = {
-  firstName: string;
-  lastName: string;
-  walletBalance: number;
-  user: {
-    phone: string;
-    email?: string;
-  };
-};
 
 type TabBarProps = {
   onOpenNotifications: () => void;
   onWalletPress: () => void;
 };
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
-
-export const TabBar = ({ onOpenNotifications, onWalletPress }: TabBarProps) => {
+export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
-  const { setAuthUser, logout } = useAuthContext();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [locationText, setLocationText] = useState("Fetching location...");
+  const [loadingLoc, setLoadingLoc] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const me = await getMeApi();
-        await setAuthUser(me);
-        if (me) {
-          setProfile({
-            firstName: me.firstName ?? me.name?.split(" ")[0] ?? "",
-            lastName: me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
-            walletBalance: me.walletBalance ?? 0,
-            user: {
-              phone: me.phone ?? me.user?.phone ?? "",
-              email: me.email ?? me.user?.email,
-            },
-          });
-        }
-      } catch {
-        // silently fail – auth handled elsewhere
-      }
-    };
-    fetchProfile();
+    fetchLocation();
   }, []);
 
- const displayName = profile?.firstName || "";
+  const fetchLocation = async () => {
+    try {
+      setLoadingLoc(true);
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationText("Location permission denied");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const geo = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      if (geo?.length > 0) {
+        const g = geo[0];
+        const city = g.city || g.subregion || "";
+        const area = g.district || g.name || "";
+
+        setLocationText(`${area}, ${city}`);
+      }
+    } catch (e) {
+      setLocationText("Unable to fetch location");
+    } finally {
+      setLoadingLoc(false);
+    }
+  };
 
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: theme.background,
-          paddingTop: insets.top || 8,
+          paddingTop: insets.top + 6,
         },
       ]}
     >
       <View style={styles.row}>
-        {/* LEFT — Greeting + Name */}
+        {/* LEFT CONTENT */}
         <View style={styles.left}>
-          <Text style={[styles.greeting, { color: theme.subText }]}>
-            {getGreeting()},
-          </Text>
-          <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>
-            {displayName}
-          </Text>
-        </View>
+          <Text style={styles.title}>24 Hours</Text>
 
-        {/* CENTER — Brand */}
-        <Text style={[styles.brand, { color: theme.text }]}>DryDash</Text>
+          <View style={styles.locationRow}>
+            <Text style={styles.homeTag}>HOME · </Text>
 
-        {/* RIGHT — Icons */}
-        <View style={styles.right}>
-          {/* <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={onWalletPress}
-            style={styles.iconBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          >
-            <Wallet  size={20} color={theme.text} />
-          </TouchableOpacity> */}
-
-          {/* <TouchableOpacity
-            activeOpacity={0.75}
-            style={styles.iconBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          >
-            <Settings size={20} color={theme.text} />
-          </TouchableOpacity> */}
-
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={onOpenNotifications}
-            style={styles.iconBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          >
-            <Bell size={20} color={theme.text} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </Text>
-              </View>
+            {loadingLoc ? (
+              <ActivityIndicator size="small" color="#2FE6A6" />
+            ) : (
+              <Text style={styles.locationText} numberOfLines={1}>
+                {locationText}
+              </Text>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
+
+        {/* RIGHT ICON */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={onOpenNotifications}
+          style={styles.iconBtn}
+        >
+          <Bell size={18} color="#E6FFF7" />
+
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -129,69 +112,80 @@ export const TabBar = ({ onOpenNotifications, onWalletPress }: TabBarProps) => {
 
 const styles = StyleSheet.create({
   container: {
-    zIndex: 30,
-  },
-  row: {
-    height: 56,
+    backgroundColor: "#031612", // deep green
     paddingHorizontal: 16,
+    paddingBottom: 10,
+  },
+
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
 
-  /* Left */
+  /* LEFT */
   left: {
     flex: 1,
-    justifyContent: "center",
-  },
-  greeting: {
-    fontSize: 11,
-    fontWeight: "500",
-    lineHeight: 14,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: "800",
-    lineHeight: 18,
   },
 
-  /* Center */
-  brand: {
-    fontSize: 20,
+  title: {
+    fontSize: 22,
     fontWeight: "900",
-    letterSpacing: 0.3,
-    textAlign: "center",
+    color: "#E6FFF7",
+    marginBottom: 2,
   },
 
-  /* Right */
-  right: {
-    flex: 1,
+  locationRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "flex-end",
   },
+
+  homeTag: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#2FE6A6",
+    letterSpacing: 1,
+  },
+
+  locationText: {
+    fontSize: 11,
+    color: "#8FB3A8",
+    fontWeight: "500",
+    maxWidth: 200,
+  },
+
+  /* RIGHT ICON */
   iconBtn: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#0D1F1C",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 2,
+    borderWidth: 1,
+    borderColor: "#1A3330",
+
+    shadowColor: "#2FE6A6",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
+
   badge: {
     position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
+    top: 6,
+    right: 6,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 3,
     backgroundColor: "#EF4444",
   },
+
   badgeText: {
     color: "#fff",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
   },
 });

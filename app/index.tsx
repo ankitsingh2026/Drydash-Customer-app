@@ -1,28 +1,47 @@
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, View } from "react-native";
+import {
+  PERMISSIONS,
+  request
+} from "react-native-permissions";
 
 export default function SplashScreen() {
+
+  const requestPermissions = async () => {
+    try {
+      if (Platform.OS === "android") {
+        const location = await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
+        console.log("Location:", location);
+      } else {
+        const location = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
+        console.log("Location:", location);
+      }
+    } catch (error) {
+      console.log("Permission error:", error);
+    }
+  };
+
   useEffect(() => {
-    const timer = setTimeout(() => {
-      // Alert.alert("auth opening ");
+    const init = async () => {
+      await requestPermissions(); //  ask  for permissions first
 
-      router.replace("/(auth)/auth");
-    }, 3000); // 2.2 seconds
+      setTimeout(() => {
+        router.replace("/(auth)/auth");
+      }, 1500);
+    };
 
-    return () => clearTimeout(timer);
+    init();
   }, []);
 
   return (
     <View style={styles.container}>
-      {/* Logo */}
       <Image
         source={require("../assets/images/drydashlogo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
 
-      {/* Slogan */}
       <Text style={styles.slogan}>Smart Laundry. Seamless Life.</Text>
     </View>
   );
@@ -38,7 +57,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 160,
     height: 160,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   slogan: {
     paddingBottom: 20,

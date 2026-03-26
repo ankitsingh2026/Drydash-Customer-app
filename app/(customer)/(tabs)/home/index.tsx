@@ -37,7 +37,7 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "Shoe Spa",
     subtitle: "Sneakers & Shoe care",
-    icon: "footsteps",
+    icon: "footsteps", // keep SVG
     featured: true,
   },
   {
@@ -45,7 +45,7 @@ const QUICK_SERVICES = [
     slug: "iron",
     label: "Dry Clean",
     subtitle: "Silk & Suits",
-    icon: "shirt",
+    icon: "shirt", // keep SVG
     featured: false,
   },
   {
@@ -53,7 +53,7 @@ const QUICK_SERVICES = [
     slug: "laundry",
     label: "Laundry",
     subtitle: "Everyday clothes",
-    icon: "water",
+    icon: "shirt-outline", // 👕 best match
     featured: false,
   },
   {
@@ -61,7 +61,23 @@ const QUICK_SERVICES = [
     slug: "doorstep",
     label: "Doorstep",
     subtitle: "At-home service",
-    icon: "hammer",
+    icon: "home-outline", // 🏠 delivery/home service
+    featured: false,
+  },
+  {
+    key: "carwash",
+    slug: "carwash",
+    label: "Car Wash",
+    subtitle: "At-home service",
+    icon: "car-outline", // 🚗 perfect match
+    featured: false,
+  },
+  {
+    key: "expressservice",
+    slug: "laundry",
+    label: "6 hour Delivery",
+    subtitle: "Express Delivery",
+    icon: "flash-outline", // ⚡ speed/express
     featured: false,
   },
 ];
@@ -359,7 +375,7 @@ export default function Home() {
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-                  <View style={styles.heroOverlay} />
+                  <View style={[styles.heroOverlay ,  {backgroundColor: "rgba(0, 40, 30, 0.55)"}]} />
 
                   {/* Tag badge - top left */}
                   <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
@@ -510,44 +526,7 @@ export default function Home() {
             </View>
           </Animated.View>
 
-          {/* ── WELCOME OFFER ── */}
-          {/* {offerVisible && (
-
-            <Animated.View
-              style={[
-                styles.floatingOfferCardWrap,
-                { transform: [{ translateY: offerSlide }] },
-              ]}
-            >
-              <BlurView
-                intensity={55}
-                tint="dark"
-                style={styles.floatingOfferCard}
-              >
-                <View style={styles.offerIconWrap}>
-                  <Text style={styles.offerPercent}>20%</Text>
-                </View>
-
-                <View style={styles.offerTextWrap}>
-                  <Text style={styles.offerTitle}>Welcome Offer</Text>
-                  <Text style={styles.offerSubtitle}>Get 20% OFF on your first booking</Text>
-                </View>
-
-                <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
-                  <Text style={styles.claimText}>CLAIM</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={dismissOffer}
-                  style={styles.offerClose}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close" size={14} color="#999" />
-                </TouchableOpacity>
-              </BlurView>
-            </Animated.View>
-
-          )} */}
+      
 
           <View style={{ height: 80 }} />
         </ScrollView>
