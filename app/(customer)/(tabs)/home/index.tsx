@@ -24,6 +24,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
+import { SvgUri } from 'react-native-svg';
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
@@ -37,51 +38,45 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "Shoe Spa",
     subtitle: "Sneakers & Shoe care",
-    icon: "footsteps", // keep SVG
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/shoes.svg",
     featured: true,
   },
   {
     key: "Dry Clean",
-    slug: "iron",
+    slug: "dryclean",
     label: "Dry Clean",
     subtitle: "Silk & Suits",
-    icon: "shirt", // keep SVG
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/dryclean.svg",
   },
   {
     key: "Laundry",
     slug: "laundry",
     label: "Laundry",
     subtitle: "Everyday clothes",
-    icon: "shirt-outline", // 👕 best match
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/laundry.svg",
   },
   {
-    key: "Doorstep",
-    slug: "doorstep",
-    label: "Doorstep",
+    key: "Onsite",
+    slug: "onsite",
+    label: "Onsite",
     subtitle: "At-home service",
-    icon: "home-outline", // 🏠 delivery/home service
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg", // ✅ FIXED
   },
   {
     key: "carwash",
     slug: "carwash",
     label: "Car Wash",
     subtitle: "At-home service",
-    icon: "car-outline", // 🚗 perfect match
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/carwash.svg",
   },
   {
-    key: "expressservice",
-    slug: "laundry",
-    label: "6 hour Delivery",
+    key: "express",
+    slug: "express",
+    label: "8 Hour Delivery",
     subtitle: "Express Delivery",
-    icon: "flash-outline", // ⚡ speed/express
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/express.svg",
   },
 ];
-
 const HERO_SLIDES = [
   {
     key: "shoe-1",
@@ -130,12 +125,6 @@ const HERO_SLIDES = [
   },
 ];
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
 
 export default function Home() {
   const { theme } = useTheme();
@@ -375,7 +364,7 @@ export default function Home() {
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-                  <View style={[styles.heroOverlay ,  {backgroundColor: "rgba(0, 40, 30, 0.55)"}]} />
+                  <View style={[styles.heroOverlay, { backgroundColor: "rgba(0, 40, 30, 0.55)" }]} />
 
                   {/* Tag badge - top left */}
                   <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
@@ -400,8 +389,8 @@ export default function Home() {
               styles.pickupCard,
               {
                 opacity: fadeAnim,
-                backgroundColor : "#0D1F1C",
-                borderColor:"#1A3330",
+                backgroundColor: "#0D1F1C",
+                borderColor: "#1A3330",
                 transform: [
                   {
                     translateY: fadeAnim.interpolate({
@@ -429,13 +418,13 @@ export default function Home() {
             </View>
 
             {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor:  "#1A3330" }]} />
+            <View style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]} />
 
             {/* Swipe to Book */}
             <View
               style={[
                 styles.swipeContainer,
-                { backgroundColor : "#071018" },
+                { backgroundColor: "#071018" },
               ]}
             >
               <Animated.View
@@ -486,7 +475,17 @@ export default function Home() {
                         },
                       ]}
                       activeOpacity={0.85}
-                      onPress={() => router.push(`/(customer)/services/${s.slug}`)}
+                      onPress={() => {
+                        if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                          // console.log("service param:");
+                          router.push({
+                            pathname: "/services/[service]",
+                            params: { service: s.slug as "shoe" | "laundry" | "dryclean" },
+                          });
+                        } else {
+                          router.push(`/services/${s.slug}`);
+                        }
+                      }}
                     >
                       <Animated.View
                         style={{
@@ -499,10 +498,10 @@ export default function Home() {
                             { backgroundColor: "#0A3D3C" },
                           ]}
                         >
-                          <Ionicons
-                            name={s.icon as any}
-                            size={22}
-                            color={PRIMARY}
+                          <SvgUri
+                            uri={s.icon}
+                            width={32}
+                            height={32}
                           />
                         </View>
                       </Animated.View>
@@ -526,7 +525,7 @@ export default function Home() {
             </View>
           </Animated.View>
 
-      
+
 
           <View style={{ height: 80 }} />
         </ScrollView>

@@ -69,17 +69,23 @@ export default function ServiceDetail() {
     setTab(i);
   };
 
+  const [layoutReady, setLayoutReady] = useState(false);
+
   React.useEffect(() => {
+    if (!layoutReady) return;
+
     const index = TABS.findIndex(t => t.key === service);
-    if (index !== -1) switchTab(index);
-  }, [service]);
+    if (index !== -1) {
+      switchTab(index);
+    }
+  }, [service, layoutReady]);
 
 
   /* ---------- DATA ---------- */
   const S3_BASE = "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images";
-const BASE = "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/dryclean";
+  const BASE = "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/dryclean";
 
-const data = useMemo<Record<string, Item[]>>(
+  const data = useMemo<Record<string, Item[]>>(
     () => ({
       shoe: [
         {
@@ -216,29 +222,6 @@ const data = useMemo<Record<string, Item[]>>(
         { id: "dryclean-48", title: "Leather Bag (Small)", price: 400, category: "DryClean", image: `${BASE}/dryclean_48.png` },
         { id: "dryclean-49", title: "Leather Bag (Large)", price: 700, category: "DryClean", image: `${BASE}/dryclean_49.png` },
       ]
-      // iron: [
-      //   {
-      //     id: "iron-1",
-      //     title: "Shirt (Iron)",
-      //     price: 59,
-      //     category: "Ironing",
-      //     image: `${S3_BASE}/laundry/laundry_5.jpg`,
-      //   },
-      //   {
-      //     id: "iron-2",
-      //     title: "Pant (Iron)",
-      //     price: 79,
-      //     category: "Ironing",
-      //     image: `${S3_BASE}/laundry/laundry_6.jpg`,
-      //   },
-      //   {
-      //     id: "iron-3",
-      //     title: "Kurta (Iron)",
-      //     price: 99,
-      //     category: "Ironing",
-      //     image: `${S3_BASE}/laundry/laundry_7.jpg`,
-      //   },
-      // ],
     }),
     []
   );
@@ -286,7 +269,10 @@ const data = useMemo<Record<string, Item[]>>(
           const totalWidth = e.nativeEvent.layout.width;
           const gap = 8;
           const padding = 6;
-          pillWidth.current = (totalWidth - padding * 2 - gap * (TABS.length - 1)) / TABS.length;
+          pillWidth.current =
+            (totalWidth - padding * 2 - gap * (TABS.length - 1)) / TABS.length;
+
+          setLayoutReady(true);
         }}
       >
         {/* ── Sliding gradient pill ── */}

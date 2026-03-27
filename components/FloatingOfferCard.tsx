@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import {
-    Animated,
-    Dimensions,
-    Easing,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Animated,
+  Dimensions,
+  Easing,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
     right: 14,
-    bottom: 10,
+    bottom: 98,
     zIndex: 999,
     width: CARD_WIDTH,
     borderRadius: 18,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
-    elevation: 28,
+    elevation: 8,
   },
 
   /* ── Glow ring — animated ── */
