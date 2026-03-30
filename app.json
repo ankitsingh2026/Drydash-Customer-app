@@ -25,8 +25,7 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE",
-        // "ACCESS_BACKGROUND_LOCATION"
+        "FOREGROUND_SERVICE"
       ],
       "config": {
         "googleMaps": {
@@ -65,9 +64,10 @@
       [
         "expo-location",
         {
-           "locationWhenInUsePermission": "Allow DryDash to access your location to select pickup address"
+          "locationWhenInUsePermission": "Allow DryDash to access your location to select pickup address"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

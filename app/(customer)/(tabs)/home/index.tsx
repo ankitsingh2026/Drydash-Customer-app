@@ -1,11 +1,10 @@
-// app/(customer)/(tabs)/home/index.tsx
 import FloatingOfferCard from "@/components/FloatingOfferCard";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -16,21 +15,20 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import {
   SafeAreaProvider,
-  SafeAreaView,
-  useSafeAreaInsets,
+  useSafeAreaInsets
 } from "react-native-safe-area-context";
-import { SvgUri } from 'react-native-svg';
+import { SvgUri } from "react-native-svg";
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
+
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width - 32; // full width cards with 16px padding each side
-
-
+const CARD_WIDTH = width - 32;
 
 const QUICK_SERVICES = [
   {
@@ -125,7 +123,129 @@ const HERO_SLIDES = [
   },
 ];
 
+// ─── Active Order Status Card ──────────────────────────────────────────────
+function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 380,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const STATUS_STEPS = ["PICKED UP", "IN TRANSIT", "DELIVERED"];
+  const currentStep = 1; // IN TRANSIT
+
+  return (
+    <Animated.View
+      style={[
+        styles.activeOrderCard,
+        { opacity: opacityAnim, transform: [{ translateY: slideAnim }] },
+      ]}
+    >
+      {/* Header row */}
+      <View style={styles.activeOrderHeader}>
+        <View style={styles.activeOrderBadgeRow}>
+          <View style={styles.activeDot} />
+          <Text style={styles.activeOrderLabel}>ACTIVE ORDER</Text>
+        </View>
+        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Ionicons name="close" size={16} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Status text */}
+      <View style={styles.activeOrderStatusRow}>
+        <View>
+          <Text style={styles.activeOrderTitle}>Rider is on the way</Text>
+          <Text style={styles.activeOrderEta}>Expected arrival in 8 mins</Text>
+        </View>
+        {/* Bike icon */}
+        <View style={styles.bikeIconWrap}>
+          <Ionicons name="bicycle" size={22} color="#00C896" />
+        </View>
+      </View>
+
+      {/* Progress tracker */}
+      <View style={styles.progressRow}>
+        {STATUS_STEPS.map((step, idx) => {
+          const isCompleted = idx < currentStep;
+          const isActive = idx === currentStep;
+          return (
+            <View key={step} style={styles.progressStepWrap}>
+              {/* Connector line before */}
+              {idx > 0 && (
+                <View
+                  style={[
+                    styles.progressLine,
+                    { backgroundColor: idx <= currentStep ? "#00C896" : "#1E3530" },
+                  ]}
+                />
+              )}
+              <View
+                style={[
+                  styles.progressDot,
+                  isCompleted || isActive
+                    ? { backgroundColor: "#00C896", borderColor: "#00C896" }
+                    : { backgroundColor: "transparent", borderColor: "#1E3530" },
+                ]}
+              >
+                {isCompleted && (
+                  <Ionicons name="checkmark" size={10} color="#000" />
+                )}
+                {isActive && <View style={styles.progressDotInner} />}
+              </View>
+              <Text
+                style={[
+                  styles.progressLabel,
+                  { color: isCompleted || isActive ? "#00C896" : "#4B5563" },
+                ]}
+              >
+                {step}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Divider */}
+      <View style={styles.activeOrderDivider} />
+
+      {/* Rider info */}
+      <View style={styles.riderRow}>
+        {/* Avatar */}
+        <View style={styles.riderAvatar}>
+          <Text style={styles.riderAvatarText}>RS</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.riderName}>Rahul Sharma</Text>
+          <View style={styles.riderRatingRow}>
+            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Text style={styles.riderRating}> 4.92 · Professional Partner</Text>
+          </View>
+        </View>
+        {/* Actions */}
+        <TouchableOpacity style={styles.riderActionBtn}>
+          <Ionicons name="call-outline" size={18} color="#00C896" />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.riderActionBtn, { marginLeft: 8 }]}>
+          <Ionicons name="chatbubble-outline" size={18} color="#00C896" />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
 export default function Home() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -134,11 +254,13 @@ export default function Home() {
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState("Ankit");
-  const [offerVisible, setOfferVisible] = useState(true);
-  const offerSlide = useRef(new Animated.Value(0)).current;
+  const [orderBooked, setOrderBooked] = useState(false);
   const { setAuthUser, logout } = useAuthContext();
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const params = useLocalSearchParams<{ orderPlaced?: string }>();
+  const [offerVisible, setOfferVisible] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -251,6 +373,21 @@ export default function Home() {
     });
   };
 
+
+//  const triggerBooking = () => {
+//     Animated.timing(dragX, {
+//       toValue: SWIPE_THRESHOLD,
+//       duration: 200,
+//       easing: Easing.out(Easing.quad),
+//       useNativeDriver: true,
+//     }).start(() => {
+//       router.push("/book-pickup");
+//       setTimeout(() => {
+//         Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+//       }, 600);
+//     });
+//   };
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -268,7 +405,6 @@ export default function Home() {
         const finalX = (dragX as any)._value || 0;
 
         if (finalX > SWIPE_THRESHOLD * 0.9) {
-          // ✅ Animate to full end, navigate, THEN reset after screen transition
           Animated.timing(dragX, {
             toValue: SWIPE_THRESHOLD,
             duration: 120,
@@ -283,10 +419,9 @@ export default function Home() {
                 damping: 15,
                 stiffness: 180,
               }).start();
-            }, 600); // after screen transition completes
+            }, 400);
           });
         } else {
-          // Not enough — spring back smoothly
           Animated.spring(dragX, {
             toValue: 0,
             useNativeDriver: true,
@@ -302,8 +437,15 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       dragX.setValue(0);
-    }, [])
+      // When returning from book-pickup with success flag, show order card
+      if (params.orderPlaced === "1") {
+        setOrderBooked(true);
+
+         router.setParams({ orderPlaced: undefined });
+      }
+    }, [params.orderPlaced]),
   );
+
   if (loading) return <HomeScreenSkeleton />;
 
   const PRIMARY = theme.primary; // teal/green
@@ -323,11 +465,35 @@ export default function Home() {
         backgroundColor={theme.background}
         translucent={false}
       />
-      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
-        <ScrollView
+      <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
+        <View
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+
+          {/* ── SEARCH BAR ── */}
+          <Animated.View style={[styles.searchBarWrap, { opacity: fadeAnim }]}>
+            <View style={[styles.searchBar, { backgroundColor: "#0D1F1C", borderColor: "#1A3330" }]}>
+              <Ionicons name="search-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder='Search "Shoe Spa"'
+                placeholderTextColor="#4B5563"
+                style={[styles.searchInput, { color: theme.text }]}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <Ionicons name="close-circle" size={18} color="#6B7280" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity>
+                  <Ionicons name="mic-outline" size={18} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </Animated.View>
 
           {/* ── HERO CAROUSEL ── */}
           <ScrollView
@@ -364,14 +530,14 @@ export default function Home() {
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-                  <View style={[styles.heroOverlay, { backgroundColor: "rgba(0, 40, 30, 0.55)" }]} />
+                  <View style={styles.heroOverlay} />
 
-                  {/* Tag badge - top left */}
+                  {/* Tag badge */}
                   <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
                     <Text style={styles.heroTagText}>{slide.tag}</Text>
                   </View>
 
-                  {/* Text - bottom */}
+                  {/* Text */}
                   <View style={styles.heroTextWrap}>
                     <Text style={styles.heroTitle}>{slide.title}</Text>
                     {slide.subtitle && (
@@ -383,8 +549,28 @@ export default function Home() {
             })}
           </ScrollView>
 
-          {/* ── INSTANT PICKUP STRIP ── */}
-          <Animated.View
+          {/* Carousel dots */}
+          <View style={styles.dotsRow}>
+            {HERO_SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i === currentIndex
+                    ? { backgroundColor: PRIMARY, width: 16 }
+                    : { backgroundColor: "#1A3330", width: 6 },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* ── ACTIVE ORDER CARD (shown after booking) ── */}
+          {orderBooked && (
+            <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
+          )}
+
+          {/* ── SWIPE TO BOOK STRIP ── */}
+          {!orderBooked && <Animated.View
             style={[
               styles.pickupCard,
               {
@@ -402,8 +588,8 @@ export default function Home() {
               },
             ]}
           >
-            {/* Top row: text + truck icon */}
-            <View style={styles.pickupRow}>
+            {/* Top row: label */}
+            {/* <View style={styles.pickupRow}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.pickupTitle, { color: theme.text }]}>
                   Instant Pickup
@@ -412,21 +598,14 @@ export default function Home() {
                   Professional care at your doorsteps
                 </Text>
               </View>
-              {/* <View style={[styles.truckIconWrap, { backgroundColor: PRIMARY }]}>
-                <Truck size={18} color="#000" />
-              </View> */}
-            </View>
+            </View> */}
 
             {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]} />
+            {/* <View style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]} /> */}
 
-            {/* Swipe to Book */}
-            <View
-              style={[
-                styles.swipeContainer,
-                { backgroundColor: "#071018" },
-              ]}
-            >
+            {/* ── Swipe Button – Image 2 style ── */}
+            <View style={[styles.swipeContainer, { backgroundColor: "#071018" }]}>
+              {/* Draggable thumb */}
               <Animated.View
                 style={[
                   styles.swipeDraggable,
@@ -435,26 +614,34 @@ export default function Home() {
                 {...panResponder.panHandlers}
               >
                 <TouchableOpacity
-                  activeOpacity={0.6}
+                  activeOpacity={0.7}
+                  // onPress={triggerBooking}
                   onPress={onPressBook}
                   style={styles.swipeDraggableInner}
+                  //delayPressIn={50}
                 >
-                  <Ionicons name="chevron-forward" size={18} color="#000" />
+                  {/* Lightning bolt icon */}
+                  <Ionicons name="flash" size={20} color="#000" />
                 </TouchableOpacity>
               </Animated.View>
 
+              {/* Label + arrow */}
               <View style={styles.swipeTextWrap} pointerEvents="none">
-                <Text style={styles.swipeHint}>SWIPE TO BOOK</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                </View>
               </View>
             </View>
-          </Animated.View>
+          </Animated.View>}
+
           {/* ── SERVICES ── */}
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {/* <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Our Services
-                </Text>
+                </Text> */}
                 {/* <TouchableOpacity>
                   <Text style={[styles.viewAll, { color: PRIMARY }]}>View All</Text>
                 </TouchableOpacity> */}
@@ -512,11 +699,11 @@ export default function Home() {
                         >
                           {s.label}
                         </Text>
-                        <Text
+                        {/* <Text
                           style={[styles.serviceSubtitle, { color: theme.subText }]}
                         >
                           {s.subtitle}
-                        </Text>
+                        </Text> */}
                       </View>
                     </TouchableOpacity>
                   );
@@ -528,10 +715,10 @@ export default function Home() {
 
 
           <View style={{ height: 80 }} />
-        </ScrollView>
+        </View>
 
 
-      </SafeAreaView>
+      </ScrollView>
 
       <FloatingOfferCard
         visible={offerVisible}
@@ -554,14 +741,35 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingTop: 0 },
 
 
-  /* Hero */
+
+  searchBarWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    paddingTop: 10
+
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+
+  /* ── Hero ── */
   heroCard: {
     width: CARD_WIDTH,
     height: 200,
-    borderRadius: 8,
+    borderRadius: 14,
     overflow: "hidden",
     justifyContent: "flex-end",
   },
@@ -572,7 +780,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: "rgba(0, 40, 30, 0.55)",
   },
   heroTagBadge: {
     position: "absolute",
@@ -589,8 +797,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   heroTextWrap: {
-    padding: 10,
-
+    padding: 12,
   },
   heroTitle: {
     fontSize: 20,
@@ -605,26 +812,175 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  /* Instant Pickup Strip */
-  pickupStrip: {
+  /* Dots */
+  dotsRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 10,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+
+  /* ── Active Order Card ── */
+  activeOrderCard: {
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  pickupTitle: { fontSize: 15, fontWeight: "800", marginBottom: 2 },
-  pickupSubtitle: { fontSize: 12, fontWeight: "500" },
-  truckIconWrap: {
-    width: 40,
-    height: 40,
+    backgroundColor: "#0D1F1C",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#1A3330",
+    padding: 14,
+    gap: 10,
+  },
+  activeOrderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeOrderBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#00C896",
+  },
+  activeOrderLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#00C896",
+    letterSpacing: 1.2,
+  },
+  activeOrderStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeOrderTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  activeOrderEta: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  bikeIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#071A17",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#1A3330",
+  },
+
+  /* Progress */
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    position: "relative",
+    marginTop: 2,
+  },
+  progressStepWrap: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    position: "relative",
+  },
+  progressLine: {
+    position: "absolute",
+    top: 9,
+    right: "50%",
+    left: "-50%",
+    height: 2,
+    zIndex: 0,
+  },
+  progressDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  progressDotInner: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#000",
+  },
+  progressLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+
+  activeOrderDivider: {
+    height: 1,
+    backgroundColor: "#1A3330",
+    marginHorizontal: -14,
+  },
+
+  /* Rider row */
+  riderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  riderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#00C896",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  riderAvatarText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#000",
+  },
+  riderName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  riderRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 1,
+  },
+  riderRating: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  riderActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#071A17",
+    borderWidth: 1,
+    borderColor: "#1A3330",
     alignItems: "center",
     justifyContent: "center",
   },
 
+  /* ── Pickup Card ── */
   pickupCard: {
     marginHorizontal: 16,
     marginTop: 14,
@@ -640,13 +996,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  pickupTitle: { fontSize: 15, fontWeight: "800", marginBottom: 2 },
+  pickupSubtitle: { fontSize: 12, fontWeight: "500" },
   pickupDivider: {
     height: 1,
     marginHorizontal: -14,
     opacity: 0.6,
   },
 
-  /* Swipe row (inside card, no outer wrap needed) */
+  /* ── Swipe button ── */
   swipeContainer: {
     height: 52,
     borderRadius: 34,
@@ -665,7 +1023,7 @@ const styles = StyleSheet.create({
   },
   swipeHint: {
     fontWeight: "800",
-    fontSize: 13,
+    fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
   },
@@ -687,7 +1045,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   /* Services */
   section: { marginTop: 20, paddingHorizontal: 16 },
   sectionHeader: {
@@ -701,20 +1058,20 @@ const styles = StyleSheet.create({
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   serviceCard: {
     width: (width - 32 - 10) / 2,
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
+    padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    gap: 12,
+    gap: 10,
   },
   serviceIconWrapper: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",

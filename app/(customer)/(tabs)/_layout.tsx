@@ -1,56 +1,78 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { useTheme } from "../../../context/ThemeContext";
 
+const ACTIVE_BG = "#33F0A2";
+const DARK_BAR = "#071F19";
+const INACTIVE_ICON = "#4B7269";
+const LABEL_ACTIVE = "#33F0A2";
+const LABEL_INACTIVE = "#7FA99E";
+
+const TAB_BAR_HEIGHT = 62;
+
+type TabIconProps = {
+  focused: boolean;
+  iconFocused: any;
+  iconOutline: any;
+  label: string;
+};
+
+function TabIcon({ focused, iconFocused, iconOutline, label }: TabIconProps) {
+  return (
+    <View style={styles.tabContent}>
+      <Ionicons
+        name={focused ? iconFocused : iconOutline}
+        size={19}
+        color={focused ? ACTIVE_BG : INACTIVE_ICON}
+      />
+      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+    </View>
+  );
+}
+
 export default function TabsLayout() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
-  const activeGreen = "#33F0A2";
-  const darkBar = "#071F19";
-  const inactive = "#6B8A82";
-  const labelColor = "#C7D6D0";
+  const bottomOffset = Math.max(insets.bottom, 10);
 
   return (
-    <View style={[styles.container, { backgroundColor: "#031612" }]}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarShowLabel: false,
-          tabBarStyle: [
-            styles.tabBar,
-            {
-              backgroundColor: darkBar,
-              height: 74 + insets.bottom,
-              paddingBottom: Math.max(insets.bottom, 10),
-            },
-          ],
+          tabBarHideOnKeyboard: true,
+          tabBarStyle: {
+            height: TAB_BAR_HEIGHT + insets.bottom, // include safe area
+            backgroundColor: DARK_BAR,
+            borderTopWidth: 0,
+            elevation: 10,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: -2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 6,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 8, // safe area fix
+            paddingTop: 6,
+          },
+          tabBarItemStyle: {
+            height: TAB_BAR_HEIGHT,
+            justifyContent: "center",
+            alignItems: "center",
+          },
+          tabBarIconStyle: {
+            width: "100%",
+            height: "100%",
+          },
         }}
       >
         <Tabs.Screen
           name="home/index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <View style={[styles.tabItem, focused && { backgroundColor: activeGreen }]}>
-                <Ionicons
-                  name={focused ? "home" : "home-outline"}
-                  size={18}
-                  color={focused ? "#062019" : inactive}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: focused ? "#062019" : labelColor },
-                    !focused && { opacity: 0.72 },
-                  ]}
-                >
-                  HOME
-                </Text>
-              </View>
+              <TabIcon focused={focused} iconFocused="home" iconOutline="home-outline" label="HOME" />
             ),
           }}
         />
@@ -59,22 +81,16 @@ export default function TabsLayout() {
           name="orders/index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <View style={[styles.tabItem, focused && { backgroundColor: activeGreen }]}>
-                <Ionicons
-                  name={focused ? "receipt" : "receipt-outline"}
-                  size={18}
-                  color={focused ? "#062019" : inactive}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: focused ? "#062019" : labelColor },
-                    !focused && { opacity: 0.72 },
-                  ]}
-                >
-                  ORDERS
-                </Text>
-              </View>
+              <TabIcon focused={focused} iconFocused="receipt" iconOutline="receipt-outline" label="ORDERS" />
+            ),
+          }}
+        />
+
+        <Tabs.Screen
+          name="chat/index"
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon focused={focused} iconFocused="chatbubble" iconOutline="chatbubble-outline" label="CHAT" />
             ),
           }}
         />
@@ -83,22 +99,7 @@ export default function TabsLayout() {
           name="profile/index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <View style={[styles.tabItem, focused && { backgroundColor: activeGreen }]}>
-                <Ionicons
-                  name={focused ? "person" : "person-outline"}
-                  size={18}
-                  color={focused ? "#062019" : inactive}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    { color: focused ? "#062019" : labelColor },
-                    !focused && { opacity: 0.72 },
-                  ]}
-                >
-                  PROFILE
-                </Text>
-              </View>
+              <TabIcon focused={focused} iconFocused="person" iconOutline="person-outline" label="ME" />
             ),
           }}
         />
@@ -108,60 +109,22 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  root: {
     flex: 1,
   },
-
-  tabBar: {
-    position: "absolute",
-    left: 10,
-    right: 10,
-    bottom: 0,
-    borderTopWidth: 0,
-    borderRadius: 22,
-    paddingTop: 10,
-    paddingHorizontal: 10,
-    elevation: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-  },
-
-  tabItem: {
-    minWidth: 72,
-    height: 44,
-    borderRadius: 14,
+  tabContent: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    gap: 2,
+    gap: 3,
   },
-
-  tabLabel: {
+  label: {
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    letterSpacing: 0.5,
+    color: LABEL_INACTIVE,
+    includeFontPadding: false,
   },
-
-  fabWrap: {
-    position: "absolute",
-    alignSelf: "center",
-    zIndex: 50,
-  },
-
-  fab: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "#33F0A2",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#33F0A2",
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
+  labelActive: {
+    color: LABEL_ACTIVE,
   },
 });

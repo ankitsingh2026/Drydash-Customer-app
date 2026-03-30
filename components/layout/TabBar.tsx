@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#031612", // deep green
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom:2 ,
   },
 
   row: {
