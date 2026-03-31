@@ -17,20 +17,19 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import {
   SafeAreaProvider,
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { SvgUri } from 'react-native-svg';
+import { SvgUri } from "react-native-svg";
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
+import AppLoader from "@/components/AppLoader";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32; // full width cards with 16px padding each side
-
-
 
 const QUICK_SERVICES = [
   {
@@ -125,7 +124,6 @@ const HERO_SLIDES = [
   },
 ];
 
-
 export default function Home() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -188,8 +186,6 @@ export default function Home() {
 
     return () => clearTimeout(t);
   }, []);
-
-
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -302,9 +298,9 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       dragX.setValue(0);
-    }, [])
+    }, []),
   );
-  if (loading) return <HomeScreenSkeleton />;
+  if (loading) return <AppLoader />;
 
   const PRIMARY = theme.primary; // teal/green
 
@@ -323,12 +319,13 @@ export default function Home() {
         backgroundColor={theme.background}
         translucent={false}
       />
-      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
+      <SafeAreaView
+        style={[styles.root, { backgroundColor: theme.background }]}
+      >
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-
           {/* ── HERO CAROUSEL ── */}
           <ScrollView
             ref={scrollViewRef}
@@ -364,10 +361,17 @@ export default function Home() {
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-                  <View style={[styles.heroOverlay, { backgroundColor: "rgba(0, 40, 30, 0.55)" }]} />
+                  <View
+                    style={[
+                      styles.heroOverlay,
+                      { backgroundColor: "rgba(0, 40, 30, 0.55)" },
+                    ]}
+                  />
 
                   {/* Tag badge - top left */}
-                  <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
+                  <View
+                    style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}
+                  >
                     <Text style={styles.heroTagText}>{slide.tag}</Text>
                   </View>
 
@@ -418,19 +422,21 @@ export default function Home() {
             </View>
 
             {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]} />
+            <View
+              style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]}
+            />
 
             {/* Swipe to Book */}
             <View
-              style={[
-                styles.swipeContainer,
-                { backgroundColor: "#071018" },
-              ]}
+              style={[styles.swipeContainer, { backgroundColor: "#071018" }]}
             >
               <Animated.View
                 style={[
                   styles.swipeDraggable,
-                  { transform: [{ translateX: dragX }], backgroundColor: PRIMARY },
+                  {
+                    transform: [{ translateX: dragX }],
+                    backgroundColor: PRIMARY,
+                  },
                 ]}
                 {...panResponder.panHandlers}
               >
@@ -480,7 +486,12 @@ export default function Home() {
                           // console.log("service param:");
                           router.push({
                             pathname: "/services/[service]",
-                            params: { service: s.slug as "shoe" | "laundry" | "dryclean" },
+                            params: {
+                              service: s.slug as
+                                | "shoe"
+                                | "laundry"
+                                | "dryclean",
+                            },
                           });
                         } else {
                           router.push(`/services/${s.slug}`);
@@ -498,11 +509,7 @@ export default function Home() {
                             { backgroundColor: "#0A3D3C" },
                           ]}
                         >
-                          <SvgUri
-                            uri={s.icon}
-                            width={32}
-                            height={32}
-                          />
+                          <SvgUri uri={s.icon} width={32} height={32} />
                         </View>
                       </Animated.View>
 
@@ -513,7 +520,10 @@ export default function Home() {
                           {s.label}
                         </Text>
                         <Text
-                          style={[styles.serviceSubtitle, { color: theme.subText }]}
+                          style={[
+                            styles.serviceSubtitle,
+                            { color: theme.subText },
+                          ]}
                         >
                           {s.subtitle}
                         </Text>
@@ -525,12 +535,8 @@ export default function Home() {
             </View>
           </Animated.View>
 
-
-
           <View style={{ height: 80 }} />
         </ScrollView>
-
-
       </SafeAreaView>
 
       <FloatingOfferCard
@@ -546,8 +552,6 @@ export default function Home() {
         onClose={() => setOfferVisible(false)}
       />
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-
-
     </SafeAreaProvider>
   );
 }
@@ -555,7 +559,6 @@ export default function Home() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: { paddingTop: 0 },
-
 
   /* Hero */
   heroCard: {
@@ -590,7 +593,6 @@ const styles = StyleSheet.create({
   },
   heroTextWrap: {
     padding: 10,
-
   },
   heroTitle: {
     fontSize: 20,
@@ -721,5 +723,4 @@ const styles = StyleSheet.create({
   },
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   serviceSubtitle: { fontSize: 11, fontWeight: "500" },
-
 });

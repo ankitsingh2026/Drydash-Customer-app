@@ -24,6 +24,7 @@ import {
 } from "react-native";
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
+import AppLoader from "@/components/AppLoader";
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
@@ -302,7 +303,7 @@ export default function Orders() {
     ).start();
   }, [filteredOrders]);
 
-  if (loading) return <OrdersScreenSkeleton />;
+  if (loading) return <AppLoader />;
 
   /* ================= EMPTY STATE ================= */
 
