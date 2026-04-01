@@ -503,7 +503,7 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
-                <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
+                {/* <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
                   <View
                     style={[
                       styles.avatarCircle,
@@ -519,7 +519,7 @@ export default function AuthScreen() {
                   <Text style={styles.avatarText}>
                     {avatar ? "Photo selected ✓" : "Add profile photo"}
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <Input
                   icon="person-outline"

@@ -1,12 +1,11 @@
+import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import { Bell } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
@@ -77,20 +76,28 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
           <Text style={styles.title}>24 Hours</Text>
 
           <View style={styles.locationRow}>
-            <Text style={styles.homeTag}>HOME · </Text>
-
             {loadingLoc ? (
               <ActivityIndicator size="small" color="#2FE6A6" />
             ) : (
-              <Text style={styles.locationText} numberOfLines={1}>
-                {locationText}
-              </Text>
+              <>
+                <Ionicons
+                  name="location-sharp"
+                  size={16}
+                  color="#2FE6A6"
+                  style={{ marginRight: 6 }}
+                />
+
+
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {locationText}
+                </Text>
+              </>
             )}
           </View>
         </View>
 
         {/* RIGHT ICON */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           activeOpacity={0.8}
           onPress={onOpenNotifications}
           style={styles.iconBtn}
@@ -104,7 +111,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#031612", // deep green
     paddingHorizontal: 16,
-    paddingBottom:2 ,
+    paddingBottom: 2,
   },
 
   row: {

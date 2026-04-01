@@ -6,4 +6,5 @@ export const DarkTheme = {
   subText: "#22EBAB",
   primary: "#9FFFD3",
   border: "#1E3A34",
+  ordergradient: ["#001A17", "#00332B", "#004D3F"],
 };

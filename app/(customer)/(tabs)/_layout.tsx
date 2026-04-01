@@ -87,10 +87,15 @@ export default function TabsLayout() {
         />
 
         <Tabs.Screen
-          name="chat/index"
+          name="assistant/index"
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon focused={focused} iconFocused="chatbubble" iconOutline="chatbubble-outline" label="CHAT" />
+              <TabIcon
+                focused={focused}
+                iconFocused="sparkles"
+                iconOutline="sparkles-outline"
+                label="ASSISTANT"
+              />
             ),
           }}
         />

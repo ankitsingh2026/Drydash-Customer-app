@@ -28,7 +28,7 @@ export default function SplashScreen() {
 
       setTimeout(() => {
         router.replace("/(auth)/auth");
-      }, 1500);
+      }, 1000);
     };
 
     init();

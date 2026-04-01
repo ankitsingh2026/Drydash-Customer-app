@@ -3,7 +3,6 @@ import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
 import React, {
   useCallback,
@@ -15,7 +14,6 @@ import React, {
 import {
   Animated,
   Easing,
-  LayoutChangeEvent,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,18 +21,14 @@ import {
   View,
 } from "react-native";
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
-import { useTheme } from "../../../../context/ThemeContext";
+
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
 type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 
-const FILTERS: FilterType[] = ["All", "Active", "Completed", "Awaiting"];
-
 const getOrderId = (o: any): string | undefined =>
-  o?.order_id ?? o?.orderId ?? o?.id ?? o?._id;
-
-
+  o?.order_id;
 
 const STATUS_CONFIG = {
   active: { bg: "#10B981", icon: "time-outline" as const, label: "Active" },
@@ -57,127 +51,148 @@ const getStatusConfig = (status: string) =>
     label: status === "processing" ? "Active" : "Completed",
   };
 
-const mapFilterStatus = (status: string): OrderStatus =>
-  status === "delivered" ? "Completed" : "Active";
+const mapFilterStatus = (status: string): OrderStatus => {
+  if (status === "delivered") return "Completed";
+  if (status === "cancelled") return "Completed";
+  return "Active";
+};
+/* ─── Accent palette — matches Home.tsx exactly ─── */
+const ACCENT = "#00C896";
+const SURFACE = "#0D1F1C";
+const BG = "#001714";
+const BORDER = "#1A3330";
+const MUTED = "#6B7280";
 
-/* ================= SCROLLABLE SLIDING TAB BAR ================= */
-function SlidingFilterTabs({
-  active, onChange, theme, isDark,
-}: {
-  active: FilterType;
-  onChange: (f: FilterType) => void;
-  theme: any;
-  isDark: boolean;
-}) {
-  const [tabLayouts, setTabLayouts] = useState<{ x: number; width: number }[]>([]);
-  const slideX = useRef(new Animated.Value(0)).current;
-  const slideW = useRef(new Animated.Value(60)).current;
-  const labelAnims = useRef(FILTERS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
-  const activeIndex = FILTERS.indexOf(active);
+/* ================= FILTER TAB ================= */
+
+
+
+/* ================= STAGE PROGRESS BAR ================= */
+
+function StageProgress({ stage }: { stage?: string }) {
+  const stages = ["WASHING", "DRYING & FOLDING", "READY", "OUT FOR DELIVERY"];
+  const current = stages.findIndex((s) =>
+    (stage ?? "").toUpperCase().includes(s.split(" ")[0])
+  );
+  const idx = current === -1 ? 0 : current;
+  const pct = ((idx + 1) / stages.length) * 100;
+  const widthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const layout = tabLayouts[activeIndex];
-    if (!layout) return;
-    Animated.parallel([
-      Animated.spring(slideX, {
-        toValue: layout.x,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: false, // width/left can't use native driver
-      }),
-      Animated.spring(slideW, {
-        toValue: layout.width,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: false,
-      }),
-      // Crossfade labels
-      ...FILTERS.map((_, idx) =>
-        Animated.timing(labelAnims[idx], {
-          toValue: idx === activeIndex ? 1 : 0,
-          duration: 200,
-          useNativeDriver: true,
-        })
-      ),
-    ]).start();
-  }, [activeIndex, tabLayouts]);
+    Animated.timing(widthAnim, {
+      toValue: pct,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [pct]);
 
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingVertical: 12, paddingHorizontal: 2 }}
-    >
-      <View style={[styles.tabBarWrapper, { backgroundColor: isDark ? "#0F1720" : "#0F1720" }]}>
-
-        {/* ── Sliding gradient pill ── */}
+    <View style={{ marginTop: 5 }}>
+      <View style={progressStyles.track}>
         <Animated.View
           style={[
-            styles.slidingPill,
+            progressStyles.fill,
             {
-              left: slideX,
-              width: slideW,
-              overflow: "hidden",
-              shadowColor: "#56BFAB",
-              shadowOpacity: 0.45,
-              shadowRadius: 10,
-              shadowOffset: { width: 0, height: 3 },
-              elevation: 6,
+              width: widthAnim.interpolate({
+                inputRange: [0, 100],
+                outputRange: ["0%", "100%"],
+              }),
             },
           ]}
-        >
-          <LinearGradient
-            colors={["#56BFAB", "#005B47"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        {/* ── Tab labels ── */}
-        {FILTERS.map((filter, i) => {
-          const isActive = active === filter;
-          return (
-            <TouchableOpacity
-              key={filter}
-              activeOpacity={0.8}
-              onLayout={(e: LayoutChangeEvent) => {
-                const { x, width } = e.nativeEvent.layout;
-                setTabLayouts((prev) => {
-                  const next = [...prev];
-                  next[i] = { x, width };
-                  return next;
-                });
-              }}
-              onPress={() => onChange(filter)}
-              style={styles.tabItem}
-            >
-              {/* Explicit elevated wrapper so text always sits above pill on Android */}
-              <View style={{ zIndex: 10, elevation: 10 }}>
-                <Animated.Text
-                  style={{
-                    fontWeight: isActive ? "800" : "600",
-                    fontSize: 13,
-                    color: labelAnims[i].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["#6B7280", "#ffffff"],
-                    }),
-                  }}
-                >
-                  {filter}
-                </Animated.Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        />
+        {/* glow dot */}
+        <Animated.View
+          style={[
+            progressStyles.dot,
+            {
+              left: widthAnim.interpolate({
+                inputRange: [0, 100],
+                outputRange: ["0%", "97%"],
+              }),
+            },
+          ]}
+        />
       </View>
-    </ScrollView>
+      <Text style={progressStyles.label}>
+        STAGE: {(stage ?? "PROCESSING").toUpperCase()}
+      </Text>
+    </View>
   );
 }
+
+const progressStyles = StyleSheet.create({
+  track: {
+    height: 4,
+    backgroundColor: BORDER,
+    borderRadius: 4,
+    overflow: "visible",
+    position: "relative",
+  },
+  fill: {
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: ACCENT,
+  },
+  dot: {
+    position: "absolute",
+    top: -4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: ACCENT,
+    borderWidth: 2,
+    borderColor: SURFACE,
+    shadowColor: ACCENT,
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  label: {
+    marginTop: 6,
+    fontSize: 10,
+    letterSpacing: 1,
+    color: MUTED,
+    fontWeight: "700",
+  },
+});
+
+/* ================= STATUS BADGE ================= */
+
+function StatusBadge({
+  label,
+  color,
+  icon,
+}: {
+  label: string;
+  color: string;
+  icon: any;
+}) {
+  return (
+    <View style={[badgeStyles.wrap, { backgroundColor: color + "1A", borderColor: color + "30" }]}>
+      <Ionicons name={icon} size={11} color={color} />
+      <Text style={[badgeStyles.text, { color }]}>{label.toUpperCase()}</Text>
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  text: { fontSize: 10, fontWeight: "800", letterSpacing: 0.8 },
+});
+
 /* ================= MAIN COMPONENT ================= */
 
 export default function Orders() {
-  const { theme, isDark } = useTheme();
   const { user } = useAuth();
 
   const [orders, setOrders] = useState<any[]>([]);
@@ -189,7 +204,6 @@ export default function Orders() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-  if (!user) return <OrdersScreenSkeleton />;
 
   const rawPhone = user?.user?.phone ?? user?.phone ?? "";
   const phoneWithout91 = rawPhone.startsWith("91")
@@ -199,31 +213,35 @@ export default function Orders() {
 
   /* ================= HELPERS ================= */
 
-  const formatOrderDateTime = (dateString: string) => {
+  const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    const datePart = date.toLocaleDateString("en-IN", {
+    return date.toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
-    const timePart = date.toLocaleTimeString("en-IN", {
+  };
+
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString("en-IN", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
     });
-    return `${datePart} • ${timePart}`;
   };
+
+  // const formatOrderDateTime = (dateString: string) =>
+  //   `${formatDate(dateString)} • ${formatTime(dateString)}`;
 
   /* ================= FILTERED ORDERS ================= */
 
   const filteredOrders = useMemo(() => {
     if (activeFilter === "Awaiting")
-      return pickups.map((p) => ({ ...p, type: "pickup" }));
+      return [];
+    
     if (activeFilter === "All") {
-      return [
-        ...orders.map((o) => ({ ...o, type: "order" })),
-        ...pickups.map((p) => ({ ...p, type: "pickup" })),
-      ];
+      return orders.map((o) => ({ ...o, type: "order" }));
     }
     return orders
       .filter((o) => mapFilterStatus(o.status) === activeFilter)
@@ -256,24 +274,37 @@ export default function Orders() {
     }
   };
 
-  const cancelPickupApi = async (pickupId: string) =>
-    new Promise((resolve) => setTimeout(() => resolve(true), 500));
+  // const cancelPickupApi = async (pickupId: string) =>
+  //   new Promise((resolve) => setTimeout(() => resolve(true), 500));
 
-  const reschedulePickupApi = async (pickupId: string) =>
-    new Promise((resolve) => setTimeout(() => resolve(true), 500));
+  // const reschedulePickupApi = async (pickupId: string) =>
+  //   new Promise((resolve) => setTimeout(() => resolve(true), 500));
 
   useFocusEffect(
     useCallback(() => {
       getCustomerOrders();
       getCustomerPickupList();
-    }, []),
+    }, [])
   );
 
   /* ================= ANIMATIONS ================= */
+  const uniqueOrders = useMemo(() => {
+    const map = new Map();
+
+    filteredOrders.forEach((item) => {
+      const id = getOrderId(item) || item._id;
+
+      if (!map.has(id)) {
+        map.set(id, item);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [filteredOrders]);
 
   useEffect(() => {
-    cardAnims.current = filteredOrders.map(
-      (_, i) => cardAnims.current[i] || new Animated.Value(0),
+    cardAnims.current = uniqueOrders.map(
+      (_, i) => cardAnims.current[i] || new Animated.Value(0)
     );
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -290,29 +321,30 @@ export default function Orders() {
       }),
     ]).start();
     Animated.stagger(
-      100,
+      90,
       cardAnims.current.map((anim) =>
         Animated.spring(anim, {
           toValue: 1,
           tension: 50,
           friction: 8,
           useNativeDriver: true,
-        }),
-      ),
+        })
+      )
     ).start();
-  }, [filteredOrders]);
+  }, [uniqueOrders]);
 
-  if (loading) return <OrdersScreenSkeleton />;
 
   /* ================= EMPTY STATE ================= */
 
+
+
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Text style={{ fontSize: 40 }}>📭</Text>
-      <Text style={[styles.emptyTitle, { color: theme.text }]}>
-        No orders here
-      </Text>
-      <Text style={{ color: theme.subText, textAlign: "center" }}>
+      <View style={styles.emptyIcon}>
+        <Text style={{ fontSize: 32 }}>📭</Text>
+      </View>
+      <Text style={[styles.emptyTitle, { color: "#fff" }]}>Nothing here</Text>
+      <Text style={{ color: MUTED, textAlign: "center", fontSize: 13 }}>
         {activeFilter === "Awaiting"
           ? "No scheduled pickups"
           : `No ${activeFilter.toLowerCase()} orders found`}
@@ -320,15 +352,19 @@ export default function Orders() {
     </View>
   );
 
+  if (!user) return <OrdersScreenSkeleton />;
+  if (loading) return <OrdersScreenSkeleton />;
+
+
   /* ================= UI ================= */
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.background }}>
+    <View style={styles.root}>
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
+        {/* ── HEADER ── */}
         <Animated.View
           style={[
             styles.headerContainer,
@@ -337,51 +373,32 @@ export default function Orders() {
         >
           <View style={styles.headerTop}>
             <View>
-              <Text style={[styles.headerTitle, { color: theme.text }]}>
-                My Orders
-              </Text>
-              <Text style={[styles.headerSubtitle, { color: theme.subText }]}>
-                Total Orders: {orders.length}
-              </Text>
+              <Text style={styles.headerTitle}>My Orders</Text>
+              {/* <Text style={styles.headerSubtitle}>
+                {activeFilter === "Awaiting"
+                  ? "Upcoming Pickups"
+                  : `${orders.length} total orders`}
+              </Text> */}
             </View>
-            <View
-              style={[
-                styles.statsBox,
-                {
-                  backgroundColor: isDark ? "#0F1720" : "#0F1720",
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <Text style={[styles.statsNumber, { color: theme.primary }]}>
-                {orders.filter((o) => o.status !== "delivered").length}
-              </Text>
-              <Text style={[styles.statsLabel, { color: theme.subText }]}>
-                Active
-              </Text>
+
+            {/* Active badge */}
+            <View style={styles.activeBadge}>
+              <View style={styles.activeDot} />
+              <View>
+                <Text style={styles.headerSubtitle}>
+                  {orders.length} total orders
+                </Text>
+              </View>
             </View>
           </View>
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
-            ]}
-          />
+
+          {/* Filter tabs */}
         </Animated.View>
 
-        {/* SCROLLABLE SLIDING FILTER TABS */}
-        <SlidingFilterTabs
-          active={activeFilter}
-          onChange={setActiveFilter}
-          theme={theme}
-          isDark={isDark}
-        />
+        {uniqueOrders.length === 0 && renderEmpty()}
 
-        {filteredOrders.length === 0 && renderEmpty()}
-
-        {/* CARDS */}
-        {filteredOrders.map((o: any, index: number) => {
-          console.log("Payment Status:", o?.payment?.status);
+        {/* ── CARDS ── */}
+        {uniqueOrders.map((o: any, index: number) => {
           const anim = cardAnims.current[index] || new Animated.Value(1);
           const animStyle = {
             opacity: anim,
@@ -389,297 +406,186 @@ export default function Orders() {
               {
                 translateY: anim.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [20, 0],
+                  outputRange: [24, 0],
                 }),
               },
             ],
           };
 
-          /* ── PICKUP CARD ── */
-          if (o.type === "pickup") {
-            return (
-              <Animated.View key={o._id || index} style={animStyle}>
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: theme.card, borderLeftColor: "#fcc601" },
-                  ]}
-                >
-                  {/* Header */}
-                  <View style={styles.cardHeader}>
-                    <View style={styles.row}>
-                      {/* Purple status dot */}
-                      <View
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: "#8B5CF622" },
-                        ]}
-                      >
-                        <Ionicons
-                          name="cube-outline"
-                          size={13}
-                          color="#fcc601"
-                        />
-                      </View>
-                      <Text
-                        style={{
-                          fontWeight: "600",
-                          color: "#fcc601",
-                          marginLeft: 8,
-                        }}
-                      >
-                        Pickup Scheduled
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.dateBadge,
-                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
-                      ]}
-                    >
-                      <Text style={{ fontSize: 11, color: theme.subText }}>
-                        {formatOrderDateTime(o.pickup_date)}
-                      </Text>
-                    </View>
-                  </View>
+          /* ── PICKUP CARD ---------------------------- ── */
+          // if (o.type === "pickup") {
+          //   return (
+          //     <Animated.View key={o._id || index} style={animStyle}>
+          //       <View style={styles.card}>
+          //         {/* subtle top accent line */}
+          //         <View style={[styles.cardAccentLine, { backgroundColor: "#fcc601" }]} />
 
-                  {/* Body */}
-                  <View style={styles.cardBody}>
-                    <Text style={[styles.orderIdText, { color: theme.text }]}>
-                      Pickup Request
-                    </Text>
-                    <View style={styles.row}>
-                      <Ionicons
-                        name="location-outline"
-                        size={13}
-                        color={theme.subText}
-                        style={{ marginTop: 4 }}
-                      />
-                      <Text
-                        style={{
-                          color: theme.subText,
-                          marginTop: 4,
-                          marginLeft: 4,
-                          flex: 1,
-                        }}
-                      >
-                        {o.Address}
-                      </Text>
-                    </View>
-                    {o.note ? (
-                      <View
-                        style={[
-                          styles.noteBadge,
-                          { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
-                        ]}
-                      >
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={13}
-                          color={theme.primary}
-                        />
-                        <Text
-                          style={{
-                            color: theme.primary,
-                            fontWeight: "600",
-                            marginLeft: 4,
-                            fontSize: 12,
-                          }}
-                        >
-                          {o.note}
-                        </Text>
-                      </View>
-                    ) : null}
+          //         <View style={styles.cardInner}>
+          //           {/* Status badge + icon */}
+          //           <View style={styles.cardHeaderRow}>
+          //             <StatusBadge
+          //               label="Pickup Scheduled"
+          //               color="#fcc601"
+          //               icon="cube-outline"
+          //             />
+          //             <View style={styles.cardIconWrap}>
+          //               <Ionicons name="calendar-outline" size={18} color="#fcc601" />
+          //             </View>
+          //           </View>
 
-                    {/* Action buttons */}
-                    <View style={{ flexDirection: "row", marginTop: 14, gap: 8 }}>
+          //           {/* Date */}
+          //           <Text style={styles.cardDate}>
+          //             {formatDate(o.pickup_date)}
+          //           </Text>
+          //           <Text style={styles.cardTime}>
+          //             {formatTime(o.pickup_date)}
+          //           </Text>
 
-                      {/* Reschedule — subtle teal ghost */}
-                      <TouchableOpacity
-                        style={styles.actionBtn}
-                        activeOpacity={0.82}
-                        onPress={() => {
-                          reschedulePickupApi(o._id);
-                          router.push(`/pickups/reschedule/${o._id}`);
-                        }}
-                      >
-                        <LinearGradient
-                          colors={["#56BFAB", "#005B47"]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={[StyleSheet.absoluteFill, { borderRadius: 10 }]}
-                        />
-                        <Ionicons name="calendar-outline" size={13} color="#fff" />
-                        <Text style={styles.actionBtnText}>Reschedule</Text>
-                      </TouchableOpacity>
+          //           {/* Address */}
+          //           <View style={styles.addressRow}>
+          //             <Ionicons name="location-outline" size={13} color={MUTED} />
+          //             <Text style={styles.addressText} numberOfLines={1}>
+          //               {o.Address}
+          //             </Text>
+          //           </View>
 
-                      {/* Cancel — muted slate, NOT red */}
-                      <TouchableOpacity
-                        style={[styles.actionBtn, styles.cancelBtn]}
-                        activeOpacity={0.82}
-                        onPress={async () => {
-                          await cancelPickupApi(o._id);
-                          setPickups((prev) => prev.filter((p) => p._id !== o._id));
-                        }}
-                      >
-                        <LinearGradient
-                          colors={["#ad5555", "#591f1f"]}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={[StyleSheet.absoluteFill, { borderRadius: 8 }]}
-                        />
-                        <Ionicons name="close-outline" size={13} color="#fff" />
-                        <Text style={[styles.actionBtnText, { color: "#fff" }]}>Cancel</Text>
-                      </TouchableOpacity>
+          //           {/* Note */}
+          //           {o.note ? (
+          //             <View style={styles.noteBadge}>
+          //               <Ionicons name="information-circle-outline" size={13} color={ACCENT} />
+          //               <Text style={styles.noteText}>{o.note}</Text>
+          //             </View>
+          //           ) : null}
 
+          //           <View style={styles.dividerLine} />
 
-                    </View>
-                  </View>
-                </View>
-              </Animated.View>
-            );
-          }
+          //           {/* Action buttons */}
+          //           <View style={styles.actionRow}>
+          //             <TouchableOpacity
+          //               style={styles.btnReschedule}
+          //               activeOpacity={0.82}
+          //               onPress={() => {
+          //                 reschedulePickupApi(o._id);
+          //                 router.push(`/pickups/reschedule/${o._id}`);
+          //               }}
+          //             >
+          //               <Ionicons name="calendar-outline" size={14} color="#fff" />
+          //               <Text style={styles.btnText}>Reschedule</Text>
+          //             </TouchableOpacity>
+
+          //             <TouchableOpacity
+          //               style={styles.btnCancel}
+          //               activeOpacity={0.82}
+          //               onPress={async () => {
+          //                 await cancelPickupApi(o._id);
+          //                 setPickups((prev) => prev.filter((p) => p._id !== o._id));
+          //               }}
+          //             >
+          //               <Ionicons name="close-circle-outline" size={14} color="#EF4444" />
+          //               <Text style={[styles.btnText, { color: "#EF4444" }]}>Cancel</Text>
+          //             </TouchableOpacity>
+          //           </View>
+          //         </View>
+          //       </View>
+          //     </Animated.View>
+          //   );
+          // }
 
           /* ── ORDER CARD ── */
           const sc = getStatusConfig(o.status);
           const orderId = getOrderId(o);
+          const isDelivered = o.status === "delivered";
+          const isProcessing = o.status === "processing" || (!isDelivered && o.status !== "cancelled");
 
           return (
-            <Animated.View key={orderId || index} style={animStyle}>
+            <Animated.View key={orderId || o._id} style={animStyle}>
               <TouchableOpacity
                 activeOpacity={0.88}
                 onPress={() => {
                   if (orderId) router.push(`/orders/${orderId}`);
                 }}
               >
-                <View
-                  style={[
-                    styles.card,
-                    { backgroundColor: theme.card, borderLeftColor: sc.bg },
-                  ]}
-                >
-                  {/* Header */}
-                  <View style={styles.cardHeader}>
-                    <View style={styles.row}>
-                      {/* Coloured status dot — different colour per status */}
-                      <View
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: sc.bg + "22" },
-                        ]}
-                      >
-                        <Ionicons name={sc.icon} size={13} color={sc.bg} />
+                <View style={styles.card}>
+                  <View style={[styles.cardAccentLine, { backgroundColor: sc.bg }]} />
+
+                  <View style={styles.cardInner}>
+                    {/* Status badge + icon/stamp */}
+                    <View style={styles.cardHeaderRow}>
+                      <StatusBadge label={sc.label} color={sc.bg} icon={sc.icon} />
+                      <View style={styles.cardIconWrap}>
+                        {isDelivered ? (
+                          <Ionicons name="checkmark-circle-outline" size={20} color={sc.bg} />
+                        ) : (
+                          <Ionicons name="shirt-outline" size={18} color={sc.bg} />
+                        )}
                       </View>
-                      <Text
-                        style={{
-                          fontWeight: "700",
-                          color: sc.bg,
-                          marginLeft: 8,
-                        }}
-                      >
-                        {sc.label}
-                      </Text>
                     </View>
 
-                    {/* Item count pill */}
-                    <View
-                      style={[
-                        styles.itemPill,
-                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
-                      ]}
-                    >
-                      <Ionicons
-                        name="shirt-outline"
-                        size={12}
-                        color={theme.subText}
-                      />
-                      <Text
-                        style={{
-                          color: theme.subText,
-                          marginLeft: 4,
-                          fontSize: 12,
-                        }}
-                      >
-                        {o.items?.length || 0} items
-                      </Text>
-                    </View>
-                  </View>
+                    {/* Date */}
+                    <Text style={styles.cardDate}>{formatDate(o.createdAt)}</Text>
+                    <Text style={styles.cardTime}>{formatTime(o.createdAt)}</Text>
 
-                  {/* Body */}
-                  <View style={styles.cardBody}>
-                    {/* 🔥 TOP ROW (LEFT + RIGHT) */}
-                    <View style={styles.orderTopRow}>
-                      {/* LEFT SIDE */}
-                      <View style={styles.orderInfo}>
-                        <Text
-                          style={[styles.orderIdText, { color: theme.text }]}
-                        >
-                          Order #{orderId}
-                        </Text>
-                        <Text style={styles.orderDate}>
-                          Placed on {formatOrderDateTime(o.createdAt)}
+                    {/* Address (delivery address if exists) */}
+                    {/* {o.address ? (
+                      <View style={styles.addressRow}>
+                        <Ionicons name="location-outline" size={13} color={MUTED} />
+                        <Text style={styles.addressText} numberOfLines={1}>
+                          {o.address}
                         </Text>
                       </View>
+                    ) : null} */}
 
-                      {/* RIGHT SIDE (STAMP) */}
-                      <View style={styles.stampWrapper}>
+                    {/* Stage progress for active/processing orders */}
+                    {isProcessing && !isDelivered && o.stage ? (
+                      <StageProgress stage={o.stage} />
+                    ) : isProcessing && !isDelivered ? (
+                      <StageProgress stage="PROCESSING" />
+                    ) : null}
+
+                    <View style={styles.dividerLine} />
+
+                    {/* Bottom row: items + price */}
+                    <View style={styles.bottomRow}>
+                      <View style={styles.itemPill}>
+                        <Ionicons name="shirt-outline" size={12} color={MUTED} />
+                        <Text style={styles.itemPillText}>{o.items?.length || 0} items</Text>
+                      </View>
+
+                      <View style={styles.priceWrap}>
                         <PaymentStamp status={o?.payment?.status} />
-                      </View>
-                    </View>
-
-                    {/* Divider */}
-                    <View
-                      style={[
-                        styles.innerDivider,
-                        { backgroundColor: isDark ? "#1F2937" : "#1F2937" },
-                      ]}
-                    />
-
-                    {/* Price row */}
-                    <View style={styles.totalRow}>
-                      <View style={styles.row}>
-                        <Ionicons
-                          name="receipt-outline"
-                          size={14}
-                          color={theme.subText}
-                        />
-                        <Text style={{ color: theme.subText, marginLeft: 4 }}>
-                          Total
+                        <Text style={[styles.priceText, { color: sc.bg }]}>
+                          ₹{o.price}
                         </Text>
                       </View>
-                      <Text
-                        style={{
-                          fontWeight: "900",
-                          color: sc.bg,
-                          fontSize: 16,
-                        }}
-                      >
-                        ₹{o.price}
-                      </Text>
                     </View>
-                  </View>
 
-                  {/* Tap hint */}
-                  <View
-                    style={[
-                      styles.tapHint,
-                      { borderTopColor: isDark ? "#1F2937" : "#1F2937" },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 11, color: theme.subText }}>
-                      Tap to view receipt
-                    </Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={12}
-                      color={theme.subText}
-                    />
+                    {/* Reorder for delivered */}
+                    {isDelivered && (
+                      <TouchableOpacity
+                        style={styles.reorderBtn}
+                        activeOpacity={0.85}
+                        onPress={() => router.push(`/orders/${orderId}`)}
+                      >
+                        <Ionicons name="refresh-outline" size={14} color={ACCENT} />
+                        <Text style={styles.reorderText}>Reorder Items</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Tap hint for non-delivered */}
+                    {!isDelivered && (
+                      <View style={styles.tapHint}>
+                        <Text style={styles.tapHintText}>Tap to view receipt</Text>
+                        <Ionicons name="chevron-forward" size={12} color={MUTED} />
+                      </View>
+                    )}
                   </View>
                 </View>
               </TouchableOpacity>
             </Animated.View>
           );
         })}
+
+        <View style={{ height: 32 }} />
       </ScrollView>
     </View>
   );
@@ -688,173 +594,236 @@ export default function Orders() {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { padding: 16, marginTop: 20 },
-  headerContainer: { marginBottom: 0 },
+  root: { flex: 1 , backgroundColor:BG },
+
+  container: { paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16 },
+
+  /* Header */
+  headerContainer: { marginBottom: 7 },
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  headerTitle: { fontSize: 20, fontWeight: "800" },
-  headerSubtitle: { marginTop: 4, fontSize: 13 },
-  statsBox: {
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: "center",
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -0.5,
   },
-  statsNumber: { fontSize: 16, fontWeight: "800" },
-  statsLabel: { fontSize: 11 },
-  divider: { height: 1, marginTop: 10 },
+  headerSubtitle: { marginTop: 3, fontSize: 13, color: MUTED },
 
-  /* Tabs */
-  tabBarWrapper: {
+  activeBadge: {
     flexDirection: "row",
-    borderRadius: 30,
-    padding: 4,
-    position: "relative",
-  },
-  slidingPill: {
-    position: "absolute",
-    top: 4,
-    bottom: 4,
-    borderRadius: 26,
-    elevation: 1,      // ← keep low so text stays above
-
-    zIndex: 1,
-  },
-  tabItem: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
     alignItems: "center",
-    zIndex: 2,
-    position: "relative",   // ← makes zIndex work on Android
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: ACCENT,
+    shadowColor: ACCENT,
+    shadowOpacity: 1,
+    shadowRadius: 6,
+    elevation: 4,
+    marginTop: 2
+  },
+  activeBadgeNum: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: ACCENT,
+    lineHeight: 20,
+  },
+  activeBadgeLabel: { fontSize: 10, color: MUTED, fontWeight: "600" },
 
-  /* Cards */
+  /* Card */
   card: {
-    borderRadius: 16,
-    marginBottom: 14,
-    borderLeftWidth: 4,
+    backgroundColor: SURFACE,
+    borderRadius: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: BORDER,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
-  cardHeader: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
+  cardAccentLine: {
+    height: 2,
+    width: "100%",
+  },
+  cardInner: { paddingHorizontal: 13, paddingTop: 11, paddingBottom: 10 },
+
+
+  cardHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 8,
   },
-  cardBody: { paddingHorizontal: 16, paddingBottom: 12 },
-  row: { flexDirection: "row", alignItems: "center" },
-
-  /* Status dot — coloured circle with icon */
-  statusDot: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  cardIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  /* Item count pill */
-  itemPill: {
+  cardDate: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  cardTime: {
+    fontSize: 12,
+    color: MUTED,
+    marginTop: 2,
+    marginBottom: 10,
+    fontWeight: "500",
+  },
+
+  addressRow: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
+    alignItems: "flex-start",
+    gap: 5,
+    marginTop: 2,
+  },
+  addressText: {
+    color: MUTED,
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 17,
   },
 
-  /* Date badge */
-  dateBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-  },
-
-  /* Note badge */
   noteBadge: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    gap: 4,
+    marginTop: 10,
+    backgroundColor: ACCENT + "12",
+    borderWidth: 1,
+    borderColor: ACCENT + "25",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
+  noteText: {
+    color: ACCENT,
+    fontWeight: "600",
+    fontSize: 12,
+  },
 
-  orderIdText: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
+  dividerLine: {
+    height: 1,
+    backgroundColor: BORDER,
+    marginVertical: 9,
+  },
+  /* Pickup action buttons */
+  actionRow: { flexDirection: "row", gap: 10 },
+  btnReschedule: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: ACCENT + "18",
+    borderWidth: 1,
+    borderColor: ACCENT + "40",
+  },
+  btnCancel: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: "#EF444412",
+    borderWidth: 1,
+    borderColor: "#EF444430",
+  },
+  btnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#fff",
+    letterSpacing: 0.2,
+  },
 
-  innerDivider: { height: 1, marginVertical: 10 },
-
-  totalRow: {
+  /* Order card bottom */
+  bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  itemPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: BG,
+    borderWidth: 1,
+    borderColor: BORDER,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  itemPillText: { color: MUTED, fontSize: 12, fontWeight: "600" },
 
+  priceWrap: { flexDirection: "row", alignItems: "center", gap: 10 },
+  priceText: { fontSize: 16, fontWeight: "900" },
+
+  /* Reorder button */
+  reorderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 9,
+    borderRadius: 9,
+    backgroundColor: ACCENT + "14",
+    borderWidth: 1,
+    borderColor: ACCENT + "35",
+  },
+
+  reorderText: {
+    color: ACCENT,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+
+  /* Tap hint */
   tapHint: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "flex-end",
     gap: 2,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderTopWidth: 1,
+    marginTop: 7,
   },
+  tapHintText: { fontSize: 11, color: MUTED },
 
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 10,
-    overflow: "hidden",
-    position: "relative",
-  },
-  actionBtnText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#fff",
-    letterSpacing: 0.2,
-  },
-  cancelBtn: {
-    backgroundColor: "#a64e4e",   // dark muted slate
+  /* Empty */
+  emptyContainer: { alignItems: "center", paddingVertical: 64, gap: 12 },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
+    backgroundColor: SURFACE,
     borderWidth: 1,
-    borderColor: "#2D3A47",       // very subtle border
-    overflow: "visible",
-  },
-
-  emptyContainer: { alignItems: "center", paddingVertical: 60, gap: 10 },
-  emptyTitle: { fontSize: 18, fontWeight: "700" },
-
-  orderTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "stretch", // ✅ key for equal height
-  },
-
-  orderInfo: {
-    justifyContent: "space-between",
-  },
-
-  orderDate: {
-    color: "#6B7280", // or theme.subText
-    fontSize: 12,
-    marginTop: 4,
-  },
-
-  stampWrapper: {
-    justifyContent: "center",
+    borderColor: BORDER,
     alignItems: "center",
-    minHeight: 45, // adjust based on your UI
+    justifyContent: "center",
   },
+  emptyTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
 });

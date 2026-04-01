@@ -4,6 +4,7 @@ import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -82,25 +83,25 @@ const HERO_SLIDES = [
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_shoespa.png",
     },
   },
   {
     key: "shoe-2",
-    tag: "SHOE CARE",
-    title: "Sneaker & Leather Care",
+    tag: "SHOFA CARE",
+    title: "Sofa Deep Cleaning",
     subtitle: "Whitening • Polishing • Protection",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/two.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_sofa.png",
     },
   },
   {
     key: "premium-1",
-    tag: "PREMIUM CARE",
-    title: "Sofa Deep Cleaning",
+    tag: "Silk • Wool • Designer Wear",
+    title: "Luxury Garment Care",
     subtitle: "Deep cleaning for high-end fabrics",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/three.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_premiumgarment.png",
     },
   },
   {
@@ -109,7 +110,7 @@ const HERO_SLIDES = [
     title: "Doorstep Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/four.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_onsite.png",
     },
   },
   {
@@ -118,7 +119,7 @@ const HERO_SLIDES = [
     title: "Luxury Garment Care",
     subtitle: "Silk • Wool • Designer Wear",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/five.gif",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_wel.png",
     },
   },
 ];
@@ -374,19 +375,19 @@ export default function Home() {
   };
 
 
-//  const triggerBooking = () => {
-//     Animated.timing(dragX, {
-//       toValue: SWIPE_THRESHOLD,
-//       duration: 200,
-//       easing: Easing.out(Easing.quad),
-//       useNativeDriver: true,
-//     }).start(() => {
-//       router.push("/book-pickup");
-//       setTimeout(() => {
-//         Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
-//       }, 600);
-//     });
-//   };
+  //  const triggerBooking = () => {
+  //     Animated.timing(dragX, {
+  //       toValue: SWIPE_THRESHOLD,
+  //       duration: 200,
+  //       easing: Easing.out(Easing.quad),
+  //       useNativeDriver: true,
+  //     }).start(() => {
+  //       router.push("/book-pickup");
+  //       setTimeout(() => {
+  //         Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+  //       }, 600);
+  //     });
+  //   };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -441,7 +442,7 @@ export default function Home() {
       if (params.orderPlaced === "1") {
         setOrderBooked(true);
 
-         router.setParams({ orderPlaced: undefined });
+        router.setParams({ orderPlaced: undefined });
       }
     }, [params.orderPlaced]),
   );
@@ -530,12 +531,12 @@ export default function Home() {
                     style={styles.heroImage}
                     resizeMode="cover"
                   />
-                  <View style={styles.heroOverlay} />
+                  {/* <View style={styles.heroOverlay} /> */}
 
                   {/* Tag badge */}
-                  <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
+                  {/* <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
                     <Text style={styles.heroTagText}>{slide.tag}</Text>
-                  </View>
+                  </View> */}
 
                   {/* Text */}
                   <View style={styles.heroTextWrap}>
@@ -618,7 +619,7 @@ export default function Home() {
                   // onPress={triggerBooking}
                   onPress={onPressBook}
                   style={styles.swipeDraggableInner}
-                  //delayPressIn={50}
+                //delayPressIn={50}
                 >
                   {/* Lightning bolt icon */}
                   <Ionicons name="flash" size={20} color="#000" />
@@ -711,13 +712,35 @@ export default function Home() {
               </View>
             </View>
           </Animated.View>
-
-
-
-          <View style={{ height: 80 }} />
         </View>
 
+        <View style={styles.wrapper}>
+          {/* Background Gradient */}
+          <LinearGradient
+            colors={["#001A17", "#00332B", "#004D3F"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0.7 }}
+            style={styles.card}
+          >
+            {/* Soft Glow Circle (right bottom curve) */}
+            <View style={styles.glowCircle} />
 
+            {/* Content */}
+            <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
+
+            <Text style={styles.title}>
+              Eco-Friendly{"\n"}Cleaning{"\n"}Solvents
+            </Text>
+
+            <Text style={styles.desc}>
+              Gentle on your skin,{"\n"}
+              gentler on the planet. Our{"\n"}
+              green cleaning tech{"\n"}
+              preserves fiber life by{"\n"}40%.
+            </Text>
+
+          </LinearGradient>
+        </View>
       </ScrollView>
 
       <FloatingOfferCard
@@ -1078,5 +1101,57 @@ const styles = StyleSheet.create({
   },
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   serviceSubtitle: { fontSize: 11, fontWeight: "500" },
+
+
+  wrapper: {
+    padding: 16,
+  },
+
+  card: {
+    borderRadius: 24,
+    padding: 22,
+    overflow: "hidden",
+  },
+
+  tag: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: "#6B9E7E",
+    marginBottom: 10,
+    fontWeight: "700",
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#E6FFF4",
+    lineHeight: 28,
+    marginBottom: 12,
+  },
+
+  desc: {
+    fontSize: 13,
+    color: "#9CCFC0",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+
+  link: {
+    fontSize: 13,
+    color: "#33F0A2",
+    fontWeight: "700",
+  },
+
+  /* Glow curve */
+  glowCircle: {
+    position: "absolute",
+    right: -40,
+    bottom: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 100,
+    borderWidth: 18,
+    borderColor: "rgba(51,240,162,0.15)",
+  },
 
 });

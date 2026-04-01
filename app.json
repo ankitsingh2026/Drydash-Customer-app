@@ -9,11 +9,7 @@
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/images/drydash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0B1F1A"
-    },
+    
     "ios": {
       "supportsTablet": true,
       "config": {

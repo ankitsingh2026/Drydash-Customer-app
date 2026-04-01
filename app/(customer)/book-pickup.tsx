@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
@@ -458,13 +459,13 @@ export default function BookPickup() {
                 <View style={s.rowBetween}>
                   <Text style={s.sectionLabel}>PICKUP FROM</Text>
                   <TouchableOpacity onPress={() => { setAddModalOpen(true); setAddressType("pickup"); }}>
-                    <Text style={[s.addLink, { color: theme.primary }]}>+ Add Now</Text>
+                    <Text style={[s.addLink, { color: theme.primary }]}>+ Add New</Text>
                   </TouchableOpacity>
                 </View>
 
                 {addresses.length === 0 ? (
                   <TouchableOpacity
-                    style={[s.emptyAddrBtn, { borderColor: theme.primary + "44" }]}
+                    style={[s.emptyAddrBtn, { borderColor: theme.primary + "44" , backgroundColor:theme.gradient }]}
                     onPress={() => { setAddModalOpen(true); setAddressType("pickup"); }}
                     activeOpacity={0.8}
                   >
@@ -496,7 +497,12 @@ export default function BookPickup() {
               </View>
 
               {/* DELIVERY ADDRESS TOGGLE */}
-              <View style={[s.card, { backgroundColor: "#0F2318" }]}>
+              <LinearGradient
+                colors={theme.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.card}
+              >
                 <View style={s.rowBetween}>
                   <View style={{ flex: 1 }}>
                     <Text style={[s.cardTitle, { color: theme.text }]}>Delivery Address</Text>
@@ -553,7 +559,7 @@ export default function BookPickup() {
                     )}
                   </View>
                 )}
-              </View>
+              </LinearGradient>
 
               <View style={s.section}>
                 <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
