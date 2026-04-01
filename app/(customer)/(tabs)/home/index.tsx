@@ -1,3 +1,4 @@
+
 import FloatingOfferCard from "@/components/FloatingOfferCard";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
@@ -27,7 +28,6 @@ import {
 import { SvgUri } from "react-native-svg";
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
-
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
@@ -35,7 +35,7 @@ const QUICK_SERVICES = [
   {
     key: "Shoe Spa",
     slug: "shoe",
-    label: "Shoe Spa",
+    label: "Shoe-Spa",
     subtitle: "Sneakers & Shoe care",
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/shoes.svg",
     featured: true,
@@ -43,7 +43,7 @@ const QUICK_SERVICES = [
   {
     key: "Dry Clean",
     slug: "dryclean",
-    label: "Dry Clean",
+    label: "Dry-Clean",
     subtitle: "Silk & Suits",
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/dryclean.svg",
   },
@@ -57,21 +57,21 @@ const QUICK_SERVICES = [
   {
     key: "Onsite",
     slug: "onsite",
-    label: "Onsite",
+    label: "On-Site",
     subtitle: "At-home service",
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg", // ✅ FIXED
   },
   {
     key: "carwash",
     slug: "carwash",
-    label: "Car Wash",
+    label: "Car-Wash",
     subtitle: "At-home service",
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/carwash.svg",
   },
   {
     key: "express",
     slug: "express",
-    label: "8 Hour Delivery",
+    label: "8-Hour Delivery",
     subtitle: "Express Delivery",
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/express.svg",
   },
@@ -82,8 +82,9 @@ const HERO_SLIDES = [
     tag: "SHOE SPA",
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_shoespa.png",
+    image:
+    {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
     },
   },
   {
@@ -91,8 +92,9 @@ const HERO_SLIDES = [
     tag: "SHOFA CARE",
     title: "Sofa Deep Cleaning",
     subtitle: "Whitening • Polishing • Protection",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_sofa.png",
+    image:
+    {
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
     },
   },
   {
@@ -101,7 +103,7 @@ const HERO_SLIDES = [
     title: "Luxury Garment Care",
     subtitle: "Deep cleaning for high-end fabrics",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_premiumgarment.png",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
     },
   },
   {
@@ -110,7 +112,7 @@ const HERO_SLIDES = [
     title: "Doorstep Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_onsite.png",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_onsite.png",
     },
   },
   {
@@ -276,10 +278,12 @@ export default function Home() {
     };
     checkAuth();
   }, []);
-
-  const dragX = useRef(new Animated.Value(0)).current;
-  const swipeContainerWidth = width - 32;
-  const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
+  // ─── Constants ────────────────────────────────────────────────────────────────
+  const THUMB_SIZE = 44;
+  const PADDING = 4;
+  const swipeContainerWidth = width - 32; // matches pickupCard marginHorizontal
+  const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8; // true travel range
+  const SWIPE_THRESHOLD = MAX_DRAG * 0.50; // trigger at 60%
 
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
@@ -359,20 +363,7 @@ export default function Home() {
     ).start();
   }, []);
 
-  const onPressBook = () => {
-    Animated.timing(dragX, {
-      toValue: SWIPE_THRESHOLD,
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
-      router.push("/book-pickup");
-      // Reset AFTER navigation, not before
-      setTimeout(() => {
-        Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
-      }, 600);
-    });
-  };
+
 
 
   //  const triggerBooking = () => {
@@ -389,59 +380,172 @@ export default function Home() {
   //     });
   //   };
 
+  // ─── Constants ────────────────────────────────────────────────────────────────
+
+
+  // ─── Inside Home() component ──────────────────────────────────────────────────
+
+  // ─── Two animated values: native for thumb, JS for fill ───────────────────────
+  const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
+  const dragXJS = useRef(new Animated.Value(0)).current;     // fill track (JS thread)
+  const dragXValue = useRef(0);                              // plain ref, always accurate
+
+  // Derived: fill track width (JS driver — width can't use native)
+  const trackFillWidth = dragXJS.interpolate({
+    inputRange: [0, MAX_DRAG],
+    outputRange: [THUMB_SIZE + PADDING * 2, swipeContainerWidth - 8],
+    extrapolate: "clamp",
+  });
+
+  const trackFillOpacity = dragXJS.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD * 0.2, SWIPE_THRESHOLD],
+    outputRange: [0, 0.18, 0.38],
+    extrapolate: "clamp",
+  });
+
+  // Derived: thumb + text (native driver ✅ — smooth!)
+  const thumbScale = dragXNative.interpolate({
+    inputRange: [0, 10, SWIPE_THRESHOLD],
+    outputRange: [1, 1.06, 1.12],
+    extrapolate: "clamp",
+  });
+
+  const swipeTextOpacity = dragXNative.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD * 0.3, SWIPE_THRESHOLD],
+    outputRange: [1, 0.2, 0],
+    extrapolate: "clamp",
+  });
+
+  const swipeTextTranslateX = dragXNative.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 16],
+    extrapolate: "clamp",
+  });
+
+
+
+  // ─── Helper: set both animated values at once ─────────────────────────────────
+  const setDrag = (val: number) => {
+    const clamped = Math.max(0, Math.min(val, MAX_DRAG));
+    dragXNative.setValue(clamped);
+    dragXJS.setValue(clamped);
+    dragXValue.current = clamped;
+  };
+  const resetDrag = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(dragXNative, {
+        toValue: 0,
+        useNativeDriver: true,   // ✅ smooth spring
+        damping: 20,
+        stiffness: 250,
+        mass: 0.5,
+      }),
+      Animated.spring(dragXJS, {
+        toValue: 0,
+        useNativeDriver: false,
+        damping: 20,
+        stiffness: 250,
+        mass: 0.5,
+      }),
+    ]).start(() => {
+      dragXValue.current = 0;
+    });
+  }, []);
+
+
+
+
+  // ─── Complete swipe (snap to end → navigate) ──────────────────────────────────
+  const completeSwipe = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(dragXNative, {
+        toValue: MAX_DRAG,
+        duration: 100,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(dragXJS, {
+        toValue: MAX_DRAG,
+        duration: 100,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+    ]).start(() => {
+      router.push("/book-pickup");
+      setTimeout(resetDrag, 500);
+    });
+  }, [resetDrag]);
+
+  // Keep refs fresh (no stale closures in PanResponder)
+  const completeSwipeRef = useRef(completeSwipe);
+  const resetDragRef = useRef(resetDrag);
+  useEffect(() => {
+    completeSwipeRef.current = completeSwipe;
+    resetDragRef.current = resetDrag;
+  }, [completeSwipe, resetDrag]);
+
+  // ─── Tap fallback ─────────────────────────────────────────────────────────────
+  const onPressBook = () => {
+    const animate = (val: Animated.Value, useNative: boolean) =>
+      Animated.timing(val, {
+        toValue: SWIPE_THRESHOLD + 0,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: useNative,
+      });
+
+    Animated.parallel([
+      animate(dragXNative, true),
+      animate(dragXJS, false),
+    ]).start(() => completeSwipeRef.current());
+  };
+
+  // ─── PanResponder ─────────────────────────────────────────────────────────────
+  // ─── PanResponder ─────────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
+      // Capture horizontal moves before ScrollView sees them
+      onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        dragX.setOffset((dragX as any)._value || 0);
-        dragX.setValue(0);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        const dx = Math.max(0, gestureState.dx);
-        dragX.setValue(dx);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        dragX.flattenOffset();
-        const finalX = (dragX as any)._value || 0;
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
 
-        if (finalX > SWIPE_THRESHOLD * 0.9) {
-          Animated.timing(dragX, {
-            toValue: SWIPE_THRESHOLD,
-            duration: 120,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }).start(() => {
-            router.push("/book-pickup");
-            setTimeout(() => {
-              Animated.spring(dragX, {
-                toValue: 0,
-                useNativeDriver: true,
-                damping: 15,
-                stiffness: 180,
-              }).start();
-            }, 400);
-          });
+      onPanResponderGrant: () => {
+        // Stop any running animation, start fresh from current position
+        dragXNative.stopAnimation();
+        dragXJS.stopAnimation();
+        // Don't reset to 0 — start from wherever thumb currently is
+        // dragXValue.current is already accurate from setDrag()
+      },
+
+      onPanResponderMove: (_, { dx }) => {
+        // dx is relative to gesture start, add to position at grant time
+        // But we reset to 0 on grant so dx IS the delta from start position
+        setDrag(dx);
+      },
+
+      onPanResponderRelease: (_, { dx, vx }) => {
+        const current = dragXValue.current;
+        // Also trigger if velocity is high (quick flick)
+        if (current >= SWIPE_THRESHOLD || vx > 0.8) {
+          completeSwipeRef.current();
         } else {
-          Animated.spring(dragX, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 15,
-            stiffness: 180,
-            mass: 0.6,
-          }).start();
+          resetDragRef.current();
         }
+      },
+
+      onPanResponderTerminate: () => {
+        resetDragRef.current();
       },
     }),
   ).current;
-
+  // ─── useFocusEffect: always reset on return ───────────────────────────────────
   useFocusEffect(
     useCallback(() => {
-      dragX.setValue(0);
-      // When returning from book-pickup with success flag, show order card
+      dragXJS.setValue(0);
       if (params.orderPlaced === "1") {
         setOrderBooked(true);
-
         router.setParams({ orderPlaced: undefined });
       }
     }, [params.orderPlaced]),
@@ -526,11 +630,19 @@ export default function Home() {
               };
               return (
                 <Animated.View key={i} style={[styles.heroCard, heroStyle]}>
-                  <Animated.Image
-                    source={slide.image}
-                    style={styles.heroImage}
-                    resizeMode="cover"
-                  />
+                  {slide.image.uri.endsWith(".svg") ? (
+                    <SvgUri
+                      uri={slide.image.uri}
+                      width="100%"
+                      height="100%"
+                    />
+                  ) : (
+                    <Animated.Image
+                      source={slide.image}
+                      style={styles.heroImage}
+                      resizeMode="cover"
+                    />
+                  )}
                   {/* <View style={styles.heroOverlay} /> */}
 
                   {/* Tag badge */}
@@ -570,71 +682,115 @@ export default function Home() {
             <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
           )}
 
+
           {/* ── SWIPE TO BOOK STRIP ── */}
-          {!orderBooked && <Animated.View
-            style={[
-              styles.pickupCard,
-              {
-                opacity: fadeAnim,
-                backgroundColor: "#0D1F1C",
-                borderColor: "#1A3330",
-                transform: [
-                  {
-                    translateY: fadeAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [12, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            {/* Top row: label */}
-            {/* <View style={styles.pickupRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.pickupTitle, { color: theme.text }]}>
-                  Instant Pickup
-                </Text>
-                <Text style={[styles.pickupSubtitle, { color: theme.subText }]}>
-                  Professional care at your doorsteps
-                </Text>
-              </View>
-            </View> */}
-
-            {/* Divider */}
-            {/* <View style={[styles.pickupDivider, { backgroundColor: "#1A3330" }]} /> */}
-
-            {/* ── Swipe Button – Image 2 style ── */}
-            <View style={[styles.swipeContainer, { backgroundColor: "#071018" }]}>
-              {/* Draggable thumb */}
+          {!orderBooked && (
+            <View collapsable={false}
+              style={{ marginHorizontal: 16, marginTop: 14 }}
+            >
               <Animated.View
                 style={[
-                  styles.swipeDraggable,
-                  { transform: [{ translateX: dragX }], backgroundColor: PRIMARY },
+                  styles.pickupCard,
+                  {
+                    opacity: fadeAnim,
+                    backgroundColor: "#0D1F1C",
+                    borderColor: "#1A3330",
+                    transform: [
+                      {
+                        translateY: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [12, 0],
+                        }),
+                      },
+                    ],
+                  },
                 ]}
-                {...panResponder.panHandlers}
               >
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  // onPress={triggerBooking}
-                  onPress={onPressBook}
-                  style={styles.swipeDraggableInner}
-                //delayPressIn={50}
-                >
-                  {/* Lightning bolt icon */}
-                  <Ionicons name="flash" size={20} color="#000" />
-                </TouchableOpacity>
-              </Animated.View>
+                <View style={[styles.swipeContainer, { backgroundColor: "#071018" }]}>
 
-              {/* Label + arrow */}
-              <View style={styles.swipeTextWrap} pointerEvents="none">
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                  {/* ── Animated green fill track ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTrackFill,
+                      {
+                        width: trackFillWidth,
+                        opacity: trackFillOpacity,
+                      },
+                    ]}
+                    pointerEvents="none"
+                  />
+
+                  {/* ── Draggable thumb ── */}
+                  {/* ── Draggable thumb — native driver = buttery smooth ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeDraggable,
+                      {
+                        backgroundColor: PRIMARY,
+                        transform: [
+                          { translateX: dragXNative },  // ✅ native thread
+                          { scale: thumbScale },         // ✅ native thread
+                        ],
+                      },
+                    ]}
+                    {...panResponder.panHandlers}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={onPressBook}
+                      style={styles.swipeDraggableInner}
+                    >
+                      <Ionicons name="flash" size={20} color="#000" />
+                    </TouchableOpacity>
+                  </Animated.View>
+
+                  {/* ── Fill track — JS driver (width can't be native) ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTrackFill,
+                      { width: trackFillWidth, opacity: trackFillOpacity },
+                    ]}
+                    pointerEvents="none"
+                  />
+
+                  {/* ── Hint label — native driver ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTextWrap,
+                      {
+                        opacity: swipeTextOpacity,           // ✅ native
+                        transform: [{ translateX: swipeTextTranslateX }], // ✅ native
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                    </View>
+                  </Animated.View>
+
+                  {/* ── Hint label (fades + shifts as you drag) ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTextWrap,
+                      {
+                        opacity: swipeTextOpacity,
+                        transform: [{ translateX: swipeTextTranslateX }],
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                    </View>
+                  </Animated.View>
+
                 </View>
-              </View>
+              </Animated.View>
             </View>
-          </Animated.View>}
+          )}
 
           {/* ── SERVICES ── */}
           <Animated.View style={{ opacity: fadeAnim }}>
@@ -787,7 +943,14 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     paddingVertical: 0,
   },
-
+  swipeTrackFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 34,
+    backgroundColor: "#00C896",
+  },
   /* ── Hero ── */
   heroCard: {
     width: CARD_WIDTH,

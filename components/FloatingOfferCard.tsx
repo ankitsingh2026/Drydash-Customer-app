@@ -12,7 +12,7 @@ import {
 } from "react-native";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = Math.min(width * 0.48, 192);
+const CARD_WIDTH = Math.min(width * 0.47, 162);
 const IMAGE_HEIGHT = CARD_WIDTH * 0.72;
 
 type FloatingOfferCardProps = {
@@ -205,7 +205,7 @@ export default function FloatingOfferCard({
 
   const shimmerX = shimmer.interpolate({
     inputRange: [0, 1],
-    outputRange: [-CARD_WIDTH * 0.5, CARD_WIDTH * 1.3],
+    outputRange: [-CARD_WIDTH * 0.5, CARD_WIDTH * 1.2],
   });
 
   if (!visible) return null;
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   wrapper: {
     position: "absolute",
     right: 14,
-    bottom: 98,
+    bottom: 28,
     zIndex: 999,
     width: CARD_WIDTH,
     borderRadius: 18,

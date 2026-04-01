@@ -98,33 +98,64 @@ function AddressCard({
 }: { address: Address; selected: boolean; onPress: () => void; theme: any }) {
   const iconName = address.label?.toLowerCase() === "home" ? "home" : "briefcase";
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
-      style={[
-        addrCardStyles.card,
-        selected && { borderColor: theme.primary, borderWidth: 1.5 },
-        !selected && { borderColor: "#1E3327", borderWidth: 1.5 },
-      ]}
-    >
-      <View style={[addrCardStyles.iconWrap, { backgroundColor: selected ? theme.primary + "22" : "#1A2C22" }]}>
-        <Ionicons name={iconName as any} size={18} color={theme.primary} />
-      </View>
-      <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
-        {address.label}
-      </Text>
-      <Text style={addrCardStyles.street} numberOfLines={2}>
-        {address.line1 || address.street}
-      </Text>
-      <Text style={addrCardStyles.city} numberOfLines={1}>
-        {address.city}
-      </Text>
-      {selected && (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+    {selected ? (
+      <LinearGradient
+        colors={theme.gradient} // 👈 your gradient
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[
+          addrCardStyles.card,
+          { borderColor: theme.primary, borderWidth: 1.5 },
+        ]}
+      >
+        {/* CONTENT */}
+        <View style={[addrCardStyles.iconWrap, { backgroundColor: theme.primary + "22" }]}>
+          <Ionicons name={iconName as any} size={18} color={theme.primary} />
+        </View>
+
+        <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
+          {address.label}
+        </Text>
+
+        <Text style={addrCardStyles.street} numberOfLines={2}>
+          {address.line1 || address.street}
+        </Text>
+
+        <Text style={addrCardStyles.city} numberOfLines={1}>
+          {address.city}
+        </Text>
+
         <View style={[addrCardStyles.checkDot, { backgroundColor: theme.primary }]}>
           <Ionicons name="checkmark" size={10} color="#000" />
         </View>
-      )}
-    </TouchableOpacity>
+      </LinearGradient>
+    ) : (
+      <View
+        style={[
+          addrCardStyles.card,
+          { borderColor: "#1E3327", borderWidth: 1.5, backgroundColor: "#0D1F1C" },
+        ]}
+      >
+        {/* SAME CONTENT */}
+        <View style={[addrCardStyles.iconWrap, { backgroundColor: "#1A2C22" }]}>
+          <Ionicons name={iconName as any} size={18} color={theme.primary} />
+        </View>
+
+        <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
+          {address.label}
+        </Text>
+
+        <Text style={addrCardStyles.street} numberOfLines={2}>
+          {address.line1 || address.street}
+        </Text>
+
+        <Text style={addrCardStyles.city} numberOfLines={1}>
+          {address.city}
+        </Text>
+      </View>
+    )}
+  </TouchableOpacity>
   );
 }
 
@@ -146,8 +177,8 @@ const addrCardStyles = StyleSheet.create({
     marginBottom: 10,
   },
   label: { fontSize: 15, fontWeight: "800", marginBottom: 4 },
-  street: { fontSize: 12, color: "#7A9B87", lineHeight: 16 },
-  city: { fontSize: 12, color: "#4E7060", marginTop: 2 },
+  street: { fontSize: 12, color: "#e0e0e0", lineHeight: 16 },
+  city: { fontSize: 12, color: "#e3dede", marginTop: 2 },
   checkDot: {
     position: "absolute",
     top: 10,
@@ -402,6 +433,7 @@ export default function BookPickup() {
     : deliveryAddresses.find(a => a.id === selectedDeliveryAddressId);
   const selectedPickupAddr = addresses.find(a => a.id === selectedAddressId);
 
+  
   // ─── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <View style={[s.safe, { backgroundColor: theme.background }]}>
@@ -465,12 +497,30 @@ export default function BookPickup() {
 
                 {addresses.length === 0 ? (
                   <TouchableOpacity
-                    style={[s.emptyAddrBtn, { borderColor: theme.primary + "44" , backgroundColor:theme.gradient }]}
-                    onPress={() => { setAddModalOpen(true); setAddressType("pickup"); }}
+                    onPress={() => {
+                      setAddModalOpen(true);
+                      setAddressType("pickup");
+                    }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="add-circle-outline" size={20} color={theme.primary} />
-                    <Text style={[s.emptyAddrText, { color: theme.primary }]}>Add pickup address</Text>
+                    <LinearGradient
+                      colors={theme.gradient} // ✅ your gradient here
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={[
+                        s.emptyAddrBtn,
+                        { borderColor: theme.primary + "44" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={20}
+                        color={theme.primary}
+                      />
+                      <Text style={[s.emptyAddrText, { color: theme.primary }]}>
+                        Add pickup address
+                      </Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 ) : (
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
@@ -1142,7 +1192,7 @@ const s = StyleSheet.create({
 
   card: { borderRadius: 16, padding: 16, marginBottom: 0 },
   cardTitle: { fontSize: 16, fontWeight: "800" },
-  cardSub: { fontSize: 12, color: "#4E7060", marginTop: 3 },
+  cardSub: { fontSize: 12, color: "#BACBC0", marginTop: 3 },
 
   emptyAddrBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -1171,7 +1221,7 @@ const s = StyleSheet.create({
   offerCode: { fontSize: 16, fontWeight: "900" },
   promoBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   promoText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
-  offerDesc: { fontSize: 12, color: "#4E7060", marginTop: 3 },
+  offerDesc: { fontSize: 12, color: "#BACBC0", marginTop: 3 },
   appliedBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
   appliedText: { fontSize: 13, fontWeight: "800" },
 
