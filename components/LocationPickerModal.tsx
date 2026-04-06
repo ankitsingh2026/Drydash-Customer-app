@@ -1,26 +1,40 @@
+import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  FlatList,
-  KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Address } from "@/types/order.types";
 
-const { height: SCREEN_H } = Dimensions.get("window");
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
+
+/* ─── theme ─── */
+const C = {
+  bg: "#031612",
+  card: "#0D1F1C",
+  border: "#1A3330",
+  primary: "#2FE6A6",
+  primaryDim: "#1A9E74",
+  text: "#E6FFF7",
+  subText: "#8FB3A8",
+  muted: "#3A5E55",
+  skyTop: "#B8EAF5",
+  skyBot: "#E0F7FA",
+};
 
 type Props = {
   visible: boolean;
@@ -30,13 +44,39 @@ type Props = {
   onClose: () => void;
 };
 
-type ManualForm = {
-  flat: string;
-  street: string;
-  city: string;
-  pincode: string;
-};
+/* ─── cloud SVG-style view ─── */
+function Cloud({ style }: { style: any }) {
+  return <View style={[styles.cloud, style]} />;
+}
 
+/* ─── map pin illustration ─── */
+function MapPinIllustration() {
+  const bounce = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(bounce, { toValue: -8, duration: 900, useNativeDriver: true }),
+        Animated.timing(bounce, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.View style={[styles.pinWrapper, { transform: [{ translateY: bounce }] }]}>
+      {/* pin body */}
+      <View style={styles.pinBody}>
+        <View style={styles.pinHole} />
+      </View>
+      {/* pin tip */}
+      <View style={styles.pinTip} />
+      {/* shadow */}
+      <View style={styles.pinShadow} />
+    </Animated.View>
+  );
+}
+
+/* ─── main component ─── */
 export default function LocationPickerModal({
   visible,
   savedAddresses,
@@ -47,82 +87,100 @@ export default function LocationPickerModal({
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [gpsLoading, setGpsLoading] = useState(false);
-  const [manual, setManual] = useState<ManualForm>({
-    flat: "",
-    street: "",
-    city: "",
-    pincode: "",
-  });
+  const [locationEnabled, setLocationEnabled] = useState<boolean | null>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
+      checkLocation();
+
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 65,
+          friction: 11,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          useNativeDriver: true,
+        }),
+      ]).start();
     } else {
-      Animated.timing(slideAnim, {
-        toValue: SCREEN_H,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: SCREEN_H,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
   }, [visible]);
 
-  const handleGPS = async () => {
-    try {
-      setGpsLoading(true);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") return;
+  const checkLocation = async () => {
+    const enabled = await Location.hasServicesEnabledAsync();
+    setLocationEnabled(enabled);
+  };
 
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const geo = await Location.reverseGeocodeAsync({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-
-      if (geo?.length > 0) {
-        const g = geo[0];
-        const label = `${g.district || g.name || ""}, ${g.city || g.subregion || ""}`;
-        onSelect(label, null);
-        onClose();
-      }
-    } catch {
-      // silent
-    } finally {
-      setGpsLoading(false);
+  const handleEnable = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS === "ios") {
+      Linking.openURL("app-settings:");
+    } else {
+      Linking.sendIntent("android.settings.LOCATION_SOURCE_SETTINGS");
     }
   };
 
+const handleGPS = async () => {
+  try {
+    setGpsLoading(true);
+
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      onClose(); // close modal
+      return;
+    }
+
+    const loc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+
+    const geo = await Location.reverseGeocodeAsync({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    });
+
+    if (geo?.length > 0) {
+      const g = geo[0];
+      const label = `${g.district}, ${g.city}`;
+
+      onSelect(label, null);
+      onClose();
+    }
+  } finally {
+    setGpsLoading(false);
+  }
+};
+
   const handleSavedPick = (addr: Address) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const label = `${addr.flat || addr.line1}, ${addr.city}`;
+    const label = `${addr.line1}, ${addr.city}`;
     onSelect(label, addr);
     onClose();
   };
 
-  const handleManualConfirm = () => {
-    if (!manual.flat || !manual.city) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const label = `${manual.flat}, ${manual.city}`;
-    onSelect(label, {
-      id: "manual",
-      label: "Other",
-      flat: manual.flat,
-      line1: manual.flat,
-      street: manual.street,
-      city: manual.city,
-      pincode: manual.pincode,
-      latitude: 0,
-      longitude: 0,
-      isActive: true,
-    } as any);
-    onClose();
+  const handleWhatsApp = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // open whatsapp or share sheet
+    Linking.openURL("whatsapp://");
   };
 
   return (
@@ -130,156 +188,172 @@ export default function LocationPickerModal({
       {/* backdrop */}
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
-      <Animated.View
-        style={[
-          styles.sheet,
-          { transform: [{ translateY: slideAnim }], paddingBottom: insets.bottom + 16 },
-        ]}
-      >
-        {/* handle bar */}
-        <View style={styles.handle} />
-
-        {/* header */}
-        <View style={styles.header}>
-          <View style={styles.dot} />
-          <Text style={styles.headerTitle}>Choose delivery location</Text>
+   <Animated.View
+  style={[
+    styles.sheet,
+    {
+      opacity: fadeAnim,
+      transform: [{ translateY: slideAnim }],
+    },
+  ]}
+>
+        <View style={styles.closeWrap}>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={20} color="#8FB3A8" />
+            <Ionicons name="close" size={20} color={C.text} />
           </TouchableOpacity>
         </View>
+        {/* handle */}
+        <View style={styles.handle} />
 
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={20}
+        {/* ── SKY HERO ── */}
+        <View style={styles.skyHero}>
+          {/* clouds */}
+          <Cloud style={{ top: 10, left: -20, width: 100, height: 50 }} />
+          <Cloud style={{ top: 30, left: 60, width: 70, height: 38 }} />
+          <Cloud style={{ top: 8, right: -10, width: 110, height: 55 }} />
+          <Cloud style={{ top: 50, right: 50, width: 60, height: 32 }} />
+          <Cloud style={{ top: 20, left: SCREEN_W * 0.35, width: 80, height: 40 }} />
+
+          {/* pin */}
+          <MapPinIllustration />
+        </View>
+
+        {/* ── TITLE ── */}
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>Your device location is off</Text>
+          <Text style={styles.subtitle}>
+            Enabling location helps us reach you quickly with accurate delivery
+          </Text>
+        </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.scroll}
         >
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: 24 }}
-          >
-            {/* GPS row */}
-            <TouchableOpacity style={styles.gpsRow} onPress={handleGPS} activeOpacity={0.8}>
-              <View style={styles.gpsIconWrap}>
+          {/* ── LOCATION ACTIONS CARD ── */}
+          <View style={styles.actionsCard}>
+            {/* Use Current Location */}
+            <View style={styles.actionRow}>
+              <View style={styles.actionIconWrap}>
+                <Ionicons name="navigate-circle-outline" size={22} color={C.primary} />
+              </View>
+              <Text style={styles.actionLabel}>Use my Current Location</Text>
+              <TouchableOpacity
+                style={styles.enableBtn}
+                onPress={locationEnabled ? handleGPS : handleEnable}
+                activeOpacity={0.85}
+              >
                 {gpsLoading ? (
-                  <ActivityIndicator size="small" color="#2FE6A6" />
+                  <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Ionicons name="navigate" size={16} color="#2FE6A6" />
+                  <LinearGradient
+                    colors={[C.primary, C.primaryDim]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.enableBtnGrad}
+                  >
+                    <Text style={styles.enableBtnText}>Enable</Text>
+                  </LinearGradient>
                 )}
-              </View>
-              <View>
-                <Text style={styles.gpsTitle}>Use current location</Text>
-                <Text style={styles.gpsSub}>Auto-detect via GPS</Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
 
-            {/* saved addresses */}
-            {savedAddresses.length > 0 && (
-              <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-                <Text style={styles.sectionLabel}>SAVED ADDRESSES</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 10, paddingBottom: 4 }}
+            <View style={styles.actionDivider} />
+
+            {/* Request from friend */}
+            <TouchableOpacity
+              style={styles.actionRow}
+              activeOpacity={0.8}
+              onPress={handleWhatsApp}
+            >
+              <View style={[styles.actionIconWrap, { backgroundColor: "#0D2B1F" }]}>
+                <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+              </View>
+              <Text style={styles.actionLabel}>Request address from friend</Text>
+              <Ionicons name="chevron-forward" size={18} color={C.subText} />
+            </TouchableOpacity>
+          </View>
+
+          {/* ── SAVED ADDRESSES ── */}
+          {savedAddresses.length > 0 && (
+            <View style={styles.savedSection}>
+              <View style={styles.savedHeader}>
+                <Text style={styles.savedTitle}>Select your address</Text>
+                <TouchableOpacity
+                  style={styles.seeAllBtn}
+                  onPress={() => {
+                    onClose();
+                    router.push("/saved-address");
+                  }}
+                  activeOpacity={0.8}
                 >
-                  {savedAddresses.map((addr) => {
-                    const isSelected = selectedId === addr.id;
-                    const iconName =
-                      addr.label?.toLowerCase() === "home" ? "home" : "briefcase";
-                    return (
+                  <Text style={styles.seeAllText}>See All</Text>
+                  <Ionicons name="chevron-forward" size={14} color={C.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.addressList}>
+                {savedAddresses.map((addr, index) => {
+                  const isSelected = selectedId === addr.id;
+                  const isLast = index === savedAddresses.length - 1;
+
+                  const iconName =
+                    addr.label?.toLowerCase() === "home"
+                      ? "location-outline"
+                      : addr.label?.toLowerCase() === "office" ||
+                        addr.label?.toLowerCase() === "work"
+                        ? "business-outline"
+                        : "location-outline";
+
+                  return (
+                    <React.Fragment key={addr.id}>
                       <TouchableOpacity
-                        key={addr.id}
                         style={[
-                          styles.addrCard,
-                          isSelected && styles.addrCardSelected,
+                          styles.addrRow,
+                          isSelected && styles.addrRowSelected,
                         ]}
                         onPress={() => handleSavedPick(addr)}
                         activeOpacity={0.8}
                       >
-                        <Ionicons
-                          name={iconName as any}
-                          size={14}
-                          color={isSelected ? "#031612" : "#2FE6A6"}
-                          style={{ marginBottom: 6 }}
-                        />
-                        <Text
+                        <View
                           style={[
-                            styles.addrLabel,
-                            isSelected && { color: "#031612" },
+                            styles.addrIconWrap,
+                            isSelected && { borderColor: C.primary + "60" },
                           ]}
                         >
-                          {addr.label}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.addrStreet,
-                            isSelected && { color: "#085041" },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {addr.line1 || addr.flat}, {addr.city}
-                        </Text>
-                        {isSelected && (
-                          <View style={styles.checkDot}>
-                            <Ionicons name="checkmark" size={9} color="#2FE6A6" />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            )}
+                          <Ionicons
+                            name={iconName as any}
+                            size={18}
+                            color={isSelected ? C.primary : C.subText}
+                          />
+                        </View>
 
-            {/* manual entry */}
-            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-              <Text style={styles.sectionLabel}>ENTER MANUALLY</Text>
-              <View style={styles.manualCard}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Flat / House No."
-                  placeholderTextColor="#4A7A6A"
-                  value={manual.flat}
-                  onChangeText={(t) => setManual((p) => ({ ...p, flat: t }))}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Street, Area, Landmark"
-                  placeholderTextColor="#4A7A6A"
-                  value={manual.street}
-                  onChangeText={(t) => setManual((p) => ({ ...p, street: t }))}
-                />
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <TextInput
-                    style={[styles.input, { flex: 1 }]}
-                    placeholder="City"
-                    placeholderTextColor="#4A7A6A"
-                    value={manual.city}
-                    onChangeText={(t) => setManual((p) => ({ ...p, city: t }))}
-                  />
-                  <TextInput
-                    style={[styles.input, { flex: 1 }]}
-                    placeholder="Pincode"
-                    placeholderTextColor="#4A7A6A"
-                    keyboardType="numeric"
-                    value={manual.pincode}
-                    onChangeText={(t) => setManual((p) => ({ ...p, pincode: t }))}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={[
-                    styles.confirmBtn,
-                    (!manual.flat || !manual.city) && { opacity: 0.45 },
-                  ]}
-                  onPress={handleManualConfirm}
-                  disabled={!manual.flat || !manual.city}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.confirmBtnText}>Confirm location</Text>
-                </TouchableOpacity>
+                        <View style={styles.addrText}>
+                          <Text style={[styles.addrLabel, isSelected && { color: C.primary }]}>
+                            {addr.label || "Address"}
+                          </Text>
+                          <Text style={styles.addrStreet} numberOfLines={2}>
+                            {addr.line1 || addr.flat}, {addr.city},{" "}
+                            {addr.state || addr.pincode || ""}
+                          </Text>
+                        </View>
+
+                        <Ionicons
+                          name={isSelected ? "checkmark-circle" : "chevron-forward"}
+                          size={18}
+                          color={isSelected ? C.primary : C.muted}
+                        />
+                      </TouchableOpacity>
+
+                      {!isLast && <View style={styles.rowDivider} />}
+                    </React.Fragment>
+                  );
+                })}
               </View>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
+          )}
+        </ScrollView>
       </Animated.View>
     </Modal>
   );
@@ -288,150 +362,254 @@ export default function LocationPickerModal({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.6)",
   },
+
   sheet: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: SCREEN_H * 0.88,
-    backgroundColor: "#031612",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    maxHeight: SCREEN_H * 0.9,
+    backgroundColor: C.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
   },
+
   handle: {
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#1A3330",
+    backgroundColor: "#2A4A44",
     alignSelf: "center",
     marginTop: 10,
+    marginBottom: 0,
+    zIndex: 10,
+  },
+
+  /* sky */
+  skyHero: {
+    width: "100%",
+    height: 160,
+    backgroundColor: C.skyBot,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 16,
+    overflow: "hidden",
+  },
+
+  cloud: {
+    position: "absolute",
+    backgroundColor: "#fff",
+    borderRadius: 40,
+    opacity: 0.88,
+    shadowColor: "#9FDCE8",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+  },
+
+  /* pin */
+  pinWrapper: {
+    alignItems: "center",
     marginBottom: 4,
   },
-  header: {
+  pinBody: {
+    width: 52,
+    height: 60,
+    borderRadius: 26,
+    borderBottomRightRadius: 4,
+    backgroundColor: "#E91E8C",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "45deg" }],
+    shadowColor: "#E91E8C",
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  pinHole: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#fff",
+    transform: [{ rotate: "-45deg" }],
+  },
+  pinTip: {
+    width: 0,
+    height: 0,
+    display: "none", // using borderRadius pin shape instead
+  },
+  pinShadow: {
+    width: 24,
+    height: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    marginTop: 2,
+  },
+
+  /* title */
+  titleSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+    alignItems: "center",
+    gap: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: C.text,
+    textAlign: "center",
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: C.subText,
+    textAlign: "center",
+    lineHeight: 19,
+    fontWeight: "500",
+  },
+
+  scroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    gap: 20,
+  },
+
+  /* actions card */
+  actionsCard: {
+    backgroundColor: C.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+    overflow: "hidden",
+  },
+  actionRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    gap: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#0D1F1C",
+    gap: 12,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#2FE6A6",
+  actionIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#0D2B24",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerTitle: {
+  actionLabel: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
-    color: "#E6FFF7",
+    color: C.text,
   },
-  closeBtn: {
-    padding: 4,
+  enableBtn: {
+    borderRadius: 10,
+    overflow: "hidden",
   },
-  gpsRow: {
+  enableBtnGrad: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  enableBtnText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#021410",
+  },
+  actionDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginHorizontal: 16,
+  },
+
+  /* saved */
+  savedSection: {
+    gap: 12,
+  },
+  savedHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginHorizontal: 16,
-    marginTop: 16,
-    backgroundColor: "#0D1F1C",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    borderRadius: 10,
-    padding: 12,
+    justifyContent: "space-between",
   },
-  gpsIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#12302A",
+  savedTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: C.text,
+  },
+  seeAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: C.primary,
+  },
+
+  addressList: {
+    backgroundColor: C.card,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: C.border,
+    overflow: "hidden",
+  },
+  addrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  addrRowSelected: {
+    backgroundColor: C.primary + "0D",
+  },
+  addrIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#0D2B24",
+    borderWidth: 1,
+    borderColor: C.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  gpsTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#E6FFF7",
-  },
-  gpsSub: {
-    fontSize: 11,
-    color: "#8FB3A8",
-    marginTop: 1,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#8FB3A8",
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  addrCard: {
-    width: 140,
-    backgroundColor: "#0D1F1C",
-    borderWidth: 1.5,
-    borderColor: "#1A3330",
-    borderRadius: 10,
-    padding: 12,
-  },
-  addrCardSelected: {
-    backgroundColor: "#2FE6A6",
-    borderColor: "#2FE6A6",
+  addrText: {
+    flex: 1,
+    gap: 3,
   },
   addrLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#E6FFF7",
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: "800",
+    color: C.text,
   },
   addrStreet: {
-    fontSize: 10,
-    color: "#8FB3A8",
-    lineHeight: 14,
+    fontSize: 11,
+    color: C.subText,
+    lineHeight: 15,
+    fontWeight: "500",
   },
-  checkDot: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#031612",
-    alignItems: "center",
-    justifyContent: "center",
+  rowDivider: {
+    height: 1,
+    backgroundColor: C.border,
+    marginHorizontal: 16,
   },
-  manualCard: {
-    backgroundColor: "#0D1F1C",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    borderRadius: 10,
-    padding: 12,
-    gap: 8,
-  },
-  input: {
-    backgroundColor: "#12302A",
-    borderWidth: 1,
-    borderColor: "#1E3A34",
-    borderRadius: 8,
-    color: "#E6FFF7",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 13,
-  },
-  confirmBtn: {
-    backgroundColor: "#2FE6A6",
-    borderRadius: 8,
-    paddingVertical: 11,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  confirmBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#031612",
-  },
+  closeWrap: {
+  position: "absolute",
+  right: 14,
+  top: 10,
+  zIndex: 20,
+},
+
+closeBtn: {
+  width: 34,
+  height: 34,
+  borderRadius: 17,
+  backgroundColor: "#0D2B24",
+  alignItems: "center",
+  justifyContent: "center",
+},
 });

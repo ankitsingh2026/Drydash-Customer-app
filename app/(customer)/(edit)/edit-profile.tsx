@@ -1,16 +1,13 @@
-import { getAddressApi } from "@/features/orders/orders.api";
-import { useAuth } from "@/hooks/useAuth";
+import { getMeApi } from "@/features/auth/auth.api";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import {
-  ArrowLeft,
-  Briefcase,
-  Home,
-  MapPin
-} from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   BackHandler,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,208 +15,206 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
-type Address = {
-  id: string;
-  type: "Home" | "Work" | "Other";
-  value: string;
-};
+
+/* ─────────── helpers ─────────── */
+
+function getInitials(name: string): string {
+  const parts = (name ?? "").trim().split(" ").filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/* ─────────── screen ─────────── */
+
 export default function EditProfile() {
   const { theme } = useTheme();
+  const params = useLocalSearchParams();
 
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
 
-  /** ENTRY */
+  const [name, setName] = useState((params.name as string) || "");
+  const [phone, setPhone] = useState((params.phone as string) || "");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  /* entry animation */
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, {
-        toValue: 1,
-        duration: 80,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slide, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fade, { toValue: 1, duration: 80, useNativeDriver: true }),
+      Animated.timing(slide, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start();
   }, []);
 
-  /** EXIT */
-  const goBack = () => {
-    router.back(); // instant navigation
-  };
-
-  /** ANDROID BACK */
+  /* pre-fill email from API */
   useEffect(() => {
-    const sub = BackHandler.addEventListener(
-      "hardwareBackPress",
-      () => {
-        goBack();
-        return true;
-      }
-    );
+    getMeApi()
+      .then((me) => {
+        const e = me.user?.email ?? me.email ?? "";
+        setEmail(e);
+        if (!name) {
+          const fn = me.firstName ?? me.name?.split(" ")[0] ?? "";
+          const ln = me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "";
+          setName(`${fn} ${ln}`.trim());
+        }
+        if (!phone) setPhone(me.user?.phone ?? me.phone ?? "");
+      })
+      .catch(() => {});
+  }, []);
+
+  /* android back */
+  useEffect(() => {
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      router.back();
+      return true;
+    });
     return () => sub.remove();
   }, []);
-  
-  const params = useLocalSearchParams();
 
-  const [name, setName] = useState(params.name as string || "");
-  const [phone, setPhone] = useState(params.phone as string || "");
-
-const [addresses, setAddresses] = useState<any[]>([]);
-const { user } = useAuth();
-
-const auth_id = user?.user?.id ? user?.user?.id : user?.id;
-
-useEffect(() => {
-  const fetchAddresses = async () => {
+  const handleSave = async () => {
     try {
-      const data = await getAddressApi(auth_id);
-
-      const list = Array.isArray(data?.results) ? data.results : [];
-
-      const mapped = list.map((a: any) => ({
-        id: String(a.id),
-        type:
-          a.label === "Home"
-            ? "Home"
-            : a.label === "Office"
-            ? "Work"
-            : "Other",
-        value: `${a.addressLine1}, ${a.city}, ${a.state}`,
-      }));
-
-      setAddresses(mapped);
-    } catch (err) {
-      console.log("Address fetch error:", err);
+      setSaving(true);
+      // await updateProfileApi({ name, phone, email });
+      router.back();
+    } catch {
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (auth_id) fetchAddresses();
-}, [auth_id]);
+  const initials = getInitials(name);
+
   return (
     <Animated.View
       style={[
         styles.root,
         {
           backgroundColor: theme.background,
+          opacity: fade,
           transform: [
             { translateY: slide },
-            {
-              scale: fade.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.98, 1],
-              })
-            }
+            { scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) },
           ],
         },
       ]}
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.backBtn}>
-          <ArrowLeft color={theme.text} size={22} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>
-          Edit Profile
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <SafeAreaView style={{ flex: 1 }}>
+        {/* ── HEADER ── */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <ArrowLeft color={theme.text} size={22} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.primary ?? "#2FE6A6" }]}>
+            Edit Profile
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.container}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* PERSONAL */}
-        <Card theme={theme}>
-          <Section title="Personal Information" theme={theme}>
-            <Input label="Full Name" value={name} onChangeText={setName} theme={theme} />
-            <Input
-              label="Phone Number"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
-              theme={theme}
-            />
-          </Section>
-        </Card>
-
-        {/* ADDRESSES */}
-        <Card theme={theme}>
-          <Section title="Saved Addresses" theme={theme}>
-            {addresses.map((a) => (
-              <View key={a.id} style={styles.addressRow}>
-                {a.type === "Home" && <Home size={18} color={theme.primary} />}
-                {a.type === "Work" && <Briefcase size={18} color={theme.primary} />}
-                {a.type === "Other" && <MapPin size={18} color={theme.primary} />}
-
-                <View style={{ marginLeft: 10 }}>
-                  <Text style={[styles.addressType, { color: theme.text }]}>
-                    {a.type}
-                  </Text>
-                  <Text style={[styles.addressText, { color: theme.subText }]}>
-                    {a.value}
-                  </Text>
-                </View>
-              </View>
-            ))}
-
-            {/* <TouchableOpacity
-              activeOpacity={0.85}
-              style={[styles.addAddress, { borderColor: theme.border }]}
-            >
-              <Plus size={18} color={theme.primary} />
-              <Text style={[styles.addText, { color: theme.primary }]}>
-                Add New Address
-              </Text>
-            </TouchableOpacity> */}
-          </Section>
-        </Card>
-
-        {/* SAVE */}
-        <TouchableOpacity
-          activeOpacity={0.9}
-          style={[styles.saveBtn, { backgroundColor: theme.primary }]}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <Text style={styles.saveText}>Save Changes</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* ── AVATAR ── */}
+            <View style={styles.avatarSection}>
+              {/* glow */}
+              <View style={[styles.glowRing, { shadowColor: theme.primary ?? "#2FE6A6" }]}>
+                <LinearGradient
+                  colors={[theme.primary ?? "#2FE6A6", "#1A9E74"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.gradientRing}
+                >
+                  <View
+                    style={[
+                      styles.avatarInner,
+                      { backgroundColor: theme.card ?? "#0D1F1C" },
+                    ]}
+                  >
+                    <Text style={[styles.initialsText, { color: theme.primary ?? "#2FE6A6" }]}>
+                      {initials}
+                    </Text>
+                  </View>
+                </LinearGradient>
+              </View>
+            </View>
+
+            {/* ── FIELDS ── */}
+            <View style={styles.fields}>
+              <Field
+                label="Full Name"
+                value={name}
+                onChangeText={setName}
+                placeholder="Your full name"
+                theme={theme}
+              />
+              <Field
+                label="Phone Number"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+91 XXXXX XXXXX"
+                keyboardType="phone-pad"
+                theme={theme}
+              />
+              {/* <Field
+                label="Email Address"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                theme={theme}
+              /> */}
+            </View>
+
+            {/* ── SAVE ── */}
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleSave}
+              disabled={saving}
+              style={styles.saveBtnWrapper}
+            >
+              <LinearGradient
+                colors={[theme.primary ?? "#2FE6A6", "#1AC98A"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveBtn}
+              >
+                <Text style={styles.saveBtnText}>
+                  {saving ? "Saving…" : "Save Changes"}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Animated.View>
   );
 }
 
-/* ---------- SMALL COMPONENTS ---------- */
+/* ─────────── field ─────────── */
 
-function Card({ children, theme }: any) {
-  return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.card, borderColor: theme.border },
-      ]}
-    >
-      {children}
-    </View>
-  );
-}
+function Field({
+  label,
+  theme,
+  ...props
+}: {
+  label: string;
+  theme: any;
+  [key: string]: any;
+}) {
+  const [focused, setFocused] = useState(false);
 
-function Section({ title, theme, children }: any) {
   return (
-    <View style={{ marginBottom: 20 }}>
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
-
-function Input({ label, theme, ...props }: any) {
-  return (
-    <View style={{ marginBottom: 14 }}>
-      <Text style={[styles.label, { color: theme.subText }]}>
+    <View style={styles.fieldWrapper}>
+      <Text style={[styles.fieldLabel, { color: theme.subText ?? "#8FB3A8" }]}>
         {label}
       </Text>
       <TextInput
@@ -227,28 +222,33 @@ function Input({ label, theme, ...props }: any) {
         style={[
           styles.input,
           {
-            backgroundColor: theme.inputBg ?? "#0F1720",
-            color: theme.text,
+            backgroundColor: theme.inputBg ?? theme.card ?? "#0D1F1C",
+            color: theme.text ?? "#E6FFF7",
+            borderColor: focused
+              ? (theme.primary ?? "#2FE6A6")
+              : (theme.border ?? "#1A3330"),
           },
         ]}
-        placeholderTextColor={theme.subText}
+        placeholderTextColor={theme.subText ?? "#8FB3A8"}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
       />
     </View>
   );
 }
 
-/* ---------- STYLES ---------- */
+/* ─────────── styles ─────────── */
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
   header: {
-    marginTop: 40,
     height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
+    marginTop: 4,
   },
 
   backBtn: {
@@ -264,79 +264,88 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  container: {
-    padding: 16,
-    paddingBottom: 140,
+  scroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 120,
   },
 
-  card: {
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-    borderWidth: 1,
+  /* avatar */
+  avatarSection: {
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 36,
   },
 
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 12,
+  glowRing: {
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 12,
   },
 
-  label: {
-    fontSize: 12,
+  gradientRing: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  avatarInner: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  initialsText: {
+    fontSize: 32,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  /* fields */
+  fields: {
+    gap: 4,
+  },
+
+  fieldWrapper: {
+    marginBottom: 18,
+  },
+
+  fieldLabel: {
+    fontSize: 13,
     fontWeight: "600",
-    marginBottom: 6,
+    marginBottom: 8,
   },
 
   input: {
-    height: 48,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-  },
-
-  addressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  addressType: {
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  addressText: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-
-  addAddress: {
-    height: 48,
+    height: 52,
     borderRadius: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
     borderWidth: 1,
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 6,
+    fontWeight: "500",
   },
 
-  addText: {
-    fontWeight: "700",
+  /* save */
+  saveBtnWrapper: {
+    marginTop: 32,
+    borderRadius: 16,
+    overflow: "hidden",
   },
 
   saveBtn: {
     height: 56,
-    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
   },
 
-  saveText: {
-    fontWeight: "900",
-    color: "#000",
+  saveBtnText: {
     fontSize: 16,
+    fontWeight: "900",
+    color: "#031612",
+    letterSpacing: 0.3,
   },
 });
