@@ -1,6 +1,8 @@
 
+import AppLoader from "@/components/AppLoader";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
+import { catalogData } from "@/constants/catalog";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,7 +27,6 @@ import {
   useSafeAreaInsets
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
-import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -277,6 +278,12 @@ export default function Home() {
     };
     checkAuth();
   }, []);
+
+  const allProducts = Object.values(catalogData).flat();
+
+  const filteredProducts = allProducts.filter(item =>
+  item.title.toLowerCase().includes(searchQuery.toLowerCase())
+);
   // ─── Constants ────────────────────────────────────────────────────────────────
   const THUMB_SIZE = 44;
   const PADDING = 4;
@@ -314,8 +321,6 @@ export default function Home() {
 
     return () => clearTimeout(t);
   }, []);
-
-
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -529,7 +534,7 @@ export default function Home() {
     }, [params.orderPlaced]),
   );
 
-  if (loading) return <HomeScreenSkeleton />;
+  if (loading) return <AppLoader />;
 
   const PRIMARY = theme.primary; // teal/green
 
@@ -802,7 +807,12 @@ export default function Home() {
                           // console.log("service param:");
                           router.push({
                             pathname: "/services/[service]",
-                            params: { service: s.slug as "shoe" | "laundry" | "dryclean" },
+                            params: {
+                              service: s.slug as
+                                | "shoe"
+                                | "laundry"
+                                | "dryclean",
+                            },
                           });
                         } else {
                           router.push(`/services/${s.slug}`);
@@ -820,11 +830,7 @@ export default function Home() {
                             { backgroundColor: "#0A3D3C" },
                           ]}
                         >
-                          <SvgUri
-                            uri={s.icon}
-                            width={32}
-                            height={32}
-                          />
+                          <SvgUri uri={s.icon} width={32} height={32} />
                         </View>
                       </Animated.View>
 
@@ -890,8 +896,6 @@ export default function Home() {
         onClose={() => setOfferVisible(false)}
       /> */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-
-
     </SafeAreaProvider>
   );
 }

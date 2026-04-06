@@ -109,15 +109,18 @@ function AddressCard({
 }: { address: Address; selected: boolean; onPress: () => void; theme: any }) {
   const iconName = address.label?.toLowerCase() === "home" ? "home" : "briefcase";
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity onPress={onPress} activeOpacity={1}>
       {selected ? (
         <LinearGradient
-          colors={theme.gradient} // 👈 your gradient
+          colors={selected ? theme.gradient : ["#0D1F1C", "#0D1F1C"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
             addrCardStyles.card,
-            { borderColor: theme.primary, borderWidth: 1.5 },
+            {
+              borderColor: selected ? theme.primary : "#1E3327",
+              borderWidth: 1.5,
+            },
           ]}
         >
           {/* CONTENT */}
@@ -173,6 +176,8 @@ function AddressCard({
 const addrCardStyles = StyleSheet.create({
   card: {
     width: 155,
+    minWidth: 155,
+    height: 140,
     borderRadius: 16,
     backgroundColor: "#0F2318",
     padding: 14,
@@ -255,6 +260,9 @@ export default function BookPickup() {
 
   const [couponOpen, setCouponOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<(typeof COUPONS)[number] | null>(null);
+
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
+  const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
 
   // use your real order subtotal here
   const subtotal = 600;
@@ -439,9 +447,8 @@ export default function BookPickup() {
 
   // ─── Derived data for date strip ─────────────────────────────────────────────
   const nextDays = getNextDays(30);
-  const selectedDeliveryAddr = deliveryMode === "same"
-    ? addresses.find(a => a.id === selectedAddressId)
-    : deliveryAddresses.find(a => a.id === selectedDeliveryAddressId);
+  const selectedDeliveryAddr =
+    deliveryAddresses.find(a => a.id === selectedDeliveryAddressId);
   const selectedPickupAddr = addresses.find(a => a.id === selectedAddressId);
 
 
@@ -520,7 +527,7 @@ export default function BookPickup() {
                     activeOpacity={0.8}
                   >
                     <LinearGradient
-                      colors={theme.gradient} // ✅ your gradient here
+                      colors={theme.gradient} 
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={[
@@ -567,7 +574,7 @@ export default function BookPickup() {
                 colors={theme.gradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={s.card}
+                style={[s.card,  {marginTop: 10 }]}
               >
                 <View style={s.rowBetween}>
                   <View style={{ flex: 1 }}>
@@ -583,48 +590,170 @@ export default function BookPickup() {
                 </View>
 
                 {/* Delivery address dropdown when "other" */}
-                {deliveryMode === "other" && (
-                  <View style={{ marginTop: 16 }}>
-                    <View style={s.rowBetween}>
-                      <Text style={s.sectionLabel}>SELECT SAVED ADDRESS</Text>
-                      <TouchableOpacity onPress={() => { setAddModalOpen(true); setAddressType("delivery"); }}>
-                        <Text style={[s.addLink, { color: theme.primary }]}>+ Add New</Text>
-                      </TouchableOpacity>
-                    </View>
+               {deliveryMode === "other" && (
+  <View style={{ marginTop: 10 }}>
 
-                    <TouchableOpacity
-                      style={[s.dropdown, { backgroundColor: "#0A1A10", borderColor: "#1E3327" }]}
-                      onPress={() => setShowDeliveryPicker(!showDeliveryPicker)}
-                      activeOpacity={0.85}
-                    >
-                      <Ionicons name="location-outline" size={18} color={theme.primary} style={{ marginRight: 10 }} />
-                      <Text style={[s.dropdownText, { color: theme.text, flex: 1 }]}>
-                        {deliveryAddresses.find(a => a.id === selectedDeliveryAddressId)?.label || "Select address"}
-                      </Text>
-                      <Ionicons name={showDeliveryPicker ? "chevron-up" : "chevron-down"} size={18} color="#4E7060" />
-                    </TouchableOpacity>
+    {/* HEADER */}
+    <View style={s.rowBetween}>
+      <Text style={s.sectionLabel}>SELECT DELIVERY ADDRESS</Text>
 
-                    {showDeliveryPicker && (
-                      <View style={[s.pickerList, { backgroundColor: "#0A1A10", borderColor: "#1E3327" }]}>
-                        {deliveryAddresses.map(addr => (
-                          <TouchableOpacity
-                            key={addr.id}
-                            style={[s.pickerItem, addr.id === selectedDeliveryAddressId && { backgroundColor: theme.primary + "18" }]}
-                            onPress={() => { setSelectedDeliveryAddressId(addr.id); setShowDeliveryPicker(false); }}
-                            activeOpacity={0.8}
-                          >
-                            <Ionicons name={addr.label?.toLowerCase() === "home" ? "home-outline" : "briefcase-outline"} size={16} color={addr.id === selectedDeliveryAddressId ? theme.primary : "#4E7060"} style={{ marginRight: 10 }} />
-                            <View style={{ flex: 1 }}>
-                              <Text style={[s.pickerItemLabel, { color: addr.id === selectedDeliveryAddressId ? theme.primary : theme.text }]}>{addr.label}</Text>
-                              <Text style={s.pickerItemSub} numberOfLines={1}>{addr.line1}, {addr.city}</Text>
-                            </View>
-                            {addr.id === selectedDeliveryAddressId && <Ionicons name="checkmark-circle" size={18} color={theme.primary} />}
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
-                  </View>
+      <TouchableOpacity
+        onPress={() => {
+          setAddModalOpen(true);
+          setAddressType("delivery");
+        }}
+      >
+        <Text style={[s.addLink, { color: theme.primary }]}>
+          + Add New
+        </Text>
+      </TouchableOpacity>
+    </View>
+
+    {/* MAIN CARD */}
+    <LinearGradient
+      colors={theme.gradient}
+      style={{
+        borderRadius: 16,
+        marginTop: 5,
+        padding: 8,
+        borderWidth: 1.5,
+        borderColor: theme.primary + "33",
+      }}
+    >
+
+      {/* DROPDOWN */}
+      <TouchableOpacity
+        onPress={() => setShowDeliveryPicker(!showDeliveryPicker)}
+        activeOpacity={0.85}
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+        }}
+      >
+        <View
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            backgroundColor: theme.primary + "22",
+            alignItems: "center",
+            justifyContent: "center",
+            marginRight: 10,
+          }}
+        >
+          <Ionicons name="location-outline" size={18} color={theme.primary} />
+        </View>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: "#7A9B87", fontWeight: "700" }}>
+            DELIVERY ADDRESS
+          </Text>
+
+          <Text style={{ color: theme.text, fontWeight: "800", marginTop: 2 }}>
+            {deliveryAddresses.find(a => a.id === selectedDeliveryAddressId)?.label || "Select address"}
+          </Text>
+        </View>
+
+        <Ionicons
+          name={showDeliveryPicker ? "chevron-up" : "chevron-down"}
+          size={18}
+          color="#7A9B87"
+        />
+      </TouchableOpacity>
+
+      {/* ADDRESS LIST */}
+      {showDeliveryPicker && (
+        <View style={{ marginTop: 12 }}>
+
+          {deliveryAddresses.map(addr => {
+            const isSelected = addr.id === selectedDeliveryAddressId;
+
+            return (
+              <TouchableOpacity
+                key={addr.id}
+                activeOpacity={0.85}
+                onPress={() => {
+                  setSelectedDeliveryAddressId(addr.id);
+                  setShowDeliveryPicker(false);
+                }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  padding: 6,
+                  borderRadius: 12,
+                  marginBottom: 10,
+                  borderWidth: 1.5,
+                  borderColor: isSelected ? theme.primary : "#1E3327",
+                  backgroundColor: isSelected
+                    ? theme.primary + "18"
+                    : "rgba(0,0,0,0.2)",
+                }}
+              >
+
+                {/* ICON */}
+                <View
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    backgroundColor: isSelected
+                      ? theme.primary + "22"
+                      : "#1A2C22",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 10,
+                  }}
+                >
+                  <Ionicons
+                    name={
+                      addr.label?.toLowerCase() === "home"
+                        ? "home-outline"
+                        : "briefcase-outline"
+                    }
+                    size={16}
+                    color={isSelected ? theme.primary : "#4E7060"}
+                  />
+                </View>
+
+                {/* TEXT */}
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontWeight: "800",
+                      color: isSelected ? theme.primary : theme.text,
+                    }}
+                  >
+                    {addr.label}
+                  </Text>
+
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: "#7A9B87",
+                      marginTop: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {addr.line1}, {addr.city}
+                  </Text>
+                </View>
+
+                {/* CHECK */}
+                {isSelected && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={theme.primary}
+                  />
                 )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+    </LinearGradient>
+  </View>
+)}
               </LinearGradient>
 
 
@@ -847,91 +976,164 @@ export default function BookPickup() {
                 <Text style={[s.bigHeading, { color: theme.text }]}>Service Route</Text>
                 <Text style={s.bigSubtitle}>Confirm your pickup and drop-off points</Text>
 
-                <View style={[s.routeCard, { backgroundColor: "#0F2318", borderColor: "#1E3327" }]}>
-                  {/* Pickup point */}
+                <LinearGradient
+                  colors={theme.gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[
+                    s.routeCard,
+                    {
+                      borderRadius: 18,
+                      borderWidth: 1.5,
+                      borderColor: theme.primary + "33",
+                      padding: 16,
+                      shadowColor: theme.primary,
+                      shadowOpacity: 0.2,
+                      shadowRadius: 10,
+                      elevation: 6,
+                    },
+                  ]}
+                >
+                  {/* PICKUP */}
                   <View style={s.routeRow}>
-                    <View style={[s.routeIconWrap, { backgroundColor: "#1A2C22" }]}>
+                    <View style={[s.routeIconWrap, { backgroundColor: theme.primary + "22" }]}>
                       <Ionicons name="home-outline" size={16} color={theme.primary} />
                     </View>
+
                     <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={s.routeTag}>PICKUP FROM</Text>
+                      <Text style={[s.routeTag, { color: "#7A9B87" }]}>PICKUP FROM</Text>
                       <Text style={[s.routeAddrLabel, { color: theme.text }]}>
                         {selectedPickupAddr?.label || "No address selected"}
                       </Text>
                       <Text style={s.routeAddrDetail} numberOfLines={2}>
-                        {selectedPickupAddr ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}` : ""}
+                        {selectedPickupAddr
+                          ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+                          : ""}
                       </Text>
                     </View>
                   </View>
 
-                  {/* Connector line */}
+                  {/* CONNECTOR */}
                   <View style={s.routeConnector}>
-                    <View style={[s.connectorLine, { backgroundColor: "#1E3327" }]} />
+                    <View style={[s.connectorLine, { backgroundColor: theme.primary + "55" }]} />
                   </View>
 
-                  {/* Delivery point */}
+                  {/* DELIVERY */}
                   <View style={s.routeRow}>
-                    <View style={[s.routeIconWrap, { backgroundColor: "#1A2C22" }]}>
+                    <View style={[s.routeIconWrap, { backgroundColor: theme.primary + "22" }]}>
                       <Ionicons name="briefcase-outline" size={16} color={theme.primary} />
                     </View>
+
                     <View style={{ flex: 1, marginLeft: 12 }}>
-                      <Text style={s.routeTag}>DELIVER TO</Text>
+                      <Text style={[s.routeTag, { color: "#7A9B87" }]}>DELIVER TO</Text>
                       <Text style={[s.routeAddrLabel, { color: theme.text }]}>
                         {selectedDeliveryAddr?.label || "Same as pickup"}
                       </Text>
                       <Text style={s.routeAddrDetail} numberOfLines={2}>
-                        {selectedDeliveryAddr ? `${selectedDeliveryAddr.line1 || selectedDeliveryAddr.street}, ${selectedDeliveryAddr.city}` : ""}
+                        {selectedDeliveryAddr
+                          ? `${selectedDeliveryAddr.line1 || selectedDeliveryAddr.street}, ${selectedDeliveryAddr.city}`
+                          : ""}
                       </Text>
                     </View>
                   </View>
-                </View>
+                </LinearGradient>
 
-                {/* Edit addresses row */}
-                <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-                  <TouchableOpacity style={[s.editAddrBtn, { borderColor: "#1E3327" }]} onPress={() => { setAddModalOpen(true); setAddressType("pickup"); }} activeOpacity={0.8}>
-                    <Ionicons name="location-outline" size={14} color="#4E7060" />
-                    <Text style={s.editAddrText}>Edit Pickup</Text>
+                {/* EDIT BUTTONS */}
+                <View style={{ flexDirection: "row", gap: 10, marginTop: 15 }}>
+
+                  {/* PICKUP */}
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      setPickerType("pickup");
+                      setAddressPickerOpen(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={theme.gradient}
+                      style={[
+                        s.editAddrBtn,
+                        {
+                          borderRadius: 12,
+                          borderWidth: 1.5,
+                          borderColor: theme.primary + "33",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="location-outline" size={14} color={theme.primary} />
+                      <Text style={[s.editAddrText, { color: theme.text }]}>
+                        Edit Pickup
+                      </Text>
+                    </LinearGradient>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[s.editAddrBtn, { borderColor: "#1E3327" }]} onPress={() => { setAddModalOpen(true); setAddressType("delivery"); }} activeOpacity={0.8}>
-                    <Ionicons name="navigate-outline" size={14} color="#4E7060" />
-                    <Text style={s.editAddrText}>Edit Delivery</Text>
+
+                  {/* DELIVERY */}
+                  <TouchableOpacity
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      setPickerType("delivery");
+                      setAddressPickerOpen(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <LinearGradient
+                      colors={theme.gradient}
+                      style={[
+                        s.editAddrBtn,
+                        {
+                          borderRadius: 12,
+                          borderWidth: 1.5,
+                          borderColor: theme.primary + "33",
+                        },
+                      ]}
+                    >
+                      <Ionicons name="navigate-outline" size={14} color={theme.primary} />
+                      <Text style={[s.editAddrText, { color: theme.text }]}>
+                        Edit Delivery
+                      </Text>
+                    </LinearGradient>
                   </TouchableOpacity>
+
                 </View>
               </View>
 
+              {/* ADDITIONAL INFO */}
               <View style={s.section}>
                 <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
 
-                <TouchableOpacity
-                  onPress={() => setHasHeavyItems(!hasHeavyItems)}
-                  activeOpacity={0.8}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    padding: 14,
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: hasHeavyItems ? theme.primary : "#1E3327",
-                    backgroundColor: "#0F2318",
-                  }}
-                >
-                  <Ionicons
-                    name={hasHeavyItems ? "checkbox" : "square-outline"}
-                    size={20}
-                    color={hasHeavyItems ? theme.primary : "#4E7060"}
-                  />
-
-                  <Text
+                <LinearGradient colors={theme.gradient} style={{ borderRadius: 14 }}>
+                  <TouchableOpacity
+                    onPress={() => setHasHeavyItems(!hasHeavyItems)}
+                    activeOpacity={0.85}
                     style={{
-                      marginLeft: 10,
-                      fontWeight: "700",
-                      color: hasHeavyItems ? theme.primary : theme.text,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
                     }}
                   >
-                    I have heavy items (blankets, curtains, etc.)
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons
+                      name={hasHeavyItems ? "checkbox" : "square-outline"}
+                      size={20}
+                      color={hasHeavyItems ? theme.primary : "#4E7060"}
+                    />
+
+                    <Text
+                      style={{
+                        marginLeft: 10,
+                        fontWeight: "700",
+                        color: hasHeavyItems ? theme.primary : theme.text,
+                      }}
+                    >
+                      I have heavy items (blankets, curtains, etc.)
+                    </Text>
+                  </TouchableOpacity>
+                </LinearGradient>
               </View>
+
               {/* APPLIED OFFERS */}
               <View style={s.section}>
                 <View style={s.rowBetween}>
@@ -943,43 +1145,48 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  style={[s.offerCard, { backgroundColor: "#0F2318", borderColor: "#1E3327" }]}
-                  activeOpacity={0.85}
-                  onPress={() => setCouponOpen(true)}
-                >
-                  <View style={[s.offerIconWrap, { backgroundColor: "#1A2C22" }]}>
-                    <Ionicons name="pricetag" size={18} color={theme.primary} />
-                  </View>
+                <LinearGradient colors={theme.gradient} style={{ borderRadius: 16 }}>
+                  <TouchableOpacity
+                    style={[
+                      s.offerCard,
+                      {
+                        borderColor: theme.primary + "33",
+                      },
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => setCouponOpen(true)}
+                  >
+                    <View style={[s.offerIconWrap, { backgroundColor: theme.primary + "22" }]}>
+                      <Ionicons name="pricetag" size={18} color={theme.primary} />
+                    </View>
 
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
                       <Text style={[s.offerCode, { color: theme.text }]}>
                         {appliedCoupon?.code || "Tap to apply coupon"}
                       </Text>
 
-                      {appliedCoupon && (
-                        <View style={[s.promoBadge, { backgroundColor: theme.primary + "22" }]}>
-                          <Text style={[s.promoText, { color: theme.primary }]}>
-                            APPLIED
-                          </Text>
-                        </View>
-                      )}
+                      <Text style={s.offerDesc}>
+                        {appliedCoupon
+                          ? appliedCoupon.description
+                          : "Choose from available coupons"}
+                      </Text>
                     </View>
 
-                    <Text style={s.offerDesc}>
-                      {appliedCoupon
-                        ? appliedCoupon.description
-                        : "Choose from available coupons"}
-                    </Text>
-                  </View>
-
-                  <View style={[s.appliedBtn, { backgroundColor: theme.primary + "15", borderColor: theme.primary + "44" }]}>
-                    <Text style={[s.appliedText, { color: theme.primary }]}>
-                      {appliedCoupon ? "Change" : "Open"}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                    <View
+                      style={[
+                        s.appliedBtn,
+                        {
+                          backgroundColor: theme.primary + "15",
+                          borderColor: theme.primary + "44",
+                        },
+                      ]}
+                    >
+                      <Text style={[s.appliedText, { color: theme.primary }]}>
+                        {appliedCoupon ? "Change" : "Open"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </LinearGradient>
               </View>
             </>
           )}
@@ -1176,6 +1383,110 @@ export default function BookPickup() {
           </TouchableWithoutFeedback>
         </Modal>
 
+        <Modal visible={addressPickerOpen} animationType="slide" transparent>
+          <View style={ms.backdrop}>
+            <View style={[ms.addSheet, { backgroundColor: "#0F2318" }]}>
+
+              {/* HEADER */}
+              <View style={ms.sheetHeader}>
+                <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                  Select {pickerType === "pickup" ? "Pickup" : "Delivery"} Address
+                </Text>
+
+                <TouchableOpacity onPress={() => setAddressPickerOpen(false)}>
+                  <Ionicons name="close" size={22} color="#7A9B87" />
+                </TouchableOpacity>
+              </View>
+
+              {/* ADDRESS LIST */}
+              <ScrollView style={{ marginTop: 10 }}>
+                {(pickerType === "pickup" ? addresses : deliveryAddresses).map(addr => {
+                  const isSelected =
+                    pickerType === "pickup"
+                      ? addr.id === selectedAddressId
+                      : addr.id === selectedDeliveryAddressId;
+
+                  return (
+                    <TouchableOpacity
+                      key={addr.id}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        if (pickerType === "pickup") {
+                          setSelectedAddressId(addr.id);
+                        } else {
+                          setSelectedDeliveryAddressId(addr.id);
+                        }
+                        setAddressPickerOpen(false);
+                      }}
+                      style={[
+                        s.pickerItem,
+                        {
+                          borderRadius: 14,
+                          marginBottom: 10,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? theme.primary : "#1E3327",
+                          backgroundColor: isSelected ? theme.primary + "15" : "#0A1A10",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          addr.label?.toLowerCase() === "home"
+                            ? "home-outline"
+                            : "briefcase-outline"
+                        }
+                        size={18}
+                        color={isSelected ? theme.primary : "#4E7060"}
+                        style={{ marginRight: 10 }}
+                      />
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontWeight: "800",
+                            color: isSelected ? theme.primary : theme.text,
+                          }}
+                        >
+                          {addr.label}
+                        </Text>
+
+                        <Text style={{ fontSize: 12, color: "#4E7060" }} numberOfLines={2}>
+                          {addr.line1}, {addr.city}
+                        </Text>
+                      </View>
+
+                      {isSelected && (
+                        <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* ADD ADDRESS BUTTON */}
+              <TouchableOpacity
+                onPress={() => {
+                  setAddressPickerOpen(false);
+                  setAddModalOpen(true);
+                  setAddressType(pickerType);
+                }}
+                style={{
+                  marginTop: 10,
+                  padding: 14,
+                  borderRadius: 14,
+                  borderWidth: 1.5,
+                  borderColor: theme.primary,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: theme.primary, fontWeight: "800" }}>
+                  + Add New Address
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* ══════════════════ SUCCESS MODAL ══════════════════ */}
         <Modal visible={successOpen} transparent animationType="fade">
           <View style={ms.centeredOverlay}>
@@ -1260,7 +1571,7 @@ const s = StyleSheet.create({
   pickerList: {
     borderRadius: 12, borderWidth: 1.5, marginTop: 6, overflow: "hidden",
   },
-  pickerItem: { flexDirection: "row", alignItems: "center", padding: 14, borderBottomWidth: 1, borderBottomColor: "#1E3327" },
+  pickerItem: { flexDirection: "row", alignItems: "center", padding: 14, marginBottom: 10 },
   pickerItemLabel: { fontSize: 14, fontWeight: "700" },
   pickerItemSub: { fontSize: 12, color: "#4E7060", marginTop: 2 },
 
@@ -1309,7 +1620,7 @@ const s = StyleSheet.create({
   routeIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   routeTag: { fontSize: 10, fontWeight: "800", color: "#4E7060", letterSpacing: 1, marginBottom: 3 },
   routeAddrLabel: { fontSize: 15, fontWeight: "800" },
-  routeAddrDetail: { fontSize: 12, color: "#4E7060", marginTop: 2, lineHeight: 16 },
+  routeAddrDetail: { fontSize: 12, color: "#a9c5b8", marginTop: 2, lineHeight: 16 },
   routeConnector: { paddingLeft: 18, paddingVertical: 6 },
   connectorLine: { width: 1.5, height: 20, marginLeft: 17 },
   editAddrBtn: {
