@@ -59,84 +59,7 @@ function ItemIcon({ heading, color }: { heading: string; color: string }) {
   return <MaterialCommunityIcons name="washing-machine" size={20} color={color} />;
 }
 
-// ─── Coupon Bottom Sheet ───────────────────────────────────────────────────────
-// function CouponSheet({
-//   visible,
-//   onClose,
-//   onApply,
-//   appliedCode,
-//   subtotal,
-// }: {
-//   visible: boolean;
-//   onClose: () => void;
-//   onApply: (coupon: Coupon) => void;
-//   appliedCode: string;
-//   subtotal: number;
-// }) {
-//   return (
-//     <Modal
-//       visible={visible}
-//       transparent
-//       animationType="slide"
-//       statusBarTranslucent
-//       onRequestClose={onClose}
-//     >
-//       <Pressable style={cs.overlay} onPress={onClose}>
-//         <Pressable style={cs.sheet} onPress={() => {}}>
-//           {/* Drag handle */}
-//           <View style={cs.handle} />
 
-//           <View style={cs.sheetHeader}>
-//             <Text style={cs.sheetTitle}>Available Coupons</Text>
-//             <TouchableOpacity onPress={onClose} hitSlop={10}>
-//               <Ionicons name="close" size={22} color="#DEE5FF" />
-//             </TouchableOpacity>
-//           </View>
-
-//           <ScrollView showsVerticalScrollIndicator={false}>
-//             {COUPONS.map((coupon) => {
-//               const isApplied = appliedCode === coupon.code;
-//               const eligible =
-//                 coupon.minOrder === 0 || subtotal >= coupon.minOrder;
-//               return (
-//                 <View key={coupon.code} style={cs.couponCard}>
-//                   <View style={cs.couponLeft}>
-//                     <View style={cs.couponTagRow}>
-//                       <View style={cs.couponTag}>
-//                         <Text style={cs.couponTagText}>{coupon.tag}</Text>
-//                       </View>
-//                     </View>
-//                     <Text style={cs.couponTitle}>{coupon.title}</Text>
-//                     <Text style={cs.couponDesc}>{coupon.description}</Text>
-//                   </View>
-//                   <TouchableOpacity
-//                     onPress={() => eligible && onApply(coupon)}
-//                     style={[
-//                       cs.applyBtn,
-//                       isApplied && cs.applyBtnActive,
-//                       !eligible && cs.applyBtnDisabled,
-//                     ]}
-//                   >
-//                     <Text
-//                       style={[
-//                         cs.applyBtnText,
-//                         isApplied && cs.applyBtnTextActive,
-//                       ]}
-//                     >
-//                       {isApplied ? "REMOVE" : "APPLY"}
-//                     </Text>
-//                   </TouchableOpacity>
-//                 </View>
-//               );
-//             })}
-//           </ScrollView>
-//         </Pressable>
-//       </Pressable>
-//     </Modal>
-//   );
-// }
-
-// ─── Main Component ────────────────────────────────────────────────────────────
 export default function OrderReceipt() {
   const params = useLocalSearchParams();
   const orderId =
@@ -356,12 +279,8 @@ export default function OrderReceipt() {
               <Ionicons name="arrow-back" size={20} color={theme.text} />
             </TouchableOpacity>
             <Text style={[s.headerTitle, { color: theme.text }]}>Receipt</Text>
-            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
-              <Ionicons
-                name="person-outline"
-                size={16}
-                color={theme.primary}
-              />
+            <View>
+              
             </View>
           </View>
 
