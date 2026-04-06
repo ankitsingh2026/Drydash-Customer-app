@@ -1,6 +1,5 @@
 
 import AppLoader from "@/components/AppLoader";
-import FloatingOfferCard from "@/components/FloatingOfferCard";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
@@ -118,10 +117,10 @@ const HERO_SLIDES = [
   {
     key: "laundry-2",
     tag: "PREMIUM",
-    title: "Luxury Garment Care",
-    subtitle: "Silk • Wool • Designer Wear",
+    title: "",
+    subtitle: "",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/hero_wel.png",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_offer.png",
     },
   },
 ];
@@ -898,7 +897,7 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      <FloatingOfferCard
+      {/* <FloatingOfferCard
         visible={offerVisible}
         title="Welcome Offer"
         subtitle="Get 20% OFF on your first booking"
@@ -909,7 +908,7 @@ export default function Home() {
           router.push("/book-pickup");
         }}
         onClose={() => setOfferVisible(false)}
-      />
+      /> */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
     </SafeAreaProvider>
   );

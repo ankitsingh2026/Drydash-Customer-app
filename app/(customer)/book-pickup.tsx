@@ -38,12 +38,7 @@ import { useTheme } from "../../context/ThemeContext";
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // ─── Constants (unchanged) ────────────────────────────────────────────────────
-const TIME_SLOTS = [
-  "9:00 – 12:00 AM",
-  "1:00 – 4:00 PM",
-  "5:00 – 8:00 PM",
-  "9:00 – 12:00 PM",
-];
+
 
 const ADDRESS_ITEM_HEIGHT = 72;
 const MAX_ADDRESS_VISIBLE = 2;
@@ -51,11 +46,27 @@ const ADDRESS_LIST_MAX_HEIGHT = ADDRESS_ITEM_HEIGHT * MAX_ADDRESS_VISIBLE + 20;
 const SERVICE_TYPES = ["Shoe Spa", "Laundry", "Dry Clean"];
 
 // ─── Time slot grouping for UI display ───────────────────────────────────────
-const TIME_GROUPS = [
-  { label: "MORNING", emoji: "☀️", slots: [0] },
-  { label: "AFTERNOON", emoji: "🌤️", slots: [1, 3] },
-  { label: "EVENING", emoji: "🌙", slots: [2] },
-];
+// Replace your old TIME_SLOTS / TIME_GROUPS with this
+
+const SLOT_START_HOUR = 8;
+const SLOT_END_HOUR = 21;
+const SLOT_DURATION = 3;
+
+const formatHour = (hour: number) => {
+  const normalized = hour % 24;
+  const suffix = normalized >= 12 ? "PM" : "AM";
+  const hour12 = normalized % 12 === 0 ? 12 : normalized % 12;
+  return `${hour12}:00 ${suffix}`;
+};
+
+const TIME_SLOTS = Array.from(
+  { length: SLOT_END_HOUR - SLOT_START_HOUR - SLOT_DURATION + 1 },
+  (_, i) => {
+    const start = SLOT_START_HOUR + i;
+    const end = start + SLOT_DURATION;
+    return `${formatHour(start)} - ${formatHour(end)}`;
+  }
+);
 
 // ─── Helper: generate next N days ────────────────────────────────────────────
 function getNextDays(count: number) {
@@ -99,63 +110,63 @@ function AddressCard({
   const iconName = address.label?.toLowerCase() === "home" ? "home" : "briefcase";
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-    {selected ? (
-      <LinearGradient
-        colors={theme.gradient} // 👈 your gradient
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[
-          addrCardStyles.card,
-          { borderColor: theme.primary, borderWidth: 1.5 },
-        ]}
-      >
-        {/* CONTENT */}
-        <View style={[addrCardStyles.iconWrap, { backgroundColor: theme.primary + "22" }]}>
-          <Ionicons name={iconName as any} size={18} color={theme.primary} />
+      {selected ? (
+        <LinearGradient
+          colors={theme.gradient} // 👈 your gradient
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            addrCardStyles.card,
+            { borderColor: theme.primary, borderWidth: 1.5 },
+          ]}
+        >
+          {/* CONTENT */}
+          <View style={[addrCardStyles.iconWrap, { backgroundColor: theme.primary + "22" }]}>
+            <Ionicons name={iconName as any} size={18} color={theme.primary} />
+          </View>
+
+          <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
+            {address.label}
+          </Text>
+
+          <Text style={addrCardStyles.street} numberOfLines={2}>
+            {address.line1 || address.street},  {address.city}
+          </Text>
+
+          {/* <Text style={addrCardStyles.city} numberOfLines={1}>
+            {address.city} 
+          </Text> */}
+
+          <View style={[addrCardStyles.checkDot, { backgroundColor: theme.primary }]}>
+            <Ionicons name="checkmark" size={10} color="#000" />
+          </View>
+        </LinearGradient>
+      ) : (
+        <View
+          style={[
+            addrCardStyles.card,
+            { borderColor: "#1E3327", borderWidth: 1.5, backgroundColor: "#0D1F1C" },
+          ]}
+        >
+          {/* SAME CONTENT */}
+          <View style={[addrCardStyles.iconWrap, { backgroundColor: "#1A2C22" }]}>
+            <Ionicons name={iconName as any} size={18} color={theme.primary} />
+          </View>
+
+          <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
+            {address.label}
+          </Text>
+
+          <Text style={addrCardStyles.street} numberOfLines={2}>
+            {address.line1 || address.street}
+          </Text>
+
+          <Text style={addrCardStyles.city} numberOfLines={1}>
+            {address.city}
+          </Text>
         </View>
-
-        <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
-          {address.label}
-        </Text>
-
-        <Text style={addrCardStyles.street} numberOfLines={2}>
-          {address.line1 || address.street}
-        </Text>
-
-        <Text style={addrCardStyles.city} numberOfLines={1}>
-          {address.city}
-        </Text>
-
-        <View style={[addrCardStyles.checkDot, { backgroundColor: theme.primary }]}>
-          <Ionicons name="checkmark" size={10} color="#000" />
-        </View>
-      </LinearGradient>
-    ) : (
-      <View
-        style={[
-          addrCardStyles.card,
-          { borderColor: "#1E3327", borderWidth: 1.5, backgroundColor: "#0D1F1C" },
-        ]}
-      >
-        {/* SAME CONTENT */}
-        <View style={[addrCardStyles.iconWrap, { backgroundColor: "#1A2C22" }]}>
-          <Ionicons name={iconName as any} size={18} color={theme.primary} />
-        </View>
-
-        <Text style={[addrCardStyles.label, { color: theme.text }]} numberOfLines={1}>
-          {address.label}
-        </Text>
-
-        <Text style={addrCardStyles.street} numberOfLines={2}>
-          {address.line1 || address.street}
-        </Text>
-
-        <Text style={addrCardStyles.city} numberOfLines={1}>
-          {address.city}
-        </Text>
-      </View>
-    )}
-  </TouchableOpacity>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -433,7 +444,7 @@ export default function BookPickup() {
     : deliveryAddresses.find(a => a.id === selectedDeliveryAddressId);
   const selectedPickupAddr = addresses.find(a => a.id === selectedAddressId);
 
-  
+
   // ─── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <View style={[s.safe, { backgroundColor: theme.background }]}>
@@ -461,7 +472,11 @@ export default function BookPickup() {
           {/* ── PICKUP SCHEDULE TABS ── */}
           <View style={s.section}>
             {/* <Text style={s.sectionLabel}>PICKUP SCHEDULE</Text> */}
-            <View style={[s.tabRow, { backgroundColor: "#0A1F14" }]}>
+            {/* <LinearGradient
+           colors={theme.gradient}
+           style={{borderRadius:18}}
+           > */}
+            <View style={[s.tabRow,]}>
               <TouchableOpacity
                 onPress={() => setPickupType("today")}
                 style={[s.tab, pickupType === "today" && { borderColor: theme.primary, backgroundColor: "#0A1F14" }]}
@@ -481,6 +496,7 @@ export default function BookPickup() {
                 </Text>
               </TouchableOpacity>
             </View>
+            {/* </LinearGradient> */}
           </View>
 
           {/* ══════════════════ TODAY VIEW ══════════════════ */}
@@ -611,39 +627,45 @@ export default function BookPickup() {
                 )}
               </LinearGradient>
 
+
               <View style={s.section}>
                 <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
-
-                <TouchableOpacity
-                  onPress={() => setHasHeavyItems(!hasHeavyItems)}
-                  activeOpacity={0.8}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    padding: 14,
-                    borderRadius: 14,
-                    borderWidth: 1.5,
-                    borderColor: hasHeavyItems ? theme.primary : "#1E3327",
-                    backgroundColor: "#0F2318",
-                  }}
+                <LinearGradient
+                  colors={theme.gradient}
+                  style={{ borderRadius: 14 }}
                 >
-                  <Ionicons
-                    name={hasHeavyItems ? "checkbox" : "square-outline"}
-                    size={20}
-                    color={hasHeavyItems ? theme.primary : "#4E7060"}
-                  />
-
-                  <Text
+                  <TouchableOpacity
+                    onPress={() => setHasHeavyItems(!hasHeavyItems)}
+                    activeOpacity={0.8}
                     style={{
-                      marginLeft: 10,
-                      fontWeight: "700",
-                      color: hasHeavyItems ? theme.primary : theme.text,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
                     }}
                   >
-                    I have heavy items (blankets, curtains, etc.)
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons
+                      name={hasHeavyItems ? "checkbox" : "square-outline"}
+                      size={20}
+                      color={hasHeavyItems ? theme.primary : "#4E7060"}
+                    />
+
+                    <Text
+                      style={{
+                        marginLeft: 10,
+                        fontWeight: "700",
+                        color: hasHeavyItems ? theme.primary : theme.text,
+                      }}
+                    >
+                      I have heavy items (blankets, curtains, etc.)
+                    </Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+
               </View>
+
 
               {/* APPLIED OFFERS */}
               <View style={s.section}>
@@ -656,65 +678,76 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 </View>
 
-                <TouchableOpacity
-                  style={[s.offerCard, { backgroundColor: "#0F2318", borderColor: "#1E3327" }]}
-                  activeOpacity={0.85}
-                  onPress={() => setCouponOpen(true)}
+                <LinearGradient
+                  colors={theme.gradient}
+                  style={{ borderRadius: 14 }}
                 >
-                  <View style={[s.offerIconWrap, { backgroundColor: "#1A2C22" }]}>
-                    <Ionicons name="pricetag" size={18} color={theme.primary} />
-                  </View>
-
-                  <View style={{ flex: 1, marginLeft: 12 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Text style={[s.offerCode, { color: theme.text }]}>
-                        {appliedCoupon?.code || "Tap to apply coupon"}
-                      </Text>
-
-                      {appliedCoupon && (
-                        <View style={[s.promoBadge, { backgroundColor: theme.primary + "22" }]}>
-                          <Text style={[s.promoText, { color: theme.primary }]}>
-                            APPLIED
-                          </Text>
-                        </View>
-                      )}
+                  <TouchableOpacity
+                    style={[s.offerCard, { borderColor: "#1E3327" }]}
+                    activeOpacity={0.85}
+                    onPress={() => setCouponOpen(true)}
+                  >
+                    <View style={[s.offerIconWrap, { backgroundColor: "#1A2C22" }]}>
+                      <Ionicons name="pricetag" size={18} color={theme.primary} />
                     </View>
 
-                    <Text style={s.offerDesc}>
-                      {appliedCoupon
-                        ? appliedCoupon.description
-                        : "Choose from available coupons"}
-                    </Text>
-                  </View>
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Text style={[s.offerCode, { color: theme.text }]}>
+                          {appliedCoupon?.code || "Tap to apply coupon"}
+                        </Text>
 
-                  <View style={[s.appliedBtn, { backgroundColor: theme.primary + "15", borderColor: theme.primary + "44" }]}>
-                    <Text style={[s.appliedText, { color: theme.primary }]}>
-                      {appliedCoupon ? "Change" : "Open"}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
+                        {appliedCoupon && (
+                          <View style={[s.promoBadge, { backgroundColor: theme.primary + "22" }]}>
+                            <Text style={[s.promoText, { color: theme.primary }]}>
+                              APPLIED
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <Text style={s.offerDesc}>
+                        {appliedCoupon
+                          ? appliedCoupon.description
+                          : "Choose from available coupons"}
+                      </Text>
+                    </View>
+
+                    <View style={[s.appliedBtn, { backgroundColor: theme.primary + "15", borderColor: theme.primary + "44" }]}>
+                      <Text style={[s.appliedText, { color: theme.primary }]}>
+                        {appliedCoupon ? "Change" : "Open"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </LinearGradient>
               </View>
 
 
               {/* SPECIAL INSTRUCTIONS */}
               <View style={s.section}>
                 <Text style={s.sectionLabel}>SPECIAL INSTRUCTIONS</Text>
-                <TouchableOpacity
-                  style={[s.noteBox, { backgroundColor: "#0F2318", borderColor: "#1E3327" }]}
-                  onPress={() => { setTempNote(note); setNotesModalOpen(true); }}
-                  activeOpacity={0.85}
+
+                <LinearGradient
+                  colors={theme.gradient}
+                  style={{ borderRadius: 14 }}
                 >
-                  <Text style={[s.notePlaceholder, note ? { color: theme.text } : { color: "#3D6050" }]}>
-                    {note || "E.g. Code 1234, leave with concierge, use scent-free detergent"}
-                  </Text>
-                  <View style={s.noteTagRow}>
-                    {["FRAGILE", "ECO-WASH"].map(tag => (
-                      <View key={tag} style={[s.noteTag, { backgroundColor: "#1A2C22", borderColor: "#2A4A34" }]}>
-                        <Text style={[s.noteTagText, { color: "#6B9E7E" }]}>{tag}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.noteBox, { borderColor: "#1E3327" }]}
+                    onPress={() => { setTempNote(note); setNotesModalOpen(true); }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={[s.notePlaceholder, note ? { color: theme.text } : { color: "#d7dbd7" }]}>
+                      {note || "E.g. Code 1234, leave with concierge, use scent-free detergent"}
+                    </Text>
+                    <View style={s.noteTagRow}>
+                      {["FRAGILE", "ECO-WASH"].map(tag => (
+                        <View key={tag} style={[s.noteTag, { backgroundColor: "#1A2C22", borderColor: "#2A4A34" }]}>
+                          <Text style={[s.noteTagText, { color: "#d7dbd7" }]}>{tag}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
+                </LinearGradient>
               </View>
             </>
           )}
@@ -737,23 +770,35 @@ export default function BookPickup() {
                   </View>
                 </View>
 
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 20 }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 14 }}>
                   {nextDays.map((d, i) => {
                     const isSelected = d.toDateString() === date.toDateString();
+
                     return (
                       <TouchableOpacity
                         key={i}
                         onPress={() => { setDate(d); setSlot(-1); }}
-                        style={[s.dateCell, isSelected && { backgroundColor: theme.primary + "15" }]}
-                        activeOpacity={0.8}
+                        activeOpacity={0.85}
+                        style={{ marginRight: 10 }}
                       >
-                        <Text style={[s.dateDayName, { color: isSelected ? theme.primary : "#4E7060" }]}>
-                          {DAY_NAMES[d.getDay()]}
-                        </Text>
-                        <Text style={[s.dateNum, { color: isSelected ? theme.primary : theme.text }]}>
-                          {d.getDate()}
-                        </Text>
-                        <View style={[s.dateDot, { backgroundColor: isSelected ? theme.primary : "transparent" }]} />
+                        <LinearGradient
+                          colors={theme.gradient}
+                          style={[
+                            s.dateCell,
+                            {
+                              opacity: isSelected ? 1 : 0.75,
+                              borderColor: isSelected ? theme.primary : "#1E3327",
+                            },
+                          ]}
+                        >
+                          <Text style={[s.dateDayName, { color: isSelected ? "#fff" : "#fff" }]}>
+                            {DAY_NAMES[d.getDay()]}
+                          </Text>
+
+                          <Text style={[s.dateNum, { color: isSelected ? "#fff" : "#fff" }]}>
+                            {d.getDate()}
+                          </Text>
+                        </LinearGradient>
                       </TouchableOpacity>
                     );
                   })}
@@ -763,36 +808,38 @@ export default function BookPickup() {
               {/* PICK TIME */}
               <View style={s.section}>
                 <Text style={[s.bigHeading, { color: theme.text }]}>Pick Time</Text>
-                <Text style={s.bigSubtitle}>Our agents are available in 2-hour windows</Text>
 
-                {TIME_GROUPS.map(group => (
-                  <View key={group.label} style={{ marginTop: 18 }}>
-                    <View style={s.timeGroupHeader}>
-                      <Text style={s.timeGroupEmoji}>{group.emoji}</Text>
-                      <Text style={s.timeGroupLabel}>{group.label}</Text>
-                    </View>
-                    <View style={s.slotRow}>
-                      {group.slots.map(idx => {
-                        const isActive = slot === idx;
-                        return (
-                          <TouchableOpacity
-                            key={idx}
-                            onPress={() => setSlot(idx)}
-                            style={[s.slotChip, {
-                              backgroundColor: isActive ? theme.primary + "18" : "#0F2318",
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 20 }}>
+                  {TIME_SLOTS.map((timeLabel, idx) => {
+                    const isActive = slot === idx;
+
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => setSlot(idx)}
+                        activeOpacity={0.85}
+                        style={{ marginRight: 10 }}
+                      >
+                        <LinearGradient
+                          colors={theme.gradient}
+                          style={[
+                            s.slotChip,
+                            {
+                              minWidth: 140,
+                              opacity: isActive ? 1 : 0.8,
                               borderColor: isActive ? theme.primary : "#1E3327",
-                            }]}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={[s.slotText, { color: isActive ? theme.primary : "#7A9B87" }]}>
-                              {TIME_SLOTS[idx]}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  </View>
-                ))}
+                              borderWidth: 1.5,
+                            },
+                          ]}
+                        >
+                          <Text style={[s.slotText, { color: isActive ? "#fff" : "#fff" }]}>
+                            {timeLabel}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
 
               {/* SERVICE ROUTE */}
@@ -953,6 +1000,7 @@ export default function BookPickup() {
               activeOpacity={0.9}
               disabled={confirmLoading}
             >
+
               {confirmLoading
                 ? <Ionicons name="sync" size={20} color="#000" style={{ marginRight: 8 }} />
                 : null}
@@ -967,6 +1015,7 @@ export default function BookPickup() {
         <Modal visible={notesModalOpen} animationType="slide" transparent onRequestClose={() => setNotesModalOpen(false)}>
           <KeyboardAvoidingView style={ms.backdrop} behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <TouchableWithoutFeedback onPress={() => setNotesModalOpen(false)}>
+
               <View style={ms.backdrop}>
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
                   <View style={[ms.notesSheet, { backgroundColor: "#0F2318" }]}>
@@ -1011,6 +1060,7 @@ export default function BookPickup() {
                   </View>
                 </TouchableWithoutFeedback>
               </View>
+
             </TouchableWithoutFeedback>
           </KeyboardAvoidingView>
         </Modal>
@@ -1169,7 +1219,7 @@ const s = StyleSheet.create({
 
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
-  section: { marginBottom: 20 },
+  section: { marginBottom: 6, marginTop: 6 },
 
   sectionLabel: {
     fontSize: 11, fontWeight: "800", color: "#4E7060",
@@ -1231,8 +1281,8 @@ const s = StyleSheet.create({
   noteTag: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   noteTagText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
 
-  bigHeading: { fontSize: 26, fontWeight: "900", marginBottom: 4 },
-  bigSubtitle: { fontSize: 13, color: "#4E7060" },
+  bigHeading: { fontSize: 18, fontWeight: "900", marginBottom: 4 },
+  bigSubtitle: { fontSize: 13, color: "#d7dbd7" },
   monthLabel: { fontSize: 10, color: "#4E7060", fontWeight: "700", letterSpacing: 1 },
   monthName: { fontSize: 17, fontWeight: "900" },
 
@@ -1281,6 +1331,7 @@ const s = StyleSheet.create({
     shadowColor: "#00FF88", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6,
   },
   confirmText: { fontSize: 17, fontWeight: "900", color: "#000" },
+
 });
 
 // ─── Modal Styles ─────────────────────────────────────────────────────────────
@@ -1363,5 +1414,27 @@ const ms = StyleSheet.create({
   },
   successCheck: {
     width: 70, height: 70, borderRadius: 35, alignItems: "center", justifyContent: "center", marginTop: 4,
+  },
+  dateCell: {
+    width: 66,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginRight: 10,
+    borderWidth: 1.5,
+    overflow: "hidden",
+  },
+  slotChip: {
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  slotText: {
+    fontSize: 13,
+    fontWeight: "800",
+    textAlign: "center",
   },
 });

@@ -24,9 +24,8 @@ const COLORS = {
 const MENU_1 = [{ label: "Edit Profile" }];
 
 const MENU_2 = [
-  { label: "Help & Support" },
   { label: "Privacy Policy" },
-  { label: "Terms of Service" },
+  { label: "Terms & Condition" },
 ];
 
 export default function Profile() {
