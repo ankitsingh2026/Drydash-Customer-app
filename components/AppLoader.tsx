@@ -496,7 +496,7 @@ const LOADER_ITEMS = [
 
 /* ─── Colors ─────────────────────────────────────────── */
 
-const BG_COLOR = "#0A1628";
+const BG_COLOR = "#064337";
 const ACCENT = "#22EBAB";
 
 /* ─── Main Loader ────────────────────────────────────── */

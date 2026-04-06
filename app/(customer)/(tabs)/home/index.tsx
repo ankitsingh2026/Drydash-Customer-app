@@ -1,4 +1,5 @@
 
+import AppLoader from "@/components/AppLoader";
 import FloatingOfferCard from "@/components/FloatingOfferCard";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
@@ -26,7 +27,6 @@ import {
   useSafeAreaInsets
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
-import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -549,7 +549,7 @@ export default function Home() {
     }, [params.orderPlaced]),
   );
 
-  if (loading) return <HomeScreenSkeleton />;
+  if (loading) return <AppLoader />;
 
   const PRIMARY = theme.primary; // teal/green
 
