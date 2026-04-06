@@ -363,27 +363,6 @@ export default function Home() {
   }, []);
 
 
-
-
-  //  const triggerBooking = () => {
-  //     Animated.timing(dragX, {
-  //       toValue: SWIPE_THRESHOLD,
-  //       duration: 200,
-  //       easing: Easing.out(Easing.quad),
-  //       useNativeDriver: true,
-  //     }).start(() => {
-  //       router.push("/book-pickup");
-  //       setTimeout(() => {
-  //         Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
-  //       }, 600);
-  //     });
-  //   };
-
-  // ─── Constants ────────────────────────────────────────────────────────────────
-
-
-  // ─── Inside Home() component ──────────────────────────────────────────────────
-
   // ─── Two animated values: native for thumb, JS for fill ───────────────────────
   const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
   const dragXJS = useRef(new Animated.Value(0)).current;     // fill track (JS thread)
@@ -411,7 +390,7 @@ export default function Home() {
 
   const swipeTextOpacity = dragXNative.interpolate({
     inputRange: [0, SWIPE_THRESHOLD * 0.3, SWIPE_THRESHOLD],
-    outputRange: [1, 0.2, 0],
+    outputRange: [1, 0.1, 0],
     extrapolate: "clamp",
   });
 
@@ -423,7 +402,7 @@ export default function Home() {
 
 
 
-  // ─── Helper: set both animated values at once ─────────────────────────────────
+
   const setDrag = (val: number) => {
     const clamped = Math.max(0, Math.min(val, MAX_DRAG));
     dragXNative.setValue(clamped);
@@ -436,7 +415,7 @@ export default function Home() {
         toValue: 0,
         useNativeDriver: true,   // ✅ smooth spring
         damping: 20,
-        stiffness: 250,
+        stiffness: 50,
         mass: 0.5,
       }),
       Animated.spring(dragXJS, {
@@ -465,13 +444,13 @@ export default function Home() {
       }),
       Animated.timing(dragXJS, {
         toValue: MAX_DRAG,
-        duration: 100,
+        duration: 500,
         easing: Easing.out(Easing.quad),
         useNativeDriver: false,
       }),
     ]).start(() => {
       router.push("/book-pickup");
-      setTimeout(resetDrag, 500);
+      setTimeout(resetDrag, 2000);
     });
   }, [resetDrag]);
 
@@ -499,7 +478,7 @@ export default function Home() {
     ]).start(() => completeSwipeRef.current());
   };
 
-  // ─── PanResponder ─────────────────────────────────────────────────────────────
+
   // ─── PanResponder ─────────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
@@ -511,11 +490,11 @@ export default function Home() {
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
 
       onPanResponderGrant: () => {
-        // Stop any running animation, start fresh from current position
+
         dragXNative.stopAnimation();
         dragXJS.stopAnimation();
-        // Don't reset to 0 — start from wherever thumb currently is
-        // dragXValue.current is already accurate from setDrag()
+
+
       },
 
       onPanResponderMove: (_, { dx }) => {
