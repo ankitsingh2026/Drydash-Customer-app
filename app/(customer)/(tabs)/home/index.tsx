@@ -2,6 +2,7 @@
 import AppLoader from "@/components/AppLoader";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
+import { catalogData } from "@/constants/catalog";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
@@ -277,6 +278,12 @@ export default function Home() {
     };
     checkAuth();
   }, []);
+
+  const allProducts = Object.values(catalogData).flat();
+
+  const filteredProducts = allProducts.filter(item =>
+  item.title.toLowerCase().includes(searchQuery.toLowerCase())
+);
   // ─── Constants ────────────────────────────────────────────────────────────────
   const THUMB_SIZE = 44;
   const PADDING = 4;
