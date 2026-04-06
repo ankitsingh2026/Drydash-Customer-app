@@ -1,11 +1,17 @@
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { ChevronRight, LogOut } from "lucide-react-native";
+import { ChevronRight, FileText, Gift, Headset, LogOut, MapPinHouse, ShieldCheck, UserPen, Wallet } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
 /* ================= THEME ================= */
 
 const COLORS = {
@@ -13,45 +19,47 @@ const COLORS = {
   card: "#0D1F1C",
   border: "#1A3330",
   primary: "#2FE6A6",
+  primaryDim: "#1A9E74",
   text: "#E6FFF7",
   subText: "#8FB3A8",
   dangerBg: "#2A1515",
+  dangerBorder: "#4B1F1F",
   danger: "#FF5A5A",
+  statBorder: "#1A3330",
 };
 
-/* ================= MENU ================= */
+/* ================= HELPERS ================= */
 
-const MENU_1 = [{ label: "Edit Profile" }];
+function getInitials(firstName: string, lastName: string): string {
+  const f = (firstName ?? "").trim()[0] ?? "";
+  const l = (lastName ?? "").trim()[0] ?? "";
+  return (f + l).toUpperCase() || "?";
+}
 
-const MENU_2 = [
-  { label: "Privacy Policy" },
-  { label: "Terms & Condition" },
-];
+/* ================= PROFILE ================= */
 
 export default function Profile() {
   const { logout, setAuthUser } = useAuthContext();
-
   const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const me = await getMeApi();
-
-        // ✅ SAFE BACKEND HANDLING
         const formatted = {
           firstName: me.firstName ?? me.name?.split(" ")[0] ?? "",
-          lastName: me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
+          lastName:
+            me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
           walletBalance: me.walletBalance ?? 0,
+          orders: me.orders ?? 0,
+          saved: me.saved ?? me.walletBalance ?? 0,
+          services: me.services ?? 0,
           user: {
             phone: me.user?.phone ?? me.phone ?? "",
             email: me.user?.email ?? me.email,
           },
         };
-
         setProfile(formatted);
-
         await setAuthUser({
           id: me.user.id,
           phone: me.user.phone,
@@ -60,138 +68,204 @@ export default function Profile() {
           lastName: formatted.lastName,
           role: me.user.role,
         });
-      } catch (e) {
+      } catch {
         await logout();
         router.replace("/(auth)/auth");
-      } finally {
-        setLoading(false);
       }
     };
-
     loadProfile();
   }, []);
 
+  const initials = profile
+    ? getInitials(profile.firstName, profile.lastName)
+    : "";
+
+  const displayContact =
+    profile?.user?.phone || profile?.user?.email || "";
+
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        backgroundColor: COLORS.bg,
-        paddingHorizontal: 16,
-        paddingTop: 24,
-        paddingBottom: 120,
-      }}
-    >
-      {/* PROFILE HEADER */}
-      <View style={styles.header}>
-        <View style={styles.avatarGlow}>
-          <View style={styles.avatarWrapper}>
-            <Image
-              source={{
-                uri: "https://i.pravatar.cc/150?img=12",
-              }}
-              style={styles.avatar}
-            />
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+      >
+        {/* ── PAGE TITLE ── */}
+        <Text style={styles.pageTitle}>Profile</Text>
+
+        {/* ── AVATAR + NAME ── */}
+        <View style={styles.header}>
+          {/* Initials avatar with glow */}
+          <View style={styles.avatarGlow}>
+            <LinearGradient
+              colors={["#2FE6A6", "#1A9E74"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarRing}
+            >
+              <View style={styles.avatarInner}>
+                <Text style={styles.initialsText}>{initials}</Text>
+              </View>
+            </LinearGradient>
           </View>
+
+          <Text style={styles.name}>
+            {profile
+              ? `${profile.firstName} ${profile.lastName || ""}`.trim()
+              : ""}
+          </Text>
+          <Text style={styles.contact}>{displayContact}</Text>
         </View>
 
-        <Text style={styles.name}>
-          {profile
-            ? `${profile.firstName} ${profile.lastName || ""}`
-            : ""}
-        </Text>
-
-        <Text style={styles.email}>
-          {profile?.user?.email ?? profile?.user?.phone}
-        </Text>
-      </View>
-
-      {/* MENU CARD 1 */}
-      <View style={styles.card}>
-        {MENU_1.map((item, index) => (
-          <MenuRow
-            key={item.label}
-            label={item.label}
-            isLast={index === MENU_1.length - 1}
-            onPress={() => {
-              if (item.label === "Edit Profile") {
-                router.push({
-                  pathname: "/edit-profile",
-                  params: {
-                    name: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`,
-                    phone: profile?.user?.phone ?? "",
-                  },
-                });
-              }
-            }}
+        {/* ── STATS ROW ── */}
+        <View style={styles.statsRow}>
+          <StatBox label="ORDERS" value={profile?.orders ?? 0} />
+          <View style={styles.statDivider} />
+          <StatBox
+            label="SAVED"
+            value={`₹${(profile?.saved ?? 0).toLocaleString("en-IN")}`}
+            accent
           />
-        ))}
-      </View>
+          <View style={styles.statDivider} />
+          <StatBox label="SERVICES" value={profile?.services ?? 0} />
+        </View>
 
-      {/* MENU CARD 2 */}
-      <View style={styles.card}>
-        {MENU_2.map((item, index) => (
-          <MenuRow
-            key={item.label}
-            label={item.label}
-            isLast={index === MENU_2.length - 1}
-            onPress={() => {
-              switch (item.label) {
-                case "Help & Support":
-                  router.push("/support");
-                  break;
-                case "Privacy Policy":
-                  router.push("/privacy-policy");
-                  break;
-                case "Terms of Service":
-                  router.push("/terms");
-                  break;
-              }
-            }}
+        {/* ── REFER & EARN ── */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push("/referral")}
+          style={styles.referWrapper}
+        >
+          <LinearGradient
+            colors={["#0D3D2E", "#0B2E22", "#072019"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.referGradient}
+          >
+            {/* left icon */}
+            <View style={styles.referIconBox}>
+              <LinearGradient
+                colors={["#2FE6A6", "#1A9E74"]}
+                style={styles.referIconGrad}
+              >
+                <Gift size={18} color="#031612" />
+              </LinearGradient>
+            </View>
+
+            {/* text */}
+            <View style={styles.referText}>
+              <Text style={styles.referTitle}>Refer &amp; Earn</Text>
+              <Text style={styles.referSub}>
+                Get ₹50 for every friend joined
+              </Text>
+            </View>
+
+            <ChevronRight size={18} color={COLORS.subText} />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* ── GRID MENU ── */}
+        <View style={styles.grid}>
+          <GridTile
+            icon={<UserPen color="rgba(159,255,211,0.7)" />}
+            label="Edit Profile"
+            onPress={() =>
+              router.push({
+                pathname: "/edit-profile",
+                params: {
+                  name: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`,
+                  phone: profile?.user?.phone ?? "",
+                },
+              })
+            }
           />
-        ))}
-      </View>
+          <GridTile
+            icon={<Headset color="rgba(159,255,211,0.7)" />}
+            label="Help & Support"
+            sub="Instant help or request call"
+            onPress={() => router.push("/(customer)/(tabs)/assistant")}
+          />
+          <GridTile
+            icon={<MapPinHouse color="rgba(159,255,211,0.7)" />}
+            label="Saved Addresses"
+            onPress={() => router.push("/saved-address")}
+          />
+          <GridTile
+            icon={< Wallet color="rgba(159,255,211,0.7)" />}
+            label="Wallet"
+            onPress={() => router.push("/wallet")}
+          />
+          <GridTile
+            icon={<ShieldCheck color="rgba(159,255,211,0.7)" />}
+            label="Privacy Policy"
+            onPress={() => router.push("/privacy-policy")}
+          />
+          <GridTile
+            icon={<FileText color="rgba(159,255,211,0.7)" />}
+            label="Terms & Condition"
+            onPress={() => router.push("/terms")}
+          />
+        </View>
 
-      {/* LOGOUT */}
-      <TouchableOpacity
-        activeOpacity={0.9}
-        style={styles.logoutBtn}
-        onPress={async () => {
-          await logout();
-          router.replace("/(auth)/auth");
-        }}
-      >
-        <LogOut size={18} color={COLORS.danger} />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
+        {/* ── LOGOUT ── */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          style={styles.logoutBtn}
+          onPress={async () => {
+            await logout();
+            router.replace("/(auth)/auth");
+          }}
+        >
+          <LogOut size={18} color={COLORS.danger} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* ================= MENU ROW ================= */
+/* ================= STAT BOX ================= */
 
-function MenuRow({
+function StatBox({
   label,
-  isLast,
-  onPress,
+  value,
+  accent,
 }: {
   label: string;
-  isLast: boolean;
+  value: string | number;
+  accent?: boolean;
+}) {
+  return (
+    <View style={styles.statBox}>
+      <Text style={[styles.statValue, accent && { color: COLORS.primary }]}>
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+/* ================= GRID TILE ================= */
+
+function GridTile({
+  icon,
+  label,
+  sub,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  sub?: string;
   onPress?: () => void;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.75}
       onPress={onPress}
-      style={[
-        styles.menuRow,
-        !isLast && {
-          borderBottomWidth: 1,
-          borderColor: COLORS.border,
-        },
-      ]}
+      style={styles.gridTile}
     >
-      <Text style={styles.menuText}>{label}</Text>
-      <ChevronRight size={18} color={COLORS.subText} />
+      <Text style={styles.gridIcon}>{icon}</Text>
+      <Text style={styles.gridLabel}>{label}</Text>
+      {sub ? <Text style={styles.gridSub}>{sub}</Text> : null}
     </TouchableOpacity>
   );
 }
@@ -199,86 +273,211 @@ function MenuRow({
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+
+  scroll: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 120,
+  },
+
+  pageTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: COLORS.text,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+
+  /* ── HEADER ── */
   header: {
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 20,
   },
 
   avatarGlow: {
     shadowColor: "#2FE6A6",
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    marginBottom: 12,
   },
 
-  avatarWrapper: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: "#0D1F1C",
+  avatarRing: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "#1A3330",
   },
 
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  avatarInner: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#0D2820",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  initialsText: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: COLORS.primary,
+    letterSpacing: 1,
   },
 
   name: {
     fontSize: 20,
     fontWeight: "900",
-    color: "#E6FFF7",
+    color: COLORS.text,
+    marginBottom: 4,
   },
 
-  email: {
+  contact: {
     fontSize: 12,
-    marginTop: 2,
-    color: "#8FB3A8",
+    color: COLORS.subText,
   },
 
-  card: {
+  /* ── STATS ── */
+  statsRow: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     marginBottom: 14,
     overflow: "hidden",
-    backgroundColor: "#0D1F1C",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    paddingVertical: 4,
   },
 
-  menuRow: {
+  statBox: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+
+  statDivider: {
+    width: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 12,
+  },
+
+  statValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: COLORS.text,
+  },
+
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: COLORS.subText,
+    marginTop: 3,
+    letterSpacing: 0.5,
+  },
+
+  /* ── REFER ── */
+  referWrapper: {
+    borderRadius: 18,
+    overflow: "hidden",
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#1A4035",
+  },
+
+  referGradient: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    height: 54,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 12,
   },
 
-  menuText: {
+  referIconBox: {
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+
+  referIconGrad: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  referText: {
+    flex: 1,
+  },
+
+  referTitle: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#E6FFF7",
+    fontWeight: "800",
+    color: COLORS.text,
   },
 
+  referSub: {
+    fontSize: 11,
+    color: COLORS.subText,
+    marginTop: 2,
+  },
+
+  /* ── GRID ── */
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  gridTile: {
+    width: "47.5%",
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
+    minHeight: 80,
+    justifyContent: "center",
+  },
+
+  gridIcon: {
+    fontSize: 22,
+    marginBottom: 6,
+    color: "#fff"
+  },
+
+  gridLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+
+  gridSub: {
+    fontSize: 10,
+    color: COLORS.subText,
+    marginTop: 3,
+  },
+
+  /* ── LOGOUT ── */
   logoutBtn: {
-    marginTop: 6,
-    height: 48,
+    height: 52,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 10,
-    backgroundColor: "#2A1515",
+    backgroundColor: COLORS.dangerBg,
     borderWidth: 1,
-    borderColor: "#4B1F1F",
+    borderColor: COLORS.dangerBorder,
   },
 
   logoutText: {
     fontWeight: "800",
-    color: "#FF5A5A",
+    fontSize: 15,
+    color: COLORS.danger,
   },
 });
