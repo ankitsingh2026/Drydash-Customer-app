@@ -36,6 +36,10 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "notification": {
+        "icon": "./assets/images/favicon.png",
+        "color": "#0B1F1A"
+      },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.drydash.newCustomer"
