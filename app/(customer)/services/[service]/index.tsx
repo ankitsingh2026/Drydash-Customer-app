@@ -1,4 +1,6 @@
+import ProductServicePopup from "@/components/ProductServicePopup";
 import { catalogData } from "@/constants/catalog";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import {
@@ -10,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react-native";
 import React, { useRef, useState } from "react";
-import { Animated, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Animated, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
@@ -48,6 +50,11 @@ export default function ServiceDetail() {
   const labelAnims = useRef(TABS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
   const pillWidth = useRef(0);  // stores actual measured pill width
 
+  const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+const [filteredItems, setFilteredItems] = useState(items);
+
   const switchTab = (i: number) => {
     Animated.parallel([
       // Slide the pill
@@ -82,13 +89,21 @@ export default function ServiceDetail() {
   }, [service, layoutReady]);
 
 
-  /* ---------- DATA ---------- */
-  const S3_BASE = "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images";
-  const BASE = "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/dryclean";
-
   const activeTab = TABS[tab];
   // console.log("key ", activeTab.key)
-const items = catalogData[activeTab.key] || [];
+  const items = catalogData[activeTab.key] || [];
+
+  // Filter items based on search query
+React.useEffect(() => {
+  if (searchQuery.trim() === "") {
+    setFilteredItems(items);
+  } else {
+    const filtered = items.filter(item =>
+      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredItems(filtered);
+  }
+}, [searchQuery, items]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -190,6 +205,32 @@ const items = catalogData[activeTab.key] || [];
           );
         })}
       </View>
+      {/* ---------- SEARCH BAR ---------- */}
+<View style={styles.searchContainer}>
+  <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <Ionicons name="search-outline" size={18} color={theme.subText} style={{ marginRight: 8 }} />
+    <TextInput
+      value={searchQuery}
+      onChangeText={setSearchQuery}
+      placeholder="Search products..."
+      placeholderTextColor="#4B5563"
+      style={[styles.searchInput, { color: theme.text }]}
+      returnKeyType="search"
+    />
+    {searchQuery.length > 0 && (
+      <TouchableOpacity onPress={() => setSearchQuery("")}>
+        <Ionicons name="close-circle" size={18} color={theme.subText} />
+      </TouchableOpacity>
+    )}
+  </View>
+</View>
+
+{/* Show results count when searching */}
+{searchQuery.length > 0 && (
+  <Text style={[styles.resultsCount, { color: theme.subText }]}>
+    Found {filteredItems.length} {filteredItems.length === 1 ? 'product' : 'products'}
+  </Text>
+)}
 
       {/* ---------- CATEGORY ---------- */}
       {/* <Text style={[styles.category, { color: theme.text }]}>
@@ -198,7 +239,7 @@ const items = catalogData[activeTab.key] || [];
 
       {/* ---------- LIST ---------- */}
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(i) => i.id}
         contentContainerStyle={{
           paddingBottom: 100 + insets.bottom,
@@ -208,81 +249,62 @@ const items = catalogData[activeTab.key] || [];
         renderItem={({ item }) => {
           const qty = cart.getQty(item.id);
           return (
-            <View
-              style={[
-                styles.row,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedProduct(item);
+                setPopupVisible(true);
+              }}
+              activeOpacity={0.7}
             >
-              {/* IMAGE PLACEHOLDER */}
+              <View
+                style={[
+                  styles.row,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                {/* IMAGE PLACEHOLDER */}
 
-              {brokenImages.has(item.id) ? (
-                /* ── Placeholder ── */
-                <View style={[styles.imagePlaceholder, { backgroundColor: theme.card }]}>
-                  <View style={styles.placeholderIconWrap}>
-                    <Text style={styles.placeholderEmoji}>
-                      {item.category === "Shoe Spa" ? "👟"
-                        : item.category === "Laundry" ? "👕"
-                          : item.category === "DryClean" ? "✨"
-                            : "🧺"}
+                {brokenImages.has(item.id) ? (
+                  /* ── Placeholder ── */
+                  <View style={[styles.imagePlaceholder, { backgroundColor: theme.card }]}>
+                    <View style={styles.placeholderIconWrap}>
+                      <Text style={styles.placeholderEmoji}>
+                        {item.category === "Shoe Spa" ? "👟"
+                          : item.category === "Laundry" ? "👕"
+                            : item.category === "DryClean" ? "✨"
+                              : "🧺"}
+                      </Text>
+                    </View>
+                    <Text style={[styles.placeholderLabel, { color: theme.subText }]} numberOfLines={1}>
+                      {item.title.split(" ")[0]}
                     </Text>
                   </View>
-                  <Text style={[styles.placeholderLabel, { color: theme.subText }]} numberOfLines={1}>
-                    {item.title.split(" ")[0]}
+                ) : (
+                  <Image
+                    source={{ uri: item.image }}
+                    style={styles.image}
+                    resizeMode="cover"
+                    onError={() =>
+                      setBrokenImages((prev) => new Set([...prev, item.id]))
+                    }
+                  />
+                )}
+
+                {/* TEXT */}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.itemTitle, { color: theme.text }]}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ color: theme.subText, marginTop: 2 }}>
+                    ₹{item.price}
                   </Text>
                 </View>
-              ) : (
-                <Image
-                  source={{ uri: item.image }}
-                  style={styles.image}
-                  resizeMode="cover"
-                  onError={() =>
-                    setBrokenImages((prev) => new Set([...prev, item.id]))
-                  }
-                />
-              )}
 
-              {/* TEXT */}
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.itemTitle, { color: theme.text }]}>
-                  {item.title}
-                </Text>
-                <Text style={{ color: theme.subText, marginTop: 2 }}>
-                  ₹{item.price}
-                </Text>
-              </View>
-
-              {/* ACTION */}
-              {qty === 0 ? (
-                <TouchableOpacity
-                  onPress={() =>
-                    cart.addItem({
-                      id: item.id,
-                      title: item.title,
-                      price: item.price,
-                      image: item.image,
-                    })
-                  }
-                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
-                >
-                  <Text style={{ fontWeight: "800", color: "#000" }}>Add</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={styles.qtyBox}>
-                  <TouchableOpacity
-                    onPress={() => cart.removeItem(item.id)}
-                    style={styles.qtyBtn}
-                  >
-                    <Minus size={14} color={theme.text} />
-                  </TouchableOpacity>
-
-                  <Text style={[styles.qtyText, { color: theme.text }]}>
-                    {qty}
-                  </Text>
-
+                {/* ACTION */}
+                {qty === 0 ? (
                   <TouchableOpacity
                     onPress={() =>
                       cart.addItem({
@@ -292,20 +314,66 @@ const items = catalogData[activeTab.key] || [];
                         image: item.image,
                       })
                     }
-                    style={styles.qtyBtn}
+                    style={[styles.addBtn,]}
                   >
-                    <Plus size={14} color={theme.text} />
+                    <Text style={{ fontWeight: "600", color: "#ffffff" }}><Plus size={20} color="#ffffff" /></Text>
                   </TouchableOpacity>
-                </View>
-              )}
-            </View>
+                ) : (
+                  <View style={styles.qtyBox}>
+                    <TouchableOpacity
+                      onPress={() => cart.removeItem(item.id)}
+                      style={styles.qtyBtn}
+                    >
+                      <Minus size={14} color={theme.text} />
+                    </TouchableOpacity>
+
+                    <Text style={[styles.qtyText, { color: theme.text }]}>
+                      {qty}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() =>
+                        cart.addItem({
+                          id: item.id,
+                          title: item.title,
+                          price: item.price,
+                          image: item.image,
+                        })
+                      }
+                      style={styles.qtyBtn}
+                    >
+                      <Plus size={14} color={theme.text} />
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           );
         }}
       />
+      {/* Empty state when no search results */}
+{searchQuery.length > 0 && filteredItems.length === 0 && (
+  <View style={styles.emptyContainer}>
+    <Ionicons name="search-outline" size={60} color={theme.subText} />
+    <Text style={[styles.emptyTitle, { color: theme.text }]}>
+      No products found
+    </Text>
+    <Text style={[styles.emptySubtitle, { color: theme.subText }]}>
+      Try searching with different keywords
+    </Text>
+  </View>
+)}
 
       <FloatingCart onOpen={() => setOpen(true)} />
       <CartSheet visible={open} onClose={() => setOpen(false)} />
+      <ProductServicePopup
+        visible={popupVisible}
+        onClose={() => setPopupVisible(false)}
+        onOpenCart={() => setOpen(true)} 
+        product={selectedProduct}
+      />
     </View>
+
   );
 }
 const styles = StyleSheet.create({
@@ -397,13 +465,13 @@ const styles = StyleSheet.create({
   // },
 
   itemTitle: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "700",
   },
 
   addBtn: {
-    height: 34,
-    paddingHorizontal: 16,
+    height: 30,
+    paddingHorizontal: 10,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -437,5 +505,45 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 12,
     backgroundColor: "#E5E7EB", // fallback while loading
-  }
+  },
+  searchContainer: {
+  marginBottom: 12,
+  marginTop: 4,
+},
+searchBar: {
+  flexDirection: "row",
+  alignItems: "center",
+  height: 44,
+  borderRadius: 12,
+  borderWidth: 1,
+  paddingHorizontal: 14,
+},
+searchInput: {
+  flex: 1,
+  fontSize: 14,
+  fontWeight: "500",
+  paddingVertical: 0,
+},
+resultsCount: {
+  fontSize: 12,
+  marginTop: 8,
+  marginBottom: 4,
+  paddingLeft: 4,
+},
+emptyContainer: {
+  alignItems: "center",
+  justifyContent: "center",
+  paddingVertical: 60,
+  gap: 12,
+},
+emptyTitle: {
+  fontSize: 18,
+  fontWeight: "700",
+  marginTop: 8,
+},
+emptySubtitle: {
+  fontSize: 14,
+  textAlign: "center",
+  paddingHorizontal: 40,
+},
 });

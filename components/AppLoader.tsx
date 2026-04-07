@@ -414,8 +414,10 @@
 
 
 
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../context/ThemeContext";
 
 /* ─── Icons ───────────────────────────────────────────── */
 
@@ -496,7 +498,6 @@ const LOADER_ITEMS = [
 
 /* ─── Colors ─────────────────────────────────────────── */
 
-const BG_COLOR = "#064337";
 const ACCENT = "#22EBAB";
 
 /* ─── Main Loader ────────────────────────────────────── */
@@ -508,7 +509,7 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.9)).current;
 
-  const ITEM_DURATION = 800;
+  const { theme } = useTheme();
 
   const animate = () => {
     // reset
@@ -520,13 +521,13 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: 0,
-          duration: 400, // 🔥 faster
+          duration: 400,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 300, // 🔥 faster
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.spring(scale, {
@@ -536,12 +537,12 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
         }),
       ]),
 
-      Animated.delay(200), // 🔥 shorter pause
+      Animated.delay(200),
 
       Animated.parallel([
         Animated.timing(translateY, {
           toValue: -70,
-          duration: 300, // 🔥 faster
+          duration: 300,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -570,7 +571,12 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
   const ActiveIcon = item.icon;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={theme.gradient}
+      start={{ x: 0, y: 1 }}
+      end={{ x: 0, y: 0 }}
+      style={styles.container}
+    >
       {/* Animated Icon */}
       <Animated.View
         style={[
@@ -593,10 +599,10 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
       {/* Brand */}
       <View style={styles.brandRow}>
         <View style={styles.dot} />
-        <Text style={styles.brandText}>CLEANSTEP</Text>
+        <Text style={styles.brandText}>DRYDASH</Text>
         <View style={styles.dot} />
       </View>
-    </View>
+    </LinearGradient>
   );
 };
 
@@ -607,7 +613,6 @@ export default AppLoader;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
     alignItems: "center",
     justifyContent: "center",
   },
