@@ -74,7 +74,7 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: "#0B1220",
+                    backgroundColor: "#003826",
                   },
                 ]}
               >

@@ -2,6 +2,7 @@
 import AppLoader from "@/components/AppLoader";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
+import ProductServicePopup from "@/components/ProductServicePopup";
 import { catalogData } from "@/constants/catalog";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
@@ -14,6 +15,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -264,6 +266,9 @@ export default function Home() {
   const router = useRouter();
   const params = useLocalSearchParams<{ orderPlaced?: string }>();
   const [offerVisible, setOfferVisible] = useState(true);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [popupVisible, setPopupVisible] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -282,8 +287,14 @@ export default function Home() {
   const allProducts = Object.values(catalogData).flat();
 
   const filteredProducts = allProducts.filter(item =>
-  item.title.toLowerCase().includes(searchQuery.toLowerCase())
-);
+    item.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const handleProductPress = (product: any) => {
+    setSelectedProduct(product);
+    setPopupVisible(true);
+    setShowSearchResults(false);
+    setSearchQuery(""); // Clear search after selection
+  };
   // ─── Constants ────────────────────────────────────────────────────────────────
   const THUMB_SIZE = 44;
   const PADDING = 4;
@@ -560,28 +571,85 @@ export default function Home() {
         >
 
           {/* ── SEARCH BAR ── */}
-          <Animated.View style={[styles.searchBarWrap, { opacity: fadeAnim }]}>
-            <View style={[styles.searchBar, { backgroundColor: "#0D1F1C", borderColor: "#1A3330" }]}>
-              <Ionicons name="search-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder='Search "Shoe Spa"'
-                placeholderTextColor="#4B5563"
-                style={[styles.searchInput, { color: theme.text }]}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 ? (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={18} color="#6B7280" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity>
-                  <Ionicons name="mic-outline" size={18} color="#6B7280" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </Animated.View>
+
+          <View style={{ position: "relative", zIndex: 1000 }}>
+            <Animated.View style={[styles.searchBarWrap, { opacity: fadeAnim }]}>
+              <View style={[styles.searchBar, { backgroundColor: "#0D1F1C", borderColor: "#1A3330" }]}>
+                <Ionicons name="search-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    setShowSearchResults(text.length > 0);
+                  }}
+                  placeholder='Search "Shoe Spa"'
+                  placeholderTextColor="#4B5563"
+                  style={[styles.searchInput, { color: theme.text }]}
+                  returnKeyType="search"
+                />
+                {searchQuery.length > 0 ? (
+                  <TouchableOpacity onPress={() => {
+                    setSearchQuery("");
+                    setShowSearchResults(false);
+                  }}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity>
+                    <Ionicons name="mic-outline" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+            {showSearchResults && (
+              <View style={[styles.searchResultsContainer, { backgroundColor: "#0D1F1C", borderColor: "#1A3330" }]}>
+                {filteredProducts.length > 0 ? (
+                  <ScrollView
+                    style={styles.searchResultsList}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                  >
+                    {filteredProducts.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.searchResultItem}
+                        onPress={() => handleProductPress(item)}
+                      >
+                        <View style={styles.searchResultImageContainer}>
+                          <Image
+                            source={{ uri: item.image }}
+                            style={styles.searchResultImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                        <View style={styles.searchResultContent}>
+                          <Text style={[styles.searchResultTitle, { color: theme.text }]}>
+                            {item.title}
+                          </Text>
+                          <Text style={[styles.searchResultCategory, { color: theme.subText }]}>
+                            {item.category}
+                          </Text>
+                          <Text style={[styles.searchResultPrice, { color: theme.primary }]}>
+                            ₹{item.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <Ionicons name="search-outline" size={40} color="#4B5563" />
+                    <Text style={[styles.noResultsText, { color: theme.subText }]}>
+                      No products found
+                    </Text>
+                    <Text style={[styles.noResultsSubtext, { color: "#4B5563" }]}>
+                      Try searching for "Shoe Spa" or "Dry Clean"
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* ── HERO CAROUSEL ── */}
           <ScrollView
@@ -896,6 +964,15 @@ export default function Home() {
         onClose={() => setOfferVisible(false)}
       /> */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+      {/* Product Service Popup */}
+      <ProductServicePopup
+        visible={popupVisible}
+        onClose={() => {
+          setPopupVisible(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+      />
     </SafeAreaProvider>
   );
 }
@@ -903,7 +980,75 @@ export default function Home() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-
+  searchResultsContainer: {
+    position: "absolute",
+    top: 70, // Adjust this value based on your search bar height
+    left: 16,
+    right: 16,
+    maxHeight: 400,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+    zIndex: 1001,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  searchResultsList: {
+    maxHeight: 400,
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1A3330",
+  },
+  searchResultImageContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    overflow: "hidden",
+    marginRight: 12,
+    backgroundColor: "#1A3330",
+  },
+  searchResultImage: {
+    width: "100%",
+    height: "100%",
+  },
+  searchResultContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  searchResultTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  searchResultCategory: {
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  searchResultPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  noResultsContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  noResultsSubtext: {
+    fontSize: 12,
+    textAlign: "center",
+  },
 
   searchBarWrap: {
     paddingHorizontal: 16,

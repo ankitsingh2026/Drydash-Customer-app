@@ -1,4 +1,4 @@
-// components/FloatingCart.tsx
+import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
@@ -7,122 +7,125 @@ import { useCart } from "../context/CartContext";
 
 export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
   const { items } = useCart();
-
-  const totalQty   = items.reduce((s, i) => s + i.qty, 0);
-  const totalPrice = items.reduce((s, i) => s + i.qty * i.price, 0);
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
 
   if (totalQty === 0) return null;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onOpen}
-      style={styles.wrapper}
-    >
-      {/* ── Frosted glass base ── */}
-      <BlurView intensity={55} tint="dark" style={styles.blur}>
-
-        {/* Thin top highlight line */}
-        <View style={styles.topLine} pointerEvents="none" />
-
-        {/* ── Left: price ── */}
-        <View style={styles.priceRow}>
-          <Text style={styles.rupee}>₹</Text>
-          <Text style={styles.amount}>{totalPrice}</Text>
-          <Text style={styles.estLabel}> Est. Total</Text>
-        </View>
-
-        {/* ── Right: gradient CTA ── */}
-        <LinearGradient
-          colors={["#56BFAB", "#005B47"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.ctaBtn}
+    <View style={styles.outerWrapper}>
+      
+      {/* 🔥 GRADIENT BORDER */}
+      <LinearGradient
+        colors={["#00E1A2", "#22EBAB", "#006B50", "#00E1A2"]}
+        start={{ x: -1, y: -1 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradientBorder}
+      >
+        {/* INNER BUTTON */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={onOpen}
+          style={styles.innerWrapper}
         >
-          <Text style={styles.ctaText}>View Cart</Text>
-        </LinearGradient>
+          <BlurView intensity={70} tint="dark" style={styles.blur}>
+            
+            {/* TOP LINE */}
+            <View style={styles.topLine} />
 
-      </BlurView>
-    </TouchableOpacity>
+            {/* ICON + BADGE */}
+            <View style={styles.iconWrap}>
+              <Ionicons name="bag-outline" size={22} color="#00E1A2" />
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{totalQty}</Text>
+              </View>
+            </View>
+
+            {/* LABEL */}
+            <Text style={styles.label}>View cart</Text>
+
+            {/* ARROW */}
+            <Ionicons name="arrow-forward" size={14} color="#00E1A2" />
+
+          </BlurView>
+        </TouchableOpacity>
+      </LinearGradient>
+    </View>
   );
 }
 
+/* ================= STYLES ================= */
+
 const styles = StyleSheet.create({
-  wrapper: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 55,
-    borderRadius: 18,
+
+  outerWrapper: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  gradientBorder: {
+    borderRadius: 50,
+    padding: 2,
+    shadowColor: "#00E1A2",
+    shadowOpacity: 0.7,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+
+  innerWrapper: {
+    borderRadius: 50,
     overflow: "hidden",
-    // Teal glow shadow
-    shadowColor: "#56BFAB",
-    shadowOpacity: 0.28,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 18,
-    // Subtle teal border
-    borderWidth: 1,
-    borderColor: "rgba(86,191,171,0.22)",
   },
 
   blur: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
+    gap: 10,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    height: 52,
-    // Dark tint over blur for contrast
-    backgroundColor: "rgba(10, 28, 24, 0.45)",
+    backgroundColor: "rgba(8, 22, 18, 0.85)",
   },
 
-  /* Top-edge highlight streak */
   topLine: {
     position: "absolute",
     top: 0,
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: "rgba(86,191,171,0.35)",
-    borderRadius: 1,
+    left: 24,
+    right: 24,
+    height: 0.5,
+    backgroundColor: "rgba(86,191,171,0.4)",
   },
 
-  /* ── Price left ── */
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
+  iconWrap: {
+    position: "relative",
+    width: 24,
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  rupee: {
-    color: "#C5EDE5",
-    fontSize: 14,
-    fontWeight: "500",
-    marginRight: 1,
+
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    backgroundColor: "#0F6E56",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: "rgba(8,22,18,0.9)",
   },
-  amount: {
+
+  badgeText: {
+    color: "#9FE1CB",
+    fontSize: 8,
+    fontWeight: "700",
+  },
+
+  label: {
     color: "#EDFAF6",
-    fontSize: 21,
-    fontWeight: "800",
-    letterSpacing: 0.1,
-  },
-  estLabel: {
-    color: "rgba(197,237,229,0.55)",
-    fontSize: 11.5,
-    fontWeight: "400",
-    marginLeft: 4,
-    letterSpacing: 0.1,
-  },
-
-  /* ── Gradient CTA pill ── */
-  ctaBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  ctaText: {
-    color: "#fff",
     fontSize: 13,
     fontWeight: "800",
-    letterSpacing: 0.2,
   },
 });
