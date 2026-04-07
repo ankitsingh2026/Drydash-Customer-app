@@ -9,7 +9,7 @@
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    
+
     "ios": {
       "supportsTablet": true,
       "config": {
@@ -17,11 +17,13 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS"
       ],
       "config": {
         "googleMaps": {
@@ -63,7 +65,8 @@
           "locationWhenInUsePermission": "Allow DryDash to access your location to select pickup address"
         }
       ],
-      "expo-video"
+      "expo-video",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true,
