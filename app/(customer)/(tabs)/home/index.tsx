@@ -1,5 +1,8 @@
 
 import AppLoader from "@/components/AppLoader";
+import CartSheet from "@/components/CartSheet";
+import FloatingCart from "@/components/FloatingCart";
+import LearnExploreSection from "@/components/home/Learnexploresection";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import ProductServicePopup from "@/components/ProductServicePopup";
@@ -269,6 +272,7 @@ export default function Home() {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [popupVisible, setPopupVisible] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -569,7 +573,6 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-
           {/* ── SEARCH BAR ── */}
 
           <View style={{ position: "relative", zIndex: 1000 }}>
@@ -921,6 +924,7 @@ export default function Home() {
             </View>
           </Animated.View>
         </View>
+        <LearnExploreSection />
 
         <View style={styles.wrapper}>
           {/* Background Gradient */}
@@ -951,6 +955,8 @@ export default function Home() {
         </View>
       </ScrollView>
 
+       <FloatingCart onOpen={() => setCartOpen(true)} />
+
       {/* <FloatingOfferCard
         visible={offerVisible}
         title="Welcome Offer"
@@ -967,12 +973,17 @@ export default function Home() {
       {/* Product Service Popup */}
       <ProductServicePopup
         visible={popupVisible}
+        onOpenCart={() => setCartOpen(true)} 
         onClose={() => {
           setPopupVisible(false);
           setSelectedProduct(null);
         }}
         product={selectedProduct}
       />
+      <CartSheet
+  visible={cartOpen}
+  onClose={() => setCartOpen(false)}
+/>
     </SafeAreaProvider>
   );
 }

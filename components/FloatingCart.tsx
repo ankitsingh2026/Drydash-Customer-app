@@ -1,27 +1,47 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext";
 
 export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
   const { items } = useCart();
+  const insets = useSafeAreaInsets();
+
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
+
+  // 🔥 Animation (smooth entry like Blinkit)
+  const translateY = useRef(new Animated.Value(100)).current;
+
+  useEffect(() => {
+    if (totalQty > 0) {
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [totalQty]);
 
   if (totalQty === 0) return null;
 
   return (
-    <View style={styles.outerWrapper}>
-      
-      {/* 🔥 GRADIENT BORDER */}
+    <Animated.View
+      style={[
+        styles.outerWrapper,
+        {
+          bottom: insets.bottom + 12,
+          transform: [{ translateY }],
+        },
+      ]}
+    >
       <LinearGradient
         colors={["#00E1A2", "#22EBAB", "#006B50", "#00E1A2"]}
-        start={{ x: -1, y: -1 }}
+        start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBorder}
       >
-        {/* INNER BUTTON */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={onOpen}
@@ -29,7 +49,6 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
         >
           <BlurView intensity={70} tint="dark" style={styles.blur}>
             
-            {/* TOP LINE */}
             <View style={styles.topLine} />
 
             {/* ICON + BADGE */}
@@ -40,16 +59,13 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
               </View>
             </View>
 
-            {/* LABEL */}
             <Text style={styles.label}>View cart</Text>
 
-            {/* ARROW */}
             <Ionicons name="arrow-forward" size={14} color="#00E1A2" />
-
           </BlurView>
         </TouchableOpacity>
       </LinearGradient>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -57,10 +73,14 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
 
 const styles = StyleSheet.create({
 
-  outerWrapper: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
+outerWrapper: {
+  position: "absolute",   // ✅ REQUIRED (makes it floating)
+  left: 0,
+  right: 0,
+  alignItems: "center",
+  zIndex: 9999,           // ✅ above everything
+  elevation: 50,          // ✅ Android fix
+},
 
   gradientBorder: {
     borderRadius: 50,

@@ -1201,20 +1201,60 @@ export default function BookPickup() {
                 </Text>
               </View>
             )}
-            <TouchableOpacity
-              style={[s.confirmBtn, { backgroundColor: theme.primary, opacity: confirmLoading ? 0.7 : 1 }]}
-              onPress={confirmPickup}
-              activeOpacity={0.9}
-              disabled={confirmLoading}
-            >
+           <View
+  style={{
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 12,
+  }}
+>
 
-              {confirmLoading
-                ? <Ionicons name="sync" size={20} color="#000" style={{ marginRight: 8 }} />
-                : null}
-              <Text style={s.confirmText}>
-                {confirmLoading ? "Booking..." : pickupType === "today" ? "Confirm Booking" : "Confirm Pickup"}
-              </Text>
-            </TouchableOpacity>
+  {/* LEFT TEXT (LIGHT + SUBTLE) */}
+  <TouchableOpacity
+    onPress={confirmPickup}
+    activeOpacity={0.7}
+    style={{
+      paddingRight: 12,
+    }}
+  >
+    <Text
+      style={{
+        color: "#6B8F7B",
+        fontSize: 20,
+        fontWeight: "600",
+      }}
+    >
+      Book without pay
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      s.confirmBtn,
+      {
+        flex: 1,
+        backgroundColor: theme.primary,
+        opacity: confirmLoading ? 0.7 : 1,
+      },
+    ]}
+    onPress={confirmPickup}
+    activeOpacity={0.9}
+    disabled={confirmLoading}
+  >
+    {confirmLoading && (
+      <Ionicons name="sync" size={20} color="#000" style={{ marginRight: 8 }} />
+    )}
+
+    <Text style={s.confirmText}>
+      {confirmLoading
+        ? "Booking..."
+        : pickupType === "today"
+        ? "Confirm Booking"
+        : "Confirm Pickup"}
+    </Text>
+  </TouchableOpacity>
+</View>
           </View>
         </ScrollView>
 
