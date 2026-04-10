@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   BackHandler,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -28,14 +29,14 @@ const C = {
 };
 
 export default function SupportIndex() {
-  const fade  = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
   const slideY = useRef(new Animated.Value(20)).current;
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade,  { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.timing(slideY,{ toValue: 0, duration: 340, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(slideY, { toValue: 0, duration: 340, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -59,12 +60,26 @@ export default function SupportIndex() {
           showsVerticalScrollIndicator={false}
         >
           {/* hero text */}
-          <Animated.View style={{ opacity: fade, transform: [{ translateY: slideY }] }}>
-            <Text style={styles.heroTitle}>{"How can we\nhelp you\ntoday?"}</Text>
-            <Text style={styles.heroSub}>
-              Whether it's a delivery update or service inquiry, our DryDash concierge is ready to assist.
-            </Text>
-          </Animated.View>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+
+            {/* LEFT: title + subtitle */}
+            <Animated.View style={{ opacity: fade, transform: [{ translateY: slideY }], flex: 1, paddingRight: 12 }}>
+              <Text style={styles.heroTitle}>{"How can we\nhelp you\ntoday?"}</Text>
+              <Text style={styles.heroSub}>
+                Whether it's a delivery update or service inquiry, our DryDash concierge is ready to assist.
+              </Text>
+            </Animated.View>
+
+            {/* RIGHT: logo */}
+            <Animated.View style={{ opacity: fade, transform: [{ translateY: slideY }] }}>
+              <Image
+                source={require("../../../../assets/images/logo/dd_logo.png")}
+                style={styles.logoDD}
+                resizeMode="contain"
+              />
+            </Animated.View>
+
+          </View>
 
           {/* search bar */}
           <Animated.View style={[styles.searchWrapper, { opacity: fade }]}>
@@ -84,7 +99,7 @@ export default function SupportIndex() {
             {/* Chat with Us */}
             <TouchableOpacity
               activeOpacity={0.88}
-            onPress={() => router.push("/(customer)/(assistant)/chat")}
+              onPress={() => router.push("/(customer)/(assistant)/chat")}
               style={styles.chatBtnOuter}
             >
               <LinearGradient
@@ -242,4 +257,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: C.subText,
   },
+  logoDD: {
+    width: 140,
+    height: 70,
+    alignSelf: "center",
+    marginTop: 0,
+  }
 });

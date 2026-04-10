@@ -7,4 +7,6 @@ export const DarkTheme = {
   primary: "#00E1A2",
   border: "#1E3A34",
   ordergradient: ["#001A17", "#00332B", "#004D3F"],
+  gray: "#fff",
+  newcard: ["#052420", "#003826"],
 };

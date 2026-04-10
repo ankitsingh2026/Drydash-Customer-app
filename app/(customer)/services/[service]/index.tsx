@@ -53,7 +53,7 @@ export default function ServiceDetail() {
   const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-const [filteredItems, setFilteredItems] = useState(items);
+  const [filteredItems, setFilteredItems] = useState(items);
 
   const switchTab = (i: number) => {
     Animated.parallel([
@@ -94,16 +94,16 @@ const [filteredItems, setFilteredItems] = useState(items);
   const items = catalogData[activeTab.key] || [];
 
   // Filter items based on search query
-React.useEffect(() => {
-  if (searchQuery.trim() === "") {
-    setFilteredItems(items);
-  } else {
-    const filtered = items.filter(item =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredItems(filtered);
-  }
-}, [searchQuery, items]);
+  React.useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredItems(items);
+    } else {
+      const filtered = items.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredItems(filtered);
+    }
+  }, [searchQuery, items]);
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
@@ -206,31 +206,31 @@ React.useEffect(() => {
         })}
       </View>
       {/* ---------- SEARCH BAR ---------- */}
-<View style={styles.searchContainer}>
-  <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
-    <Ionicons name="search-outline" size={18} color={theme.subText} style={{ marginRight: 8 }} />
-    <TextInput
-      value={searchQuery}
-      onChangeText={setSearchQuery}
-      placeholder="Search products..."
-      placeholderTextColor="#4B5563"
-      style={[styles.searchInput, { color: theme.text }]}
-      returnKeyType="search"
-    />
-    {searchQuery.length > 0 && (
-      <TouchableOpacity onPress={() => setSearchQuery("")}>
-        <Ionicons name="close-circle" size={18} color={theme.subText} />
-      </TouchableOpacity>
-    )}
-  </View>
-</View>
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <Ionicons name="search-outline" size={18} color={theme.subText} style={{ marginRight: 8 }} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search products..."
+            placeholderTextColor="#4B5563"
+            style={[styles.searchInput, { color: theme.text }]}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={18} color={theme.subText} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
-{/* Show results count when searching */}
-{searchQuery.length > 0 && (
-  <Text style={[styles.resultsCount, { color: theme.subText }]}>
-    Found {filteredItems.length} {filteredItems.length === 1 ? 'product' : 'products'}
-  </Text>
-)}
+      {/* Show results count when searching */}
+      {searchQuery.length > 0 && (
+        <Text style={[styles.resultsCount, { color: theme.subText }]}>
+          Found {filteredItems.length} {filteredItems.length === 1 ? 'product' : 'products'}
+        </Text>
+      )}
 
       {/* ---------- CATEGORY ---------- */}
       {/* <Text style={[styles.category, { color: theme.text }]}>
@@ -352,24 +352,24 @@ React.useEffect(() => {
         }}
       />
       {/* Empty state when no search results */}
-{searchQuery.length > 0 && filteredItems.length === 0 && (
-  <View style={styles.emptyContainer}>
-    <Ionicons name="search-outline" size={60} color={theme.subText} />
-    <Text style={[styles.emptyTitle, { color: theme.text }]}>
-      No products found
-    </Text>
-    <Text style={[styles.emptySubtitle, { color: theme.subText }]}>
-      Try searching with different keywords
-    </Text>
-  </View>
-)}
+      {searchQuery.length > 0 && filteredItems.length === 0 && (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={60} color={theme.subText} />
+          <Text style={[styles.emptyTitle, { color: theme.text }]}>
+            No products found
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: theme.subText }]}>
+            Try searching with different keywords
+          </Text>
+        </View>
+      )}
 
       <FloatingCart onOpen={() => setOpen(true)} />
       <CartSheet visible={open} onClose={() => setOpen(false)} />
       <ProductServicePopup
         visible={popupVisible}
         onClose={() => setPopupVisible(false)}
-        onOpenCart={() => setOpen(true)} 
+        onOpenCart={() => setOpen(true)}
         product={selectedProduct}
       />
     </View>
@@ -507,43 +507,43 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5E7EB", // fallback while loading
   },
   searchContainer: {
-  marginBottom: 12,
-  marginTop: 4,
-},
-searchBar: {
-  flexDirection: "row",
-  alignItems: "center",
-  height: 44,
-  borderRadius: 12,
-  borderWidth: 1,
-  paddingHorizontal: 14,
-},
-searchInput: {
-  flex: 1,
-  fontSize: 14,
-  fontWeight: "500",
-  paddingVertical: 0,
-},
-resultsCount: {
-  fontSize: 12,
-  marginTop: 8,
-  marginBottom: 4,
-  paddingLeft: 4,
-},
-emptyContainer: {
-  alignItems: "center",
-  justifyContent: "center",
-  paddingVertical: 60,
-  gap: 12,
-},
-emptyTitle: {
-  fontSize: 18,
-  fontWeight: "700",
-  marginTop: 8,
-},
-emptySubtitle: {
-  fontSize: 14,
-  textAlign: "center",
-  paddingHorizontal: 40,
-},
+    marginBottom: 12,
+    marginTop: 4,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+  resultsCount: {
+    fontSize: 12,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingLeft: 4,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingHorizontal: 40,
+  },
 });

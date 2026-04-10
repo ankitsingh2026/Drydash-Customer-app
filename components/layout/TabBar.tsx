@@ -4,13 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { Bell, MousePointer2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
@@ -24,7 +25,7 @@ type TabBarProps = {
 
 export const TabBar = ({
   onOpenNotifications,
- 
+
 }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -35,9 +36,14 @@ export const TabBar = ({
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
+  // useEffect(() => {
+  //   fetchLocation();
+  // }, []);
   useEffect(() => {
+  if (!selectedAddressId) {
     fetchLocation();
-  }, []);
+  }
+}, []);
 
   const fetchLocation = async () => {
     try {
@@ -69,10 +75,19 @@ export const TabBar = ({
     }
   };
 
-  const handleLocationSelect = (label: string, address: Address | null) => {
-    setLocationText(label);
-    if (address?.id) setSelectedAddressId(address.id);
-  };
+  // const handleLocationSelect = (label: string, address: Address | null) => {
+  //   setLocationText(label);
+  //   if (address?.id) setSelectedAddressId(address.id);
+  // };
+
+  useEffect(() => {
+    if (savedAddresses.length > 0 && !selectedAddressId) {
+      const first = savedAddresses[0];
+
+      setSelectedAddressId(first.id);
+      setLocationText(`${first.line1}, ${first.city}`);
+    }
+  }, [savedAddresses]);
 
 
   const [savedAddresses, setSavedAddresses] = useState([]);
@@ -131,25 +146,43 @@ export const TabBar = ({
                 <ActivityIndicator size="small" color="#2FE6A6" />
               ) : (
                 <>
-                  <Ionicons
-                    name="location-sharp"
-                    size={14}
+                  <MousePointer2
+                    size={16}
                     color="#2FE6A6"
+                    strokeWidth={2}
                     style={{ marginRight: 5 }}
+
                   />
                   <Text style={styles.locationText} numberOfLines={1}>
                     {locationText}
                   </Text>
                   <Ionicons
                     name="chevron-down"
-                    size={12}
+                    size={16}
                     color="#2FE6A6"
-                    style={{ marginLeft: 3 }}
+                    style={{ marginLeft: 3, marginTop: 2 }}
                   />
                 </>
               )}
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onOpenNotifications}
+            style={styles.iconBtn}
+          >
+            <Bell size={18} color="#E6FFF7" />
+
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
         </View>
       </View>
 
@@ -184,19 +217,56 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "600",
     color: "#E6FFF7",
     marginBottom: 2,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 6
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 16,
     color: "#8FB3A8",
     fontWeight: "500",
     maxWidth: 200,
+  },
+
+
+  // right
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#0D1F1C",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#1A3330",
+
+    shadowColor: "#2FE6A6",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+
+  badge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    minWidth: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#EF4444",
+  },
+
+  badgeText: {
+    color: "#fff",
+    fontSize: 8,
+    fontWeight: "800",
   },
 });

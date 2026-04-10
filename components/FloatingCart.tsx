@@ -1,11 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext";
-
 export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
   const { items } = useCart();
   const insets = useSafeAreaInsets();
@@ -44,11 +44,11 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
       >
         <TouchableOpacity
           activeOpacity={0.9}
-          onPress={onOpen}
+          onPress={() => router.push("/book-pickup")}
           style={styles.innerWrapper}
         >
           <BlurView intensity={70} tint="dark" style={styles.blur}>
-            
+
             <View style={styles.topLine} />
 
             {/* ICON + BADGE */}
@@ -59,7 +59,7 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
               </View>
             </View>
 
-            <Text style={styles.label}>View cart</Text>
+            <Text style={styles.label}>Checkout</Text>
 
             <Ionicons name="arrow-forward" size={14} color="#00E1A2" />
           </BlurView>
@@ -73,14 +73,14 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
 
 const styles = StyleSheet.create({
 
-outerWrapper: {
-  position: "absolute",   // ✅ REQUIRED (makes it floating)
-  left: 0,
-  right: 0,
-  alignItems: "center",
-  zIndex: 9999,           // ✅ above everything
-  elevation: 50,          // ✅ Android fix
-},
+  outerWrapper: {
+    position: "absolute",   // ✅ REQUIRED (makes it floating)
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 9999,           // ✅ above everything
+    elevation: 50,          // ✅ Android fix
+  },
 
   gradientBorder: {
     borderRadius: 50,

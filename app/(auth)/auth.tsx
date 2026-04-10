@@ -333,6 +333,18 @@ export default function AuthScreen() {
             }}
           >
             <Image
+              source={require("../../assets/images/logo/dd_logo.png")}
+              style={styles.logoDD}
+              resizeMode="contain"
+            />
+          </Animated.View>
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
+            <Image
               source={require("../../assets/images/logo/greenLogo.png")}
               style={styles.logo}
               resizeMode="contain"
@@ -439,6 +451,7 @@ export default function AuthScreen() {
                 )}
               </>
             )}
+
 
             {step === "OTP" && (
               <>
@@ -563,6 +576,8 @@ export default function AuthScreen() {
               </View>
             )}
 
+
+
             {error && (
               <Animated.View
                 style={[
@@ -606,7 +621,7 @@ export default function AuthScreen() {
                   <>
                     <Text style={styles.buttonText}>
                       {step === "MOBILE"
-                        ? "Send OTP"
+                        ? "Continue"
                         : step === "OTP"
                           ? "Verify & Continue"
                           : "Create Account"}
@@ -622,7 +637,28 @@ export default function AuthScreen() {
               </TouchableOpacity>
             )}
           </Animated.View>
+
+          {step !== "SUCCESS" && (
+            <Text style={styles.legalText}>
+              By continuing, you agree to our {"\n"}
+              <Text
+                style={styles.legalLink}
+                onPress={() => router.push("/(terms)/terms")}
+              >
+                Terms of Use
+              </Text>
+              {" & "}
+              <Text
+                style={[styles.legalLink, { marginTop: 4 }]}
+                onPress={() => router.push("/(terms)/privacy-policy")}
+              >
+                Privacy Policy
+              </Text>
+            </Text>
+          )}
         </ScrollView>
+
+
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -671,7 +707,7 @@ function Input({
 const styles = StyleSheet.create({
   outer: {
     flex: 1,
-    backgroundColor: "#0A1612",
+    backgroundColor: "#001714",
   },
 
   gradientOverlay: {
@@ -690,12 +726,20 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
+  logoDD: {
+    width: 140,
+    height: 70,
+    alignSelf: "center",
+    marginTop: 0,
+
+  },
+
   logo: {
     width: 160,
     height: 100,
     alignSelf: "center",
-    marginTop: 30,
-    marginBottom: 20,
+
+
   },
 
   card: {
@@ -910,7 +954,7 @@ const styles = StyleSheet.create({
 
   button: {
     backgroundColor: "#34D399",
-    height: 56,
+    height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -1029,5 +1073,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,
+  },
+
+  legalText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 28,
+    lineHeight: 22,
+  },
+  legalLink: {
+    color: "#34D399",
+    fontWeight: "600",
+
+
   },
 });
