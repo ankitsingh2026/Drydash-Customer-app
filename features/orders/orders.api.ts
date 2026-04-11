@@ -21,6 +21,13 @@ export const saveAddressApi = async (payload: any) => {
   return data;
 };
 
+export const updateAddressApi = async (payload: any) => {
+  console.log("this is the payload of the api===>", payload);
+  const { data } = await apiClient.patch("/v1/addressupdate", payload);
+  console.log("this is the data===>>", data);
+  return data;
+};
+
 export const getOrdersApi = async (phoneNumber: any) => {
   console.log("phoneNumber", phoneNumber);
   const { data } = await oldApiClient.get(
