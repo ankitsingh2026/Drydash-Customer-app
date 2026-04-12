@@ -4,9 +4,10 @@ import { oldApiClient } from "@/lib/api/client";
 
 export const checkServiceAvailability = async (latitude, longitude) => {
   try {
+    console.log("this is the lag and long", latitude, longitude);
     // Step 1: Resolve zone from coordinates
     const zoneResponse = await oldApiClient.get(
-      `/slots/location/resolve?lat=${latitude}&lng=${longitude}`,
+      `v1/slots/location/resolve?lat=${latitude}&lng=${longitude}`,
     );
 
     if (!zoneResponse.data.zoneFound) {
@@ -53,7 +54,7 @@ export const checkServiceAvailability = async (latitude, longitude) => {
 export const getLocationDetails = async (latitude, longitude) => {
   try {
     const response = await oldApiClient.get(
-      `/slots/location/resolve?lat=${latitude}&lng=${longitude}`,
+      `v1/slots/location/resolve?lat=${latitude}&lng=${longitude}`,
     );
     return response.data;
   } catch (error) {
