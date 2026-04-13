@@ -6,6 +6,7 @@ import { ChevronRight, FileText, Gift, Headset, LogOut, MapPinHouse, ShieldCheck
 import React, { useEffect, useState } from "react";
 import {
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -83,6 +84,30 @@ export default function Profile() {
   const displayContact =
     profile?.user?.phone || profile?.user?.email || "";
 
+
+
+  const onShareReferral = async () => {
+    try {
+      await Share.share({
+        message: `🎉 Get ₹50 on your first DryDash order!
+
+Download DryDash:
+
+Android:
+https://play.google.com/store/apps/details?id=com.drydash.newcustomer
+
+iOS:
+https://apps.apple.com/app/id000000000
+
+Use my referral code: DRYDASH50
+
+Laundry • Dry Clean • Shoe Spa 🚀`,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView
@@ -132,7 +157,7 @@ export default function Profile() {
         {/* ── REFER & EARN ── */}
         <TouchableOpacity
           activeOpacity={0.85}
-          onPress={() => router.push("/referral")}
+          onPress={onShareReferral}
           style={styles.referWrapper}
         >
           <LinearGradient

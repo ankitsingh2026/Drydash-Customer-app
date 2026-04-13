@@ -37,8 +37,13 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { user } = useAuth();
   const authId = user?.user?.id ?? user?.id;
 
+  // useEffect(() => {
+  //   fetchLocation();
+  // }, []);
   useEffect(() => {
-    fetchLocation();
+    if (!selectedAddressId) {
+      fetchLocation();
+    }
   }, []);
 
   const fetchLocation = async () => {
@@ -128,9 +133,9 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
               ) : (
                 <>
                   <Ionicons
-                    name="location-sharp"
-                    size={14}
+                    size={16}
                     color="#2FE6A6"
+                    strokeWidth={2}
                     style={{ marginRight: 5 }}
                   />
                   <Text style={styles.locationText} numberOfLines={1}>
@@ -138,9 +143,9 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
                   </Text>
                   <Ionicons
                     name="chevron-down"
-                    size={12}
+                    size={16}
                     color="#2FE6A6"
-                    style={{ marginLeft: 3 }}
+                    style={{ marginLeft: 3, marginTop: 2 }}
                   />
                 </>
               )}
@@ -198,17 +203,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "900",
+    fontSize: 18,
+    fontWeight: "600",
     color: "#E6FFF7",
     marginBottom: 2,
   },
   locationRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 6,
   },
   locationText: {
-    fontSize: 11,
+    fontSize: 16,
     color: "#8FB3A8",
     fontWeight: "500",
     maxWidth: 200,

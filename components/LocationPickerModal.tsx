@@ -6,7 +6,6 @@ import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Animated,
   Dimensions,
   Linking,
@@ -16,7 +15,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -137,38 +136,38 @@ export default function LocationPickerModal({
     }
   };
 
-const handleGPS = async () => {
-  try {
-    setGpsLoading(true);
+  const handleGPS = async () => {
+    try {
+      setGpsLoading(true);
 
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
+      const { status } =
+        await Location.requestForegroundPermissionsAsync();
 
-    if (status !== "granted") {
-      onClose(); // close modal
-      return;
+      if (status !== "granted") {
+        onClose(); // close modal
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const geo = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      if (geo?.length > 0) {
+        const g = geo[0];
+        const label = `${g.district}, ${g.city}`;
+
+        onSelect(label, null);
+        onClose();
+      }
+    } finally {
+      setGpsLoading(false);
     }
-
-    const loc = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.High,
-    });
-
-    const geo = await Location.reverseGeocodeAsync({
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-    });
-
-    if (geo?.length > 0) {
-      const g = geo[0];
-      const label = `${g.district}, ${g.city}`;
-
-      onSelect(label, null);
-      onClose();
-    }
-  } finally {
-    setGpsLoading(false);
-  }
-};
+  };
 
   const handleSavedPick = (addr: Address) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -188,15 +187,15 @@ const handleGPS = async () => {
       {/* backdrop */}
       <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={onClose} />
 
-   <Animated.View
-  style={[
-    styles.sheet,
-    {
-      opacity: fadeAnim,
-      transform: [{ translateY: slideAnim }],
-    },
-  ]}
->
+      <Animated.View
+        style={[
+          styles.sheet,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
+      >
         <View style={styles.closeWrap}>
           <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
             <Ionicons name="close" size={20} color={C.text} />
@@ -239,14 +238,12 @@ const handleGPS = async () => {
                 <Ionicons name="navigate-circle-outline" size={22} color={C.primary} />
               </View>
               <Text style={styles.actionLabel}>Use my Current Location</Text>
-              <TouchableOpacity
-                style={styles.enableBtn}
-                onPress={locationEnabled ? handleGPS : handleEnable}
-                activeOpacity={0.85}
-              >
-                {gpsLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
+              {locationEnabled === false && (
+                <TouchableOpacity
+                  style={styles.enableBtn}
+                  onPress={handleEnable}
+                  activeOpacity={0.85}
+                >
                   <LinearGradient
                     colors={[C.primary, C.primaryDim]}
                     start={{ x: 0, y: 0 }}
@@ -255,8 +252,8 @@ const handleGPS = async () => {
                   >
                     <Text style={styles.enableBtnText}>Enable</Text>
                   </LinearGradient>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+              )}
             </View>
 
             <View style={styles.actionDivider} />
@@ -598,18 +595,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   closeWrap: {
-  position: "absolute",
-  right: 14,
-  top: 10,
-  zIndex: 20,
-},
+    position: "absolute",
+    right: 14,
+    top: 10,
+    zIndex: 20,
+  },
 
-closeBtn: {
-  width: 34,
-  height: 34,
-  borderRadius: 17,
-  backgroundColor: "#0D2B24",
-  alignItems: "center",
-  justifyContent: "center",
-},
+  closeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#0D2B24",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

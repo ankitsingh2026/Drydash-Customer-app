@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-    Dimensions,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Dimensions,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from "react-native";
 // ─── Coupon Bottom Sheet ───────────────────────────────────────────────────────
  export  const COUPONS = [
@@ -133,7 +133,7 @@ const cs = StyleSheet.create({
   },
 
   sheet: {
-    backgroundColor: "#00291F",
+    backgroundColor: "#001714",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 18,
@@ -144,7 +144,7 @@ const cs = StyleSheet.create({
   handle: {
     width: 38,
     height: 5,
-    backgroundColor: "#0F3D2E",
+    backgroundColor: "#001714",
     borderRadius: 10,
     alignSelf: "center",
     marginTop: 10,
@@ -173,7 +173,7 @@ const cs = StyleSheet.create({
     marginBottom: 14,
 
     // Gradient feel (fake with layered colors)
-    backgroundColor: "#043D2C",
+    backgroundColor: "#001714",
 
     // Border glow
     borderWidth: 1,
