@@ -1,4 +1,3 @@
-// TabBar.tsx - Updated
 import LocationPickerModal from "@/components/LocationPickerModal";
 import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
@@ -49,21 +48,18 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     lng: number;
   } | null>(null);
 
-  // Update location text when selected address changes
   useEffect(() => {
     console.log("Selected address changed:", selectedAddress);
+
     if (selectedAddress) {
       setLocationText(`${selectedAddress.line1}, ${selectedAddress.city}`);
-      // Fetch coordinates and update service
+
       fetchAddressCoordinates(selectedAddress).then((coords) => {
-        if (coords) {
-          setCurrentCoords(coords);
-        }
+        if (coords) setCurrentCoords(coords);
       });
     }
   }, [selectedAddress]);
 
-  // Check service when coordinates change
   useEffect(() => {
     if (currentCoords) {
       checkServiceForLocation(currentCoords.lat, currentCoords.lng);
@@ -114,6 +110,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
       const coords = await fetchAddressCoordinates(address);
       if (coords) {
         setCurrentCoords(coords);
+
         const geo = await Location.reverseGeocodeAsync({
           latitude: coords.lat,
           longitude: coords.lng,
@@ -135,7 +132,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     isFetchingRef.current = true;
 
     try {
-      await refreshNotifications();
+      await refreshNotifications(); // fetch first
       onOpenNotifications?.();
     } catch (e) {
       console.error("Notification refresh failed", e);
@@ -213,6 +210,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
             style={styles.iconBtn}
           >
             <Bell size={18} color="#E6FFF7" />
+
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>

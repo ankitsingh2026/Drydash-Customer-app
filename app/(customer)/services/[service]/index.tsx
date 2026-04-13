@@ -1,6 +1,3 @@
-import ProductServicePopup from "@/components/ProductServicePopup";
-import { catalogData } from "@/constants/catalog";
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import {
@@ -11,8 +8,16 @@ import {
   Shirt,
   Sparkles,
 } from "lucide-react-native";
-import React, { useRef, useState } from "react";
-import { Animated, FlatList, Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
@@ -32,7 +37,6 @@ type Item = {
   price: number;
   category: string;
   image: string;
-
 };
 
 export default function ServiceDetail() {
@@ -47,8 +51,10 @@ export default function ServiceDetail() {
 
   // ── Tab transition animations ──
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const labelAnims = useRef(TABS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0))).current;
-  const pillWidth = useRef(0);  // stores actual measured pill width
+  const labelAnims = useRef(
+    TABS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0)),
+  ).current;
+  const pillWidth = useRef(0); // stores actual measured pill width
 
   const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -71,7 +77,7 @@ export default function ServiceDetail() {
           toValue: idx === i ? 1 : 0,
           duration: 180,
           useNativeDriver: true,
-        })
+        }),
       ),
     ]).start();
     setTab(i);
@@ -82,13 +88,451 @@ export default function ServiceDetail() {
   React.useEffect(() => {
     if (!layoutReady) return;
 
-    const index = TABS.findIndex(t => t.key === service);
+    const index = TABS.findIndex((t) => t.key === service);
     if (index !== -1) {
       switchTab(index);
     }
   }, [service, layoutReady]);
 
+  /* ---------- DATA ---------- */
+  const S3_BASE =
+    "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images";
+  const BASE =
+    "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images/dryclean";
 
+  const data = useMemo<Record<string, Item[]>>(
+    () => ({
+      shoe: [
+        {
+          id: "shoe-4",
+          title: "Sport Shoes / Sneakers",
+          price: 500,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_1.jpg`,
+        },
+        {
+          id: "shoe-5",
+          title: "Leather Shoes",
+          price: 600,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_2.jpg`,
+        },
+        {
+          id: "shoe-6",
+          title: "Suede Shoes",
+          price: 600,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_3.jpg`,
+        },
+        {
+          id: "shoe-7",
+          title: "Boots",
+          price: 700,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_7.jpg`,
+        },
+        {
+          id: "shoe-8",
+          title: "Stilettos",
+          price: 600,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_8.jpg`,
+        },
+        {
+          id: "shoe-9",
+          title: "Sliders",
+          price: 250,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_9.jpg`,
+        },
+        {
+          id: "shoe-10",
+          title: "Sandals",
+          price: 300,
+          category: "Shoe Spa",
+          image: `${S3_BASE}/sheo-spa/shoe_10.jpg`,
+        },
+      ],
+
+      laundry: [
+        {
+          id: "laundry-1",
+          title: "W & F (Wearables)",
+          price: 80,
+          category: "Laundry",
+          image: `${S3_BASE}/laundry/laundry_1.jpg`,
+        },
+        {
+          id: "laundry-2",
+          title: "W & F (Non-Wearables)",
+          price: 100,
+          category: "Laundry",
+          image: `${S3_BASE}/laundry/laundry_2.jpg`,
+        },
+        {
+          id: "laundry-3",
+          title: "W & I (Wearables)",
+          price: 100,
+          category: "Laundry",
+          image: `${S3_BASE}/laundry/laundry_3.jpg`,
+        },
+        {
+          id: "laundry-4",
+          title: "W & I (Non-Wearables)",
+          price: 120,
+          category: "Laundry",
+          image: `${S3_BASE}/laundry/laundry_4.jpg`,
+        },
+      ],
+
+      dryclean: [
+        {
+          id: "dryclean-1",
+          title: "Shirt/T-shirt",
+          price: 100,
+          category: "DryClean",
+          image: `${BASE}/dryclean_1.png`,
+        },
+        {
+          id: "dryclean-2",
+          title: "Jeans",
+          price: 120,
+          category: "DryClean",
+          image: `${BASE}/dryclean_2.png`,
+        },
+        {
+          id: "dryclean-3",
+          title: "Trousers",
+          price: 100,
+          category: "DryClean",
+          image: `${BASE}/dryclean_3.png`,
+        },
+        {
+          id: "dryclean-4",
+          title: "Blazer/Jacket",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_4.png`,
+        },
+        {
+          id: "dryclean-5",
+          title: "3 Piece Suit",
+          price: 450,
+          category: "DryClean",
+          image: `${BASE}/dryclean_5.png`,
+        },
+        {
+          id: "dryclean-6",
+          title: "2 Piece Suit",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_6.png`,
+        },
+        {
+          id: "dryclean-7",
+          title: "Long Blazer",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_7.png`,
+        },
+        {
+          id: "dryclean-8",
+          title: "Sweatshirt / Hoodie",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_8.png`,
+        },
+        {
+          id: "dryclean-9",
+          title: "Winter Jacket",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_9.png`,
+        },
+        {
+          id: "dryclean-10",
+          title: "Heavy Saree",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_10.png`,
+        },
+        {
+          id: "dryclean-11",
+          title: "Medium Saree",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_11.png`,
+        },
+        {
+          id: "dryclean-12",
+          title: "Saree",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_12.png`,
+        },
+        {
+          id: "dryclean-13",
+          title: "Blouse",
+          price: 80,
+          category: "DryClean",
+          image: `${BASE}/dryclean_13.png`,
+        },
+        {
+          id: "dryclean-14",
+          title: "Heavy Blouse",
+          price: 120,
+          category: "DryClean",
+          image: `${BASE}/dryclean_14.png`,
+        },
+        {
+          id: "dryclean-15",
+          title: "Lehnga",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_15.png`,
+        },
+        {
+          id: "dryclean-16",
+          title: "Medium Lehnga",
+          price: 500,
+          category: "DryClean",
+          image: `${BASE}/dryclean_16.png`,
+        },
+        {
+          id: "dryclean-17",
+          title: "Heavy Lehnga",
+          price: 700,
+          category: "DryClean",
+          image: `${BASE}/dryclean_17.png`,
+        },
+        {
+          id: "dryclean-18",
+          title: "Heavy Dress",
+          price: 500,
+          category: "DryClean",
+          image: `${BASE}/dryclean_18.png`,
+        },
+        {
+          id: "dryclean-19",
+          title: "Dress",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_19.png`,
+        },
+        {
+          id: "dryclean-20",
+          title: "Heavy Gown",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_20.png`,
+        },
+        {
+          id: "dryclean-21",
+          title: "Gown",
+          price: 200,
+          category: "DryClean",
+          image: `${BASE}/dryclean_21.png`,
+        },
+        {
+          id: "dryclean-22",
+          title: "Dupatta",
+          price: 80,
+          category: "DryClean",
+          image: `${BASE}/dryclean_22.png`,
+        },
+        {
+          id: "dryclean-23",
+          title: "Heavy Dupatta",
+          price: 100,
+          category: "DryClean",
+          image: `${BASE}/dryclean_23.png`,
+        },
+        {
+          id: "dryclean-24",
+          title: "Kurta Pyjama",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_24.png`,
+        },
+        {
+          id: "dryclean-25",
+          title: "Shawl",
+          price: 200,
+          category: "DryClean",
+          image: `${BASE}/dryclean_25.png`,
+        },
+        {
+          id: "dryclean-26",
+          title: "Sweater / Cardigan",
+          price: 200,
+          category: "DryClean",
+          image: `${BASE}/dryclean_26.png`,
+        },
+        {
+          id: "dryclean-27",
+          title: "Shrug",
+          price: 200,
+          category: "DryClean",
+          image: `${BASE}/dryclean_27.png`,
+        },
+        {
+          id: "dryclean-28",
+          title: "Leather Jackets",
+          price: 450,
+          category: "DryClean",
+          image: `${BASE}/dryclean_28.png`,
+        },
+        {
+          id: "dryclean-29",
+          title: "Belt",
+          price: 150,
+          category: "DryClean",
+          image: `${BASE}/dryclean_29.png`,
+        },
+        {
+          id: "dryclean-30",
+          title: "Leather Belt",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_30.png`,
+        },
+        {
+          id: "dryclean-31",
+          title: "Pillow Cover",
+          price: 50,
+          category: "DryClean",
+          image: `${BASE}/dryclean_31.png`,
+        },
+        {
+          id: "dryclean-32",
+          title: "Large Pillow",
+          price: 100,
+          category: "DryClean",
+          image: `${BASE}/dryclean_32.png`,
+        },
+        {
+          id: "dryclean-33",
+          title: "Small Pillow",
+          price: 60,
+          category: "DryClean",
+          image: `${BASE}/dryclean_33.png`,
+        },
+        {
+          id: "dryclean-34",
+          title: "Blanket (Single)",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_34.png`,
+        },
+        {
+          id: "dryclean-35",
+          title: "Blanket (Double)",
+          price: 400,
+          category: "DryClean",
+          image: `${BASE}/dryclean_35.png`,
+        },
+        {
+          id: "dryclean-36",
+          title: "Duvet (Single)",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_36.png`,
+        },
+        {
+          id: "dryclean-37",
+          title: "Duvet (Double)",
+          price: 400,
+          category: "DryClean",
+          image: `${BASE}/dryclean_37.png`,
+        },
+        {
+          id: "dryclean-38",
+          title: "Quilt (Single)",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_38.png`,
+        },
+        {
+          id: "dryclean-39",
+          title: "Quilt (Double)",
+          price: 450,
+          category: "DryClean",
+          image: `${BASE}/dryclean_39.png`,
+        },
+        {
+          id: "dryclean-40",
+          title: "Bed Cover (Single)",
+          price: 250,
+          category: "DryClean",
+          image: `${BASE}/dryclean_40.png`,
+        },
+        {
+          id: "dryclean-41",
+          title: "Bed Cover (Double)",
+          price: 350,
+          category: "DryClean",
+          image: `${BASE}/dryclean_41.png`,
+        },
+        {
+          id: "dryclean-42",
+          title: "Bed Sheet (Single)",
+          price: 200,
+          category: "DryClean",
+          image: `${BASE}/dryclean_42.png`,
+        },
+        {
+          id: "dryclean-43",
+          title: "Bed Sheet (Double)",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_43.png`,
+        },
+        {
+          id: "dryclean-44",
+          title: "Handbag (Small)",
+          price: 300,
+          category: "DryClean",
+          image: `${BASE}/dryclean_44.png`,
+        },
+        {
+          id: "dryclean-45",
+          title: "Handbag (Medium)",
+          price: 450,
+          category: "DryClean",
+          image: `${BASE}/dryclean_45.png`,
+        },
+        {
+          id: "dryclean-46",
+          title: "Handbag (Large)",
+          price: 450,
+          category: "DryClean",
+          image: `${BASE}/dryclean_46.png`,
+        },
+        {
+          id: "dryclean-47",
+          title: "Sports Bag",
+          price: 400,
+          category: "DryClean",
+          image: `${BASE}/dryclean_47.png`,
+        },
+        {
+          id: "dryclean-48",
+          title: "Leather Bag (Small)",
+          price: 400,
+          category: "DryClean",
+          image: `${BASE}/dryclean_48.png`,
+        },
+        {
+          id: "dryclean-49",
+          title: "Leather Bag (Large)",
+          price: 700,
+          category: "DryClean",
+          image: `${BASE}/dryclean_49.png`,
+        },
+      ],
+    }),
+    [],
+  );
   const activeTab = TABS[tab];
   // console.log("key ", activeTab.key)
   const items = catalogData[activeTab.key] || [];
@@ -98,8 +542,8 @@ export default function ServiceDetail() {
     if (searchQuery.trim() === "") {
       setFilteredItems(items);
     } else {
-      const filtered = items.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = items.filter((item) =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredItems(filtered);
     }
@@ -156,15 +600,17 @@ export default function ServiceDetail() {
           style={[
             styles.slidingPill,
             {
-              transform: [{
-                translateX: slideAnim.interpolate({
-                  inputRange: [0, 1, 2],
-                  outputRange: [0, 1, 2].map(i =>
-                    i * (pillWidth.current + 8)  // pillWidth + gap
-                  ),
-                }),
-              }],
-              width: pillWidth.current || `${100 / TABS.length}%` as any,
+              transform: [
+                {
+                  translateX: slideAnim.interpolate({
+                    inputRange: [0, 1, 2],
+                    outputRange: [0, 1, 2].map(
+                      (i) => i * (pillWidth.current + 8), // pillWidth + gap
+                    ),
+                  }),
+                },
+              ],
+              width: pillWidth.current || (`${100 / TABS.length}%` as any),
             },
           ]}
           pointerEvents="none"
@@ -207,8 +653,18 @@ export default function ServiceDetail() {
       </View>
       {/* ---------- SEARCH BAR ---------- */}
       <View style={styles.searchContainer}>
-        <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Ionicons name="search-outline" size={18} color={theme.subText} style={{ marginRight: 8 }} />
+        <View
+          style={[
+            styles.searchBar,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={theme.subText}
+            style={{ marginRight: 8 }}
+          />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -228,7 +684,8 @@ export default function ServiceDetail() {
       {/* Show results count when searching */}
       {searchQuery.length > 0 && (
         <Text style={[styles.resultsCount, { color: theme.subText }]}>
-          Found {filteredItems.length} {filteredItems.length === 1 ? 'product' : 'products'}
+          Found {filteredItems.length}{" "}
+          {filteredItems.length === 1 ? "product" : "products"}
         </Text>
       )}
 
@@ -239,7 +696,7 @@ export default function ServiceDetail() {
 
       {/* ---------- LIST ---------- */}
       <FlatList
-        data={filteredItems}
+        data={items}
         keyExtractor={(i) => i.id}
         contentContainerStyle={{
           paddingBottom: 100 + insets.bottom,
@@ -249,62 +706,92 @@ export default function ServiceDetail() {
         renderItem={({ item }) => {
           const qty = cart.getQty(item.id);
           return (
-            <TouchableOpacity
-              onPress={() => {
-                setSelectedProduct(item);
-                setPopupVisible(true);
-              }}
-              activeOpacity={0.7}
+            <View
+              style={[
+                styles.row,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
             >
-              <View
-                style={[
-                  styles.row,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                  },
-                ]}
-              >
-                {/* IMAGE PLACEHOLDER */}
+              {/* IMAGE PLACEHOLDER */}
 
-                {brokenImages.has(item.id) ? (
-                  /* ── Placeholder ── */
-                  <View style={[styles.imagePlaceholder, { backgroundColor: theme.card }]}>
-                    <View style={styles.placeholderIconWrap}>
-                      <Text style={styles.placeholderEmoji}>
-                        {item.category === "Shoe Spa" ? "👟"
-                          : item.category === "Laundry" ? "👕"
-                            : item.category === "DryClean" ? "✨"
-                              : "🧺"}
-                      </Text>
-                    </View>
-                    <Text style={[styles.placeholderLabel, { color: theme.subText }]} numberOfLines={1}>
-                      {item.title.split(" ")[0]}
+              {brokenImages.has(item.id) ? (
+                /* ── Placeholder ── */
+                <View
+                  style={[
+                    styles.imagePlaceholder,
+                    { backgroundColor: theme.card },
+                  ]}
+                >
+                  <View style={styles.placeholderIconWrap}>
+                    <Text style={styles.placeholderEmoji}>
+                      {item.category === "Shoe Spa"
+                        ? "👟"
+                        : item.category === "Laundry"
+                          ? "👕"
+                          : item.category === "DryClean"
+                            ? "✨"
+                            : "🧺"}
                     </Text>
                   </View>
-                ) : (
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.image}
-                    resizeMode="cover"
-                    onError={() =>
-                      setBrokenImages((prev) => new Set([...prev, item.id]))
-                    }
-                  />
-                )}
-
-                {/* TEXT */}
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: theme.text }]}>
-                    {item.title}
-                  </Text>
-                  <Text style={{ color: theme.subText, marginTop: 2 }}>
-                    ₹{item.price}
+                  <Text
+                    style={[styles.placeholderLabel, { color: theme.subText }]}
+                    numberOfLines={1}
+                  >
+                    {item.title.split(" ")[0]}
                   </Text>
                 </View>
+              ) : (
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.image}
+                  resizeMode="cover"
+                  onError={() =>
+                    setBrokenImages((prev) => new Set([...prev, item.id]))
+                  }
+                />
+              )}
 
-                {/* ACTION */}
-                {qty === 0 ? (
+              {/* TEXT */}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemTitle, { color: theme.text }]}>
+                  {item.title}
+                </Text>
+                <Text style={{ color: theme.subText, marginTop: 2 }}>
+                  ₹{item.price}
+                </Text>
+              </View>
+
+              {/* ACTION */}
+              {qty === 0 ? (
+                <TouchableOpacity
+                  onPress={() =>
+                    cart.addItem({
+                      id: item.id,
+                      title: item.title,
+                      price: item.price,
+                      image: item.image,
+                    })
+                  }
+                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
+                >
+                  <Text style={{ fontWeight: "800", color: "#000" }}>Add</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.qtyBox}>
+                  <TouchableOpacity
+                    onPress={() => cart.removeItem(item.id)}
+                    style={styles.qtyBtn}
+                  >
+                    <Minus size={14} color={theme.text} />
+                  </TouchableOpacity>
+
+                  <Text style={[styles.qtyText, { color: theme.text }]}>
+                    {qty}
+                  </Text>
+
                   <TouchableOpacity
                     onPress={() =>
                       cart.addItem({
@@ -314,40 +801,13 @@ export default function ServiceDetail() {
                         image: item.image,
                       })
                     }
-                    style={[styles.addBtn,]}
+                    style={styles.qtyBtn}
                   >
-                    <Text style={{ fontWeight: "600", color: "#ffffff" }}><Plus size={20} color="#ffffff" /></Text>
+                    <Plus size={14} color={theme.text} />
                   </TouchableOpacity>
-                ) : (
-                  <View style={styles.qtyBox}>
-                    <TouchableOpacity
-                      onPress={() => cart.removeItem(item.id)}
-                      style={styles.qtyBtn}
-                    >
-                      <Minus size={14} color={theme.text} />
-                    </TouchableOpacity>
-
-                    <Text style={[styles.qtyText, { color: theme.text }]}>
-                      {qty}
-                    </Text>
-
-                    <TouchableOpacity
-                      onPress={() =>
-                        cart.addItem({
-                          id: item.id,
-                          title: item.title,
-                          price: item.price,
-                          image: item.image,
-                        })
-                      }
-                      style={styles.qtyBtn}
-                    >
-                      <Plus size={14} color={theme.text} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
+                </View>
+              )}
+            </View>
           );
         }}
       />
@@ -373,7 +833,6 @@ export default function ServiceDetail() {
         product={selectedProduct}
       />
     </View>
-
   );
 }
 const styles = StyleSheet.create({
@@ -387,7 +846,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     marginVertical: 12,
     gap: 8,
-    position: "relative",   // ← needed for absolute pill
+    position: "relative", // ← needed for absolute pill
   },
 
   slidingPill: {
@@ -395,7 +854,7 @@ const styles = StyleSheet.create({
     top: 6,
     bottom: 6,
     left: 6,
-    width: `${100 / TABS.length}%` as any,  // each tab = equal width
+    width: `${100 / TABS.length}%` as any, // each tab = equal width
     borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#56BFAB",
@@ -410,7 +869,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 1,              // ← labels sit above the pill
+    zIndex: 1, // ← labels sit above the pill
   },
 
   tabLabel: {
@@ -465,13 +924,13 @@ const styles = StyleSheet.create({
   // },
 
   itemTitle: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "700",
   },
 
   addBtn: {
-    height: 30,
-    paddingHorizontal: 10,
+    height: 34,
+    paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",

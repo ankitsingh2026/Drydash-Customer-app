@@ -1,11 +1,7 @@
-import AppLoader from "@/components/AppLoader";
 import CartSheet from "@/components/CartSheet";
 import FloatingCart from "@/components/FloatingCart";
-import LearnExploreSection from "@/components/home/Learnexploresection";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
-import ProductServicePopup from "@/components/ProductServicePopup";
-import { catalogData } from "@/constants/catalog";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +13,6 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Image,
   PanResponder,
   ScrollView,
   StyleSheet,
@@ -31,6 +26,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
+import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
 import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -275,10 +271,6 @@ export default function Home() {
   const router = useRouter();
   const params = useLocalSearchParams<{ orderPlaced?: string }>();
   const [offerVisible, setOfferVisible] = useState(true);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -388,6 +380,24 @@ export default function Home() {
     ).start();
   }, []);
 
+  //  const triggerBooking = () => {
+  //     Animated.timing(dragX, {
+  //       toValue: SWIPE_THRESHOLD,
+  //       duration: 200,
+  //       easing: Easing.out(Easing.quad),
+  //       useNativeDriver: true,
+  //     }).start(() => {
+  //       router.push("/book-pickup");
+  //       setTimeout(() => {
+  //         Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+  //       }, 600);
+  //     });
+  //   };
+
+  // ─── Constants ────────────────────────────────────────────────────────────────
+
+  // ─── Inside Home() component ──────────────────────────────────────────────────
+
   // ─── Two animated values: native for thumb, JS for fill ───────────────────────
   const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
   const dragXJS = useRef(new Animated.Value(0)).current; // fill track (JS thread)
@@ -415,7 +425,7 @@ export default function Home() {
 
   const swipeTextOpacity = dragXNative.interpolate({
     inputRange: [0, SWIPE_THRESHOLD * 0.3, SWIPE_THRESHOLD],
-    outputRange: [1, 0.1, 0],
+    outputRange: [1, 0.2, 0],
     extrapolate: "clamp",
   });
 
@@ -424,7 +434,7 @@ export default function Home() {
     outputRange: [0, 16],
     extrapolate: "clamp",
   });
-
+  // ─── Helper: set both animated values at once ─────────────────────────────────
   const setDrag = (val: number) => {
     const clamped = Math.max(0, Math.min(val, MAX_DRAG));
     dragXNative.setValue(clamped);
@@ -437,7 +447,7 @@ export default function Home() {
         toValue: 0,
         useNativeDriver: true, // ✅ smooth spring
         damping: 20,
-        stiffness: 50,
+        stiffness: 250,
         mass: 0.5,
       }),
       Animated.spring(dragXJS, {
@@ -463,13 +473,13 @@ export default function Home() {
       }),
       Animated.timing(dragXJS, {
         toValue: MAX_DRAG,
-        duration: 500,
+        duration: 100,
         easing: Easing.out(Easing.quad),
         useNativeDriver: false,
       }),
     ]).start(() => {
       router.push("/book-pickup");
-      setTimeout(resetDrag, 2000);
+      setTimeout(resetDrag, 500);
     });
   }, [resetDrag]);
 
@@ -544,7 +554,7 @@ export default function Home() {
     }, [params.orderPlaced]),
   );
 
-  if (loading) return <AppLoader />;
+  if (loading) return <HomeScreenSkeleton />;
 
   const PRIMARY = theme.primary; // teal/green
 
@@ -568,8 +578,6 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* ── SEARCH BAR ── */}
-
           <View style={{ position: "relative", zIndex: 1000 }}>
             <Animated.View
               style={[styles.searchBarWrap, { opacity: fadeAnim }]}
@@ -980,7 +988,6 @@ export default function Home() {
             </View>
           </Animated.View>
         </View>
-        <LearnExploreSection />
 
         <View style={styles.wrapper}>
           {/* Background Gradient */}
@@ -1042,76 +1049,6 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-
-  searchResultsContainer: {
-    position: "absolute",
-    top: 70, // Adjust this value based on your search bar height
-    left: 16,
-    right: 16,
-    maxHeight: 400,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: "hidden",
-    zIndex: 1001,
-    elevation: 6,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  searchResultsList: {
-    maxHeight: 400,
-  },
-  searchResultItem: {
-    flexDirection: "row",
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1A3330",
-  },
-  searchResultImageContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 8,
-    overflow: "hidden",
-    marginRight: 12,
-    backgroundColor: "#1A3330",
-  },
-  searchResultImage: {
-    width: "100%",
-    height: "100%",
-  },
-  searchResultContent: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  searchResultTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  searchResultCategory: {
-    fontSize: 11,
-    marginBottom: 2,
-  },
-  searchResultPrice: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  noResultsContainer: {
-    padding: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  noResultsText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  noResultsSubtext: {
-    fontSize: 12,
-    textAlign: "center",
-  },
 
   searchBarWrap: {
     paddingHorizontal: 16,

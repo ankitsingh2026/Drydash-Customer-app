@@ -21,6 +21,7 @@ import {
   View,
 } from "react-native";
 import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
+
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
