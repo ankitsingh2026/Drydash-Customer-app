@@ -861,7 +861,7 @@ export default function OrderReceipt() {
                 color="#001714"
               />
               <Text style={s.payBtnText}>
-                Paid ₹{singleOrderDetails.price?.toFixed(0)}
+                Paid ₹{singleOrderDetails.totalAmount?.toFixed(0)}
               </Text>
             </View>
           ) : (

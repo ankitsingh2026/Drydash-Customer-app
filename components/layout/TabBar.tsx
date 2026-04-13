@@ -1,8 +1,7 @@
+// TabBar.tsx - Updated
 import LocationPickerModal from "@/components/LocationPickerModal";
+import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
-import { getAddressApi } from "@/features/orders/orders.api";
-import { useAuth } from "@/hooks/useAuth";
-import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { Bell, MousePointer2 } from "lucide-react-native";
@@ -20,20 +19,22 @@ import { useTheme } from "../../context/ThemeContext";
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
-  onWalletPress?: () => void;
-  savedAddresses?: Address[];
 };
 
 export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { unreadCount } = useNotifications();
+  const {
+    selectedAddress,
+    allAddresses,
+    setSelectedAddress,
+    refreshAddresses,
+    loading,
+  } = useAddress();
 
   const [locationText, setLocationText] = useState("Fetching location...");
-  const [loadingLoc, setLoadingLoc] = useState(true);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
-    null,
-  );
+  const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   // Service availability states
@@ -45,12 +46,19 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     lng: number;
   } | null>(null);
 
-  // Fetch location and check service when component mounts or address changes
+  // Update location text when selected address changes
   useEffect(() => {
-    if (!selectedAddressId) {
-      fetchLocationAndCheckService();
+    console.log("Selected address changed:", selectedAddress);
+    if (selectedAddress) {
+      setLocationText(`${selectedAddress.line1}, ${selectedAddress.city}`);
+      // Fetch coordinates and update service
+      fetchAddressCoordinates(selectedAddress).then((coords) => {
+        if (coords) {
+          setCurrentCoords(coords);
+        }
+      });
     }
-  }, []);
+  }, [selectedAddress]);
 
   // Check service when coordinates change
   useEffect(() => {
@@ -63,7 +71,6 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     try {
       setCheckingService(true);
       const serviceCheck = await checkServiceAvailability(lat, lng);
-
       setIsServiceAvailable(serviceCheck.serviceAvailable);
       setServiceType(serviceCheck.type);
     } catch (error) {
@@ -74,57 +81,12 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   };
 
-  const fetchLocationAndCheckService = async () => {
+  const fetchAddressCoordinates = async (address: any) => {
     try {
-      setLoadingLoc(true);
-      setCheckingService(true);
-
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setLocationText("Set delivery location");
-        setServiceType("ERROR");
-        setCheckingService(false);
-        return;
-      }
-
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const geo = await Location.reverseGeocodeAsync({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-
-      if (geo?.length > 0) {
-        const g = geo[0];
-        const city = g.city || g.subregion || "";
-        const area = g.district || g.name || "";
-        setLocationText(`${area}, ${city}`);
-      }
-
-      // Save coordinates for service check
-      setCurrentCoords({
-        lat: loc.coords.latitude,
-        lng: loc.coords.longitude,
-      });
-    } catch (error) {
-      console.error("Location error:", error);
-      setLocationText("Set delivery location");
-      setServiceType("ERROR");
-    } finally {
-      setLoadingLoc(false);
-    }
-  };
-
-  const fetchAddressCoordinates = async (address: Address) => {
-    try {
-      // If address already has coordinates, use them
       if (address.latitude && address.longitude) {
         return { lat: address.latitude, lng: address.longitude };
       }
 
-      // Otherwise geocode the address
       const fullAddress = `${address.line1}, ${address.city}, ${address.state}`;
       const geo = await Location.geocodeAsync(fullAddress);
 
@@ -138,22 +100,17 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   };
 
-  const handleAddressSelect = async (
-    label: string,
-    address: Address | null,
-  ) => {
-    setLocationText(label);
+  const handleAddressSelect = async (label: string, address: any | null) => {
     setModalVisible(false);
 
     if (address) {
-      setSelectedAddressId(address.id);
+      console.log("Address selected in modal:", address);
+      setSelectedAddress(address);
+      setLocationText(label);
 
-      // Fetch coordinates for the selected address
       const coords = await fetchAddressCoordinates(address);
-
       if (coords) {
         setCurrentCoords(coords);
-        // Reverse geocode to get proper location name
         const geo = await Location.reverseGeocodeAsync({
           latitude: coords.lat,
           longitude: coords.lng,
@@ -165,13 +122,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
           const area = g.district || g.name || "";
           setLocationText(`${area}, ${city}`);
         }
-      } else {
-        // If no coordinates, use address text
-        setLocationText(`${address.line1}, ${address.city}`);
       }
-    } else {
-      // User selected "Use current location"
-      await fetchLocationAndCheckService();
     }
   };
 
@@ -190,52 +141,18 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     return "Service unavailable";
   };
 
-  const [savedAddresses, setSavedAddresses] = useState([]);
-  const { user } = useAuth();
-  const authId = user?.user?.id ?? user?.id;
-
-  useEffect(() => {
-    if (!authId) return;
-
-    const fetchAddresses = async () => {
-      try {
-        const data = await getAddressApi(authId);
-        const list = Array.isArray(data?.results) ? data.results : [];
-        setSavedAddresses(
-          list.map((a) => ({
-            id: String(a.id),
-            label: a.label,
-            flat: a.addressLine1 ?? a.address,
-            line1: a.addressLine1 ?? a.address,
-            city: a.city,
-            state: a.state,
-            latitude: a.latitude,
-            longitude: a.longitude,
-          })),
-        );
-      } catch (e) {
-        console.log(e);
-      }
-    };
-
-    fetchAddresses();
-  }, [authId]);
-
-  useEffect(() => {
-    if (savedAddresses.length > 0 && !selectedAddressId) {
-      const first = savedAddresses[0];
-      setSelectedAddressId(first.id);
-      setLocationText(`${first.line1}, ${first.city}`);
-      // Fetch coordinates for first address
-      handleAddressSelect(`${first.line1}, ${first.city}`, first);
-    }
-  }, [savedAddresses]);
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
+        <ActivityIndicator color="#2FE6A6" />
+      </View>
+    );
+  }
 
   return (
     <>
       <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
         <View style={styles.row}>
-          {/* LEFT — service status + tappable location */}
           <View style={styles.left}>
             <View style={styles.serviceRow}>
               {checkingService ? (
@@ -249,33 +166,26 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
               )}
             </View>
 
-            {/* tappable location row */}
             <TouchableOpacity
               style={styles.locationRow}
               onPress={() => setModalVisible(true)}
               activeOpacity={0.75}
             >
-              {loadingLoc ? (
-                <ActivityIndicator size="small" color="#2FE6A6" />
-              ) : (
-                <>
-                  <MousePointer2
-                    size={16}
-                    color={getServiceColor()}
-                    strokeWidth={2}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={styles.locationText} numberOfLines={1}>
-                    {locationText}
-                  </Text>
-                  <Ionicons
-                    name="chevron-down"
-                    size={16}
-                    color="#8FB3A8"
-                    style={{ marginLeft: 3, marginTop: 2 }}
-                  />
-                </>
-              )}
+              <MousePointer2
+                size={16}
+                color={getServiceColor()}
+                strokeWidth={2}
+                style={{ marginRight: 5 }}
+              />
+              <Text style={styles.locationText} numberOfLines={1}>
+                {locationText}
+              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color="#8FB3A8"
+                style={{ marginLeft: 3, marginTop: 2 }}
+              />
             </TouchableOpacity>
           </View>
 
@@ -285,7 +195,6 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
             style={styles.iconBtn}
           >
             <Bell size={18} color="#E6FFF7" />
-
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -297,11 +206,10 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
         </View>
       </View>
 
-      {/* LOCATION PICKER MODAL */}
       <LocationPickerModal
         visible={modalVisible}
-        savedAddresses={savedAddresses}
-        selectedId={selectedAddressId}
+        savedAddresses={allAddresses}
+        selectedId={selectedAddress?.id || null}
         onSelect={handleAddressSelect}
         onClose={() => setModalVisible(false)}
       />
@@ -344,8 +252,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     maxWidth: 200,
   },
-
-  // right
   iconBtn: {
     width: 40,
     height: 40,
@@ -360,7 +266,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 6,
   },
-
   badge: {
     position: "absolute",
     top: 6,
@@ -372,7 +277,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#EF4444",
   },
-
   badgeText: {
     color: "#fff",
     fontSize: 8,

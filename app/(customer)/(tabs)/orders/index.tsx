@@ -394,6 +394,7 @@ export default function Orders() {
 
         {/* ── CARDS ── */}
         {uniqueOrders.map((o: any, index: number) => {
+          console.log("this is the o", o);
           const anim = cardAnims.current[index] || new Animated.Value(1);
           const animStyle = {
             opacity: anim,
@@ -575,7 +576,7 @@ export default function Orders() {
                       <View style={styles.priceWrap}>
                         <PaymentStamp status={o?.payment?.status} />
                         <Text style={[styles.priceText, { color: sc.bg }]}>
-                          ₹{o.price}
+                          ₹{o.isPaid ? o.totalAmount : o.price}
                         </Text>
                       </View>
                     </View>

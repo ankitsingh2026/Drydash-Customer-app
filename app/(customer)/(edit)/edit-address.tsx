@@ -1,7 +1,7 @@
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, Briefcase, Home, MapPin } from "lucide-react-native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,14 +16,16 @@ import {
 import { useTheme } from "../../../context/ThemeContext";
 
 import PickupMap from "@/components/maps/PickupMap.native";
-import { updateAddressApi } from "@/features/orders/orders.api";
+import { saveAddressApi, updateAddressApi } from "@/features/orders/orders.api";
 
 export default function EditAddress() {
   const { theme } = useTheme();
   const params = useLocalSearchParams();
+  const isEditing = !!params._id;
 
   const [loading, setLoading] = useState(false);
   const [mapQuery, setMapQuery] = useState("");
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
 
   const [location, setLocation] = useState({
     latitude: Number(params.latitude) || 19.076,
@@ -48,80 +50,232 @@ export default function EditAddress() {
     longitude: (params.longitude as string) || "",
   });
 
-  /* ---------------- LOCATION ---------------- */
+  /* ---------------- AUTO-FILL ADDRESS FROM COORDINATES ---------------- */
 
-  const fetchCurrentLocation = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
+  const autoFillAddressFromCoords = async (coords: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    if (isAutoFilling) return;
 
-    const loc = await Location.getCurrentPositionAsync({});
-    const coords = {
-      latitude: loc.coords.latitude,
-      longitude: loc.coords.longitude,
-    };
+    setIsAutoFilling(true);
 
-    setLocation(coords);
-
-    const geo = await Location.reverseGeocodeAsync(coords);
-
-    if (geo.length) {
-      const g = geo[0];
-
-      setAddressForm((p) => ({
-        ...p,
-        city: g.city || "",
-        state: g.region || "",
-        pincode: g.postalCode || "",
-        latitude: String(coords.latitude),
-        longitude: String(coords.longitude),
-      }));
-    }
-  };
-
-  const searchOnMap = async () => {
-    if (!mapQuery.trim()) return;
-
-    const results = await Location.geocodeAsync(mapQuery);
-
-    if (results.length) {
-      const coords = results[0];
-
-      setLocation(coords);
-
+    try {
       const geo = await Location.reverseGeocodeAsync(coords);
 
       if (geo.length) {
         const g = geo[0];
 
-        setAddressForm((p) => ({
-          ...p,
-          city: g.city || "",
-          state: g.region || "",
-          pincode: g.postalCode || "",
+        // Sequential field filling with priority order
+        let newAddressLine1 = "";
+        let newAddressLine2 = "";
+        let newLandmark = "";
+        let newCity = "";
+        let newState = "";
+        let newPincode = "";
+
+        // Priority 1: Street address (most important)
+        if (g.street && g.street.trim()) {
+          newAddressLine1 = g.street.trim();
+        }
+
+        // Priority 2: House/Suburb/Area
+        if (g.subregion && g.subregion.trim()) {
+          if (newAddressLine1) {
+            newAddressLine1 += `, ${g.subregion.trim()}`;
+          } else {
+            newAddressLine1 = g.subregion.trim();
+          }
+        }
+
+        // Priority 3: District
+        if (g.district && g.district.trim()) {
+          if (newAddressLine1) {
+            newAddressLine1 += `, ${g.district.trim()}`;
+          } else {
+            newAddressLine1 = g.district.trim();
+          }
+        }
+
+        // Priority 4: City (for address line 2 or fallback)
+        if (g.city && g.city.trim()) {
+          newCity = g.city.trim();
+        } else if (g.district && g.district.trim()) {
+          newCity = g.district.trim();
+        }
+
+        // Priority 5: State/Region
+        if (g.region && g.region.trim()) {
+          newState = g.region.trim();
+        }
+
+        // Priority 6: Postal Code
+        if (g.postalCode && g.postalCode.trim()) {
+          newPincode = g.postalCode.trim();
+        }
+
+        // Priority 7: Landmark (name of the place)
+        if (g.name && g.name.trim() && g.name !== g.street) {
+          newLandmark = g.name.trim();
+        }
+
+        // Priority 8: Additional details for address line 2
+        const additionalDetails = [];
+        if (
+          g.area &&
+          g.area.trim() &&
+          g.area !== g.subregion &&
+          g.area !== g.district
+        ) {
+          additionalDetails.push(g.area.trim());
+        }
+        if (g.isoCountryCode && g.isoCountryCode.trim()) {
+          additionalDetails.push(g.isoCountryCode.trim());
+        }
+
+        if (additionalDetails.length > 0) {
+          newAddressLine2 = additionalDetails.join(", ");
+        }
+
+        // Update form fields sequentially
+        setAddressForm((prev) => ({
+          ...prev,
+          addressLine1: newAddressLine1 || prev.addressLine1,
+          addressLine2: newAddressLine2 || prev.addressLine2,
+          landmark: newLandmark || prev.landmark,
+          city: newCity || prev.city,
+          state: newState || prev.state,
+          pincode: newPincode || prev.pincode,
+          latitude: String(coords.latitude),
+          longitude: String(coords.longitude),
+        }));
+
+        // Show success feedback
+        if (newAddressLine1 || newCity) {
+          console.log("Address auto-filled successfully");
+        }
+      } else {
+        // If reverse geocoding fails, at least update coordinates
+        setAddressForm((prev) => ({
+          ...prev,
           latitude: String(coords.latitude),
           longitude: String(coords.longitude),
         }));
       }
+    } catch (error) {
+      console.log("Reverse geocoding error:", error);
+      // Still update coordinates even if address fetch fails
+      setAddressForm((prev) => ({
+        ...prev,
+        latitude: String(coords.latitude),
+        longitude: String(coords.longitude),
+      }));
+    } finally {
+      setIsAutoFilling(false);
     }
   };
 
-  /* ---------------- SAVE ---------------- */
+  /* ---------------- LOCATION ---------------- */
+
+  const fetchCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Location permission is required");
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+      const coords = {
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      };
+
+      setLocation(coords);
+      await autoFillAddressFromCoords(coords);
+    } catch (error) {
+      console.log("Error fetching location:", error);
+      Alert.alert("Error", "Failed to get current location");
+    }
+  };
+
+  const searchOnMap = async () => {
+    if (!mapQuery.trim()) {
+      Alert.alert("Error", "Please enter a location to search");
+      return;
+    }
+
+    try {
+      const results = await Location.geocodeAsync(mapQuery);
+
+      if (results.length) {
+        const coords = results[0];
+        setLocation(coords);
+        await autoFillAddressFromCoords(coords);
+        setMapQuery(""); // Clear search after successful search
+      } else {
+        Alert.alert("Not Found", "No location found for the given address");
+      }
+    } catch (error) {
+      console.log("Geocoding error:", error);
+      Alert.alert("Error", "Failed to search location");
+    }
+  };
+
+  /* ---------------- HANDLE MAP SELECTION ---------------- */
+
+  const handleMapSelect = async (coords: {
+    latitude: number;
+    longitude: number;
+  }) => {
+    setLocation(coords);
+    await autoFillAddressFromCoords(coords);
+  };
+
+  /* ---------------- INITIAL AUTO-FILL IF COORDINATES EXIST ---------------- */
+
+  useEffect(() => {
+    // If we have coordinates from params, auto-fill the address fields
+    if (params.latitude && params.longitude && !addressForm.addressLine1) {
+      const coords = {
+        latitude: Number(params.latitude),
+        longitude: Number(params.longitude),
+      };
+      autoFillAddressFromCoords(coords);
+    }
+  }, []);
+
+  /* ---------------- SAVE ADDRESS ---------------- */
 
   const handleSave = async () => {
+    // Validation
     if (
       !addressForm.addressLine1 ||
       !addressForm.city ||
       !addressForm.pincode
     ) {
-      Alert.alert("Error", "Please fill all required fields");
+      Alert.alert(
+        "Validation Error",
+        "Please fill all required fields:\n• Address Line 1\n• City\n• Pincode",
+      );
+      return;
+    }
+
+    if (!addressForm.latitude || !addressForm.longitude) {
+      Alert.alert(
+        "Location Error",
+        "Please select a location on the map first",
+      );
       return;
     }
 
     try {
       setLoading(true);
 
+      // Prepare payload according to API expectations
       const payload = {
-        _id: addressForm._id,
+        // For new address, don't include _id
+        ...(isEditing && { _id: addressForm._id }),
 
         label:
           addressForm.label === "home"
@@ -144,18 +298,31 @@ export default function EditAddress() {
         longitude: Number(addressForm.longitude),
       };
 
-      console.log("UPDATE PAYLOAD:", payload);
+      console.log("Saving payload:", payload);
 
-      const res = await updateAddressApi(payload);
-
-      console.log("UPDATE RESPONSE:", res);
-
-      Alert.alert("Success", "Address updated successfully");
+      let response;
+      if (isEditing) {
+        // Update existing address
+        response = await updateAddressApi(payload);
+        console.log("Update response:", response);
+        Alert.alert("Success", "Address updated successfully");
+      } else {
+        // Create new address - using saveAddressApi
+        response = await saveAddressApi(payload);
+        console.log("Save response:", response);
+        Alert.alert("Success", "Address saved successfully");
+      }
 
       router.back();
-    } catch (error) {
-      console.log("UPDATE ERROR:", error);
-      Alert.alert("Error", "Failed to update address");
+    } catch (error: any) {
+      console.log("Save/Update error:", error);
+
+      // Show detailed error message if available
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to save address";
+      Alert.alert("Error", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -169,7 +336,9 @@ export default function EditAddress() {
           <ArrowLeft color={theme.text} size={22} />
         </TouchableOpacity>
 
-        <Text style={[styles.title, { color: theme.text }]}>Edit Address</Text>
+        <Text style={[styles.title, { color: theme.text }]}>
+          {isEditing ? "Edit Address" : "Add New Address"}
+        </Text>
 
         <View style={{ width: 22 }} />
       </View>
@@ -183,42 +352,34 @@ export default function EditAddress() {
             value={mapQuery}
             onChangeText={setMapQuery}
             style={{ flex: 1, color: "#000" }}
+            onSubmitEditing={searchOnMap}
           />
           <TouchableOpacity onPress={searchOnMap}>
             <Text style={{ color: "#000", fontWeight: "600" }}>Go</Text>
           </TouchableOpacity>
         </View>
 
-        <PickupMap
-          location={location}
-          onSelect={(c) => {
-            setLocation(c);
-            setAddressForm((p) => ({
-              ...p,
-              latitude: String(c.latitude),
-              longitude: String(c.longitude),
-            }));
-          }}
-        />
+        <PickupMap location={location} onSelect={handleMapSelect} />
 
         <TouchableOpacity
           style={[styles.locBtn, { backgroundColor: theme.primary }]}
           onPress={fetchCurrentLocation}
         >
           <Text style={{ color: "#000", fontWeight: "700" }}>
-            Use Current Location
+            📍 Use Current Location
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* LABEL */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.container}
+      >
+        {/* LABEL SELECTION */}
         <Text style={[styles.label, { color: theme.text }]}>Save as</Text>
-
         <View style={styles.typeRow}>
           {["home", "work", "other"].map((t) => {
             const active = addressForm.label === t;
-
             return (
               <TouchableOpacity
                 key={t}
@@ -237,7 +398,6 @@ export default function EditAddress() {
                 {t === "other" && (
                   <MapPin size={16} color={active ? "#000" : "#fff"} />
                 )}
-
                 <Text
                   style={{
                     marginLeft: 6,
@@ -245,20 +405,18 @@ export default function EditAddress() {
                     fontWeight: "700",
                   }}
                 >
-                  {t}
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* TYPE */}
-        <Text style={[styles.label, { color: theme.text }]}>Type</Text>
-
+        {/* ADDRESS TYPE */}
+        <Text style={[styles.label, { color: theme.text }]}>Address Type</Text>
         <View style={styles.typeRow}>
           {["PICKUP", "DELIVERY"].map((t) => {
             const active = addressForm.addressType === t;
-
             return (
               <TouchableOpacity
                 key={t}
@@ -283,9 +441,13 @@ export default function EditAddress() {
           })}
         </View>
 
-        {/* INPUTS */}
+        {/* ADDRESS FIELDS - Filled in sequence */}
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          Address Details
+        </Text>
+
         <Input
-          placeholder="Address Line 1"
+          placeholder="Address Line 1 * (Street, Area)"
           placeholderTextColor="#888"
           value={addressForm.addressLine1}
           onChangeText={(t: any) =>
@@ -303,7 +465,7 @@ export default function EditAddress() {
         />
 
         <Input
-          placeholder="Landmark"
+          placeholder="Landmark (Nearby famous place)"
           placeholderTextColor="#888"
           value={addressForm.landmark}
           onChangeText={(t: any) =>
@@ -312,49 +474,73 @@ export default function EditAddress() {
         />
 
         <Input
-          placeholder="City"
+          placeholder="City / District *"
           placeholderTextColor="#888"
           value={addressForm.city}
           onChangeText={(t: any) => setAddressForm((p) => ({ ...p, city: t }))}
         />
 
         <Input
-          placeholder="State"
+          placeholder="State *"
           placeholderTextColor="#888"
           value={addressForm.state}
           onChangeText={(t: any) => setAddressForm((p) => ({ ...p, state: t }))}
         />
 
         <Input
-          placeholder="Pincode"
+          placeholder="Pincode / Postal Code *"
           placeholderTextColor="#888"
           value={addressForm.pincode}
           onChangeText={(t: any) =>
             setAddressForm((p) => ({ ...p, pincode: t }))
           }
+          keyboardType="numeric"
+          maxLength={6}
         />
+
+        {/* AUTO-FILL STATUS INDICATOR */}
+        {isAutoFilling && (
+          <View style={styles.autoFillIndicator}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.autoFillText, { color: theme.subText }]}>
+              Auto-filling address details...
+            </Text>
+          </View>
+        )}
+
+        {/* COORDINATES DISPLAY */}
+        {addressForm.latitude && addressForm.longitude && (
+          <View style={styles.coordsContainer}>
+            <Text style={[styles.coordsText, { color: theme.subText }]}>
+              📍 Coordinates: {Number(addressForm.latitude).toFixed(6)},{" "}
+              {Number(addressForm.longitude).toFixed(6)}
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      {/* SAVE */}
+      {/* SAVE BUTTON */}
       <TouchableOpacity
         style={[styles.saveBtn, { backgroundColor: theme.primary }]}
         onPress={handleSave}
-        disabled={loading}
+        disabled={loading || isAutoFilling}
       >
         {loading ? (
           <ActivityIndicator color="#000" />
         ) : (
-          <Text style={styles.saveText}>Save Address</Text>
+          <Text style={styles.saveText}>
+            {isEditing ? "Update Address" : "Save Address"}
+          </Text>
         )}
       </TouchableOpacity>
     </View>
   );
 }
 
-/* INPUT */
+/* INPUT COMPONENT */
 function Input(props: any) {
   return (
-    <View style={{ marginBottom: 12 }}>
+    <View style={{ marginBottom: 14 }}>
       <TextInput style={styles.input} {...props} />
     </View>
   );
@@ -365,15 +551,20 @@ const styles = StyleSheet.create({
   root: { flex: 1 },
 
   header: {
-    marginTop: 40,
+    marginTop: Platform.OS === "ios" ? 50 : 40,
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 16,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
 
-  title: { fontSize: 16, fontWeight: "700" },
+  title: { fontSize: 18, fontWeight: "800" },
 
-  mapContainer: { height: 260 },
+  mapContainer: {
+    height: 260,
+    position: "relative",
+  },
 
   searchBox: {
     position: "absolute",
@@ -384,49 +575,69 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 10,
     flexDirection: "row",
-    paddingHorizontal: 10,
-    height: 40,
+    paddingHorizontal: 12,
+    height: 44,
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   locBtn: {
     position: "absolute",
     bottom: 12,
     alignSelf: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   container: {
     padding: 16,
-    paddingBottom: 120,
+    paddingBottom: 100,
+  },
+
+  sectionTitle: {
+    fontWeight: "800",
+    marginBottom: 12,
+    marginTop: 8,
+    fontSize: 14,
   },
 
   label: {
     fontWeight: "800",
     marginBottom: 8,
+    fontSize: 14,
   },
 
   typeRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 16,
+    marginBottom: 20,
   },
 
   typeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 10,
   },
 
   input: {
-    height: 45,
+    height: 48,
     backgroundColor: "#1A2332",
     borderRadius: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
     color: "#fff",
+    fontSize: 14,
   },
 
   saveBtn: {
@@ -434,15 +645,42 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === "ios" ? 30 : 20,
     left: 16,
     right: 16,
-    height: 50,
+    height: 52,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
 
   saveText: {
     color: "#000",
     fontWeight: "900",
     fontSize: 16,
+  },
+
+  autoFillIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    gap: 8,
+  },
+
+  autoFillText: {
+    fontSize: 12,
+  },
+
+  coordsContainer: {
+    marginTop: 12,
+    alignItems: "center",
+  },
+
+  coordsText: {
+    fontSize: 11,
+    opacity: 0.6,
   },
 });

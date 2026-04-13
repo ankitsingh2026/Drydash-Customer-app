@@ -9,19 +9,21 @@
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    
     "ios": {
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
-      }
+      },
+      "bundleIdentifier": "com.drydash.newCustomer"
     },
     "android": {
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -63,7 +65,8 @@
           "locationWhenInUsePermission": "Allow DryDash to access your location to select pickup address"
         }
       ],
-      "expo-video"
+      "expo-video",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -23,10 +23,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import OtpVerify from "react-native-otp-verify";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
+let OtpVerify: any = null;
+
+if (Platform.OS === "android") {
+  OtpVerify = require("react-native-otp-verify").default;
+}
 export default function AuthScreen() {
   const [step, setStep] = useState<Step>("MOBILE");
 
@@ -381,7 +386,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                  styles.progressDotActive,
+                    styles.progressDotActive,
                 ]}
               />
             </View>
@@ -451,7 +456,6 @@ export default function AuthScreen() {
                 )}
               </>
             )}
-
 
             {step === "OTP" && (
               <>
@@ -576,8 +580,6 @@ export default function AuthScreen() {
               </View>
             )}
 
-
-
             {error && (
               <Animated.View
                 style={[
@@ -657,8 +659,6 @@ export default function AuthScreen() {
             </Text>
           )}
         </ScrollView>
-
-
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -731,15 +731,12 @@ const styles = StyleSheet.create({
     height: 70,
     alignSelf: "center",
     marginTop: 0,
-
   },
 
   logo: {
     width: 160,
     height: 100,
     alignSelf: "center",
-
-
   },
 
   card: {
@@ -1085,7 +1082,5 @@ const styles = StyleSheet.create({
   legalLink: {
     color: "#34D399",
     fontWeight: "600",
-
-
   },
 });
