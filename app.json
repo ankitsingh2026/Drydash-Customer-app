@@ -14,7 +14,8 @@
       "supportsTablet": true,
       "config": {
         "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
-      }
+      },
+      "bundleIdentifier": "com.drydash.newCustomer"
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -23,7 +24,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -70,7 +73,8 @@
         }
       ],
       "expo-video",
-      "@react-native-firebase/messaging"
+      "@react-native-firebase/messaging",
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,

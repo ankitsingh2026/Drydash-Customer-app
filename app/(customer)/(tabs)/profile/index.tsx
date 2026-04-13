@@ -2,7 +2,17 @@ import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { ChevronRight, FileText, Gift, Headset, LogOut, MapPinHouse, ShieldCheck, UserPen, Wallet } from "lucide-react-native";
+import {
+  ChevronRight,
+  FileText,
+  Gift,
+  Headset,
+  LogOut,
+  MapPinHouse,
+  ShieldCheck,
+  UserPen,
+  Wallet,
+} from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
   ScrollView,
@@ -49,8 +59,7 @@ export default function Profile() {
         const me = await getMeApi();
         const formatted = {
           firstName: me.firstName ?? me.name?.split(" ")[0] ?? "",
-          lastName:
-            me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
+          lastName: me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
           walletBalance: me.walletBalance ?? 0,
           orders: me.orders ?? 0,
           saved: me.saved ?? me.walletBalance ?? 0,
@@ -81,10 +90,7 @@ export default function Profile() {
     ? getInitials(profile.firstName, profile.lastName)
     : "";
 
-  const displayContact =
-    profile?.user?.phone || profile?.user?.email || "";
-
-
+  const displayContact = profile?.user?.phone || profile?.user?.email || "";
 
   const onShareReferral = async () => {
     try {
@@ -215,7 +221,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             onPress={() => router.push("/saved-address")}
           />
           <GridTile
-            icon={< Wallet color="rgba(159,255,211,0.7)" />}
+            icon={<Wallet color="rgba(159,255,211,0.7)" />}
             label="Wallet"
             onPress={() => router.push("/wallet")}
           />
@@ -472,7 +478,7 @@ const styles = StyleSheet.create({
   gridIcon: {
     fontSize: 22,
     marginBottom: 6,
-    color: "#fff"
+    color: "#fff",
   },
 
   gridLabel: {
@@ -498,6 +504,21 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dangerBg,
     borderWidth: 1,
     borderColor: COLORS.dangerBorder,
+  },
+
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#4F46E5", // you can change color
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  initials: {
+    color: "#fff",
+    fontSize: 28,
+    fontWeight: "bold",
   },
 
   logoutText: {

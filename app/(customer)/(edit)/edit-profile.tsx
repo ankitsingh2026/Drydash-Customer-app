@@ -31,21 +31,53 @@ function getInitials(name: string): string {
 
 export default function EditProfile() {
   const { theme } = useTheme();
-  const params = useLocalSearchParams();
 
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
+  const sheetAnim = useRef(new Animated.Value(300)).current;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [showSheet, setShowSheet] = useState(false);
+
+  const params = useLocalSearchParams();
+  const [phone] = useState((params.phone as string) || "");
+
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const { user } = useAuth();
+  const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const loadProfileData = async () => {
+    const me = await getMeApi();
+    console.log("i am being called");
+    setFirstName(me?.firstName);
+    setLastName(me?.lastName);
+  };
+
+  useEffect(() => {
+    loadProfileData();
+  }, []);
 
   const [name, setName] = useState((params.name as string) || "");
-  const [phone, setPhone] = useState((params.phone as string) || "");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
   /* entry animation */
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 80, useNativeDriver: true }),
-      Animated.timing(slide, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slide, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
@@ -57,7 +89,8 @@ export default function EditProfile() {
         setEmail(e);
         if (!name) {
           const fn = me.firstName ?? me.name?.split(" ")[0] ?? "";
-          const ln = me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "";
+          const ln =
+            me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "";
           setName(`${fn} ${ln}`.trim());
         }
         if (!phone) setPhone(me.user?.phone ?? me.phone ?? "");
@@ -96,7 +129,12 @@ export default function EditProfile() {
           opacity: fade,
           transform: [
             { translateY: slide },
-            { scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.98, 1] }) },
+            {
+              scale: fade.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.98, 1],
+              }),
+            },
           ],
         },
       ]}
@@ -104,10 +142,15 @@ export default function EditProfile() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* ── HEADER ── */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
             <ArrowLeft color={theme.text} size={22} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.primary ?? "#2FE6A6" }]}>
+          <Text
+            style={[styles.headerTitle, { color: theme.primary ?? "#2FE6A6" }]}
+          >
             Edit Profile
           </Text>
           <View style={{ width: 40 }} />
@@ -125,7 +168,12 @@ export default function EditProfile() {
             {/* ── AVATAR ── */}
             <View style={styles.avatarSection}>
               {/* glow */}
-              <View style={[styles.glowRing, { shadowColor: theme.primary ?? "#2FE6A6" }]}>
+              <View
+                style={[
+                  styles.glowRing,
+                  { shadowColor: theme.primary ?? "#2FE6A6" },
+                ]}
+              >
                 <LinearGradient
                   colors={[theme.primary ?? "#2FE6A6", "#1A9E74"]}
                   start={{ x: 0, y: 0 }}
@@ -138,7 +186,12 @@ export default function EditProfile() {
                       { backgroundColor: theme.card ?? "#0D1F1C" },
                     ]}
                   >
-                    <Text style={[styles.initialsText, { color: theme.primary ?? "#2FE6A6" }]}>
+                    <Text
+                      style={[
+                        styles.initialsText,
+                        { color: theme.primary ?? "#2FE6A6" },
+                      ]}
+                    >
                       {initials}
                     </Text>
                   </View>
@@ -219,6 +272,7 @@ function Field({
       </Text>
       <TextInput
         {...props}
+        editable={editable}
         style={[
           styles.input,
           {
@@ -245,7 +299,6 @@ const styles = StyleSheet.create({
   header: {
     height: 56,
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     marginTop: 4,
@@ -254,7 +307,6 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },

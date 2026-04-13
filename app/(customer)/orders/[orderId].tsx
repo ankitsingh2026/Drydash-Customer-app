@@ -1,4 +1,10 @@
-import CouponCard, { COUPONS } from "@/components/CouponCard";
+import CouponCard, { Coupon } from "@/components/CouponCard";
+import {
+  applyCouponApi,
+  confirmCouponApi,
+  fetchAllValidCoupons,
+  removeCouponApi,
+} from "@/features/coupons/coupons.api";
 import { getSingleOrderDetailssApi } from "@/features/orders/orders.api";
 import {
   razorpayPaymentInitiate,
@@ -7,7 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -18,15 +24,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
 import RazorpayWebView from "./RazorpayWebView";
-// ─── Types ─────────────────────────────────────────────────────────────────────
+
 interface OrderItem {
   heading: string;
   quantity: number;
   price: number;
+  type?: string;
+  category?: string;
 }
 
 interface OrderDetails {
@@ -45,27 +53,45 @@ interface OrderDetails {
   };
 }
 
-
-
-// ─── Item icon helper ──────────────────────────────────────────────────────────
 function ItemIcon({ heading, color }: { heading: string; color: string }) {
   const h = heading.toLowerCase();
-  if (h.includes("shoe") || h.includes("footwear") || h.includes("boot") || h.includes("sneaker")) {
-    return <MaterialCommunityIcons name="shoe-sneaker" size={20} color={color} />;
-  }
-  if (h.includes("laundry") || h.includes("wash") || h.includes("wearable") || h.includes("shirt") || h.includes("tee")) {
-    return <MaterialCommunityIcons name="tshirt-crew-outline" size={20} color={color} />;
-  }
-  return <MaterialCommunityIcons name="washing-machine" size={20} color={color} />;
-}
 
+  if (
+    h.includes("shoe") ||
+    h.includes("footwear") ||
+    h.includes("boot") ||
+    h.includes("sneaker")
+  ) {
+    return (
+      <MaterialCommunityIcons name="shoe-sneaker" size={20} color={color} />
+    );
+  }
+
+  if (
+    h.includes("laundry") ||
+    h.includes("wash") ||
+    h.includes("wearable") ||
+    h.includes("shirt") ||
+    h.includes("tee")
+  ) {
+    return (
+      <MaterialCommunityIcons
+        name="tshirt-crew-outline"
+        size={20}
+        color={color}
+      />
+    );
+  }
+
+  return (
+    <MaterialCommunityIcons name="washing-machine" size={20} color={color} />
+  );
+}
 
 export default function OrderReceipt() {
   const params = useLocalSearchParams();
   const orderId =
     typeof params.orderId === "string" ? params.orderId : undefined;
-
-  console.log("this is the orderId okay", orderId);
 
   const { theme } = useTheme();
   const { user } = useAuth();
@@ -77,25 +103,190 @@ export default function OrderReceipt() {
   const [showPaymentWebView, setShowPaymentWebView] = useState(false);
   const [razorpayData, setRazorpayData] = useState<any>(null);
 
-  // Coupon state
   const [showCouponSheet, setShowCouponSheet] = useState(false);
   const [couponInput, setCouponInput] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState("");
 
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [isPaymentDone, setIsPaymentDone] = useState(false);
+
   if (!user) return null;
+
   const User = user?.user ? user?.user : user;
   const email = User?.email ?? "test@example.com";
   const phone = User?.phone ?? User?.mobile ?? "9999999999";
   const name = User?.name ?? User?.fullName ?? "Test User";
 
-  // ── Payment Handlers (logic unchanged) ───────────────────────────────────
+  console.log("this is the userrr---->>>>", User?.id);
+
+  const calculateSubtotal = (items: OrderItem[] = []) =>
+    items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  const getOrderCategory = (order: OrderDetails | null) => {
+    if (!order?.items?.length) return "";
+
+    const firstItem = order.items[0];
+
+    const rawCategory =
+      firstItem?.type || firstItem?.category || firstItem?.heading || "";
+
+    const normalized = rawCategory.toUpperCase().trim();
+
+    if (normalized.includes("SHOE")) return "SHOESPA";
+    if (normalized.includes("DRY")) return "DRYCLEAN";
+    if (normalized.includes("LAUNDRY") || normalized.includes("WASH")) {
+      return "LAUNDRY";
+    }
+
+    return normalized;
+  };
+
+  const getSingleOrderDetails = async () => {
+    if (!orderId) return null;
+
+    try {
+      setLoading(true);
+      const data = await getSingleOrderDetailssApi(orderId);
+      const orderDetails = data?.order_details || null;
+
+      setSingleOrderDetails({ ...orderDetails }); // 🔥 force re-render
+
+      // ✅ AUTO APPLY COUPON FROM BACKEND
+      if (orderDetails?.Coupon?.coupon?.code) {
+        setAppliedCoupon({
+          code: orderDetails.Coupon.coupon.code,
+        } as Coupon);
+
+        setCouponInput(orderDetails.Coupon.coupon.code);
+      } else {
+        setAppliedCoupon(null);
+        setCouponInput("");
+      }
+
+      return orderDetails;
+    } catch (error) {
+      console.log("Single order error:", error);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAvailableCoupons = async (orderData?: OrderDetails | null) => {
+    try {
+      const order = orderData || singleOrderDetails;
+      if (!order) return;
+
+      setCouponLoading(true);
+
+      const subtotal = calculateSubtotal(order.items || []);
+      const category = getOrderCategory(order);
+
+      console.log("this is the category and cartAmount--->>>>>", {
+        subtotal,
+        category,
+      });
+
+      const res = await fetchAllValidCoupons(subtotal, category);
+      const couponsFromApi: Coupon[] = Array.isArray(res?.data) ? res.data : [];
+
+      const now = new Date();
+
+      const filteredCoupons = couponsFromApi.filter((coupon) => {
+        const activeCheck = coupon?.isActive === true;
+
+        const minOrderCheck = subtotal >= Number(coupon?.minOrder || 0);
+
+        const categoryCheck =
+          !category ||
+          !coupon?.categories?.length ||
+          coupon.categories.includes(category);
+
+        const startCheck = coupon?.startDate
+          ? new Date(coupon.startDate) <= now
+          : true;
+
+        const expiryCheck = coupon?.expiryDate
+          ? new Date(coupon.expiryDate) >= now
+          : true;
+
+        const limitCheck =
+          typeof coupon?.totalLimit === "number"
+            ? (coupon.usedCount || 0) + (coupon.reservedCount || 0) <
+              coupon.totalLimit
+            : true;
+
+        return (
+          activeCheck &&
+          minOrderCheck &&
+          categoryCheck &&
+          startCheck &&
+          expiryCheck &&
+          limitCheck
+        );
+      });
+
+      const sortedCoupons = filteredCoupons.sort((a, b) => {
+        return (
+          calculateCouponValue(b, subtotal) - calculateCouponValue(a, subtotal)
+        );
+      });
+
+      setAvailableCoupons(sortedCoupons);
+
+      setAppliedCoupon((prev) => {
+        if (!prev) return null;
+        const stillExists = sortedCoupons.find((c) => c.code === prev.code);
+        return stillExists || null;
+      });
+    } catch (error) {
+      console.log("this is the error", error);
+      setAvailableCoupons([]);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadData = async () => {
+        const orderData = await getSingleOrderDetails();
+        if (orderData && isActive) {
+          await fetchAvailableCoupons(orderData);
+        }
+      };
+
+      loadData();
+
+      // 🔥 CLEANUP WHEN USER LEAVES SCREEN
+      return () => {
+        isActive = false;
+
+        // ✅ REMOVE COUPON IF APPLIED
+        if (appliedCoupon && orderId && !isPaid) {
+          try {
+            removeCouponApi({ orderId });
+          } catch (error) {
+            console.log("this is the error==>", error);
+          }
+        }
+      };
+    }, [orderId]),
+  );
+
   const handleRazorpayPayNow = async () => {
     try {
       setPaymentLoading(true);
-      console.log("this si the id==>>", orderId);
       const res = await razorpayPaymentInitiate(orderId);
-      if (!res?.data?.success) throw new Error("Payment initiation failed");
+
+      if (!res?.data?.success) {
+        throw new Error("Payment initiation failed");
+      }
+
       setRazorpayData(res.data);
       setShowPaymentWebView(true);
     } catch (error) {
@@ -108,17 +299,29 @@ export default function OrderReceipt() {
   const handlePaymentSuccess = async (data: any) => {
     try {
       setPaymentLoading(true);
+
       const verifyRes = await verifyRazorpayPayment({
         razorpay_order_id: data.orderId,
         razorpay_payment_id: data.paymentId,
         razorpay_signature: data.signature,
       });
-      if (!verifyRes?.success) throw new Error("Verification failed");
+
+      if (!verifyRes?.success) {
+        throw new Error("Verification failed");
+      }
+
+      // ✅ CONFIRM COUPON
+      if (orderId) {
+        await confirmCouponApi({ orderId });
+      }
+
+      setIsPaymentDone(true);
+
       router.replace({
         pathname: "/(customer)/orders/payment-success",
         params: {
           orderId,
-          amount: String(singleOrderDetails?.price),
+          amount: String(singleOrderDetails?.totalAmount),
           paymentId: data.paymentId,
         },
       });
@@ -127,7 +330,7 @@ export default function OrderReceipt() {
         pathname: "/(customer)/orders/payment-failure",
         params: {
           orderId,
-          amount: String(singleOrderDetails?.price),
+          amount: String(singleOrderDetails?.totalAmount),
           reason: "Payment verification failed",
         },
       });
@@ -140,6 +343,7 @@ export default function OrderReceipt() {
   const handlePaymentFailure = (reason: string) => {
     setShowPaymentWebView(false);
     setPaymentLoading(false);
+
     router.replace({
       pathname: "/(customer)/orders/payment-failure",
       params: { orderId, amount: String(singleOrderDetails?.price), reason },
@@ -151,73 +355,146 @@ export default function OrderReceipt() {
     setPaymentLoading(false);
   };
 
-  // ── Data Fetching (unchanged) ─────────────────────────────────────────────
-  const getSingleOrderDetails = async () => {
-    if (!orderId) return;
+  const handleCouponAction = async (
+    coupon: Coupon,
+    action: "apply" | "remove",
+  ) => {
     try {
-      setLoading(true);
-      const data = await getSingleOrderDetailssApi(orderId);
-      setSingleOrderDetails(data.order_details);
-    } catch (error) {
-      console.log("Single order error:", error);
+      if (!orderId) return;
+
+      setCouponLoading(true);
+
+      if (action === "apply") {
+        await applyCouponApi({
+          orderId,
+          code: coupon.code,
+          userId: User?.id,
+        });
+      } else {
+        await removeCouponApi({ orderId });
+      }
+
+      // ✅ REFRESH ORDER
+      const updatedOrder = await getSingleOrderDetails();
+      setSingleOrderDetails({ ...updatedOrder });
+
+      setShowCouponSheet(false);
+      setCouponError("");
+    } catch (err: any) {
+      console.log("Coupon error", err);
+      setCouponError(err?.response?.data?.message || "Something went wrong");
     } finally {
-      setLoading(false);
+      setCouponLoading(false);
     }
   };
 
-  const calculateSubtotal = (items: OrderItem[] = []) =>
-    items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  useFocusEffect(
-    useCallback(() => {
-      getSingleOrderDetails();
-    }, [orderId])
-  );
-
-  // ── Coupon handlers ───────────────────────────────────────────────────────
   const handleApplyCoupon = (coupon: Coupon) => {
     if (appliedCoupon?.code === coupon.code) {
-      // Remove
       setAppliedCoupon(null);
       setCouponInput("");
       setCouponError("");
       setShowCouponSheet(false);
       return;
     }
+
+    const subtotal = calculateSubtotal(singleOrderDetails?.items || []);
+    if (Number(coupon.minOrder || 0) > subtotal) {
+      setCouponError(`Minimum order ₹${coupon.minOrder} required`);
+      return;
+    }
+
     setAppliedCoupon(coupon);
     setCouponInput(coupon.code);
     setCouponError("");
     setShowCouponSheet(false);
   };
 
-  const handleManualApply = () => {
-    const match = COUPONS.find(
-      (c) => c.code === couponInput.trim().toUpperCase()
+  // const handleManualApply = () => {
+  //   const enteredCode = couponInput.trim().toUpperCase();
+
+  //   if (!enteredCode) {
+  //     setCouponError("Please enter coupon code");
+  //     return;
+  //   }
+
+  //   const match = availableCoupons.find(
+  //     (coupon) => coupon.code.toUpperCase() === enteredCode,
+  //   );
+
+  //   if (!match) {
+  //     setCouponError("Invalid coupon code");
+  //     return;
+  //   }
+
+  //   const subtotal = calculateSubtotal(singleOrderDetails?.items || []);
+
+  //   if (Number(match.minOrder || 0) > subtotal) {
+  //     setCouponError(`Minimum order ₹${match.minOrder} required`);
+  //     return;
+  //   }
+
+  //   setAppliedCoupon(match);
+  //   setCouponInput(match.code);
+  //   setCouponError("");
+  // };
+
+  const handleManualApply = async () => {
+    const enteredCode = couponInput.trim().toUpperCase();
+
+    if (!enteredCode) {
+      setCouponError("Please enter coupon code");
+      return;
+    }
+
+    const match = availableCoupons.find(
+      (coupon) => coupon.code.toUpperCase() === enteredCode,
     );
+
     if (!match) {
       setCouponError("Invalid coupon code");
       return;
     }
-    const subtotal = calculateSubtotal(singleOrderDetails?.items);
-    if (match.minOrder > 0 && subtotal < match.minOrder) {
-      setCouponError(`Minimum order ₹${match.minOrder} required`);
-      return;
+
+    await handleCouponAction(match, "apply");
+  };
+
+  const calculateCouponValue = (coupon: Coupon, subtotal: number) => {
+    if (coupon.type === "flat") {
+      return Number(coupon.discount || 0);
     }
-    setAppliedCoupon(match);
-    setCouponError("");
+
+    if (coupon.type === "discount") {
+      const percentage = Math.min(Number(coupon.discount || 0), 100);
+      const calculated = Math.round((subtotal * percentage) / 100);
+
+      const maxCap = Number(coupon.maxCap || 0);
+
+      return maxCap > 0 ? Math.min(calculated, maxCap) : calculated;
+    }
+
+    return 0;
   };
 
   const getCouponDiscount = (coupon: Coupon | null, subtotal: number) => {
     if (!coupon) return 0;
-    if (coupon.type === "flat") return coupon.value;
-    if (coupon.type === "percent") {
-      const disc = Math.round((subtotal * coupon.value) / 100);
-      return Math.min(disc, (coupon as any).maxDiscount ?? disc);
+
+    if (coupon.type === "flat") {
+      return Number(coupon.discount || 0);
     }
-    return 0; // delivery type - show as label
+
+    if (coupon.type === "discount") {
+      const disc = Math.round((subtotal * Number(coupon.discount || 0)) / 100);
+      const maxCap = Number(coupon.maxCap || 0);
+      return maxCap > 0 ? Math.min(disc, maxCap) : disc;
+    }
+
+    return 0;
   };
 
-  // ── Loading / Error States ────────────────────────────────────────────────
+  const bestCoupon = useMemo(() => {
+    return availableCoupons.length ? availableCoupons[0] : null;
+  }, [availableCoupons]);
+
   if (loading) {
     return (
       <View style={[s.center, { backgroundColor: theme.background }]}>
@@ -234,7 +511,6 @@ export default function OrderReceipt() {
     );
   }
 
-  // ── Derived values ────────────────────────────────────────────────────────
   const isPaid = singleOrderDetails?.payment?.status === "success";
   const isActive =
     singleOrderDetails.status === "processing" ||
@@ -243,22 +519,33 @@ export default function OrderReceipt() {
   const statusLabel = isActive
     ? "Active"
     : singleOrderDetails.status.charAt(0).toUpperCase() +
-    singleOrderDetails.status.slice(1);
+      singleOrderDetails.status.slice(1);
 
   const subtotal = calculateSubtotal(singleOrderDetails.items);
   const baseDiscount = subtotal - singleOrderDetails.price;
-  const couponDiscount = getCouponDiscount(appliedCoupon, subtotal);
-  const totalDiscount = baseDiscount + couponDiscount;
-  const finalTotal = Math.max(0, subtotal - totalDiscount);
+  // const couponDiscount = getCouponDiscount(appliedCoupon, subtotal);
+  // const totalDiscount = baseDiscount + couponDiscount;
+  // const finalTotal = Math.max(0, subtotal - totalDiscount);
+
+  console.log("this is the singleOrderDetails", singleOrderDetails);
+
+  const finalTotal =
+    singleOrderDetails?.totalAmount || singleOrderDetails?.price || 0;
+
+  const totalDiscount = singleOrderDetails?.discountAmount || 0;
 
   const displayOrderId = `#${(orderId ?? singleOrderDetails._id.slice(-6)).toUpperCase()}`;
 
-  const scheduledDate = new Date(singleOrderDetails.createdAt).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric", year: "numeric" }
-  );
+  const scheduledDate = new Date(
+    singleOrderDetails.createdAt,
+  ).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  console.log("this is the isPaid-->>", isPaid);
+
   return (
     <>
       <KeyboardAvoidingView
@@ -273,22 +560,33 @@ export default function OrderReceipt() {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── HEADER ── */}
           <View style={s.header}>
-            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  if (appliedCoupon && orderId && !isPaid) {
+                    await removeCouponApi({ orderId });
+                  }
+                } catch (err) {
+                  console.log("Back remove error", err);
+                } finally {
+                  router.back();
+                }
+              }}
+              style={s.backBtn}
+            >
               <Ionicons name="arrow-back" size={20} color={theme.text} />
             </TouchableOpacity>
             <Text style={[s.headerTitle, { color: theme.text }]}>Receipt</Text>
-            <View>
-              
+            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
+              <Ionicons name="person-outline" size={16} color={theme.primary} />
             </View>
           </View>
 
-          {/* ── ORDER ID + STATUS + TRACKING BADGE ── */}
           <View style={s.orderCard}>
             <View style={s.orderTopRow}>
               <View>
-                <Text style={s.orderSmallId}>ORDER #{displayOrderId}</Text>
+                <Text style={s.orderSmallId}>ORDER {displayOrderId}</Text>
                 <Text style={[s.activeLabel, { color: theme.text }]}>
                   {statusLabel}
                 </Text>
@@ -303,7 +601,11 @@ export default function OrderReceipt() {
             <View style={s.infoBlock}>
               <View style={s.infoRow}>
                 <View style={[s.infoIconBox, { backgroundColor: theme.card }]}>
-                  <Ionicons name="calendar-outline" size={16} color={theme.primary} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={theme.primary}
+                  />
                 </View>
 
                 <View style={s.infoTextWrap}>
@@ -318,7 +620,11 @@ export default function OrderReceipt() {
 
               <View style={s.infoRow}>
                 <View style={[s.infoIconBox, { backgroundColor: theme.card }]}>
-                  <Ionicons name="location-outline" size={16} color={theme.primary} />
+                  <Ionicons
+                    name="location-outline"
+                    size={16}
+                    color={theme.primary}
+                  />
                 </View>
 
                 <View style={s.infoTextWrap}>
@@ -331,7 +637,6 @@ export default function OrderReceipt() {
             </View>
           </View>
 
-          {/* ── ORDER DETAILS ── */}
           <Text style={[s.sectionHeading, { color: theme.text }]}>
             Order Details
           </Text>
@@ -346,6 +651,7 @@ export default function OrderReceipt() {
               >
                 <ItemIcon heading={item.heading} color={theme.primary} />
               </View>
+
               <View style={s.itemInfo}>
                 <Text style={[s.itemName, { color: theme.text }]}>
                   {item.heading}
@@ -353,81 +659,105 @@ export default function OrderReceipt() {
                 <Text style={s.itemSub}>
                   {item.quantity}{" "}
                   {item.heading.toLowerCase().includes("shoe") ||
-                    item.heading.toLowerCase().includes("boot")
+                  item.heading.toLowerCase().includes("boot")
                     ? "Pair"
                     : "Shirt/Tee"}
                 </Text>
               </View>
+
               <Text style={[s.itemPrice, { color: theme.text }]}>
                 ₹{(item.price * item.quantity).toFixed(0)}
               </Text>
             </View>
           ))}
 
-          {/* ── AVAILABLE OFFERS ── */}
-          <View style={s.offersHeader}>
-            <Text style={s.offersLabel}>AVAILABLE OFFERS</Text>
-            <TouchableOpacity onPress={() => setShowCouponSheet(true)}>
-              <Text style={[s.viewAllText, { color: theme.primary }]}>
-                VIEW ALL &rsaquo;
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {!isPaid && (
+            <View style={s.offersHeader}>
+              <Text style={s.offersLabel}>AVAILABLE OFFERS</Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  await fetchAvailableCoupons();
+                  setShowCouponSheet(true);
+                }}
+              >
+                <Text style={[s.viewAllText, { color: theme.primary }]}>
+                  VIEW ALL &rsaquo;
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Coupon Input */}
-          <View style={[s.couponInputRow, { backgroundColor: "#00110E" }]}>
-            <MaterialCommunityIcons
-              name="ticket-percent-outline"
-              size={18}
-              color="#64748b"
-              style={{ marginRight: 8 }}
-            />
-            <TextInput
-              value={couponInput}
-              onChangeText={(t) => {
-                setCouponInput(t);
-                setCouponError("");
-                if (!t) setAppliedCoupon(null);
-              }}
-              placeholder="Coupon Code"
-              placeholderTextColor="#475569"
-              style={[s.couponInput, { color: theme.text }]}
-              autoCapitalize="characters"
-            />
-            <TouchableOpacity
-              onPress={handleManualApply}
-              style={[s.couponApplyBtn, { backgroundColor: "#22EBAB" }]}
-            >
-              <Text style={s.couponApplyText}>Apply</Text>
-            </TouchableOpacity>
-          </View>
+          {!isPaid && (
+            <View style={[s.couponInputRow, { backgroundColor: "#00110E" }]}>
+              <MaterialCommunityIcons
+                name="ticket-percent-outline"
+                size={18}
+                color="#64748b"
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                value={couponInput}
+                onChangeText={(t) => {
+                  setCouponInput(t.toUpperCase());
+                  setCouponError("");
+                  if (!t.trim()) {
+                    setAppliedCoupon(null);
+                  }
+                }}
+                placeholder="Coupon Code"
+                placeholderTextColor="#475569"
+                style={[s.couponInput, { color: theme.text }]}
+                autoCapitalize="characters"
+              />
+              {appliedCoupon ? (
+                <View
+                  style={[
+                    s.couponAppliedTag,
+                    { backgroundColor: "#0B3326", borderColor: "#22EBAB" },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={14}
+                    color="#22EBAB"
+                  />
+                  <Text style={s.couponAppliedText}>APPLIED</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleManualApply}
+                  style={[s.couponApplyBtn, { backgroundColor: "#22EBAB" }]}
+                >
+                  <Text style={s.couponApplyText}>Apply</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {couponError ? (
             <Text style={s.couponError}>{couponError}</Text>
           ) : null}
 
-          {/* Best coupon suggestion card */}
-          {!appliedCoupon && (
+          {!appliedCoupon && bestCoupon && !isPaid && (
             <View style={[s.suggestionCard, { backgroundColor: theme.card }]}>
               <View style={s.suggestionLeft}>
                 <View style={s.suggestionTagRow}>
                   <View style={s.codeTag}>
-                    <Text style={s.codeTagText}>SAVE50</Text>
+                    <Text style={s.codeTagText}>{bestCoupon.code}</Text>
                   </View>
                   <View style={s.bestValueTag}>
                     <Text style={s.bestValueText}>BEST VALUE</Text>
                   </View>
                 </View>
+
                 <Text style={[s.suggestionDesc, { color: "#94a3b8" }]}>
-                  ₹50 OFF on this order
+                  Save ₹{calculateCouponValue(bestCoupon, subtotal)} on this
+                  order
                 </Text>
               </View>
-              <TouchableOpacity
-                onPress={() => {
-                  const coupon = COUPONS?.find((c) => c.code === "SAVE50");
-                  if (!coupon) return;
 
-                  handleApplyCoupon(coupon);
-                }}
+              <TouchableOpacity
+                onPress={() => handleCouponAction(bestCoupon, "apply")}
                 style={[s.suggestionApplyBtn, { backgroundColor: "#22EBAB" }]}
               >
                 <Text style={s.suggestionApplyText}>Apply</Text>
@@ -435,8 +765,7 @@ export default function OrderReceipt() {
             </View>
           )}
 
-          {/* Applied coupon pill */}
-          {appliedCoupon && (
+          {appliedCoupon && !isPaid && (
             <View style={[s.appliedPill, { backgroundColor: "#0B3326" }]}>
               <MaterialCommunityIcons
                 name="check-circle-outline"
@@ -445,15 +774,20 @@ export default function OrderReceipt() {
               />
               <Text style={[s.appliedPillText, { color: theme.primary }]}>
                 "{appliedCoupon.code}" applied!
-                {couponDiscount > 0 ? ` Save ₹${couponDiscount}` : " Free delivery!"}
+                {totalDiscount > 0
+                  ? ` Save ₹${totalDiscount?.toFixed(0)}`
+                  : " Offer applied!"}
               </Text>
-              <TouchableOpacity onPress={() => { setAppliedCoupon(null); setCouponInput(""); }}>
+              <TouchableOpacity
+                onPress={() =>
+                  appliedCoupon && handleCouponAction(appliedCoupon, "remove")
+                }
+              >
                 <Ionicons name="close-circle" size={16} color={theme.primary} />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── BILL SUMMARY ── */}
           <View style={[s.billCard, { backgroundColor: theme.card }]}>
             <View style={s.billRow}>
               <Text style={s.billLabel}>Subtotal</Text>
@@ -461,15 +795,16 @@ export default function OrderReceipt() {
                 ₹{subtotal.toFixed(0)}
               </Text>
             </View>
+
             <View style={s.billRow}>
               <Text style={s.billLabel}>Discount</Text>
-              <Text style={s.discountValue}>-₹{totalDiscount.toFixed(0)}</Text>
+              <Text style={s.discountValue}>-₹{totalDiscount?.toFixed(0)}</Text>
             </View>
 
             {totalDiscount > 0 && (
               <View style={s.savingsPill}>
                 <Text style={s.savingsPillText}>
-                  Woohoo! You saved ₹{totalDiscount.toFixed(0)}!
+                  Woohoo! You saved ₹{totalDiscount?.toFixed(0)}!
                 </Text>
               </View>
             )}
@@ -481,16 +816,16 @@ export default function OrderReceipt() {
                 Total Amount
               </Text>
               <Text style={[s.totalAmount, { color: theme.primary }]}>
-                ₹{finalTotal.toFixed(0)}
+                ₹{finalTotal?.toFixed(0)}
               </Text>
             </View>
           </View>
 
-          {/* ── SECURE PAYMENT ICONS ── */}
           <View style={s.secureSection}>
             <Ionicons name="lock-closed-outline" size={12} color="#64748b" />
             <Text style={s.secureText}> SECURE PAYMENT</Text>
           </View>
+
           <View style={s.paymentIconsRow}>
             <MaterialCommunityIcons
               name="credit-card-outline"
@@ -509,14 +844,10 @@ export default function OrderReceipt() {
             />
           </View>
 
-          {/* Spacer for fixed button */}
           <View style={{ height: 90 }} />
         </ScrollView>
 
-        {/* ── PAY NOW FIXED BUTTON ── */}
-        <View
-          style={[s.payBtnWrapper, { backgroundColor: theme.background }]}
-        >
+        <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
           {isPaid ? (
             <View
               style={[
@@ -530,7 +861,7 @@ export default function OrderReceipt() {
                 color="#001714"
               />
               <Text style={s.payBtnText}>
-                Paid ₹{singleOrderDetails.price.toFixed(0)}
+                Paid ₹{singleOrderDetails.totalAmount?.toFixed(0)}
               </Text>
             </View>
           ) : (
@@ -549,7 +880,9 @@ export default function OrderReceipt() {
                 <ActivityIndicator size="small" color="#001714" />
               ) : (
                 <>
-                  <Text style={s.payBtnText}>Pay ₹{finalTotal.toFixed(0)} Now</Text>
+                  <Text style={s.payBtnText}>
+                    Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
+                  </Text>
                   <Ionicons name="arrow-forward" size={18} color="#001714" />
                 </>
               )}
@@ -558,16 +891,16 @@ export default function OrderReceipt() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* ── COUPON BOTTOM SHEET ── */}
       <CouponCard
         visible={showCouponSheet}
         onClose={() => setShowCouponSheet(false)}
-        onApply={handleApplyCoupon}
+        onApply={handleCouponAction}
         appliedCode={appliedCoupon?.code ?? ""}
         subtotal={subtotal}
+        coupons={availableCoupons}
+        loading={couponLoading}
       />
 
-      {/* ── PAYMENT WEBVIEW MODAL (logic unchanged) ── */}
       <Modal visible={showPaymentWebView} animationType="slide">
         {razorpayData && (
           <RazorpayWebView
@@ -589,7 +922,6 @@ export default function OrderReceipt() {
   );
 }
 
-
 const s = StyleSheet.create({
   container: {
     flexGrow: 1,
@@ -601,7 +933,6 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Header
   header: {
     paddingTop: 54,
     paddingHorizontal: 20,
@@ -620,15 +951,12 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
 
-  // Order top row
   orderCard: {
     marginHorizontal: 20,
     marginBottom: 24,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: "#0D2B24", // darker + richer
-
-    // 👇 subtle border like image
+    backgroundColor: "#0D2B24",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.04)",
   },
@@ -660,6 +988,23 @@ const s = StyleSheet.create({
     lineHeight: 34,
   },
 
+  couponAppliedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+
+  couponAppliedText: {
+    color: "#22EBAB",
+    fontWeight: "700",
+    fontSize: 12,
+    letterSpacing: 0.5,
+  },
+
   liveTrackingBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -684,8 +1029,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.7,
   },
-
-
 
   infoRow: {
     flexDirection: "row",
@@ -724,7 +1067,7 @@ const s = StyleSheet.create({
     fontWeight: "600",
     lineHeight: 18,
   },
-  // Section heading
+
   sectionHeading: {
     fontSize: 16,
     fontWeight: "700",
@@ -732,7 +1075,6 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // Item cards
   itemCard: {
     marginHorizontal: 20,
     marginBottom: 8,
@@ -753,12 +1095,11 @@ const s = StyleSheet.create({
   itemSub: { fontSize: 14, color: "#64748b", marginTop: 2 },
   itemPrice: { fontSize: 14, fontWeight: "700" },
 
-  // Available Offers
   offersHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 18,
+    paddingHorizontal: 30,
     marginTop: 20,
     marginBottom: 10,
   },
@@ -770,7 +1111,6 @@ const s = StyleSheet.create({
   },
   viewAllText: { fontSize: 12, fontWeight: "700" },
 
-  // Coupon input row
   couponInputRow: {
     marginHorizontal: 20,
     borderRadius: 16,
@@ -781,7 +1121,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 6,
     borderWidth: 0.5,
-    borderColor: "#000"
+    borderColor: "#000",
   },
   couponInput: {
     flex: 1,
@@ -789,10 +1129,9 @@ const s = StyleSheet.create({
     fontWeight: "600",
     paddingVertical: 8,
     borderRadius: 8,
-
   },
   couponApplyBtn: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 30,
     paddingVertical: 10,
     borderRadius: 8,
   },
@@ -808,7 +1147,6 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
 
-  // Suggestion card (best coupon)
   suggestionCard: {
     marginHorizontal: 20,
     borderRadius: 12,
@@ -862,7 +1200,6 @@ const s = StyleSheet.create({
     fontSize: 13,
   },
 
-  // Applied coupon pill
   appliedPill: {
     marginHorizontal: 20,
     marginTop: 4,
@@ -879,7 +1216,6 @@ const s = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Bill card
   billCard: {
     marginHorizontal: 20,
     marginTop: 16,
@@ -916,7 +1252,6 @@ const s = StyleSheet.create({
   totalLabel: { fontSize: 15, fontWeight: "700" },
   totalAmount: { fontSize: 26, fontWeight: "700" },
 
-  // Secure payment
   secureSection: {
     flexDirection: "row",
     justifyContent: "center",
@@ -936,7 +1271,6 @@ const s = StyleSheet.create({
     marginTop: 10,
   },
 
-  // Pay button
   payBtnWrapper: {
     position: "absolute",
     bottom: 0,

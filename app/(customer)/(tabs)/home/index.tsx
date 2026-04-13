@@ -1,4 +1,5 @@
-
+import CartSheet from "@/components/CartSheet";
+import FloatingCart from "@/components/FloatingCart";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import { useAuthContext } from "@/context/AuthContext";
@@ -22,7 +23,7 @@ import {
 } from "react-native";
 import {
   SafeAreaProvider,
-  useSafeAreaInsets
+  useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
@@ -81,8 +82,7 @@ const HERO_SLIDES = [
     tag: "SHOE SPA",
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
-    image:
-    {
+    image: {
       uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
     },
   },
@@ -91,8 +91,7 @@ const HERO_SLIDES = [
     tag: "SHOFA CARE",
     title: "Sofa Deep Cleaning",
     subtitle: "Whitening • Polishing • Protection",
-    image:
-    {
+    image: {
       uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
     },
   },
@@ -162,7 +161,10 @@ function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
           <View style={styles.activeDot} />
           <Text style={styles.activeOrderLabel}>ACTIVE ORDER</Text>
         </View>
-        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          onPress={onDismiss}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="close" size={16} color="#6B7280" />
         </TouchableOpacity>
       </View>
@@ -191,7 +193,10 @@ function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
                 <View
                   style={[
                     styles.progressLine,
-                    { backgroundColor: idx <= currentStep ? "#00C896" : "#1E3530" },
+                    {
+                      backgroundColor:
+                        idx <= currentStep ? "#00C896" : "#1E3530",
+                    },
                   ]}
                 />
               )}
@@ -200,7 +205,10 @@ function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
                   styles.progressDot,
                   isCompleted || isActive
                     ? { backgroundColor: "#00C896", borderColor: "#00C896" }
-                    : { backgroundColor: "transparent", borderColor: "#1E3530" },
+                    : {
+                        backgroundColor: "transparent",
+                        borderColor: "#1E3530",
+                      },
                 ]}
               >
                 {isCompleted && (
@@ -277,12 +285,24 @@ export default function Home() {
     };
     checkAuth();
   }, []);
+
+  const allProducts = Object.values(catalogData).flat();
+
+  const filteredProducts = allProducts.filter((item) =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+  const handleProductPress = (product: any) => {
+    setSelectedProduct(product);
+    setPopupVisible(true);
+    setShowSearchResults(false);
+    setSearchQuery(""); // Clear search after selection
+  };
   // ─── Constants ────────────────────────────────────────────────────────────────
   const THUMB_SIZE = 44;
   const PADDING = 4;
   const swipeContainerWidth = width - 32; // matches pickupCard marginHorizontal
   const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8; // true travel range
-  const SWIPE_THRESHOLD = MAX_DRAG * 0.50; // trigger at 60%
+  const SWIPE_THRESHOLD = MAX_DRAG * 0.5; // trigger at 60%
 
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
@@ -314,8 +334,6 @@ export default function Home() {
 
     return () => clearTimeout(t);
   }, []);
-
-
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -362,9 +380,6 @@ export default function Home() {
     ).start();
   }, []);
 
-
-
-
   //  const triggerBooking = () => {
   //     Animated.timing(dragX, {
   //       toValue: SWIPE_THRESHOLD,
@@ -381,13 +396,12 @@ export default function Home() {
 
   // ─── Constants ────────────────────────────────────────────────────────────────
 
-
   // ─── Inside Home() component ──────────────────────────────────────────────────
 
   // ─── Two animated values: native for thumb, JS for fill ───────────────────────
   const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
-  const dragXJS = useRef(new Animated.Value(0)).current;     // fill track (JS thread)
-  const dragXValue = useRef(0);                              // plain ref, always accurate
+  const dragXJS = useRef(new Animated.Value(0)).current; // fill track (JS thread)
+  const dragXValue = useRef(0); // plain ref, always accurate
 
   // Derived: fill track width (JS driver — width can't use native)
   const trackFillWidth = dragXJS.interpolate({
@@ -420,9 +434,6 @@ export default function Home() {
     outputRange: [0, 16],
     extrapolate: "clamp",
   });
-
-
-
   // ─── Helper: set both animated values at once ─────────────────────────────────
   const setDrag = (val: number) => {
     const clamped = Math.max(0, Math.min(val, MAX_DRAG));
@@ -434,7 +445,7 @@ export default function Home() {
     Animated.parallel([
       Animated.spring(dragXNative, {
         toValue: 0,
-        useNativeDriver: true,   // ✅ smooth spring
+        useNativeDriver: true, // ✅ smooth spring
         damping: 20,
         stiffness: 250,
         mass: 0.5,
@@ -450,9 +461,6 @@ export default function Home() {
       dragXValue.current = 0;
     });
   }, []);
-
-
-
 
   // ─── Complete swipe (snap to end → navigate) ──────────────────────────────────
   const completeSwipe = useCallback(() => {
@@ -500,7 +508,6 @@ export default function Home() {
   };
 
   // ─── PanResponder ─────────────────────────────────────────────────────────────
-  // ─── PanResponder ─────────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
       // Capture horizontal moves before ScrollView sees them
@@ -511,11 +518,8 @@ export default function Home() {
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
 
       onPanResponderGrant: () => {
-        // Stop any running animation, start fresh from current position
         dragXNative.stopAnimation();
         dragXJS.stopAnimation();
-        // Don't reset to 0 — start from wherever thumb currently is
-        // dragXValue.current is already accurate from setDrag()
       },
 
       onPanResponderMove: (_, { dx }) => {
@@ -574,30 +578,122 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-
-          {/* ── SEARCH BAR ── */}
-          <Animated.View style={[styles.searchBarWrap, { opacity: fadeAnim }]}>
-            <View style={[styles.searchBar, { backgroundColor: "#0D1F1C", borderColor: "#1A3330" }]}>
-              <Ionicons name="search-outline" size={18} color="#6B7280" style={{ marginRight: 8 }} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder='Search "Shoe Spa"'
-                placeholderTextColor="#4B5563"
-                style={[styles.searchInput, { color: theme.text }]}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 ? (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={18} color="#6B7280" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity>
-                  <Ionicons name="mic-outline" size={18} color="#6B7280" />
-                </TouchableOpacity>
-              )}
-            </View>
-          </Animated.View>
+          <View style={{ position: "relative", zIndex: 1000 }}>
+            <Animated.View
+              style={[styles.searchBarWrap, { opacity: fadeAnim }]}
+            >
+              <View
+                style={[
+                  styles.searchBar,
+                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                ]}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color="#6B7280"
+                  style={{ marginRight: 8 }}
+                />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    setShowSearchResults(text.length > 0);
+                  }}
+                  placeholder='Search "Shoe Spa"'
+                  placeholderTextColor="#4B5563"
+                  style={[styles.searchInput, { color: theme.text }]}
+                  returnKeyType="search"
+                />
+                {searchQuery.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchQuery("");
+                      setShowSearchResults(false);
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity>
+                    <Ionicons name="mic-outline" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+            {showSearchResults && (
+              <View
+                style={[
+                  styles.searchResultsContainer,
+                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                ]}
+              >
+                {filteredProducts.length > 0 ? (
+                  <ScrollView
+                    style={styles.searchResultsList}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                  >
+                    {filteredProducts.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.searchResultItem}
+                        onPress={() => handleProductPress(item)}
+                      >
+                        <View style={styles.searchResultImageContainer}>
+                          <Image
+                            source={{ uri: item.image }}
+                            style={styles.searchResultImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                        <View style={styles.searchResultContent}>
+                          <Text
+                            style={[
+                              styles.searchResultTitle,
+                              { color: theme.text },
+                            ]}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.searchResultCategory,
+                              { color: theme.subText },
+                            ]}
+                          >
+                            {item.category}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.searchResultPrice,
+                              { color: theme.primary },
+                            ]}
+                          >
+                            ₹{item.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <Ionicons name="search-outline" size={40} color="#4B5563" />
+                    <Text
+                      style={[styles.noResultsText, { color: theme.subText }]}
+                    >
+                      No products found
+                    </Text>
+                    <Text
+                      style={[styles.noResultsSubtext, { color: "#4B5563" }]}
+                    >
+                      Try searching for "Shoe Spa" or "Dry Clean"
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* ── HERO CAROUSEL ── */}
           <ScrollView
@@ -630,11 +726,7 @@ export default function Home() {
               return (
                 <Animated.View key={i} style={[styles.heroCard, heroStyle]}>
                   {slide.image.uri.endsWith(".svg") ? (
-                    <SvgUri
-                      uri={slide.image.uri}
-                      width="100%"
-                      height="100%"
-                    />
+                    <SvgUri uri={slide.image.uri} width="100%" height="100%" />
                   ) : (
                     <Animated.Image
                       source={slide.image}
@@ -681,10 +773,10 @@ export default function Home() {
             <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
           )}
 
-
           {/* ── SWIPE TO BOOK STRIP ── */}
           {!orderBooked && (
-            <View collapsable={false}
+            <View
+              collapsable={false}
               style={{ marginHorizontal: 16, marginTop: 14 }}
             >
               <Animated.View
@@ -705,8 +797,12 @@ export default function Home() {
                   },
                 ]}
               >
-                <View style={[styles.swipeContainer, { backgroundColor: "#071018" }]}>
-
+                <View
+                  style={[
+                    styles.swipeContainer,
+                    { backgroundColor: "#071018" },
+                  ]}
+                >
                   {/* ── Animated green fill track ── */}
                   <Animated.View
                     style={[
@@ -727,8 +823,8 @@ export default function Home() {
                       {
                         backgroundColor: PRIMARY,
                         transform: [
-                          { translateX: dragXNative },  // ✅ native thread
-                          { scale: thumbScale },         // ✅ native thread
+                          { translateX: dragXNative }, // ✅ native thread
+                          { scale: thumbScale }, // ✅ native thread
                         ],
                       },
                     ]}
@@ -757,15 +853,27 @@ export default function Home() {
                     style={[
                       styles.swipeTextWrap,
                       {
-                        opacity: swipeTextOpacity,           // ✅ native
+                        opacity: swipeTextOpacity, // ✅ native
                         transform: [{ translateX: swipeTextTranslateX }], // ✅ native
                       },
                     ]}
                     pointerEvents="none"
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
-                      <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.swipeHint}>
+                        SWIPE FOR INSTANT PICKUP
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#4B5563"
+                      />
                     </View>
                   </Animated.View>
 
@@ -780,12 +888,23 @@ export default function Home() {
                     ]}
                     pointerEvents="none"
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
-                      <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.swipeHint}>
+                        SWIPE FOR INSTANT PICKUP
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#4B5563"
+                      />
                     </View>
                   </Animated.View>
-
                 </View>
               </Animated.View>
             </View>
@@ -823,7 +942,12 @@ export default function Home() {
                           // console.log("service param:");
                           router.push({
                             pathname: "/services/[service]",
-                            params: { service: s.slug as "shoe" | "laundry" | "dryclean" },
+                            params: {
+                              service: s.slug as
+                                | "shoe"
+                                | "laundry"
+                                | "dryclean",
+                            },
                           });
                         } else {
                           router.push(`/services/${s.slug}`);
@@ -841,11 +965,7 @@ export default function Home() {
                             { backgroundColor: "#0A3D3C" },
                           ]}
                         >
-                          <SvgUri
-                            uri={s.icon}
-                            width={32}
-                            height={32}
-                          />
+                          <SvgUri uri={s.icon} width={32} height={32} />
                         </View>
                       </Animated.View>
 
@@ -893,10 +1013,11 @@ export default function Home() {
               green cleaning tech{"\n"}
               preserves fiber life by{"\n"}40%.
             </Text>
-
           </LinearGradient>
         </View>
       </ScrollView>
+
+      <FloatingCart onOpen={() => setCartOpen(true)} />
 
       {/* <FloatingOfferCard
         visible={offerVisible}
@@ -911,8 +1032,17 @@ export default function Home() {
         onClose={() => setOfferVisible(false)}
       /> */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-
-
+      {/* Product Service Popup */}
+      <ProductServicePopup
+        visible={popupVisible}
+        onOpenCart={() => setCartOpen(true)}
+        onClose={() => {
+          setPopupVisible(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+      />
+      <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} />
     </SafeAreaProvider>
   );
 }
@@ -920,13 +1050,10 @@ export default function Home() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
 
-
-
   searchBarWrap: {
     paddingHorizontal: 16,
     paddingBottom: 10,
-    paddingTop: 10
-
+    paddingTop: 10,
   },
   searchBar: {
     flexDirection: "row",
@@ -1264,7 +1391,6 @@ const styles = StyleSheet.create({
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   serviceSubtitle: { fontSize: 11, fontWeight: "500" },
 
-
   wrapper: {
     padding: 16,
   },
@@ -1315,5 +1441,4 @@ const styles = StyleSheet.create({
     borderWidth: 18,
     borderColor: "rgba(51,240,162,0.15)",
   },
-
 });

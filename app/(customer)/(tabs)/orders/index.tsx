@@ -27,8 +27,7 @@ import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
 type OrderStatus = "Active" | "Completed";
 type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 
-const getOrderId = (o: any): string | undefined =>
-  o?.order_id;
+const getOrderId = (o: any): string | undefined => o?.order_id;
 
 const STATUS_CONFIG = {
   active: { bg: "#10B981", icon: "time-outline" as const, label: "Active" },
@@ -65,14 +64,12 @@ const MUTED = "#6B7280";
 
 /* ================= FILTER TAB ================= */
 
-
-
 /* ================= STAGE PROGRESS BAR ================= */
 
 function StageProgress({ stage }: { stage?: string }) {
   const stages = ["WASHING", "DRYING & FOLDING", "READY", "OUT FOR DELIVERY"];
   const current = stages.findIndex((s) =>
-    (stage ?? "").toUpperCase().includes(s.split(" ")[0])
+    (stage ?? "").toUpperCase().includes(s.split(" ")[0]),
   );
   const idx = current === -1 ? 0 : current;
   const pct = ((idx + 1) / stages.length) * 100;
@@ -169,7 +166,12 @@ function StatusBadge({
   icon: any;
 }) {
   return (
-    <View style={[badgeStyles.wrap, { backgroundColor: color + "1A", borderColor: color + "30" }]}>
+    <View
+      style={[
+        badgeStyles.wrap,
+        { backgroundColor: color + "1A", borderColor: color + "30" },
+      ]}
+    >
       <Ionicons name={icon} size={11} color={color} />
       <Text style={[badgeStyles.text, { color }]}>{label.toUpperCase()}</Text>
     </View>
@@ -204,7 +206,6 @@ export default function Orders() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
-
   const rawPhone = user?.user?.phone ?? user?.phone ?? "";
   const phoneWithout91 = rawPhone.startsWith("91")
     ? rawPhone.slice(2)
@@ -237,9 +238,8 @@ export default function Orders() {
   /* ================= FILTERED ORDERS ================= */
 
   const filteredOrders = useMemo(() => {
-    if (activeFilter === "Awaiting")
-      return [];
-    
+    if (activeFilter === "Awaiting") return [];
+
     if (activeFilter === "All") {
       return orders.map((o) => ({ ...o, type: "order" }));
     }
@@ -284,7 +284,7 @@ export default function Orders() {
     useCallback(() => {
       getCustomerOrders();
       getCustomerPickupList();
-    }, [])
+    }, []),
   );
 
   /* ================= ANIMATIONS ================= */
@@ -304,7 +304,7 @@ export default function Orders() {
 
   useEffect(() => {
     cardAnims.current = uniqueOrders.map(
-      (_, i) => cardAnims.current[i] || new Animated.Value(0)
+      (_, i) => cardAnims.current[i] || new Animated.Value(0),
     );
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -328,15 +328,12 @@ export default function Orders() {
           tension: 50,
           friction: 8,
           useNativeDriver: true,
-        })
-      )
+        }),
+      ),
     ).start();
   }, [uniqueOrders]);
 
-
   /* ================= EMPTY STATE ================= */
-
-
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -354,7 +351,6 @@ export default function Orders() {
 
   if (!user) return <OrdersScreenSkeleton />;
   if (loading) return <OrdersScreenSkeleton />;
-
 
   /* ================= UI ================= */
 
@@ -399,6 +395,7 @@ export default function Orders() {
 
         {/* ── CARDS ── */}
         {uniqueOrders.map((o: any, index: number) => {
+          console.log("this is the o", o);
           const anim = cardAnims.current[index] || new Animated.Value(1);
           const animStyle = {
             opacity: anim,
@@ -495,7 +492,9 @@ export default function Orders() {
           const sc = getStatusConfig(o.status);
           const orderId = getOrderId(o);
           const isDelivered = o.status === "delivered";
-          const isProcessing = o.status === "processing" || (!isDelivered && o.status !== "cancelled");
+          const isProcessing =
+            o.status === "processing" ||
+            (!isDelivered && o.status !== "cancelled");
 
           return (
             <Animated.View key={orderId || o._id} style={animStyle}>
@@ -506,24 +505,42 @@ export default function Orders() {
                 }}
               >
                 <View style={styles.card}>
-                  <View style={[styles.cardAccentLine, { backgroundColor: sc.bg }]} />
+                  <View
+                    style={[styles.cardAccentLine, { backgroundColor: sc.bg }]}
+                  />
 
                   <View style={styles.cardInner}>
                     {/* Status badge + icon/stamp */}
                     <View style={styles.cardHeaderRow}>
-                      <StatusBadge label={sc.label} color={sc.bg} icon={sc.icon} />
+                      <StatusBadge
+                        label={sc.label}
+                        color={sc.bg}
+                        icon={sc.icon}
+                      />
                       <View style={styles.cardIconWrap}>
                         {isDelivered ? (
-                          <Ionicons name="checkmark-circle-outline" size={20} color={sc.bg} />
+                          <Ionicons
+                            name="checkmark-circle-outline"
+                            size={20}
+                            color={sc.bg}
+                          />
                         ) : (
-                          <Ionicons name="shirt-outline" size={18} color={sc.bg} />
+                          <Ionicons
+                            name="shirt-outline"
+                            size={18}
+                            color={sc.bg}
+                          />
                         )}
                       </View>
                     </View>
 
                     {/* Date */}
-                    <Text style={styles.cardDate}>{formatDate(o.createdAt)}</Text>
-                    <Text style={styles.cardTime}>{formatTime(o.createdAt)}</Text>
+                    <Text style={styles.cardDate}>
+                      {formatDate(o.createdAt)}
+                    </Text>
+                    <Text style={styles.cardTime}>
+                      {formatTime(o.createdAt)}
+                    </Text>
 
                     {/* Address (delivery address if exists) */}
                     {/* {o.address ? (
@@ -547,14 +564,20 @@ export default function Orders() {
                     {/* Bottom row: items + price */}
                     <View style={styles.bottomRow}>
                       <View style={styles.itemPill}>
-                        <Ionicons name="shirt-outline" size={12} color={MUTED} />
-                        <Text style={styles.itemPillText}>{o.items?.length || 0} items</Text>
+                        <Ionicons
+                          name="shirt-outline"
+                          size={12}
+                          color={MUTED}
+                        />
+                        <Text style={styles.itemPillText}>
+                          {o.items?.length || 0} items
+                        </Text>
                       </View>
 
                       <View style={styles.priceWrap}>
                         <PaymentStamp status={o?.payment?.status} />
                         <Text style={[styles.priceText, { color: sc.bg }]}>
-                          ₹{o.price}
+                          ₹{o.isPaid ? o.totalAmount : o.price}
                         </Text>
                       </View>
                     </View>
@@ -566,7 +589,11 @@ export default function Orders() {
                         activeOpacity={0.85}
                         onPress={() => router.push(`/orders/${orderId}`)}
                       >
-                        <Ionicons name="refresh-outline" size={14} color={ACCENT} />
+                        <Ionicons
+                          name="refresh-outline"
+                          size={14}
+                          color={ACCENT}
+                        />
                         <Text style={styles.reorderText}>Reorder Items</Text>
                       </TouchableOpacity>
                     )}
@@ -574,8 +601,14 @@ export default function Orders() {
                     {/* Tap hint for non-delivered */}
                     {!isDelivered && (
                       <View style={styles.tapHint}>
-                        <Text style={styles.tapHintText}>Tap to view receipt</Text>
-                        <Ionicons name="chevron-forward" size={12} color={MUTED} />
+                        <Text style={styles.tapHintText}>
+                          Tap to view receipt
+                        </Text>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={12}
+                          color={MUTED}
+                        />
                       </View>
                     )}
                   </View>
@@ -594,7 +627,7 @@ export default function Orders() {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  root: { flex: 1 , backgroundColor:BG },
+  root: { flex: 1, backgroundColor: BG },
 
   container: { paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16 },
 
@@ -629,7 +662,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 6,
     elevation: 4,
-    marginTop: 2
+    marginTop: 2,
   },
   activeBadgeNum: {
     fontSize: 18,
@@ -658,7 +691,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   cardInner: { paddingHorizontal: 13, paddingTop: 11, paddingBottom: 10 },
-
 
   cardHeaderRow: {
     flexDirection: "row",

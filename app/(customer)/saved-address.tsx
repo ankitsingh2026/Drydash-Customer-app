@@ -1,7 +1,8 @@
 import { deleteAddressApi, getAddressApi } from "@/features/orders/orders.api";
 import { useAuth } from "@/hooks/useAuth";
+import { eventEmitter } from "@/utils/eventEmitter";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
   Briefcase,
@@ -14,6 +15,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   BackHandler,
   Dimensions,
@@ -24,8 +26,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-/* ─────────── constants ─────────── */
 
 const { width } = Dimensions.get("window");
 
@@ -53,33 +53,24 @@ type Address = {
   city: string;
   state: string;
   isDefault?: boolean;
+  latitude?: number;
+  longitude?: number;
 };
-
-/* ─────────── map decoration ─────────── */
 
 function MapDecoration() {
   return (
     <View style={styles.mapWrapper}>
-      {/* faint grid lines */}
       {[...Array(6)].map((_, i) => (
-        <View
-          key={`h${i}`}
-          style={[styles.gridLineH, { top: 20 + i * 22 }]}
-        />
+        <View key={`h${i}`} style={[styles.gridLineH, { top: 20 + i * 22 }]} />
       ))}
       {[...Array(8)].map((_, i) => (
-        <View
-          key={`v${i}`}
-          style={[styles.gridLineV, { left: 10 + i * 44 }]}
-        />
+        <View key={`v${i}`} style={[styles.gridLineV, { left: 10 + i * 44 }]} />
       ))}
 
-      {/* glowing road shape */}
       <View style={styles.roadOuter}>
         <View style={styles.roadInner} />
       </View>
 
-      {/* live dispatch badge */}
       <View style={styles.dispatchBadge}>
         <View style={styles.dispatchDot} />
         <Text style={styles.dispatchText}>LIVE DISPATCH RANGE</Text>
@@ -88,16 +79,18 @@ function MapDecoration() {
   );
 }
 
-/* ─────────── address card ─────────── */
-
 function AddressCard({
   address,
   index,
+  isSelected,
+  onSelect,
   onEdit,
   onDelete,
 }: {
   address: Address;
   index: number;
+  isSelected: boolean;
+  onSelect: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -131,58 +124,83 @@ function AddressCard({
 
   return (
     <Animated.View style={{ opacity, transform: [{ scale }] }}>
-      <View
-        style={[
-          styles.card,
-          isDefault && styles.cardActive,
-        ]}
-      >
-        {/* left accent bar for default */}
-        {isDefault && <View style={styles.cardAccentBar} />}
+      <TouchableOpacity onPress={onSelect} activeOpacity={0.7}>
+        <View
+          style={[
+            styles.card,
+            isDefault && styles.cardActive,
+            isSelected && styles.cardSelected,
+          ]}
+        >
+          {isDefault && <View style={styles.cardAccentBar} />}
+          {isSelected && !isDefault && <View style={styles.cardSelectedBar} />}
 
-        <View style={styles.cardContent}>
-          {/* top row */}
-          <View style={styles.cardTopRow}>
-            <View style={styles.labelRow}>
-              <IconComp size={17} color={C.primary} />
-              <Text style={styles.cardLabel}>{address.label}</Text>
-              {isDefault && (
-                <View style={styles.defaultBadge}>
-                  <Text style={styles.defaultBadgeText}>DEFAULT</Text>
-                </View>
-              )}
+          <View style={styles.cardContent}>
+            <View style={styles.cardTopRow}>
+              <View style={styles.labelRow}>
+                <IconComp size={17} color={isSelected ? C.primary : C.text} />
+                <Text
+                  style={[styles.cardLabel, isSelected && { color: C.primary }]}
+                >
+                  {address.label}
+                </Text>
+                {isDefault && (
+                  <View style={styles.defaultBadge}>
+                    <Text style={styles.defaultBadgeText}>DEFAULT</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
+                  style={styles.actionBtn}
+                >
+                  <Pencil size={15} color={C.subText} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  style={styles.actionBtn}
+                >
+                  <Trash2 size={15} color={C.subText} />
+                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity onPress={onEdit} style={styles.actionBtn}>
-                <Pencil size={15} color={C.subText} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onDelete} style={styles.actionBtn}>
-                <Trash2 size={15} color={C.subText} />
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.addressLine1}>{address.addressLine1}</Text>
+            <Text style={styles.addressLine2}>
+              {address.city}, {address.state}
+            </Text>
           </View>
 
-          {/* address text */}
-          <Text style={styles.addressLine1}>{address.addressLine1}</Text>
-          <Text style={styles.addressLine2}>
-            {address.city}, {address.state}
-          </Text>
+          {/* {isSelected && (
+            <View style={styles.checkmarkContainer}>
+              <CheckCircle size={22} color={C.primary} />
+            </View>
+          )} */}
         </View>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
-/* ─────────── screen ─────────── */
-
 export default function SavedAddresses() {
   const { user } = useAuth();
+  const params = useLocalSearchParams();
   const authId = user?.user?.id ?? user?.id;
+  const selectMode = params.selectMode === "true";
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    (params.selectedId as string) || null,
+  );
 
   const headerFade = useRef(new Animated.Value(0)).current;
 
@@ -194,7 +212,6 @@ export default function SavedAddresses() {
     }).start();
   }, []);
 
-  /* android back */
   useEffect(() => {
     const sub = BackHandler.addEventListener("hardwareBackPress", () => {
       router.back();
@@ -203,7 +220,6 @@ export default function SavedAddresses() {
     return () => sub.remove();
   }, []);
 
-  /* fetch */
   useEffect(() => {
     if (!authId) return;
     const fetch = async () => {
@@ -223,7 +239,9 @@ export default function SavedAddresses() {
             city: a.city ?? "",
             state: a.state ?? "",
             isDefault: a.isDefault ?? false,
-          }))
+            latitude: a.latitude,
+            longitude: a.longitude,
+          })),
         );
       } catch (e) {
         console.log("address fetch error", e);
@@ -234,44 +252,106 @@ export default function SavedAddresses() {
     fetch();
   }, [authId]);
 
+  const handleSelectAddress = (address: Address) => {
+    const label = `${address.addressLine1}, ${address.city}`;
+
+    // Emit the event with selected address data
+    eventEmitter.emit("addressSelected", {
+      address: {
+        id: address.id,
+        label: address.label,
+        line1: address.addressLine1,
+        city: address.city,
+        state: address.state,
+        latitude: address.latitude,
+        longitude: address.longitude,
+      },
+      label,
+    });
+
+    // Navigate back
+    router.back();
+  };
+
   const handleDelete = async (id: string) => {
-    try {
-      await deleteAddressApi(id);
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
-    } catch {
-      setAddresses((prev) => prev.filter((a) => a.id !== id));
+    Alert.alert(
+      "Delete Address",
+      "Are you sure you want to delete this address?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAddressApi(id);
+              setAddresses((prev) => prev.filter((a) => a.id !== id));
+              if (selectedAddressId === id) {
+                setSelectedAddressId(null);
+              }
+            } catch {
+              setAddresses((prev) => prev.filter((a) => a.id !== id));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleAddNewAddress = () => {
+    router.push({
+      pathname: "/edit-address",
+      params: {
+        returnTo: "saved-addresses",
+        selectMode: selectMode ? "true" : "false",
+      },
+    });
+  };
+
+  const handleConfirmSelection = () => {
+    if (selectedAddressId) {
+      const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
+      if (selectedAddress) {
+        handleSelectAddress(selectedAddress);
+      }
+    } else {
+      Alert.alert("No Selection", "Please select an address first");
     }
   };
 
   return (
     <View style={styles.root}>
       <SafeAreaView style={{ flex: 1 }}>
-        {/* ── HEADER ── */}
         <Animated.View style={[styles.header, { opacity: headerFade }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
             <ArrowLeft size={22} color={C.text} />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Saved Locations</Text>
+          <Text style={styles.headerTitle}>
+            {selectMode ? "Select Location" : "Saved Locations"}
+          </Text>
         </Animated.View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
-          {/* ── TAB ROW ── */}
           <View style={styles.tabRow}>
             <View style={styles.activeTab}>
-              <Text style={styles.activeTabText}>Active Destinations</Text>
-              {/* <View style={styles.activeTabUnderline} /> */}
+              <Text style={styles.activeTabText}>
+                {selectMode ? "Choose Delivery Address" : "Active Destinations"}
+              </Text>
             </View>
 
             <Text style={styles.countText}>
-              {addresses.length} LOCATION{addresses.length !== 1 ? "S" : ""} SAVED
+              {addresses.length} LOCATION{addresses.length !== 1 ? "S" : ""}{" "}
+              SAVED
             </Text>
           </View>
 
-          {/* ── ADDRESS LIST ── */}
           {loading ? (
             <View style={styles.loader}>
               <ActivityIndicator color={C.primary} size="large" />
@@ -280,6 +360,14 @@ export default function SavedAddresses() {
             <View style={styles.empty}>
               <MapPin size={36} color={C.muted} />
               <Text style={styles.emptyText}>No saved locations yet</Text>
+              <TouchableOpacity
+                onPress={handleAddNewAddress}
+                style={styles.emptyAddBtn}
+              >
+                <Text style={styles.emptyAddBtnText}>
+                  Add your first address
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.list}>
@@ -288,10 +376,16 @@ export default function SavedAddresses() {
                   key={a.id}
                   address={a}
                   index={i}
+                  isSelected={selectedAddressId === a.id}
+                  onSelect={() => setSelectedAddressId(a.id)}
                   onEdit={() =>
                     router.push({
                       pathname: "/edit-address",
-                      params: { id: a.id },
+                      params: {
+                        id: a.id,
+                        returnTo: "saved-addresses",
+                        selectMode: selectMode ? "true" : "false",
+                      },
                     })
                   }
                   onDelete={() => handleDelete(a.id)}
@@ -300,48 +394,54 @@ export default function SavedAddresses() {
             </View>
           )}
 
-          {/* ── MAP DECORATION ── */}
-          <MapDecoration />
+          {!selectMode && <MapDecoration />}
         </ScrollView>
 
-        {/* ── ADD BUTTON ── */}
         <View style={styles.addBtnWrapper}>
-          <TouchableOpacity
-            activeOpacity={0.88}
-            onPress={() => router.push("/add-address")}
-            style={styles.addBtnOuter}
-          >
-            <LinearGradient
-              colors={[C.primary, C.primaryDim]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.addBtn}
+          {selectMode && selectedAddressId ? (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleConfirmSelection}
+              style={styles.addBtnOuter}
             >
-              <MapPinPlus size={20} color="#031612" strokeWidth={2.5} />
-              <Text style={styles.addBtnText}>+ Add New Address</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[C.primary, C.primaryDim]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.addBtn}
+              >
+                {/* <CheckCircle size={20} color="#031612" strokeWidth={2.5} /> */}
+                <Text style={styles.addBtnText}>Confirm Selection</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={handleAddNewAddress}
+              style={styles.addBtnOuter}
+            >
+              <LinearGradient
+                colors={[C.primary, C.primaryDim]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.addBtn}
+              >
+                <MapPinPlus size={20} color="#031612" strokeWidth={2.5} />
+                <Text style={styles.addBtnText}>
+                  {selectMode ? "Add New Address Instead" : "+ Add New Address"}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
         </View>
       </SafeAreaView>
     </View>
   );
 }
 
-/* ─────────── styles ─────────── */
-
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-
-  /* header */
-  header: {
-    height: 46,
-    justifyContent: "center",
-    paddingHorizontal: 14,
-  },
-
+  root: { flex: 1, backgroundColor: C.bg },
+  header: { height: 46, justifyContent: "center", paddingHorizontal: 14 },
   backBtn: {
     position: "absolute",
     left: 16,
@@ -351,19 +451,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
   },
-
   headerTitle: {
     textAlign: "center",
     fontSize: 17,
     fontWeight: "800",
     color: C.primary,
   },
-  /* scroll */
-  scroll: {
-    paddingBottom: 120,
-  },
-
-  /* tab row */
+  scroll: { paddingBottom: 120 },
   tabRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -372,55 +466,27 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 20,
   },
-
-  activeTab: {
-    gap: 6,
-  },
-
-  activeTabText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: C.text,
-  },
-
-  activeTabUnderline: {
-    height: 2,
-    width: "100%",
-    backgroundColor: C.primary,
-    borderRadius: 2,
-  },
-
+  activeTab: { gap: 6 },
+  activeTabText: { fontSize: 14, fontWeight: "700", color: C.text },
   countText: {
     fontSize: 11,
     fontWeight: "700",
     color: C.subText,
     letterSpacing: 0.8,
   },
-
-  /* list */
-  list: {
-    paddingHorizontal: 16,
-    gap: 12,
+  list: { paddingHorizontal: 16, gap: 12 },
+  loader: { paddingVertical: 60, alignItems: "center" },
+  empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
+  emptyText: { color: C.subText, fontSize: 14, fontWeight: "600" },
+  emptyAddBtn: {
+    backgroundColor: C.card,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.primary,
   },
-
-  loader: {
-    paddingVertical: 60,
-    alignItems: "center",
-  },
-
-  empty: {
-    paddingVertical: 60,
-    alignItems: "center",
-    gap: 12,
-  },
-
-  emptyText: {
-    color: C.subText,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  /* card */
+  emptyAddBtnText: { color: C.primary, fontSize: 14, fontWeight: "700" },
   card: {
     backgroundColor: C.card,
     borderRadius: 16,
@@ -428,12 +494,10 @@ const styles = StyleSheet.create({
     borderColor: C.cardBorder,
     overflow: "hidden",
     flexDirection: "row",
+    position: "relative",
   },
-
-  cardActive: {
-    borderColor: "#1A4035",
-  },
-
+  cardActive: { borderColor: "#1A4035" },
+  cardSelected: { borderColor: C.primary, borderWidth: 2 },
   cardAccentBar: {
     width: 3,
     backgroundColor: C.primary,
@@ -441,51 +505,40 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     marginLeft: 2,
   },
-
-  cardContent: {
-    flex: 1,
-    padding: 14,
+  cardSelectedBar: {
+    width: 3,
+    backgroundColor: C.primary,
+    borderRadius: 3,
+    marginVertical: 12,
+    marginLeft: 2,
   },
-
+  cardContent: { flex: 1, padding: 14 },
   cardTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 8,
   },
-
   labelRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     flexWrap: "wrap",
   },
-
-  cardLabel: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: C.text,
-  },
-
+  cardLabel: { fontSize: 16, fontWeight: "800", color: C.text },
   defaultBadge: {
     backgroundColor: C.defaultBadgeBg,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
   },
-
   defaultBadgeText: {
     fontSize: 9,
     fontWeight: "900",
     color: C.defaultBadgeText,
     letterSpacing: 0.5,
   },
-
-  actions: {
-    flexDirection: "row",
-    gap: 4,
-  },
-
+  actions: { flexDirection: "row", gap: 4 },
   actionBtn: {
     width: 30,
     height: 30,
@@ -494,21 +547,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#0D2620",
   },
-
   addressLine1: {
     fontSize: 14,
     fontWeight: "700",
     color: C.text,
     marginBottom: 3,
   },
-
-  addressLine2: {
-    fontSize: 12,
-    color: C.subText,
-    fontWeight: "500",
-  },
-
-  /* map */
+  addressLine2: { fontSize: 12, color: C.subText, fontWeight: "500" },
+  checkmarkContainer: { position: "absolute", right: 12, top: 12 },
   mapWrapper: {
     marginTop: 20,
     marginHorizontal: 16,
@@ -520,7 +566,6 @@ const styles = StyleSheet.create({
     borderColor: "#0F2C24",
     position: "relative",
   },
-
   gridLineH: {
     position: "absolute",
     left: 0,
@@ -528,7 +573,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#0D2A22",
   },
-
   gridLineV: {
     position: "absolute",
     top: 0,
@@ -536,7 +580,6 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: "#0D2A22",
   },
-
   roadOuter: {
     position: "absolute",
     bottom: 40,
@@ -550,7 +593,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     transform: [{ rotate: "-8deg" }],
   },
-
   roadInner: {
     width: "88%",
     height: 20,
@@ -560,7 +602,6 @@ const styles = StyleSheet.create({
     borderColor: C.primary,
     opacity: 0.4,
   },
-
   dispatchBadge: {
     position: "absolute",
     bottom: 12,
@@ -569,7 +610,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-
   dispatchDot: {
     width: 7,
     height: 7,
@@ -579,22 +619,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 4,
   },
-
   dispatchText: {
     fontSize: 10,
     fontWeight: "700",
     color: C.subText,
     letterSpacing: 1.2,
   },
-
-  /* add button */
-  addBtnWrapper: {
-    position: "absolute",
-    bottom: 24,
-    left: 20,
-    right: 20,
-  },
-
+  addBtnWrapper: { position: "absolute", bottom: 24, left: 20, right: 20 },
   addBtnOuter: {
     borderRadius: 18,
     overflow: "hidden",
@@ -604,7 +635,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     elevation: 8,
   },
-
   addBtn: {
     height: 58,
     flexDirection: "row",
@@ -612,7 +642,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-
   addBtnText: {
     fontSize: 16,
     fontWeight: "900",
