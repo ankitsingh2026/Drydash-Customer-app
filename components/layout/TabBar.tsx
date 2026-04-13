@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -22,18 +22,20 @@ type TabBarProps = {
   savedAddresses?: Address[];
 };
 
-export const TabBar = ({
-  onOpenNotifications,
- 
-}: TabBarProps) => {
+export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { unreadCount } = useNotifications();
-
+  const { unreadCount, refreshNotifications } = useNotifications();
+  const isFetchingRef = useRef(false);
   const [locationText, setLocationText] = useState("Fetching location...");
   const [loadingLoc, setLoadingLoc] = useState(true);
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
+    null,
+  );
   const [modalVisible, setModalVisible] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const { user } = useAuth();
+  const authId = user?.user?.id ?? user?.id;
 
   useEffect(() => {
     fetchLocation();
@@ -60,7 +62,8 @@ export const TabBar = ({
         const g = geo[0];
         const city = g.city || g.subregion || "";
         const area = g.district || g.name || "";
-        setLocationText(`${area}, ${city}`);
+        const text = [area, city].filter(Boolean).join(", ");
+        setLocationText(text || "Set delivery location");
       }
     } catch {
       setLocationText("Set delivery location");
@@ -69,17 +72,6 @@ export const TabBar = ({
     }
   };
 
-  const handleLocationSelect = (label: string, address: Address | null) => {
-    setLocationText(label);
-    if (address?.id) setSelectedAddressId(address.id);
-  };
-
-
-  const [savedAddresses, setSavedAddresses] = useState([]);
-
-  const { user } = useAuth();
-  const authId = user?.user?.id ?? user?.id;
-
   useEffect(() => {
     if (!authId) return;
 
@@ -87,9 +79,7 @@ export const TabBar = ({
       try {
         const data = await getAddressApi(authId);
 
-        const list = Array.isArray(data?.results)
-          ? data.results
-          : [];
+        const list = Array.isArray(data?.results) ? data.results : [];
 
         setSavedAddresses(
           list.map((a) => ({
@@ -99,7 +89,7 @@ export const TabBar = ({
             line1: a.addressLine1 ?? a.address,
             city: a.city,
             state: a.state,
-          }))
+          })),
         );
       } catch (e) {
         console.log(e);
@@ -108,24 +98,30 @@ export const TabBar = ({
 
     fetchAddresses();
   }, [authId]);
+
+  const handleBellPress = async () => {
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+
+    onOpenNotifications?.();
+    await refreshNotifications();
+
+    isFetchingRef.current = false;
+  };
+
   return (
     <>
-      <View
-        style={[
-          styles.container,
-          { paddingTop: insets.top + 6 },
-        ]}
-      >
+      <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
         <View style={styles.row}>
-          {/* LEFT — title + tappable location */}
+          {/* LEFT */}
           <View style={styles.left}>
             <Text style={styles.title}>24 Hours</Text>
 
-            {/* tappable location row */}
             <TouchableOpacity
               style={styles.locationRow}
               onPress={() => setModalVisible(true)}
-              activeOpacity={0.75}
+              activeOpacity={0.55}
             >
               {loadingLoc ? (
                 <ActivityIndicator size="small" color="#2FE6A6" />
@@ -150,6 +146,24 @@ export const TabBar = ({
               )}
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            onPress={handleBellPress}
+            style={styles.bellContainer}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#E6FFF7" />
+
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {Math.max(0, unreadCount) > 9
+                    ? "9+"
+                    : Math.max(0, unreadCount)}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -159,9 +173,9 @@ export const TabBar = ({
         savedAddresses={savedAddresses}
         selectedId={selectedAddressId}
         onSelect={(label, addr) => {
-          setLocationText(label)
-          setSelectedAddressId(addr?.id || null)
-          setModalVisible(false)
+          setLocationText(label);
+          setSelectedAddressId(addr?.id || null);
+          setModalVisible(false);
         }}
         onClose={() => setModalVisible(false)}
       />
@@ -198,5 +212,26 @@ const styles = StyleSheet.create({
     color: "#8FB3A8",
     fontWeight: "500",
     maxWidth: 200,
+  },
+  bellContainer: {
+    padding: 6,
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#FF3B30",
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
 });
