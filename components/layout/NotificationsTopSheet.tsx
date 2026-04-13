@@ -1,6 +1,7 @@
 // components/NotificationsTopSheet.tsx
+
 import { useNotifications } from "@/context/NotificationContext";
-import { Bell, X } from "lucide-react-native";
+import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -15,8 +16,75 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 
-const { width } = Dimensions.get("window");
-const SHEET_HEIGHT = 320;
+const { width, height } = Dimensions.get("window");
+const SHEET_HEIGHT = Math.min(640, Math.round(height * 0.82));
+
+type NotificationItem = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  unread?: boolean;
+  time?: string;
+  kind?: string;
+};
+
+/* ---------- Helper ---------- */
+function withOpacity(color: string, opacity: number): string {
+  let hex = color.replace("#", "");
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (hex.length === 6) {
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  }
+  return color;
+}
+
+/* ---------- Meta ---------- */
+function getMeta(kind: string | undefined, primary: string) {
+  switch (kind) {
+    case "order_created":
+    case "order_updated":
+      return {
+        icon: "cube-outline" as const,
+        color: primary,
+        softBg: withOpacity(primary, 0.1),
+      };
+    case "pickup_created":
+    case "pickup_updated":
+      return {
+        icon: "bicycle-outline" as const,
+        color: "#06B6D4",
+        softBg: "rgba(6,182,212,0.14)",
+      };
+    case "wallet":
+      return {
+        icon: "wallet-outline" as const,
+        color: "#8B5CF6",
+        softBg: "rgba(139,92,246,0.14)",
+      };
+    case "offer":
+      return {
+        icon: "pricetag-outline" as const,
+        color: "#F59E0B",
+        softBg: "rgba(245,158,11,0.14)",
+      };
+    default:
+      return {
+        icon: "notifications-outline" as const,
+        color: primary,
+        softBg: withOpacity(primary, 0.1),
+      };
+  }
+}
+
+/* ---------- Component ---------- */
 
 export default function NotificationsTopSheet({
   visible,
@@ -27,19 +95,14 @@ export default function NotificationsTopSheet({
 }) {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { notifications, markAllRead } = useNotifications();
+  const { notifications, markAllRead, markRead } = useNotifications();
 
   const translateY = useRef(new Animated.Value(-SHEET_HEIGHT)).current;
   const backdrop = useRef(new Animated.Value(0)).current;
 
-  const unreadBg = isDark
-    ? "rgba(52,211,153,0.12)"
-    : "rgba(52,211,153,0.12)";
-
-  /** Animate + mark read when opened */
+  /* ---------- Animation ---------- */
   useEffect(() => {
     if (visible) {
-      markAllRead(); // 🔥 sync badge → zero
       Animated.parallel([
         Animated.timing(backdrop, {
           toValue: 1,
@@ -48,7 +111,8 @@ export default function NotificationsTopSheet({
         }),
         Animated.spring(translateY, {
           toValue: 0,
-          friction: 8,
+          friction: 9,
+          tension: 80,
           useNativeDriver: true,
         }),
       ]).start();
@@ -56,12 +120,12 @@ export default function NotificationsTopSheet({
       Animated.parallel([
         Animated.timing(backdrop, {
           toValue: 0,
-          duration: 150,
+          duration: 200,
           useNativeDriver: true,
         }),
         Animated.timing(translateY, {
           toValue: -SHEET_HEIGHT,
-          duration: 150,
+          duration: 220,
           useNativeDriver: true,
         }),
       ]).start();
@@ -70,14 +134,22 @@ export default function NotificationsTopSheet({
 
   if (!visible) return null;
 
+  const divider = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
+  const subtleHl = isDark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.022)";
+
   return (
-    <View style={styles.overlay}>
-      {/* BACKDROP */}
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* Backdrop */}
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
-        <Animated.View style={[styles.backdrop, { opacity: backdrop }]} />
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            { backgroundColor: "rgba(0,0,0,0.48)", opacity: backdrop },
+          ]}
+        />
       </Pressable>
 
-      {/* SHEET */}
+      {/* Sheet */}
       <Animated.View
         style={[
           styles.sheet,
@@ -89,154 +161,104 @@ export default function NotificationsTopSheet({
           },
         ]}
       >
-        {/* HEADER */}
-        <View style={styles.header}>
+        {/* Header */}
+        <View style={[styles.headerRow, { borderBottomColor: divider }]}>
           <Text style={[styles.title, { color: theme.text }]}>
             Notifications
           </Text>
 
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-            <X size={20} color={theme.subText} />
-          </TouchableOpacity>
+          {notifications.length > 0 && (
+            <TouchableOpacity onPress={markAllRead}>
+              <Text style={{ color: theme.primary, fontWeight: "700" }}>
+                Mark all as read
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* LIST */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 12 }}
-        >
-          {notifications.length === 0 && (
-            <Text style={[styles.empty, { color: theme.subText }]}>
-              No notifications yet
+        {/* List */}
+        <ScrollView>
+          {notifications.length === 0 ? (
+            <Text style={{ textAlign: "center", marginTop: 40 }}>
+              No notifications
             </Text>
+          ) : (
+            notifications.map((n: NotificationItem, idx) => {
+              const meta = getMeta(n.kind, theme.primary);
+
+              return (
+                <TouchableOpacity
+                  key={n.id}
+                  onPress={async () => {
+                    await markRead(n.id);
+                    onClose();
+                  }}
+                  style={[
+                    styles.row,
+                    n.unread && { backgroundColor: subtleHl },
+                    idx !== notifications.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: divider,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[styles.iconWrap, { backgroundColor: meta.softBg }]}
+                  >
+                    <Ionicons name={meta.icon} size={20} color={meta.color} />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.titleText, { color: theme.text }]}>
+                      {n.title}
+                    </Text>
+                    {!!n.subtitle && (
+                      <Text style={{ color: theme.subText }}>{n.subtitle}</Text>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
-
-          {notifications.map((n) => (
-            <TouchableOpacity
-              key={n.id}
-              activeOpacity={0.88}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: n.unread ? unreadBg : theme.background,
-                  borderColor: theme.border,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.iconWrap,
-                  { backgroundColor: theme.primary + "22" },
-                ]}
-              >
-                <Bell size={26} color={theme.primary} />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cardTitle, { color: theme.text }]}>
-                  {n.title}
-                </Text>
-
-                {!!n.subtitle && (
-                  <Text style={[styles.cardSub, { color: theme.subText }]}>
-                    {n.subtitle}
-                  </Text>
-                )}
-              </View>
-
-              {n.unread && <View style={styles.dot} />}
-            </TouchableOpacity>
-          ))}
         </ScrollView>
       </Animated.View>
     </View>
   );
 }
 
-/* ================= STYLES ================= */
+/* ---------- Styles ---------- */
 
 const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 999,
-    alignItems: "center",
-  },
-
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-
   sheet: {
     position: "absolute",
     height: SHEET_HEIGHT,
     borderRadius: 20,
-    paddingHorizontal: 12,
-    elevation: 18,
+    overflow: "hidden",
+    alignSelf: "center",
   },
-
-  header: {
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    padding: 16,
   },
-
   title: {
-    fontSize: 17,
-    fontWeight: "900",
-  },
-
-  closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginBottom: 10,
-  },
-
-  iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-
-  cardTitle: {
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "800",
   },
-
-  cardSub: {
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
+  row: {
+    flexDirection: "row",
+    padding: 14,
+    gap: 10,
+    alignItems: "center",
   },
-
-  dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: "#22C55E",
-    marginLeft: 6,
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
-
-  empty: {
-    textAlign: "center",
-    marginTop: 40,
-    fontSize: 13,
-    fontWeight: "600",
+  titleText: {
+    fontWeight: "700",
   },
 });

@@ -5,7 +5,7 @@ import { checkServiceAvailability } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { Bell, MousePointer2 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -24,7 +24,10 @@ type TabBarProps = {
 export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { unreadCount } = useNotifications();
+
+  const { unreadCount, refreshNotifications } = useNotifications();
+  const isFetchingRef = useRef(false);
+
   const {
     selectedAddress,
     allAddresses,
@@ -126,6 +129,21 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   };
 
+  const handleBellPress = async () => {
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+
+    try {
+      await refreshNotifications();
+      onOpenNotifications?.();
+    } catch (e) {
+      console.error("Notification refresh failed", e);
+    } finally {
+      isFetchingRef.current = false;
+    }
+  };
+
   const getServiceColor = () => {
     if (isServiceAvailable) return "#2FE6A6";
     if (serviceType === "OUT_OF_AREA") return "#FFA500";
@@ -191,7 +209,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={onOpenNotifications}
+            onPress={handleBellPress}
             style={styles.iconBtn}
           >
             <Bell size={18} color="#E6FFF7" />
