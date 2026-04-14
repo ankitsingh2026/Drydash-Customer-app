@@ -587,14 +587,14 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
           },
         ]}
       >
-        <ActiveIcon size={90} />
+        <ActiveIcon size={70} />
       </Animated.View>
 
       {/* Text */}
-      <Animated.View style={{ opacity }}>
+      {/* <Animated.View style={{ opacity }}>
         <Text style={styles.mainText}>{item.text}</Text>
         <Text style={styles.subText}>{item.subtext}</Text>
-      </Animated.View>
+      </Animated.View> */}
 
       {/* Brand */}
       <View style={styles.brandRow}>

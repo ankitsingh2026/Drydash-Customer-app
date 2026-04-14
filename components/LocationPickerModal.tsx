@@ -1,11 +1,15 @@
+import { useAddress } from "@/context/AddressContext";
+import { deleteAddressApi } from "@/features/orders/orders.api";
 import { Address } from "@/types/order.types";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { router } from "expo-router";
+import { Pencil, Trash2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   AppState,
   AppStateStatus,
@@ -41,8 +45,9 @@ type Props = {
   visible: boolean;
   savedAddresses: Address[];
   selectedId: string | null;
-  onSelect: (label: string, address: Address | null) => void;
+  onSelect: (label: string, address: Address | null, shouldSelect?: boolean) => void;
   onClose: () => void;
+  onAddNewAddress?: () => void;
 };
 
 /* ─── cloud SVG-style view ─── */
@@ -91,6 +96,7 @@ export default function LocationPickerModal({
   selectedId,
   onSelect,
   onClose,
+  onAddNewAddress,
 }: Props) {
   const insets = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
@@ -99,6 +105,7 @@ export default function LocationPickerModal({
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const appState = useRef(AppState.currentState);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   // Check location when modal becomes visible
   useEffect(() => {
@@ -252,8 +259,45 @@ export default function LocationPickerModal({
   const handleSavedPick = (addr: Address) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const label = `${addr.line1}, ${addr.city}`;
-    onSelect(label, addr);
+    onSelect(label, addr, true);
     onClose();
+  };
+  const { refreshAddresses } = useAddress();
+  const handleDelete = (id: string) => {
+    Alert.alert(
+      "Delete Address",
+      "Are you sure you want to delete this address?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAddressApi(id);
+              await refreshAddresses();
+              onClose(); // refresh modal
+            } catch (err) {
+              console.log("Delete error:", err);
+            }
+          },
+        },
+      ]
+    );
+  };
+  const handleEdit = (addr: any) => {
+    router.push({
+      pathname: "/edit-address",
+      params: {
+        _id: addr.id,
+        label: addr.label,
+        addressLine1: addr.line1,
+        city: addr.city,
+        state: addr.state,
+        latitude: addr.latitude,
+        longitude: addr.longitude,
+      },
+    });
   };
 
   const handleWhatsApp = () => {
@@ -422,32 +466,23 @@ export default function LocationPickerModal({
           </View>
 
           {/* ── SAVED ADDRESSES ── */}
-          {savedAddresses.length > 0 && (
-            <View style={styles.savedSection}>
-              <View style={styles.savedHeader}>
-                <Text style={styles.savedTitle}>Select your address</Text>
-                <TouchableOpacity
-                  style={styles.seeAllBtn}
-                  onPress={() => {
-                    onClose();
-                    router.push({
-                      pathname: "/saved-address",
-                      params: {
-                        selectMode: "true",
-                      },
-                    });
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.seeAllText}>See All</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={14}
-                    color={C.primary}
-                  />
-                </TouchableOpacity>
-              </View>
 
+          <View style={styles.savedSection}>
+            <View style={styles.savedHeader}>
+              <Text style={styles.savedTitle}>
+                {savedAddresses.length > 0 ? "Select your address" : "No address found"}
+              </Text>
+              <TouchableOpacity
+                style={styles.seeAllBtn}
+                onPress={() => {
+                  onClose();
+                  onAddNewAddress?.();
+                }}
+              >
+                <Text style={styles.seeAllText}>+ Add New</Text>
+              </TouchableOpacity>
+            </View>
+            {savedAddresses.length > 0 && (
               <View style={styles.addressList}>
                 {savedAddresses.map((addr, index) => {
                   const isSelected = selectedId === addr.id;
@@ -457,7 +492,7 @@ export default function LocationPickerModal({
                     addr.label?.toLowerCase() === "home"
                       ? "location-outline"
                       : addr.label?.toLowerCase() === "office" ||
-                          addr.label?.toLowerCase() === "work"
+                        addr.label?.toLowerCase() === "work"
                         ? "business-outline"
                         : "location-outline";
 
@@ -506,6 +541,29 @@ export default function LocationPickerModal({
                           size={18}
                           color={isSelected ? C.primary : C.muted}
                         />
+                        <View style={{ flexDirection: "row", gap: 10 }}>
+
+                          {/* EDIT */}
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleEdit(addr);
+                            }}
+                          >
+                            <Pencil size={16} color="#8FB3A8" />
+                          </TouchableOpacity>
+
+                          {/* DELETE */}
+                          <TouchableOpacity
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleDelete(addr.id);
+                            }}
+                          >
+                            <Trash2 size={16} color="#FF5A5A" />
+                          </TouchableOpacity>
+
+                        </View>
                       </TouchableOpacity>
 
                       {!isLast && <View style={styles.rowDivider} />}
@@ -513,8 +571,9 @@ export default function LocationPickerModal({
                   );
                 })}
               </View>
-            </View>
-          )}
+            )}
+          </View>
+
         </ScrollView>
       </Animated.View>
     </Modal>

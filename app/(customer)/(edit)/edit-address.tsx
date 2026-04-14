@@ -16,6 +16,7 @@ import {
 import { useTheme } from "../../../context/ThemeContext";
 
 import PickupMap from "@/components/maps/PickupMap.native";
+import { useAddress } from "@/context/AddressContext";
 import { saveAddressApi, updateAddressApi } from "@/features/orders/orders.api";
 
 export default function EditAddress() {
@@ -246,7 +247,7 @@ export default function EditAddress() {
   }, []);
 
   /* ---------------- SAVE ADDRESS ---------------- */
-
+  const { refreshAddresses } = useAddress();
   const handleSave = async () => {
     // Validation
     if (
@@ -274,9 +275,6 @@ export default function EditAddress() {
 
       // Prepare payload according to API expectations
       const payload = {
-        // For new address, don't include _id
-        ...(isEditing && { _id: addressForm._id }),
-
         label:
           addressForm.label === "home"
             ? "Home"
@@ -284,10 +282,11 @@ export default function EditAddress() {
               ? "Office"
               : "Other",
 
-        addressType: addressForm.addressType,
-
         addressLine1: addressForm.addressLine1,
-        addressLine2: addressForm.addressLine2 || "",
+
+        ...(addressForm.addressLine2 && {
+          addressLine2: addressForm.addressLine2,
+        }),
 
         landmark: addressForm.landmark,
         city: addressForm.city,
@@ -303,7 +302,7 @@ export default function EditAddress() {
       let response;
       if (isEditing) {
         // Update existing address
-        response = await updateAddressApi(payload);
+        response = await updateAddressApi(addressForm._id, payload);
         console.log("Update response:", response);
         Alert.alert("Success", "Address updated successfully");
       } else {
@@ -312,7 +311,7 @@ export default function EditAddress() {
         console.log("Save response:", response);
         Alert.alert("Success", "Address saved successfully");
       }
-
+      await refreshAddresses();
       router.back();
     } catch (error: any) {
       console.log("Save/Update error:", error);

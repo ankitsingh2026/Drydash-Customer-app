@@ -4,6 +4,7 @@ import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { router } from "expo-router";
 import { Bell, MousePointer2 } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
@@ -60,6 +61,22 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   }, [selectedAddress]);
 
+  useEffect(() => {
+    if (selectedAddress) {
+      const exists = allAddresses.find(a => a.id === selectedAddress.id);
+
+      if (!exists) {
+        // deleted address → reset
+        if (allAddresses.length > 0) {
+          setSelectedAddress(allAddresses[0]);
+        } else {
+          setSelectedAddress(null);
+          setLocationText("No address selected");
+        }
+      }
+    }
+  }, [allAddresses]);
+
   // Check service when coordinates change
   useEffect(() => {
     if (currentCoords) {
@@ -100,12 +117,18 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   };
 
-  const handleAddressSelect = async (label: string, address: any | null) => {
+  const handleAddressSelect = async (
+    label: string,
+    address: any | null,
+    shouldSelect = true 
+  ) => {
     setModalVisible(false);
 
     if (address) {
       console.log("Address selected in modal:", address);
-      setSelectedAddress(address);
+      if (shouldSelect) {
+        setSelectedAddress(address);
+      }
       setLocationText(label);
 
       const coords = await fetchAddressCoordinates(address);
@@ -211,7 +234,10 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
         savedAddresses={allAddresses}
         selectedId={selectedAddress?.id || null}
         onSelect={handleAddressSelect}
-        onClose={() => setModalVisible(false)}
+        onClose={() => { setModalVisible(false); refreshAddresses(); }}
+        onAddNewAddress={() => {
+          router.push("/edit-address");
+        }}
       />
     </>
   );

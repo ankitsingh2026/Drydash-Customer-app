@@ -221,7 +221,7 @@ export default function ProductServicePopup({
                                 ) : (
                                     <View style={styles.qtyContainer}>
                                         <TouchableOpacity
-                                            onPress={handleDecrement}
+                                            onPress={ () => cart.decreaseQty(product.id)}
                                             style={styles.qtyBtn}
                                         >
                                             <Minus size={15} color="#56BFAB" strokeWidth={2.5} />
@@ -236,11 +236,11 @@ export default function ProductServicePopup({
                                     </View>
                                 )}
                             </View>
-                          {cartTotalQty > 0 && (
-    <View style={{ paddingTop: 5 }}>
-      <FloatingCart onOpen={onOpenCart} />
-    </View>
-  )}
+                            {cartTotalQty > 0 && (
+                                <View style={{ paddingTop: 5 }}>
+                                    <FloatingCart onOpen={onOpenCart} />
+                                </View>
+                            )}
                         </Animated.View>
                     </TouchableWithoutFeedback>
                 </View>

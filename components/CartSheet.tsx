@@ -21,7 +21,7 @@ export default function CartSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const { items, addItem, removeItem, clear } = useCart();
+  const { items, addItem, removeItem, clear, decreaseQty } = useCart();
   const { theme } = useTheme();
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);

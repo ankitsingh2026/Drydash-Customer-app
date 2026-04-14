@@ -321,7 +321,7 @@ export default function ServiceDetail() {
                 ) : (
                   <View style={styles.qtyBox}>
                     <TouchableOpacity
-                      onPress={() => cart.removeItem(item.id)}
+                      onPress={() => cart.decreaseQty(item.id)}
                       style={styles.qtyBtn}
                     >
                       <Minus size={14} color={theme.text} />
