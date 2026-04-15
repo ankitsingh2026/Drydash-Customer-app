@@ -324,7 +324,7 @@ export default function Home() {
           setI((prev) => (prev + 1) % words.length);
         }
       }
-    }, deleting ? 10 : 15); 
+    }, 5); 
 
     return () => clearTimeout(timer);
   }, [j, deleting, i, isFocused]);
@@ -876,7 +876,7 @@ export default function Home() {
                       activeOpacity={0.85}
                       onPress={onPressBook}
                       style={styles.swipeDraggableInner}
-                    >
+                    > 
                       <Ionicons name="flash" size={20} color="#000" />
                     </TouchableOpacity>
                   </Animated.View>
@@ -1451,6 +1451,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
+    marginLeft: 20,
   },
   swipeDraggable: {
     width: 44,

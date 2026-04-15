@@ -552,11 +552,11 @@ export default function Orders() {
                     ) : null} */}
 
                     {/* Stage progress for active/processing orders */}
-                    {isProcessing && !isDelivered && o.stage ? (
+                    {/* {isProcessing && !isDelivered && o.stage ? (
                       <StageProgress stage={o.stage} />
                     ) : isProcessing && !isDelivered ? (
                       <StageProgress stage="PROCESSING" />
-                    ) : null}
+                    ) : null} */}
 
                     <View style={styles.dividerLine} />
 
