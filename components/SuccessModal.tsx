@@ -1,13 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useRef } from "react";
 import {
-    Animated,
-    Easing,
-    Modal,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Easing,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -134,6 +134,9 @@ export function SuccessModal({
       }),
     ])
   ).start();
+    setTimeout(() => {
+    onHome();
+  }, 1000);
 });
   }, [visible]);
 
@@ -160,7 +163,7 @@ export function SuccessModal({
           {/* Circle */}
           <Animated.View style={[s.circle, { transform: [{ scale: circleScale }] }]}>
             <Animated.View style={{ transform: [{ scale: checkScale }, { rotate: checkSpin }] }}>
-              <Ionicons name="checkmark" size={46} color="#052B25" />
+              <Ionicons name="checkmark" size={46} color="#ffffff" />
             </Animated.View>
           </Animated.View>
 
@@ -214,10 +217,10 @@ const s = StyleSheet.create({
   // Soft radial green glow in background
   radialGlow: {
     position: "absolute",
-    top: "12%",
+    top: "14%",
     alignSelf: "center",
-    width: 340,
-    height: 340,
+    width: 300,
+    height: 300,
     borderRadius: 170,
     backgroundColor: "rgba(39,226,164,0.07)",
     // layered shadow trick for radial feel
@@ -258,11 +261,11 @@ const s = StyleSheet.create({
 
   title: {
     color: "#CFFFF1",
-    fontSize: 32,
+    fontSize:24,
     fontWeight: "900",
     textAlign: "center",
     marginTop: 28,
-    lineHeight: 40,
+    lineHeight: 30,
     letterSpacing: 0.4,
   },
 

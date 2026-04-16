@@ -1,6 +1,5 @@
 // app/screens/BookPickup.tsx — Complete updated file with service availability check
 import CouponCard, { COUPONS } from "@/components/CouponCard";
-import LocationPickerModal from "@/components/LocationPickerModal";
 import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
 import { useAddress } from "@/context/AddressContext";
@@ -32,6 +31,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -1047,7 +1047,7 @@ export default function BookPickup() {
                     marginLeft: 4,
                   }}
                 >
-                  Explore Services
+                  Add Items
                 </Text>
               </TouchableOpacity>
 
@@ -1274,7 +1274,7 @@ export default function BookPickup() {
                 </Text>
               </View>
             )}
-            <View
+            {/* <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -1330,9 +1330,50 @@ export default function BookPickup() {
                       : "Confirm Pickup"}
                 </Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         </ScrollView>
+
+        {/* ✅ FIXED FOOTER */}
+        <View
+          style={[
+            s.fixedFooter,
+            {
+              backgroundColor: theme.background,
+              paddingBottom: insets.bottom + 10,
+            },
+          ]}
+        >
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, margin: 10 }}>
+            <TouchableOpacity onPress={confirmPickup}>
+              <Text style={{ color: "#6B8F7B", fontSize: 20, fontWeight: "600" }}>
+                Book without pay
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                s.confirmBtn,
+                {
+                  flex: 1,
+                  backgroundColor: theme.primary,
+                  opacity: confirmLoading ? 0.7 : 1,
+                },
+              ]}
+              onPress={confirmPickup}
+              disabled={confirmLoading}
+            >
+              <Text style={s.confirmText}>
+                {confirmLoading
+                  ? "Booking..."
+                  : pickupType === "today"
+                    ? "Confirm Booking"
+                    : "Confirm Pickup"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* ══════════════════ NOTES MODAL ══════════════════ */}
         <Modal
@@ -1998,6 +2039,9 @@ export default function BookPickup() {
           setModalVisible(false);
         }}
         onClose={() => setModalVisible(false)}
+        onAddNewAddress={() => {
+          router.push("/select-address-location");
+        }}
       />
 
       <CouponCard
@@ -2240,7 +2284,7 @@ const s = StyleSheet.create({
   },
 
   confirmBtn: {
-    height: 54,
+    height: 45,
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
@@ -2520,6 +2564,17 @@ const ms = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
+  },
+  fixedFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#1E3327",
+    zIndex: 1000,
   },
 
   // warningBox: {

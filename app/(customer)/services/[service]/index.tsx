@@ -775,14 +775,16 @@ export default function ServiceDetail() {
                       image: item.image,
                     })
                   }
-                  style={[styles.addBtn, { backgroundColor: theme.primary }]}
+                  style={[styles.addBtn]}
                 >
-                  <Text style={{ fontWeight: "800", color: "#000" }}>Add</Text>
+                  <Text style={{ fontWeight: "600", color: "#ffffff" }}>
+                    <Plus size={20} color="#ffffff" />
+                  </Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.qtyBox}>
                   <TouchableOpacity
-                    onPress={() => cart.removeItem(item.id)}
+                    onPress={() => cart.decreaseQty(item.id)}
                     style={styles.qtyBtn}
                   >
                     <Minus size={14} color={theme.text} />

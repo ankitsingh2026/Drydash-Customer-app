@@ -300,7 +300,7 @@ export default function SavedAddresses() {
 
   const handleAddNewAddress = () => {
     router.push({
-      pathname: "/edit-address",
+      pathname: "/select-address-location",
       params: {
         returnTo: "saved-addresses",
         selectMode: selectMode ? "true" : "false",

@@ -1,3 +1,4 @@
+import AppLoader from "@/components/AppLoader";
 import PaymentStamp from "@/components/PaymentStamp";
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
@@ -20,8 +21,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { OrdersScreenSkeleton } from "../../../../components/SkeletonLoader";
-
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
@@ -349,8 +348,8 @@ export default function Orders() {
     </View>
   );
 
-  if (!user) return <OrdersScreenSkeleton />;
-  if (loading) return <OrdersScreenSkeleton />;
+  if (!user) return <AppLoader />;
+  if (loading) return <AppLoader />;
 
   /* ================= UI ================= */
 
@@ -553,11 +552,11 @@ export default function Orders() {
                     ) : null} */}
 
                     {/* Stage progress for active/processing orders */}
-                    {isProcessing && !isDelivered && o.stage ? (
+                    {/* {isProcessing && !isDelivered && o.stage ? (
                       <StageProgress stage={o.stage} />
                     ) : isProcessing && !isDelivered ? (
                       <StageProgress stage="PROCESSING" />
-                    ) : null}
+                    ) : null} */}
 
                     <View style={styles.dividerLine} />
 

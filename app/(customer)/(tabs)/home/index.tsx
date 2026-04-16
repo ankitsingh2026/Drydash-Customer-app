@@ -206,9 +206,9 @@ function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
                   isCompleted || isActive
                     ? { backgroundColor: "#00C896", borderColor: "#00C896" }
                     : {
-                        backgroundColor: "transparent",
-                        borderColor: "#1E3530",
-                      },
+                      backgroundColor: "transparent",
+                      borderColor: "#1E3530",
+                    },
                 ]}
               >
                 {isCompleted && (
@@ -286,6 +286,40 @@ export default function Home() {
     checkAuth();
   }, []);
 
+  const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
+
+  const [text, setText] = useState("");
+  const [i, setI] = useState(0);
+  const [j, setJ] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (isFocused) return; 
+
+    const word = words[i];
+
+    const timer = setTimeout(() => {
+      if (!deleting) {
+        setText(word.slice(0, j + 1));
+        setJ((prev) => prev + 1);
+
+        if (j + 1 === word.length) {
+          setDeleting(true);
+        }
+      } else {
+        setText(word.slice(0, j - 1));
+        setJ((prev) => prev - 1);
+
+        if (j - 1 === 0) {
+          setDeleting(false);
+          setI((prev) => (prev + 1) % words.length);
+        }
+      }
+    }, 5); 
+
+    return () => clearTimeout(timer);
+  }, [j, deleting, i, isFocused]);
   const allProducts = Object.values(catalogData).flat();
 
   const filteredProducts = allProducts.filter((item) =>
@@ -600,11 +634,22 @@ export default function Home() {
                     setSearchQuery(text);
                     setShowSearchResults(text.length > 0);
                   }}
-                  placeholder='Search "Shoe Spa"'
-                  placeholderTextColor="#4B5563"
+                  onFocus={() => setIsFocused(true)}     // ✅ stop animation
+                  onBlur={() => setIsFocused(false)}     // ✅ resume animation
+                  placeholder=""
                   style={[styles.searchInput, { color: theme.text }]}
-                  returnKeyType="search"
                 />
+                {searchQuery === "" && !isFocused && (
+                  <Text
+                    style={{
+                      position: "absolute",
+                      left: 36,
+                      color: "#4B5563",
+                    }}
+                  >
+                    {`Search "${text}"`}
+                  </Text>
+                )}
                 {searchQuery.length > 0 ? (
                   <TouchableOpacity
                     onPress={() => {
@@ -770,7 +815,12 @@ export default function Home() {
 
           {/* ── ACTIVE ORDER CARD (shown after booking) ── */}
           {orderBooked && (
-            <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.push("/(customer)/order-tracking")}
+            >
+              <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
+            </TouchableOpacity>
           )}
 
           {/* ── SWIPE TO BOOK STRIP ── */}
@@ -834,7 +884,7 @@ export default function Home() {
                       activeOpacity={0.85}
                       onPress={onPressBook}
                       style={styles.swipeDraggableInner}
-                    >
+                    > 
                       <Ionicons name="flash" size={20} color="#000" />
                     </TouchableOpacity>
                   </Animated.View>
@@ -1052,7 +1102,7 @@ const styles = StyleSheet.create({
 
   searchBarWrap: {
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 15,
     paddingTop: 10,
   },
   searchBar: {
@@ -1338,6 +1388,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
+    marginLeft: 20,
   },
   swipeDraggable: {
     width: 44,

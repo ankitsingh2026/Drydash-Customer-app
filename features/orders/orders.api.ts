@@ -21,12 +21,17 @@ export const saveAddressApi = async (payload: any) => {
   return data;
 };
 
-export const updateAddressApi = async (payload: any) => {
+export const updateAddressApi = async (id: any, payload: any) => {
   console.log("this is the payload of the api===>", payload);
-  const { data } = await apiClient.patch("/v1/addressupdate", payload);
+  const { data } = await apiClient.patch(`/v1/addresses/${id}`, payload);
   console.log("this is the data===>>", data);
   return data;
 };
+export const deleteAddressApi = async (id: any) => {
+  console.log("deleting address with id:", id);
+  const { data } = await apiClient.delete(`/v1/addresses/${id}`);
+  return data;
+}
 
 export const getOrdersApi = async (phoneNumber: any) => {
   console.log("phoneNumber", phoneNumber);
