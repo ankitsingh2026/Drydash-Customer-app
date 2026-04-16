@@ -2,6 +2,7 @@
 
 import { useNotifications } from "@/context/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
@@ -94,6 +95,7 @@ export default function NotificationsTopSheet({
   onClose: () => void;
 }) {
   const { theme, isDark } = useTheme();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { notifications, markAllRead, markRead } = useNotifications();
 
@@ -167,13 +169,20 @@ export default function NotificationsTopSheet({
             Notifications
           </Text>
 
-          {notifications.length > 0 && (
-            <TouchableOpacity onPress={markAllRead}>
-              <Text style={{ color: theme.primary, fontWeight: "700" }}>
-                Mark all as read
-              </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            {notifications.length > 0 && (
+              <TouchableOpacity onPress={markAllRead}>
+                <Text style={{ color: theme.primary, fontWeight: "700" }}>
+                  Mark all as read
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* ❌ Close Button */}
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={22} color={theme.text} />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
 
         {/* List */}
@@ -183,42 +192,58 @@ export default function NotificationsTopSheet({
               No notifications
             </Text>
           ) : (
-            notifications.map((n: NotificationItem, idx) => {
-              const meta = getMeta(n.kind, theme.primary);
+            notifications
+              .filter((n) => n.unread)
+              .map((n, idx) => {
+                const meta = getMeta(n.kind, theme.primary);
 
-              return (
-                <TouchableOpacity
-                  key={n.id}
-                  onPress={async () => {
-                    await markRead(n.id);
-                    onClose();
-                  }}
-                  style={[
-                    styles.row,
-                    n.unread && { backgroundColor: subtleHl },
-                    idx !== notifications.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: divider,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[styles.iconWrap, { backgroundColor: meta.softBg }]}
+                return (
+                  <TouchableOpacity
+                    key={n.id}
+                    onPress={async () => {
+                      await markRead(n.id);
+                      onClose();
+                    }}
+                    style={[
+                      styles.row,
+                      n.unread && { backgroundColor: subtleHl },
+                      idx !== notifications.length - 1 && {
+                        borderBottomWidth: 1,
+                        borderBottomColor: divider,
+                      },
+                    ]}
                   >
-                    <Ionicons name={meta.icon} size={20} color={meta.color} />
-                  </View>
+                    <View
+                      style={[
+                        styles.iconWrap,
+                        { backgroundColor: meta.softBg },
+                      ]}
+                    >
+                      <Ionicons name={meta.icon} size={20} color={meta.color} />
+                    </View>
 
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.titleText, { color: theme.text }]}>
-                      {n.title}
-                    </Text>
-                    {!!n.subtitle && (
-                      <Text style={{ color: theme.subText }}>{n.subtitle}</Text>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.titleText, { color: theme.text }]}>
+                        {n.title}
+                      </Text>
+                      {!!n.subtitle && (
+                        <Text style={{ color: theme.subText }}>
+                          {n.subtitle}
+                        </Text>
+                      )}
+                      <Text
+                        style={{
+                          color: theme.subText,
+                          fontSize: 11,
+                          marginTop: 2,
+                        }}
+                      >
+                        {n.time}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
           )}
         </ScrollView>
       </Animated.View>

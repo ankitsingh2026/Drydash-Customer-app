@@ -115,7 +115,13 @@ export const NotificationProvider = ({
       const mapped = data.map(normalizeNotification);
 
       setNotifications(mapped);
-      setUnreadCount(Number(res.data?.total ?? mapped.length ?? 0));
+      setUnreadCount(
+        Number(
+          res.data?.unreadCount ??
+            res.data?.total ??
+            mapped.filter((n: any) => n.unread).length,
+        ),
+      );
     } catch (err) {
       console.log("fetchNotifications error", err);
     }
@@ -157,9 +163,8 @@ export const NotificationProvider = ({
 
     socketRef.current = socket;
 
-    socket.emit("joinCustomer", { customerId });
-
     socket.on("connect", () => {
+      socket.emit("joinCustomer", { customerId });
       refreshNotifications();
     });
 
@@ -204,10 +209,10 @@ export const NotificationProvider = ({
   const markRead = async (id: string) => {
     if (!customerId) return;
 
-    // optimistic
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n)),
     );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
 
     try {
       await axios.patch(`${API_URL}/api/v1/customer/notifications/read/${id}`, {
