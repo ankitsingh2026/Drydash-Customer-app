@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "974761324990",
+    "project_id": "drydash-customer-notification",
+    "storage_bucket": "drydash-customer-notification.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:974761324990:android:ad23fc480f5ebeda4949ef",
+        "android_client_info": {
+          "package_name": "com.drydash.newCustomer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDRZAUL8nvTBf3uZqjaTvOW5wNsB8IvUeY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,7 @@
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true,
       "config": {
@@ -17,11 +18,13 @@
       "bundleIdentifier": "com.drydash.newCustomer"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
@@ -35,6 +38,10 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "notification": {
+        "icon": "./assets/images/favicon.png",
+        "color": "#0B1F1A"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -66,6 +73,7 @@
         }
       ],
       "expo-video",
+      "@react-native-firebase/messaging",
       "expo-build-properties"
     ],
     "experiments": {

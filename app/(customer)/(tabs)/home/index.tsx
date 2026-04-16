@@ -210,9 +210,9 @@ function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
                   isCompleted || isActive
                     ? { backgroundColor: "#00C896", borderColor: "#00C896" }
                     : {
-                      backgroundColor: "transparent",
-                      borderColor: "#1E3530",
-                    },
+                        backgroundColor: "transparent",
+                        borderColor: "#1E3530",
+                      },
                 ]}
               >
                 {isCompleted && (
@@ -303,7 +303,7 @@ export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
-    if (isFocused) return; 
+    if (isFocused) return;
 
     const word = words[i];
 
@@ -324,7 +324,7 @@ export default function Home() {
           setI((prev) => (prev + 1) % words.length);
         }
       }
-    }, 5); 
+    }, 5);
 
     return () => clearTimeout(timer);
   }, [j, deleting, i, isFocused]);
@@ -626,8 +626,8 @@ export default function Home() {
                     setSearchQuery(text);
                     setShowSearchResults(text.length > 0);
                   }}
-                  onFocus={() => setIsFocused(true)}     // ✅ stop animation
-                  onBlur={() => setIsFocused(false)}     // ✅ resume animation
+                  onFocus={() => setIsFocused(true)} // ✅ stop animation
+                  onBlur={() => setIsFocused(false)} // ✅ resume animation
                   placeholder=""
                   style={[styles.searchInput, { color: theme.text }]}
                 />
@@ -876,8 +876,12 @@ export default function Home() {
                       activeOpacity={0.85}
                       onPress={onPressBook}
                       style={styles.swipeDraggableInner}
-                    > 
-                      <Ionicons name="flash" size={20} color="#000" />
+                    >
+                      <Ionicons
+                        name="bag-check-outline"
+                        size={20}
+                        color="#000"
+                      />
                     </TouchableOpacity>
                   </Animated.View>
 

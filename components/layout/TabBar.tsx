@@ -1,11 +1,10 @@
-// TabBar.tsx - Updated
 import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { Bell, MousePointer2 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -16,7 +15,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
-import LocationPickerModal from "../LocationPickerModal";
+import LocationPickerModal from "@/components/LocationPickerModal";
+
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
@@ -25,7 +25,10 @@ type TabBarProps = {
 export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { unreadCount } = useNotifications();
+
+  const { unreadCount, refreshNotifications } = useNotifications();
+  const isFetchingRef = useRef(false);
+
   const {
     selectedAddress,
     allAddresses,
@@ -47,16 +50,14 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     lng: number;
   } | null>(null);
 
-  // Update location text when selected address changes
   useEffect(() => {
     console.log("Selected address changed:", selectedAddress);
+
     if (selectedAddress) {
       setLocationText(`${selectedAddress.line1}, ${selectedAddress.city}`);
-      // Fetch coordinates and update service
+
       fetchAddressCoordinates(selectedAddress).then((coords) => {
-        if (coords) {
-          setCurrentCoords(coords);
-        }
+        if (coords) setCurrentCoords(coords);
       });
     }
   }, [selectedAddress]);
@@ -77,7 +78,6 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
     }
   }, [allAddresses]);
 
-  // Check service when coordinates change
   useEffect(() => {
     if (currentCoords) {
       checkServiceForLocation(currentCoords.lat, currentCoords.lng);
@@ -134,6 +134,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
       const coords = await fetchAddressCoordinates(address);
       if (coords) {
         setCurrentCoords(coords);
+
         const geo = await Location.reverseGeocodeAsync({
           latitude: coords.lat,
           longitude: coords.lng,
@@ -151,6 +152,21 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
       if (label) {
         setLocationText(label);
       }
+    }
+  };
+
+  const handleBellPress = async () => {
+    if (isFetchingRef.current) return;
+
+    isFetchingRef.current = true;
+
+    try {
+      await refreshNotifications(); // fetch first
+      onOpenNotifications?.();
+    } catch (e) {
+      console.error("Notification refresh failed", e);
+    } finally {
+      isFetchingRef.current = false;
     }
   };
 
@@ -219,10 +235,11 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={onOpenNotifications}
+            onPress={handleBellPress}
             style={styles.iconBtn}
           >
             <Bell size={18} color="#E6FFF7" />
+
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>

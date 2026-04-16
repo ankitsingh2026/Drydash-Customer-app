@@ -74,7 +74,7 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: "#003826",
+                    backgroundColor: "#0B1220",
                   },
                 ]}
               >
@@ -150,12 +150,12 @@ export default function CartSheet({
             {/* PRICE SUMMARY */}
             {items.length > 0 && (
               <View style={styles.summary}>
-                {/* <Row label="Subtotal" value={`₹${subtotal}`} />
+                <Row label="Subtotal" value={`₹${subtotal}`} />
                 <Row
                   label="Discount"
                   value={`- ₹${discount}`}
                   highlight={discount > 0}
-                /> */}
+                />
                 <Row label="Total" value={`₹${total}`} bold />
               </View>
             )}

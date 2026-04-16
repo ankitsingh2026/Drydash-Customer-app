@@ -1,4 +1,8 @@
 import { AuthUser } from "@/features/auth/auth.types";
+import {
+  registerCustomerPushToken,
+  unregisterCustomerPushToken,
+} from "../lib/notifications/pushNotifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
@@ -56,6 +60,21 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     bootstrapAuth();
   }, []);
 
+  useEffect(() => {
+    const syncPushToken = async () => {
+      const customerId = user?.user?.id ?? user?.id;
+      if (!customerId) return;
+
+      try {
+        await registerCustomerPushToken(String(customerId));
+      } catch (error) {
+        console.log("Push token registration failed:", error);
+      }
+    };
+
+    syncPushToken();
+  }, [user]);
+
   /* Save tokens after OTP verification */
   const saveTokens = async (tokens: Tokens) => {
     await AsyncStorage.multiSet([
@@ -72,7 +91,13 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
   /* Logout & clear storage */
   const logout = async () => {
-    await AsyncStorage.multiRemove(["accessToken", "refreshToken"]);
+    try {
+      await unregisterCustomerPushToken();
+    } catch (error) {
+      console.log("Push token unregister failed:", error);
+    }
+
+    await AsyncStorage.multiRemove(["accessToken", "refreshToken", "user"]);
     setUser(null);
   };
 
