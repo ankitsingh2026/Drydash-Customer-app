@@ -1,17 +1,12 @@
-export const LightTheme = {
-  background: "#F8FAFC",
-  card: "#FFFFFF",
-  text: "#0F172A",
-  subText: "#475569",
-  primary: "#10B981",
-  border: "#E2E8F0",
-};
-
 export const DarkTheme = {
-  background: "#0B1F1A",
+  background: "#001714",
+  gradient: ["#052420", "#003826"],
   card: "#102B25",
-  text: "#FFFFFF",
-  subText: "#CBD5E1",
-  primary: "#34F5C5",
+  text: "#DEE5FF",
+  subText: "#22EBAB",
+  primary: "#00E1A2",
   border: "#1E3A34",
+  ordergradient: ["#001A17", "#00332B", "#004D3F"],
+  gray: "#fff",
+  newcard: ["#052420", "#003826"],
 };

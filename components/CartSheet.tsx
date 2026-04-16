@@ -1,7 +1,10 @@
 // components/CartSheet.tsx
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { Minus, Plus, X } from "lucide-react-native";
 import React from "react";
 import {
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -11,7 +14,6 @@ import {
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
-
 export default function CartSheet({
   visible,
   onClose,
@@ -19,13 +21,16 @@ export default function CartSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const { items, addItem, removeItem, clear } = useCart();
-  const { theme, isDark } = useTheme();
+  const { items, addItem, removeItem, clear, decreaseQty } = useCart();
+  const { theme } = useTheme();
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
   const discount = subtotal >= 1000 ? Math.round(subtotal * 0.1) : 0;
   const total = subtotal - discount;
 
+  const handleBookPickup = () => {
+    router.push("/book-pickup")
+  }
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -69,21 +74,25 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: isDark ? "#0B1220" : "#F8FAFC",
+                    backgroundColor: "#003826",
                   },
                 ]}
               >
                 {/* IMAGE PLACEHOLDER */}
-                <View
-                  style={[
-                    styles.thumb,
-                    { backgroundColor: isDark ? "#1E293B" : "#E5E7EB" },
-                  ]}
-                >
-                  <Text style={{ fontSize: 11, color: theme.subText }}>
-                    IMG
-                  </Text>
-                </View>
+                {i.image ? (
+                  <Image
+                    source={{ uri: i.image }}
+                    style={styles.thumb}
+                    resizeMode="cover"
+                    onError={() => console.log("Image failed")}
+                  />
+                ) : (
+                  <View style={[styles.thumb, { backgroundColor: "#1E293B" }]}>
+                    <Text style={{ fontSize: 11, color: theme.subText }}>
+                      IMG
+                    </Text>
+                  </View>
+                )}
 
                 {/* INFO */}
                 <View style={{ flex: 1 }}>
@@ -127,6 +136,7 @@ export default function CartSheet({
                         id: i.id,
                         title: i.title,
                         price: i.price,
+                        image: i.image,
                       })
                     }
                     style={styles.qtyBtn}
@@ -140,23 +150,30 @@ export default function CartSheet({
             {/* PRICE SUMMARY */}
             {items.length > 0 && (
               <View style={styles.summary}>
-                <Row label="Subtotal" value={`₹${subtotal}`} />
+                {/* <Row label="Subtotal" value={`₹${subtotal}`} />
                 <Row
                   label="Discount"
                   value={`- ₹${discount}`}
                   highlight={discount > 0}
-                />
+                /> */}
                 <Row label="Total" value={`₹${total}`} bold />
               </View>
             )}
 
             {/* CHECKOUT */}
             {items.length > 0 && (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                style={[styles.checkout, { backgroundColor: theme.primary }]}
+              <TouchableOpacity activeOpacity={0.9} style={styles.checkout}
+                onPress={handleBookPickup}
               >
-                <Text style={styles.checkoutText}>Checkout • ₹{total}</Text>
+                <LinearGradient
+                  colors={["#56BFAB", "#005B47"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+                <Text
+
+                  style={styles.checkoutText}>Book Your Pickup</Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -182,7 +199,7 @@ function Row({
     <View style={styles.totRow}>
       <Text
         style={{
-          color: highlight ? "#16A34A" : "#64748B",
+          color: "#fff",
           fontWeight: bold ? "900" : "600",
         }}
       >
@@ -190,7 +207,7 @@ function Row({
       </Text>
       <Text
         style={{
-          color: highlight ? "#16A34A" : "#0F172A",
+          color: "#fff",
           fontWeight: bold ? "900" : "700",
         }}
       >
@@ -280,16 +297,18 @@ const styles = StyleSheet.create({
   },
 
   checkout: {
-    height: 56,
+    height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 16,
+    overflow: "hidden",   // ← add this
+
   },
 
   checkoutText: {
-    fontWeight: "900",
+    fontWeight: "700",
     fontSize: 16,
-    color: "#000",
+    color: "#fff",
   },
 });

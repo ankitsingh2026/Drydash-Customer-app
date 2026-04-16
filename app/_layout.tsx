@@ -6,9 +6,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CartProvider } from "../context/CartContext";
 import { ThemeProvider } from "../context/ThemeContext";
 
+import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
 
-// ✅ REGISTER INTERCEPTOR ONCE
 setupInterceptors();
 
 export default function RootLayout() {
@@ -17,19 +17,21 @@ export default function RootLayout() {
       <AuthProvider>
         <ThemeProvider>
           <NotificationProvider>
-            <CartProvider>
-              <StatusBar style="auto" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: "#0B1F1A" },
-                }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(customer)" />
-              </Stack>
-            </CartProvider>
+            <AddressProvider>
+              <CartProvider>
+                <StatusBar style="auto" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: "#0B1F1A" },
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(customer)" />
+                </Stack>
+              </CartProvider>
+            </AddressProvider>
           </NotificationProvider>
         </ThemeProvider>
       </AuthProvider>

@@ -1,72 +1,85 @@
-// app/(customer)/(tabs)/home/index.tsx
+import AppLoader from "@/components/AppLoader";
+import CartSheet from "@/components/CartSheet";
+import FloatingCart from "@/components/FloatingCart";
+import LearnExploreSection from "@/components/home/Learnexploresection";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
+import ProductServicePopup from "@/components/ProductServicePopup";
+import { catalogData } from "@/constants/catalog";
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
 import { Ionicons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
-import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   PanResponder,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 import {
   SafeAreaProvider,
-  SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { HomeScreenSkeleton } from "../../../../components/SkeletonLoader";
+import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";
-
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width - 32; // full width cards with 16px padding each side
-
-
+const CARD_WIDTH = width - 32;
 
 const QUICK_SERVICES = [
   {
     key: "Shoe Spa",
     slug: "shoe",
-    label: "Shoe Spa",
+    label: "Shoe-Spa",
     subtitle: "Sneakers & Shoe care",
-    icon: "footsteps",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/shoes.svg",
     featured: true,
   },
   {
     key: "Dry Clean",
-    slug: "iron",
-    label: "Dry Clean",
+    slug: "dryclean",
+    label: "Dry-Clean",
     subtitle: "Silk & Suits",
-    icon: "shirt",
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/dryclean.svg",
   },
   {
     key: "Laundry",
     slug: "laundry",
     label: "Laundry",
     subtitle: "Everyday clothes",
-    icon: "water",
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/laundry.svg",
   },
   {
-    key: "Doorstep",
-    slug: "doorstep",
-    label: "Doorstep",
+    key: "Onsite",
+    slug: "onsite",
+    label: "On-Site",
     subtitle: "At-home service",
-    icon: "hammer",
-    featured: false,
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg", // ✅ FIXED
+  },
+  {
+    key: "carwash",
+    slug: "carwash",
+    label: "Car-Wash",
+    subtitle: "At-home service",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/carwash.svg",
+  },
+  {
+    key: "express",
+    slug: "express",
+    label: "8-Hour Delivery",
+    subtitle: "Express Delivery",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/express.svg",
   },
 ];
-
 const HERO_SLIDES = [
   {
     key: "shoe-1",
@@ -74,25 +87,25 @@ const HERO_SLIDES = [
     title: "Premium Shoe Cleaning",
     subtitle: "Deep clean • Deodorize • Restore",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
     },
   },
   {
     key: "shoe-2",
-    tag: "SHOE CARE",
-    title: "Sneaker & Leather Care",
+    tag: "SHOFA CARE",
+    title: "Sofa Deep Cleaning",
     subtitle: "Whitening • Polishing • Protection",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/two.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
     },
   },
   {
     key: "premium-1",
-    tag: "PREMIUM CARE",
-    title: "Sofa Deep Cleaning",
+    tag: "Silk • Wool • Designer Wear",
+    title: "Luxury Garment Care",
     subtitle: "Deep cleaning for high-end fabrics",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/three.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
     },
   },
   {
@@ -101,40 +114,171 @@ const HERO_SLIDES = [
     title: "Doorstep Cleaning Service",
     subtitle: "Carpets • Sofas • Mattresses",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/four.jpg",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_onsite.png",
     },
   },
   {
     key: "laundry-2",
     tag: "PREMIUM",
-    title: "Luxury Garment Care",
-    subtitle: "Silk • Wool • Designer Wear",
+    title: "",
+    subtitle: "",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/five.gif",
+      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_offer.png",
     },
   },
 ];
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
+// ─── Active Order Status Card ──────────────────────────────────────────────
+function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 380,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 380,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const STATUS_STEPS = ["PICKED UP", "IN TRANSIT", "DELIVERED"];
+  const currentStep = 1; // IN TRANSIT
+
+  return (
+    <Animated.View
+      style={[
+        styles.activeOrderCard,
+        { opacity: opacityAnim, transform: [{ translateY: slideAnim }] },
+      ]}
+    >
+      {/* Header row */}
+      <View style={styles.activeOrderHeader}>
+        <View style={styles.activeOrderBadgeRow}>
+          <View style={styles.activeDot} />
+          <Text style={styles.activeOrderLabel}>ACTIVE ORDER</Text>
+        </View>
+        <TouchableOpacity
+          onPress={onDismiss}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close" size={16} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Status text */}
+      <View style={styles.activeOrderStatusRow}>
+        <View>
+          <Text style={styles.activeOrderTitle}>Rider is on the way</Text>
+          <Text style={styles.activeOrderEta}>Expected arrival in 8 mins</Text>
+        </View>
+        {/* Bike icon */}
+        <View style={styles.bikeIconWrap}>
+          <Ionicons name="bicycle" size={22} color="#00C896" />
+        </View>
+      </View>
+
+      {/* Progress tracker */}
+      <View style={styles.progressRow}>
+        {STATUS_STEPS.map((step, idx) => {
+          const isCompleted = idx < currentStep;
+          const isActive = idx === currentStep;
+          return (
+            <View key={step} style={styles.progressStepWrap}>
+              {/* Connector line before */}
+              {idx > 0 && (
+                <View
+                  style={[
+                    styles.progressLine,
+                    {
+                      backgroundColor:
+                        idx <= currentStep ? "#00C896" : "#1E3530",
+                    },
+                  ]}
+                />
+              )}
+              <View
+                style={[
+                  styles.progressDot,
+                  isCompleted || isActive
+                    ? { backgroundColor: "#00C896", borderColor: "#00C896" }
+                    : {
+                      backgroundColor: "transparent",
+                      borderColor: "#1E3530",
+                    },
+                ]}
+              >
+                {isCompleted && (
+                  <Ionicons name="checkmark" size={10} color="#000" />
+                )}
+                {isActive && <View style={styles.progressDotInner} />}
+              </View>
+              <Text
+                style={[
+                  styles.progressLabel,
+                  { color: isCompleted || isActive ? "#00C896" : "#4B5563" },
+                ]}
+              >
+                {step}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Divider */}
+      <View style={styles.activeOrderDivider} />
+
+      {/* Rider info */}
+      <View style={styles.riderRow}>
+        {/* Avatar */}
+        <View style={styles.riderAvatar}>
+          <Text style={styles.riderAvatarText}>RS</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.riderName}>Rahul Sharma</Text>
+          <View style={styles.riderRatingRow}>
+            <Ionicons name="star" size={11} color="#F59E0B" />
+            <Text style={styles.riderRating}> 4.92 · Professional Partner</Text>
+          </View>
+        </View>
+        {/* Actions */}
+        <TouchableOpacity style={styles.riderActionBtn}>
+          <Ionicons name="call-outline" size={18} color="#00C896" />
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.riderActionBtn, { marginLeft: 8 }]}>
+          <Ionicons name="chatbubble-outline" size={18} color="#00C896" />
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
 export default function Home() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState("Ankit");
-  const [offerVisible, setOfferVisible] = useState(true);
-  const offerSlide = useRef(new Animated.Value(0)).current;
+  const [orderBooked, setOrderBooked] = useState(false);
   const { setAuthUser, logout } = useAuthContext();
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+  const params = useLocalSearchParams<{ orderPlaced?: string }>();
+  const [offerVisible, setOfferVisible] = useState(true);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [popupVisible, setPopupVisible] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -150,9 +294,57 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  const dragX = useRef(new Animated.Value(0)).current;
-  const swipeContainerWidth = width - 32;
-  const SWIPE_THRESHOLD = swipeContainerWidth * 0.55;
+  const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
+
+  const [text, setText] = useState("");
+  const [i, setI] = useState(0);
+  const [j, setJ] = useState(0);
+  const [deleting, setDeleting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (isFocused) return; 
+
+    const word = words[i];
+
+    const timer = setTimeout(() => {
+      if (!deleting) {
+        setText(word.slice(0, j + 1));
+        setJ((prev) => prev + 1);
+
+        if (j + 1 === word.length) {
+          setDeleting(true);
+        }
+      } else {
+        setText(word.slice(0, j - 1));
+        setJ((prev) => prev - 1);
+
+        if (j - 1 === 0) {
+          setDeleting(false);
+          setI((prev) => (prev + 1) % words.length);
+        }
+      }
+    }, 5); 
+
+    return () => clearTimeout(timer);
+  }, [j, deleting, i, isFocused]);
+  const allProducts = Object.values(catalogData).flat();
+
+  const filteredProducts = allProducts.filter((item) =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+  const handleProductPress = (product: any) => {
+    setSelectedProduct(product);
+    setPopupVisible(true);
+    setShowSearchResults(false);
+    setSearchQuery(""); // Clear search after selection
+  };
+  // ─── Constants ────────────────────────────────────────────────────────────────
+  const THUMB_SIZE = 44;
+  const PADDING = 4;
+  const swipeContainerWidth = width - 32; // matches pickupCard marginHorizontal
+  const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8; // true travel range
+  const SWIPE_THRESHOLD = MAX_DRAG * 0.5; // trigger at 60%
 
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
@@ -184,15 +376,6 @@ export default function Home() {
 
     return () => clearTimeout(t);
   }, []);
-
-  const dismissOffer = () => {
-    Animated.timing(offerSlide, {
-      toValue: 120,
-      duration: 260,
-      easing: Easing.in(Easing.cubic),
-      useNativeDriver: true,
-    }).start(() => setOfferVisible(false));
-  }
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -239,63 +422,169 @@ export default function Home() {
     ).start();
   }, []);
 
-  const onPressBook = () => {
-    Animated.sequence([
-      Animated.timing(dragX, {
-        toValue: SWIPE_THRESHOLD,
-        duration: 220,
+  // ─── Two animated values: native for thumb, JS for fill ───────────────────────
+  const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
+  const dragXJS = useRef(new Animated.Value(0)).current; // fill track (JS thread)
+  const dragXValue = useRef(0); // plain ref, always accurate
+
+  // Derived: fill track width (JS driver — width can't use native)
+  const trackFillWidth = dragXJS.interpolate({
+    inputRange: [0, MAX_DRAG],
+    outputRange: [THUMB_SIZE + PADDING * 2, swipeContainerWidth - 8],
+    extrapolate: "clamp",
+  });
+
+  const trackFillOpacity = dragXJS.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD * 0.2, SWIPE_THRESHOLD],
+    outputRange: [0, 0.18, 0.38],
+    extrapolate: "clamp",
+  });
+
+  // Derived: thumb + text (native driver ✅ — smooth!)
+  const thumbScale = dragXNative.interpolate({
+    inputRange: [0, 10, SWIPE_THRESHOLD],
+    outputRange: [1, 1.06, 1.12],
+    extrapolate: "clamp",
+  });
+
+  const swipeTextOpacity = dragXNative.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD * 0.3, SWIPE_THRESHOLD],
+    outputRange: [1, 0.1, 0],
+    extrapolate: "clamp",
+  });
+
+  const swipeTextTranslateX = dragXNative.interpolate({
+    inputRange: [0, SWIPE_THRESHOLD],
+    outputRange: [0, 16],
+    extrapolate: "clamp",
+  });
+
+  const setDrag = (val: number) => {
+    const clamped = Math.max(0, Math.min(val, MAX_DRAG));
+    dragXNative.setValue(clamped);
+    dragXJS.setValue(clamped);
+    dragXValue.current = clamped;
+  };
+  const resetDrag = useCallback(() => {
+    Animated.parallel([
+      Animated.spring(dragXNative, {
+        toValue: 0,
+        useNativeDriver: true, // ✅ smooth spring
+        damping: 20,
+        stiffness: 50,
+        mass: 0.5,
+      }),
+      Animated.spring(dragXJS, {
+        toValue: 0,
+        useNativeDriver: false,
+        damping: 20,
+        stiffness: 250,
+        mass: 0.5,
+      }),
+    ]).start(() => {
+      dragXValue.current = 0;
+    });
+  }, []);
+
+  // ─── Complete swipe (snap to end → navigate) ──────────────────────────────────
+  const completeSwipe = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(dragXNative, {
+        toValue: MAX_DRAG,
+        duration: 100,
         easing: Easing.out(Easing.quad),
         useNativeDriver: true,
       }),
-      Animated.timing(dragX, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
+      Animated.timing(dragXJS, {
+        toValue: MAX_DRAG,
+        duration: 500,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
       }),
     ]).start(() => {
       router.push("/book-pickup");
+      setTimeout(resetDrag, 2000);
     });
+  }, [resetDrag]);
+
+  // Keep refs fresh (no stale closures in PanResponder)
+  const completeSwipeRef = useRef(completeSwipe);
+  const resetDragRef = useRef(resetDrag);
+  useEffect(() => {
+    completeSwipeRef.current = completeSwipe;
+    resetDragRef.current = resetDrag;
+  }, [completeSwipe, resetDrag]);
+
+  // ─── Tap fallback ─────────────────────────────────────────────────────────────
+  const onPressBook = () => {
+    const animate = (val: Animated.Value, useNative: boolean) =>
+      Animated.timing(val, {
+        toValue: SWIPE_THRESHOLD + 0,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: useNative,
+      });
+
+    Animated.parallel([
+      animate(dragXNative, true),
+      animate(dragXJS, false),
+    ]).start(() => completeSwipeRef.current());
   };
 
+  // ─── PanResponder ─────────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
+      // Capture horizontal moves before ScrollView sees them
+      onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
+        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
+
       onPanResponderGrant: () => {
-        dragX.setOffset((dragX as any)._value || 0);
-        dragX.setValue(0);
+        dragXNative.stopAnimation();
+        dragXJS.stopAnimation();
       },
-      onPanResponderMove: (_, gestureState) => {
-        const dx = Math.max(0, gestureState.dx);
-        dragX.setValue(dx);
+
+      onPanResponderMove: (_, { dx }) => {
+        // dx is relative to gesture start, add to position at grant time
+        // But we reset to 0 on grant so dx IS the delta from start position
+        setDrag(dx);
       },
-      onPanResponderRelease: (_, gestureState) => {
-        dragX.flattenOffset();
-        const finalX = (dragX as any)._value || 0;
-        if (finalX > SWIPE_THRESHOLD * 0.9) {
-          Animated.timing(dragX, {
-            toValue: SWIPE_THRESHOLD,
-            duration: 160,
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }).start(() => {
-            router.push("/book-pickup");
-            setTimeout(() => dragX.setValue(0), 400);
-          });
+
+      onPanResponderRelease: (_, { dx, vx }) => {
+        const current = dragXValue.current;
+        // Also trigger if velocity is high (quick flick)
+        if (current >= SWIPE_THRESHOLD || vx > 0.8) {
+          completeSwipeRef.current();
         } else {
-          Animated.spring(dragX, { toValue: 0, useNativeDriver: true }).start();
+          resetDragRef.current();
         }
+      },
+
+      onPanResponderTerminate: () => {
+        resetDragRef.current();
       },
     }),
   ).current;
+  // ─── useFocusEffect: always reset on return ───────────────────────────────────
+  useFocusEffect(
+    useCallback(() => {
+      dragXJS.setValue(0);
+      if (params.orderPlaced === "1") {
+        setOrderBooked(true);
+        router.setParams({ orderPlaced: undefined });
+      }
+    }, [params.orderPlaced]),
+  );
 
-  if (loading) return <HomeScreenSkeleton />;
+  if (loading) return <AppLoader />;
 
   const PRIMARY = theme.primary; // teal/green
 
   return (
     <SafeAreaProvider>
-       <TabBar
+      <TabBar
         onOpenNotifications={() => setOpen(true)}
         onWalletPress={() => router.push("/(customer)/wallet")}
         style={{
@@ -304,15 +593,144 @@ export default function Home() {
         }}
       />
       <StatusBar
-        style={isDark ? "dark" : "dark"}
+        style={"dark"}
         backgroundColor={theme.background}
         translucent={false}
       />
-      <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
-        <ScrollView
+      <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
+        <View
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
+          {/* ── SEARCH BAR ── */}
+
+          <View style={{ position: "relative", zIndex: 1000 }}>
+            <Animated.View
+              style={[styles.searchBarWrap, { opacity: fadeAnim }]}
+            >
+              <View
+                style={[
+                  styles.searchBar,
+                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                ]}
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={18}
+                  color="#6B7280"
+                  style={{ marginRight: 8 }}
+                />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={(text) => {
+                    setSearchQuery(text);
+                    setShowSearchResults(text.length > 0);
+                  }}
+                  onFocus={() => setIsFocused(true)}     // ✅ stop animation
+                  onBlur={() => setIsFocused(false)}     // ✅ resume animation
+                  placeholder=""
+                  style={[styles.searchInput, { color: theme.text }]}
+                />
+                {searchQuery === "" && !isFocused && (
+                  <Text
+                    style={{
+                      position: "absolute",
+                      left: 36,
+                      color: "#4B5563",
+                    }}
+                  >
+                    {`Search "${text}"`}
+                  </Text>
+                )}
+                {searchQuery.length > 0 ? (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSearchQuery("");
+                      setShowSearchResults(false);
+                    }}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity>
+                    <Ionicons name="mic-outline" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Animated.View>
+            {showSearchResults && (
+              <View
+                style={[
+                  styles.searchResultsContainer,
+                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                ]}
+              >
+                {filteredProducts.length > 0 ? (
+                  <ScrollView
+                    style={styles.searchResultsList}
+                    showsVerticalScrollIndicator={false}
+                    nestedScrollEnabled={true}
+                  >
+                    {filteredProducts.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.searchResultItem}
+                        onPress={() => handleProductPress(item)}
+                      >
+                        <View style={styles.searchResultImageContainer}>
+                          <Image
+                            source={{ uri: item.image }}
+                            style={styles.searchResultImage}
+                            resizeMode="cover"
+                          />
+                        </View>
+                        <View style={styles.searchResultContent}>
+                          <Text
+                            style={[
+                              styles.searchResultTitle,
+                              { color: theme.text },
+                            ]}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.searchResultCategory,
+                              { color: theme.subText },
+                            ]}
+                          >
+                            {item.category}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.searchResultPrice,
+                              { color: theme.primary },
+                            ]}
+                          >
+                            ₹{item.price}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <View style={styles.noResultsContainer}>
+                    <Ionicons name="search-outline" size={40} color="#4B5563" />
+                    <Text
+                      style={[styles.noResultsText, { color: theme.subText }]}
+                    >
+                      No products found
+                    </Text>
+                    <Text
+                      style={[styles.noResultsSubtext, { color: "#4B5563" }]}
+                    >
+                      Try searching for "Shoe Spa" or "Dry Clean"
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* ── HERO CAROUSEL ── */}
           <ScrollView
@@ -344,19 +762,23 @@ export default function Home() {
               };
               return (
                 <Animated.View key={i} style={[styles.heroCard, heroStyle]}>
-                  <Animated.Image
-                    source={slide.image}
-                    style={styles.heroImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.heroOverlay} />
+                  {slide.image.uri.endsWith(".svg") ? (
+                    <SvgUri uri={slide.image.uri} width="100%" height="100%" />
+                  ) : (
+                    <Animated.Image
+                      source={slide.image}
+                      style={styles.heroImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  {/* <View style={styles.heroOverlay} /> */}
 
-                  {/* Tag badge - top left */}
-                  <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
+                  {/* Tag badge */}
+                  {/* <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
                     <Text style={styles.heroTagText}>{slide.tag}</Text>
-                  </View>
+                  </View> */}
 
-                  {/* Text - bottom */}
+                  {/* Text */}
                   <View style={styles.heroTextWrap}>
                     <Text style={styles.heroTitle}>{slide.title}</Text>
                     {slide.subtitle && (
@@ -368,78 +790,175 @@ export default function Home() {
             })}
           </ScrollView>
 
-          {/* ── INSTANT PICKUP STRIP ── */}
-          <Animated.View
-            style={[
-              styles.pickupCard,
-              {
-                opacity: fadeAnim,
-                backgroundColor: isDark ? "#0D1F1C" : "#F0FDF4",
-                borderColor: isDark ? "#1A3330" : "#A7F3D0",
-                transform: [
-                  {
-                    translateY: fadeAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [12, 0],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            {/* Top row: text + truck icon */}
-            <View style={styles.pickupRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.pickupTitle, { color: theme.text }]}>
-                  Instant Pickup
-                </Text>
-                <Text style={[styles.pickupSubtitle, { color: theme.subText }]}>
-                  Professional care at your doorsteps
-                </Text>
-              </View>
-              {/* <View style={[styles.truckIconWrap, { backgroundColor: PRIMARY }]}>
-                <Truck size={18} color="#000" />
-              </View> */}
-            </View>
+          {/* Carousel dots */}
+          <View style={styles.dotsRow}>
+            {HERO_SLIDES.map((_, i) => (
+              <View
+                key={i}
+                style={[
+                  styles.dot,
+                  i === currentIndex
+                    ? { backgroundColor: PRIMARY, width: 16 }
+                    : { backgroundColor: "#1A3330", width: 6 },
+                ]}
+              />
+            ))}
+          </View>
 
-            {/* Divider */}
-            <View style={[styles.pickupDivider, { backgroundColor: isDark ? "#1A3330" : "#A7F3D0" }]} />
+          {/* ── ACTIVE ORDER CARD (shown after booking) ── */}
+          {orderBooked && (
+            <TouchableOpacity
+              activeOpacity={0.92}
+              onPress={() => router.push("/(customer)/order-tracking")}
+            >
+              <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
+            </TouchableOpacity>
+          )}
 
-            {/* Swipe to Book */}
+          {/* ── SWIPE TO BOOK STRIP ── */}
+          {!orderBooked && (
             <View
-              style={[
-                styles.swipeContainer,
-                { backgroundColor: isDark ? "#071018" : "#112B25" },
-              ]}
+              collapsable={false}
+              style={{ marginHorizontal: 16, marginTop: 14 }}
             >
               <Animated.View
                 style={[
-                  styles.swipeDraggable,
-                  { transform: [{ translateX: dragX }], backgroundColor: PRIMARY },
+                  styles.pickupCard,
+                  {
+                    opacity: fadeAnim,
+                    backgroundColor: "#0D1F1C",
+                    borderColor: "#1A3330",
+                    transform: [
+                      {
+                        translateY: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [12, 0],
+                        }),
+                      },
+                    ],
+                  },
                 ]}
-                {...panResponder.panHandlers}
               >
-                <TouchableOpacity
-                  activeOpacity={0.6}
-                  onPress={onPressBook}
-                  style={styles.swipeDraggableInner}
+                <View
+                  style={[
+                    styles.swipeContainer,
+                    { backgroundColor: "#071018" },
+                  ]}
                 >
-                  <Ionicons name="chevron-forward" size={18} color="#000" />
-                </TouchableOpacity>
-              </Animated.View>
+                  {/* ── Animated green fill track ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTrackFill,
+                      {
+                        width: trackFillWidth,
+                        opacity: trackFillOpacity,
+                      },
+                    ]}
+                    pointerEvents="none"
+                  />
 
-              <View style={styles.swipeTextWrap} pointerEvents="none">
-                <Text style={styles.swipeHint}>SWIPE TO BOOK</Text>
-              </View>
+                  {/* ── Draggable thumb ── */}
+                  {/* ── Draggable thumb — native driver = buttery smooth ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeDraggable,
+                      {
+                        backgroundColor: PRIMARY,
+                        transform: [
+                          { translateX: dragXNative }, // ✅ native thread
+                          { scale: thumbScale }, // ✅ native thread
+                        ],
+                      },
+                    ]}
+                    {...panResponder.panHandlers}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={onPressBook}
+                      style={styles.swipeDraggableInner}
+                    > 
+                      <Ionicons name="flash" size={20} color="#000" />
+                    </TouchableOpacity>
+                  </Animated.View>
+
+                  {/* ── Fill track — JS driver (width can't be native) ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTrackFill,
+                      { width: trackFillWidth, opacity: trackFillOpacity },
+                    ]}
+                    pointerEvents="none"
+                  />
+
+                  {/* ── Hint label — native driver ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTextWrap,
+                      {
+                        opacity: swipeTextOpacity, // ✅ native
+                        transform: [{ translateX: swipeTextTranslateX }], // ✅ native
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.swipeHint}>
+                        SWIPE FOR INSTANT PICKUP
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#4B5563"
+                      />
+                    </View>
+                  </Animated.View>
+
+                  {/* ── Hint label (fades + shifts as you drag) ── */}
+                  <Animated.View
+                    style={[
+                      styles.swipeTextWrap,
+                      {
+                        opacity: swipeTextOpacity,
+                        transform: [{ translateX: swipeTextTranslateX }],
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.swipeHint}>
+                        SWIPE FOR INSTANT PICKUP
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#4B5563"
+                      />
+                    </View>
+                  </Animated.View>
+                </View>
+              </Animated.View>
             </View>
-          </Animated.View>
+          )}
+
           {/* ── SERVICES ── */}
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                {/* <Text style={[styles.sectionTitle, { color: theme.text }]}>
                   Our Services
-                </Text>
+                </Text> */}
                 {/* <TouchableOpacity>
                   <Text style={[styles.viewAll, { color: PRIMARY }]}>View All</Text>
                 </TouchableOpacity> */}
@@ -455,12 +974,27 @@ export default function Home() {
                       style={[
                         styles.serviceCard,
                         {
-                          backgroundColor: isDark ? "#0D1F1C" : "#F0FDF4",
-                          borderColor: isDark ? "#1A3330" : "#A7F3D0",
+                          backgroundColor: "#0D1F1C",
+                          borderColor: "#1A3330",
                         },
                       ]}
                       activeOpacity={0.85}
-                      onPress={() => router.push(`/(customer)/services/${s.slug}`)}
+                      onPress={() => {
+                        if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                          // console.log("service param:");
+                          router.push({
+                            pathname: "/services/[service]",
+                            params: {
+                              service: s.slug as
+                                | "shoe"
+                                | "laundry"
+                                | "dryclean",
+                            },
+                          });
+                        } else {
+                          router.push(`/services/${s.slug}`);
+                        }
+                      }}
                     >
                       <Animated.View
                         style={{
@@ -470,14 +1004,10 @@ export default function Home() {
                         <View
                           style={[
                             styles.serviceIconWrapper,
-                            { backgroundColor: isDark ? "#0A3D3C" : "#CCFBF1" },
+                            { backgroundColor: "#0A3D3C" },
                           ]}
                         >
-                          <Ionicons
-                            name={s.icon as any}
-                            size={22}
-                            color={PRIMARY}
-                          />
+                          <SvgUri uri={s.icon} width={32} height={32} />
                         </View>
                       </Animated.View>
 
@@ -487,11 +1017,11 @@ export default function Home() {
                         >
                           {s.label}
                         </Text>
-                        <Text
+                        {/* <Text
                           style={[styles.serviceSubtitle, { color: theme.subText }]}
                         >
                           {s.subtitle}
-                        </Text>
+                        </Text> */}
                       </View>
                     </TouchableOpacity>
                   );
@@ -499,106 +1029,172 @@ export default function Home() {
               </View>
             </View>
           </Animated.View>
+        </View>
+        <LearnExploreSection />
 
-          {/* ── WELCOME OFFER ── */}
-          {offerVisible && (
+        <View style={styles.wrapper}>
+          {/* Background Gradient */}
+          <LinearGradient
+            colors={["#001A17", "#00332B", "#004D3F"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0.7 }}
+            style={styles.card}
+          >
+            {/* Soft Glow Circle (right bottom curve) */}
+            <View style={styles.glowCircle} />
 
-            <Animated.View
-              style={[
-                styles.floatingOfferCardWrap,
-                { transform: [{ translateY: offerSlide }] },
-              ]}
-            >
-              <BlurView
-                intensity={55}
-                tint="dark"
-                style={styles.floatingOfferCard}
-              >
-                {/* Gold % circle */}
-                <View style={styles.offerIconWrap}>
-                  <Text style={styles.offerPercent}>20%</Text>
-                </View>
+            {/* Content */}
+            <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
 
-                {/* Text */}
-                <View style={styles.offerTextWrap}>
-                  <Text style={styles.offerTitle}>Welcome Offer</Text>
-                  <Text style={styles.offerSubtitle}>Get 20% OFF on your first booking</Text>
-                </View>
+            <Text style={styles.title}>
+              Eco-Friendly{"\n"}Cleaning{"\n"}Solvents
+            </Text>
 
-                {/* Claim */}
-                <TouchableOpacity activeOpacity={0.8} style={styles.claimBtn}>
-                  <Text style={styles.claimText}>CLAIM</Text>
-                </TouchableOpacity>
+            <Text style={styles.desc}>
+              Gentle on your skin,{"\n"}
+              gentler on the planet. Our{"\n"}
+              green cleaning tech{"\n"}
+              preserves fiber life by{"\n"}40%.
+            </Text>
+          </LinearGradient>
+        </View>
+      </ScrollView>
 
-                {/* Dismiss × */}
-                <TouchableOpacity
-                  onPress={dismissOffer}
-                  style={styles.offerClose}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="close" size={14} color="#999" />
-                </TouchableOpacity>
-              </BlurView>
-            </Animated.View>
+      <FloatingCart onOpen={() => setCartOpen(true)} />
 
-          )}
-
-          <View style={{ height: 80 }} />
-        </ScrollView>
-      </SafeAreaView>
-            <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-
+      {/* <FloatingOfferCard
+        visible={offerVisible}
+        title="Welcome Offer"
+        subtitle="Get 20% OFF on your first booking"
+        imageUri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg"
+        ctaText="CLAIM"
+        onPress={() => {
+          setOfferVisible(false);
+          router.push("/book-pickup");
+        }}
+        onClose={() => setOfferVisible(false)}
+      /> */}
+      <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+      {/* Product Service Popup */}
+      <ProductServicePopup
+        visible={popupVisible}
+        onOpenCart={() => setCartOpen(true)}
+        onClose={() => {
+          setPopupVisible(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+      />
+      <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} />
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingTop: 0 },
 
-  /* Header */
-  // header: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   justifyContent: "space-between",
-  //   paddingHorizontal: 16,
-  //   paddingVertical: 0,
-  //   marginBottom: 1,
-  // },
-  // headerLeft: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   flex: 1,
-  // },
-  // avatar: {
-  //   width: 38,
-  //   height: 38,
-  //   borderRadius: 19,
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  // },
-  // greeting: { fontSize: 11, fontWeight: "500" },
-  // greetingName: { fontSize: 14, fontWeight: "800" },
-  // brand: { fontSize: 18, fontWeight: "900", letterSpacing: 0.5 },
-  // headerRight: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   gap: 4,
-  //   flex: 1,
-  //   justifyContent: "flex-end",
-  // },
-  // iconBtn: {
-  //   width: 4,
-  //   height: 34,
-  //   alignItems: "center",
-  //   justifyContent: "center",
-  // },
+  searchResultsContainer: {
+    position: "absolute",
+    top: 70, // Adjust this value based on your search bar height
+    left: 16,
+    right: 16,
+    maxHeight: 400,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+    zIndex: 1001,
+    elevation: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  searchResultsList: {
+    maxHeight: 400,
+  },
+  searchResultItem: {
+    flexDirection: "row",
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1A3330",
+  },
+  searchResultImageContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    overflow: "hidden",
+    marginRight: 12,
+    backgroundColor: "#1A3330",
+  },
+  searchResultImage: {
+    width: "100%",
+    height: "100%",
+  },
+  searchResultContent: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  searchResultTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  searchResultCategory: {
+    fontSize: 11,
+    marginBottom: 2,
+  },
+  searchResultPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  noResultsContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noResultsText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  noResultsSubtext: {
+    fontSize: 12,
+    textAlign: "center",
+  },
 
-  /* Hero */
+  searchBarWrap: {
+    paddingHorizontal: 16,
+    paddingBottom: 15,
+    paddingTop: 10,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
+    paddingVertical: 0,
+  },
+  swipeTrackFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 34,
+    backgroundColor: "#00C896",
+  },
+  /* ── Hero ── */
   heroCard: {
     width: CARD_WIDTH,
     height: 200,
-    borderRadius: 8,
+    borderRadius: 14,
     overflow: "hidden",
     justifyContent: "flex-end",
   },
@@ -609,7 +1205,7 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.38)",
+    backgroundColor: "rgba(0, 40, 30, 0.55)",
   },
   heroTagBadge: {
     position: "absolute",
@@ -626,8 +1222,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   heroTextWrap: {
-    padding: 10,
-    
+    padding: 12,
   },
   heroTitle: {
     fontSize: 20,
@@ -642,26 +1237,175 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  /* Instant Pickup Strip */
-  pickupStrip: {
+  /* Dots */
+  dotsRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 10,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+
+  /* ── Active Order Card ── */
+  activeOrderCard: {
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  pickupTitle: { fontSize: 15, fontWeight: "800", marginBottom: 2 },
-  pickupSubtitle: { fontSize: 12, fontWeight: "500" },
-  truckIconWrap: {
-    width: 40,
-    height: 40,
+    backgroundColor: "#0D1F1C",
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#1A3330",
+    padding: 14,
+    gap: 10,
+  },
+  activeOrderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeOrderBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  activeDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#00C896",
+  },
+  activeOrderLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#00C896",
+    letterSpacing: 1.2,
+  },
+  activeOrderStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeOrderTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#FFFFFF",
+  },
+  activeOrderEta: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#6B7280",
+    marginTop: 2,
+  },
+  bikeIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "#071A17",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#1A3330",
+  },
+
+  /* Progress */
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    position: "relative",
+    marginTop: 2,
+  },
+  progressStepWrap: {
+    flex: 1,
+    alignItems: "center",
+    gap: 5,
+    position: "relative",
+  },
+  progressLine: {
+    position: "absolute",
+    top: 9,
+    right: "50%",
+    left: "-50%",
+    height: 2,
+    zIndex: 0,
+  },
+  progressDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  progressDotInner: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#000",
+  },
+  progressLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
+
+  activeOrderDivider: {
+    height: 1,
+    backgroundColor: "#1A3330",
+    marginHorizontal: -14,
+  },
+
+  /* Rider row */
+  riderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  riderAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#00C896",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  riderAvatarText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#000",
+  },
+  riderName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  riderRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 1,
+  },
+  riderRating: {
+    fontSize: 11,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  riderActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#071A17",
+    borderWidth: 1,
+    borderColor: "#1A3330",
     alignItems: "center",
     justifyContent: "center",
   },
 
+  /* ── Pickup Card ── */
   pickupCard: {
     marginHorizontal: 16,
     marginTop: 14,
@@ -677,93 +1421,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-
-  floatingOfferCardWrap: {
-    position: "absolute",
-    bottom: 0,
-    left: 16,
-    right: 16,
-    borderRadius: 10,
-    overflow: "hidden",       // ← clips BlurView to rounded corners
-    elevation: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.75,
-    shadowRadius: 12,
-    zIndex: 40,
-    borderWidth: 0.5,
-    borderColor: "#fff",   // gold border on wrapper, not BlurView
-  },
-
-  floatingOfferCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    gap: 10,
-  },
-  offerIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 20,
-    backgroundColor: "#D4AF37",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  offerPercent: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#fff",
-  },
-  offerTextWrap: {
-    flex: 1,
-  },
-  offerTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#fff",
-    marginBottom: 2,
-  },
-  offerSubtitle: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#fff",
-  },
-  claimBtn: {
-    backgroundColor: "#F0FDF4",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#F0FDF4",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 5,
-    elevation: 4,
-  },
-  claimText: {
-    color: "#fffff",
-    fontWeight: "800",
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
-  offerClose: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  pickupTitle: { fontSize: 15, fontWeight: "800", marginBottom: 2 },
+  pickupSubtitle: { fontSize: 12, fontWeight: "500" },
   pickupDivider: {
     height: 1,
     marginHorizontal: -14,
     opacity: 0.6,
   },
 
-  /* Swipe row (inside card, no outer wrap needed) */
+  /* ── Swipe button ── */
   swipeContainer: {
     height: 52,
     borderRadius: 34,
@@ -782,9 +1448,10 @@ const styles = StyleSheet.create({
   },
   swipeHint: {
     fontWeight: "800",
-    fontSize: 13,
+    fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
+    marginLeft: 20,
   },
   swipeDraggable: {
     width: 44,
@@ -804,7 +1471,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   /* Services */
   section: { marginTop: 20, paddingHorizontal: 16 },
   sectionHeader: {
@@ -818,25 +1484,75 @@ const styles = StyleSheet.create({
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   serviceCard: {
     width: (width - 32 - 10) / 2,
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
+    padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    gap: 12,
+    gap: 10,
   },
   serviceIconWrapper: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   serviceSubtitle: { fontSize: 11, fontWeight: "500" },
- 
+
+  wrapper: {
+    padding: 16,
+  },
+
+  card: {
+    borderRadius: 24,
+    padding: 22,
+    overflow: "hidden",
+  },
+
+  tag: {
+    fontSize: 10,
+    letterSpacing: 2,
+    color: "#6B9E7E",
+    marginBottom: 10,
+    fontWeight: "700",
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#E6FFF4",
+    lineHeight: 28,
+    marginBottom: 12,
+  },
+
+  desc: {
+    fontSize: 13,
+    color: "#9CCFC0",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+
+  link: {
+    fontSize: 13,
+    color: "#33F0A2",
+    fontWeight: "700",
+  },
+
+  /* Glow curve */
+  glowCircle: {
+    position: "absolute",
+    right: -40,
+    bottom: -40,
+    width: 140,
+    height: 140,
+    borderRadius: 100,
+    borderWidth: 18,
+    borderColor: "rgba(51,240,162,0.15)",
+  },
 });

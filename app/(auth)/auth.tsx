@@ -5,7 +5,7 @@ import {
 } from "@/features/auth/auth.api";
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
-import { useSmsUserConsent } from '@eabdullazyanov/react-native-sms-user-consent';
+import { useSmsUserConsent } from "@eabdullazyanov/react-native-sms-user-consent";
 import { Ionicons } from "@expo/vector-icons";
 import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-hint";
 import { router } from "expo-router";
@@ -21,12 +21,17 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
-import OtpVerify from 'react-native-otp-verify';
+
 import { SafeAreaView } from "react-native-safe-area-context";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
+let OtpVerify: any = null;
+
+if (Platform.OS === "android") {
+  OtpVerify = require("react-native-otp-verify").default;
+}
 export default function AuthScreen() {
   const [step, setStep] = useState<Step>("MOBILE");
 
@@ -81,14 +86,11 @@ export default function AuthScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-
   }, [step]);
-
-
 
   useEffect(() => {
     setHGasing().then((hashes) => {
-      handleGetPhoneNumbers(hashes);  // pass fresh hash
+      handleGetPhoneNumbers(hashes); // pass fresh hash
     });
   }, []);
 
@@ -99,19 +101,19 @@ export default function AuthScreen() {
   };
 
   const handleGetPhoneNumbers = async (freshHashes?: string[]) => {
-    if (Platform.OS === 'ios') return; // not suport 
+    if (Platform.OS === "ios") return; // not suport
 
     try {
       const number = await showPhoneNumberHint({ showGuidanceDialog: true });
 
       if (!number) return; // user cancelled
 
-      const digits = number.replace(/\D/g, '');
+      const digits = number.replace(/\D/g, "");
 
-      let cleanNumber = '';
-      if (digits.length === 12 && digits.startsWith('91')) {
+      let cleanNumber = "";
+      if (digits.length === 12 && digits.startsWith("91")) {
         cleanNumber = digits.slice(2);
-      } else if (digits.length === 11 && digits.startsWith('0')) {
+      } else if (digits.length === 11 && digits.startsWith("0")) {
         cleanNumber = digits.slice(1);
       } else if (digits.length === 10) {
         cleanNumber = digits;
@@ -132,13 +134,15 @@ export default function AuthScreen() {
         }
         // If userIsTyping, do NOTHING — let them type
       } else {
-        Alert.alert('Could not read number', `Got: "${number}". Please type manually.`);
+        Alert.alert(
+          "Could not read number",
+          `Got: "${number}". Please type manually.`,
+        );
       }
     } catch (error) {
       // silently fail, user can type manually
     }
   };
-
 
   useEffect(() => {
     if (error) {
@@ -167,10 +171,8 @@ export default function AuthScreen() {
     }
   }, [error]);
 
-
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
-    const mobile = phone;
-
+    const mobile = phoneValue || phone;
     // console.log("this is the mobileeeee=====>>>>>",mobile)
     // Alert.alert("chcek pyone :::  ",mobile)
     // console.log('sendOtp called with mobile:', mobile);
@@ -193,16 +195,12 @@ export default function AuthScreen() {
     }
   };
 
-
   // Auto-fill OTP when SMS is intercepted
   useEffect(() => {
     if (retrievedCode && retrievedCode.length === 6) {
       setOtp(retrievedCode);
     }
   }, [retrievedCode]);
-
-
-
 
   const { saveTokens, setAuthUser } = useAuth();
 
@@ -214,7 +212,7 @@ export default function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      const res = await verifyOtpApi(phone, otpToVerify);   // no +91
+      const res = await verifyOtpApi(phone, otpToVerify); // no +91
       if (!res.isNewUser) {
         await saveTokens(res.tokens);
       }
@@ -340,6 +338,18 @@ export default function AuthScreen() {
             }}
           >
             <Image
+              source={require("../../assets/images/logo/dd_logo.png")}
+              style={styles.logoDD}
+              resizeMode="contain"
+            />
+          </Animated.View>
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ scale: scaleAnim }],
+            }}
+          >
+            <Image
               source={require("../../assets/images/logo/greenLogo.png")}
               style={styles.logo}
               resizeMode="contain"
@@ -376,7 +386,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                  styles.progressDotActive,
+                    styles.progressDotActive,
                 ]}
               />
             </View>
@@ -395,7 +405,6 @@ export default function AuthScreen() {
               {step === "SUCCESS" && "Your account is ready!"}
             </Text>
 
-
             {/* FORM */}
             {step === "MOBILE" && (
               <>
@@ -412,11 +421,15 @@ export default function AuthScreen() {
                       value={phone}
                       onChangeText={(text) => {
                         userIsTyping.current = true;
-                        const digits = text.replace(/\D/g, '').slice(0, 10);
+                        const digits = text.replace(/\D/g, "").slice(0, 10);
                         setPhone(digits);
 
                         // auto sent otp
-                        if (digits.length === 10 && validatePhone(digits) && !loading) {
+                        if (
+                          digits.length === 10 &&
+                          validatePhone(digits) &&
+                          !loading
+                        ) {
                           sendOtp(digits);
                         }
                       }}
@@ -428,16 +441,19 @@ export default function AuthScreen() {
                   </View>
                 </View>
 
-                {Platform.OS === 'android' && (
+                {Platform.OS === "android" && (
                   <TouchableOpacity
                     style={styles.hintButton}
                     onPress={handleGetPhoneNumbers}
                   >
-                    <Ionicons name="phone-portrait-outline" size={16} color="#34D399" />
+                    <Ionicons
+                      name="phone-portrait-outline"
+                      size={16}
+                      color="#34D399"
+                    />
                     <Text style={styles.hintButtonText}>Use saved number</Text>
                   </TouchableOpacity>
                 )}
-
               </>
             )}
 
@@ -448,10 +464,9 @@ export default function AuthScreen() {
                   placeholder="Enter 6-digit OTP"
                   value={otp}
                   onChangeText={(text) => {
-                    const digits = text.replace(/\D/g, '').slice(0, 6); // force digits only
+                    const digits = text.replace(/\D/g, "").slice(0, 6); // force digits only
                     setOtp(digits);
                     setError(null);
-
                   }}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -505,7 +520,7 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
-                <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
+                {/* <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
                   <View
                     style={[
                       styles.avatarCircle,
@@ -521,7 +536,7 @@ export default function AuthScreen() {
                   <Text style={styles.avatarText}>
                     {avatar ? "Photo selected ✓" : "Add profile photo"}
                   </Text>
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 <Input
                   icon="person-outline"
@@ -608,7 +623,7 @@ export default function AuthScreen() {
                   <>
                     <Text style={styles.buttonText}>
                       {step === "MOBILE"
-                        ? "Send OTP"
+                        ? "Continue"
                         : step === "OTP"
                           ? "Verify & Continue"
                           : "Create Account"}
@@ -624,6 +639,25 @@ export default function AuthScreen() {
               </TouchableOpacity>
             )}
           </Animated.View>
+
+          {step !== "SUCCESS" && (
+            <Text style={styles.legalText}>
+              By continuing, you agree to our {"\n"}
+              <Text
+                style={styles.legalLink}
+                onPress={() => router.push("/(terms)/terms")}
+              >
+                Terms of Use
+              </Text>
+              {" & "}
+              <Text
+                style={[styles.legalLink, { marginTop: 4 }]}
+                onPress={() => router.push("/(terms)/privacy-policy")}
+              >
+                Privacy Policy
+              </Text>
+            </Text>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -632,9 +666,14 @@ export default function AuthScreen() {
 
 /* ---------------- INPUT COMPONENT ---------------- */
 
-function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props }: any) {
+function Input({
+  icon,
+  style,
+  onFocus: onFocusProp,
+  onBlur: onBlurProp,
+  ...props
+}: any) {
   const [isFocused, setIsFocused] = useState(false);
-
 
   return (
     <View
@@ -668,7 +707,7 @@ function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props
 const styles = StyleSheet.create({
   outer: {
     flex: 1,
-    backgroundColor: "#0A1612",
+    backgroundColor: "#001714",
   },
 
   gradientOverlay: {
@@ -687,12 +726,17 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
+  logoDD: {
+    width: 140,
+    height: 70,
+    alignSelf: "center",
+    marginTop: 0,
+  },
+
   logo: {
     width: 160,
     height: 100,
     alignSelf: "center",
-    marginTop: 30,
-    marginBottom: 20,
   },
 
   card: {
@@ -907,7 +951,7 @@ const styles = StyleSheet.create({
 
   button: {
     backgroundColor: "#34D399",
-    height: 56,
+    height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
@@ -983,48 +1027,60 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   phoneRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 14,
   },
   countryCodeBox: {
-    backgroundColor: '#0A1F19',
+    backgroundColor: "#0A1F19",
     borderWidth: 2,
-    borderColor: '#1A3529',
+    borderColor: "#1A3529",
     borderRadius: 16,
     paddingHorizontal: 12,
-    justifyContent: 'center',
+    justifyContent: "center",
     marginRight: 8,
   },
   countryCode: {
-    color: '#F0FDF4',
+    color: "#F0FDF4",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   phoneInputWrapper: {
     flex: 1,
-    backgroundColor: '#0A1F19',
+    backgroundColor: "#0A1F19",
     borderWidth: 2,
-    borderColor: '#1A3529',
+    borderColor: "#1A3529",
     borderRadius: 16,
   },
   phoneInput: {
-    color: '#F0FDF4',
+    color: "#F0FDF4",
     paddingVertical: 14,
     paddingHorizontal: 16,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   hintButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
     marginBottom: 8,
   },
   hintButtonText: {
-    color: '#34D399',
+    color: "#34D399",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 6,
+  },
+
+  legalText: {
+    color: "#fff",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 28,
+    lineHeight: 22,
+  },
+  legalLink: {
+    color: "#34D399",
+    fontWeight: "600",
   },
 });

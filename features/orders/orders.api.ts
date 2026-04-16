@@ -10,7 +10,9 @@ export const createOrderApi = async (order_details: order_details) => {
 };
 
 export const getAddressApi = async (id: any) => {
+  console.log("i am calleddddd--->>", id);
   const { data } = await apiClient.get(`/v1/addresses?customerid=${id}`);
+  console.log("this is the dataa--->>>>>", data);
   return data;
 };
 
@@ -18,6 +20,18 @@ export const saveAddressApi = async (payload: any) => {
   const { data } = await apiClient.post("/v1/addresses", payload);
   return data;
 };
+
+export const updateAddressApi = async (id: any, payload: any) => {
+  console.log("this is the payload of the api===>", payload);
+  const { data } = await apiClient.patch(`/v1/addresses/${id}`, payload);
+  console.log("this is the data===>>", data);
+  return data;
+};
+export const deleteAddressApi = async (id: any) => {
+  console.log("deleting address with id:", id);
+  const { data } = await apiClient.delete(`/v1/addresses/${id}`);
+  return data;
+}
 
 export const getOrdersApi = async (phoneNumber: any) => {
   console.log("phoneNumber", phoneNumber);

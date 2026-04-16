@@ -8,6 +8,7 @@ export type CartItem = {
   image?: any; // require(...) or uri
   qty: number;
   meta?: any;
+  
 };
 
 type CartCtx = {
@@ -18,6 +19,7 @@ type CartCtx = {
   clear: () => void;
   getQty: (id: string) => number;
   total: () => number;
+  decreaseQty: (id: string) => void;
 };
 
 const CartContext = createContext<CartCtx | undefined>(undefined);
@@ -43,6 +45,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (qty <= 0) return removeItem(id);
     setItems(prev => prev.map(p => p.id === id ? { ...p, qty } : p));
   };
+  const decreaseQty = (id: string) => {
+    setItems(prev =>
+      prev
+        .map(p =>
+          p.id === id ? { ...p, qty: p.qty - 1 } : p
+        )
+        .filter(p => p.qty > 0)
+    );
+  };
 
   const getQty = (id: string) => items.find(i => i.id === id)?.qty ?? 0;
 
@@ -51,7 +62,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const total = () => items.reduce((s, it) => s + it.price * it.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, setQty, clear, getQty, total }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, setQty, clear, getQty, total, decreaseQty }}>
       {children}
     </CartContext.Provider>
   );

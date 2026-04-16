@@ -1,129 +1,137 @@
-// app/screens/BookPickup.tsx
+// app/screens/BookPickup.tsx — Complete updated file with service availability check
+import CouponCard, { COUPONS } from "@/components/CouponCard";
 import PickupMap from "@/components/maps/PickupMap.native";
-import { Address } from "@/types/order.types";
+import { SuccessModal } from "@/components/SuccessModal";
+import { useAddress } from "@/context/AddressContext";
+import { useCart } from "@/context/CartContext";
+import { checkServiceAvailability } from "@/features/location/location.api";
+import { createOrderApi, saveAddressApi } from "@/features/orders/orders.api";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import {
-  createOrderApi,
-  getAddressApi,
-  saveAddressApi,
-} from "@/features/orders/orders.api";
-import { useAuth } from "@/hooks/useAuth";
-import * as Haptics from "expo-haptics";
+import { CirclePlus } from "lucide-react-native";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
-  Animated,
   Dimensions,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const TIME_SLOTS = [
-  "9:00 – 12:00 AM",
-  "1:00 – 4:00 PM",
-  "5:00 – 8:00 PM",
-  "9:00 – 12:00 PM",
-];
-
-const ADDRESS_ITEM_HEIGHT = 72; // approx height of 1 address card
-const MAX_ADDRESS_VISIBLE = 2;
-
-const ADDRESS_LIST_MAX_HEIGHT = ADDRESS_ITEM_HEIGHT * MAX_ADDRESS_VISIBLE + 20;
+// ─── Constants ────────────────────────────────────────────────────
 
 const SERVICE_TYPES = ["Shoe Spa", "Laundry", "Dry Clean"];
 
-const mapApiAddressToUI = (a: any): Address => {
-  return {
-    id: String(a.id),
-    label: a.label || "Other",
+// ─── Time slot grouping for UI display ───────────────────────────────────────
+const SLOT_START_HOUR = 8;
+const SLOT_END_HOUR = 21;
+const SLOT_DURATION = 3;
 
-    // UI expects flat + line1
-    flat: a.addressLine1 || "",
-    line1: a.addressLine1 || "",
-    street: a.addressLine1 || "",
-
-    landmark: a.landmark || "",
-    city: a.city || "",
-    state: a.state || "",
-    pincode: a.pincode || "",
-
-    latitude: Number(a.latitude || 0),
-    longitude: Number(a.longitude || 0),
-
-    isActive: a.isActive ?? true,
-
-    // keep this for filtering pickup/delivery
-    addressType: a.addressType,
-  } as any;
+const formatHour = (hour: number) => {
+  const normalized = hour % 24;
+  const suffix = normalized >= 12 ? "PM" : "AM";
+  const hour12 = normalized % 12 === 0 ? 12 : normalized % 12;
+  return `${hour12}:00 ${suffix}`;
 };
 
+const TIME_SLOTS = Array.from(
+  { length: SLOT_END_HOUR - SLOT_START_HOUR - SLOT_DURATION + 1 },
+  (_, i) => {
+    const start = SLOT_START_HOUR + i;
+    const end = start + SLOT_DURATION;
+    return `${formatHour(start)} - ${formatHour(end)}`;
+  },
+);
+
+// ─── Helper: generate next N days ────────────────────────────────────────────
+function getNextDays(count: number) {
+  const days: Date[] = [];
+  for (let i = 1; i <= count; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    days.push(d);
+  }
+  return days;
+}
+
+const DAY_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 export default function BookPickup() {
-  const { theme, isDark } = useTheme();
+  const { theme } = useTheme();
   const [note, setNote] = useState("");
   const [locLoading, setLocLoading] = useState(false);
   const insets = useSafeAreaInsets();
 
-  // DELIVERY MODE
   const [deliveryMode, setDeliveryMode] = useState<"same" | "other">("same");
   const [addressType, setAddressType] = useState<"pickup" | "delivery">(
     "pickup",
   );
   const [pickupType, setPickupType] = useState<"today" | "schedule">("today");
 
-  // DATE
   const [date, setDate] = useState<Date>(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  // TIME
   const [slot, setSlot] = useState<number>(-1);
 
-  // ADDRESSES (pickup)
-  const [addresses, setAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>("");
+  // Service availability states
+  const [isServiceAvailable, setIsServiceAvailable] = useState(true);
+  const [checkingService, setCheckingService] = useState(true);
 
-  const [deliveryAddresses, setDeliveryAddresses] = useState<Address[]>([]);
+  // Use Address Context
+  const {
+    selectedAddress,
+    allAddresses,
+    setSelectedAddress,
+    refreshAddresses,
+    loading,
+  } = useAddress();
+  const [selectedPickupAddressId, setSelectedPickupAddressId] =
+    useState<string>("");
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] =
     useState<string>("");
 
-  // SERVICE TYPE
-  const [serviceType, setServiceType] = useState<string>(SERVICE_TYPES[1]);
+  const [modalMode, setModalMode] = useState<"pickup" | "delivery">("pickup");
 
-  // ADD ADDRESS MODAL
+  const [serviceType, setServiceType] = useState<string>(SERVICE_TYPES[1]);
   const [mapQuery, setMapQuery] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
-
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewAddress, setPreviewAddress] = useState<any>(null);
-
   const [addModalOpen, setAddModalOpen] = useState(false);
-
   const [confirmLoading, setConfirmLoading] = useState(false);
-
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  const scaleAnim = React.useRef(new Animated.Value(0.7)).current;
-  const fadeAnim = React.useRef(new Animated.Value(0)).current;
-  const slideAnim = React.useRef(new Animated.Value(40)).current;
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [tempNote, setTempNote] = useState("");
   const [addressForm, setAddressForm] = useState({
@@ -141,97 +149,153 @@ export default function BookPickup() {
     longitude: "",
     isActive: true,
   });
+  const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
 
-  const scrollRef = React.useRef<ScrollView>(null);
-
+  const scrollRef = useRef<ScrollView>(null);
   const [location, setLocation] = useState({
     latitude: 19.076,
     longitude: 72.8777,
   });
-
+  const [hasHeavyItems, setHasHeavyItems] = useState(false);
   const { user } = useAuth();
 
   if (!user) return null;
 
-  const { firstName, lastName, id } = user;
-
-  console.log("this is valueeeess", user?.user?.id);
-
-  console.log("this is valueeeess", user?.id);
-
+  const { firstName, lastName } = user;
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+  const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
 
-  const phone = '91' + user?.user?.phone  //need to look
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<
+    (typeof COUPONS)[number] | null
+  >(null);
 
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
+  const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
 
-  const openAddressPreview = (addr: any) => {
-    setPreviewAddress(addr);
-    setPreviewOpen(true);
+  const { items, setQty, removeItem } = useCart();
+
+  const cartSubtotal = items.reduce(
+    (sum, item) => sum + item.qty * item.price,
+    0,
+  );
+  const deliveryCharge = cartSubtotal > 0 ? 40 : 0;
+  const discount = appliedCoupon ? Math.min(50, cartSubtotal) : 0;
+  const tax = Math.round(cartSubtotal * 0.05);
+  const total = cartSubtotal + deliveryCharge + tax - discount;
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const handleApplyCoupon = (coupon: (typeof COUPONS)[number]) => {
+    if (appliedCoupon?.code === coupon.code) {
+      setAppliedCoupon(null);
+    } else {
+      setAppliedCoupon(coupon);
+    }
+    setCouponOpen(false);
+  };
+
+  // ─── Handlers ──────────────────────────────────────
+
+  const navigateHomeWithSuccess = () => {
+    router.replace({
+      pathname: "/(customer)/(tabs)/home",
+      params: { orderPlaced: "1" },
+    });
   };
 
   const goBackSafe = () => {
-    if (router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace("/(customer)/(tabs)/home");
-    }
+    if (router.canGoBack()) router.back();
+    else router.replace("/(customer)/(tabs)/home");
   };
+
   const openSuccessModal = (msg: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
     setSuccessMessage(msg);
     setSuccessOpen(true);
-
-    scaleAnim.setValue(0.6);
-    fadeAnim.setValue(0);
-    slideAnim.setValue(40);
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 120,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    setTimeout(() => {
-      setSuccessOpen(false);
-      goBackSafe();
-    }, 2500);
   };
 
   useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
+    const kbShow = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => {
-        setKeyboardVisible(true);
-      },
+      () => setKeyboardVisible(true),
     );
-
-    const keyboardWillHide = Keyboard.addListener(
+    const kbHide = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false);
-      },
+      () => setKeyboardVisible(false),
     );
-
     return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
+      kbShow.remove();
+      kbHide.remove();
     };
   }, []);
-  // helper: display "Today" when date is today
+
+  useEffect(() => {
+    if (!mapQuery.trim()) return;
+    const timer = setTimeout(() => searchOnMap(), 700);
+    return () => clearTimeout(timer);
+  }, [mapQuery]);
+
+  // Set pickup address from selected address
+  useEffect(() => {
+    if (selectedAddress && !selectedPickupAddressId) {
+      setSelectedPickupAddressId(selectedAddress.id);
+    }
+  }, [selectedAddress]);
+
+  // Check service availability for selected address
+  useEffect(() => {
+    checkServiceForSelectedAddress();
+  }, [selectedPickupAddressId, selectedAddress]);
+
+  const checkServiceForSelectedAddress = async () => {
+    try {
+      setCheckingService(true);
+
+      let lat: number | null = null;
+      let lng: number | null = null;
+
+      const selectedAddr = selectedPickupAddr || selectedAddress;
+
+      if (selectedAddr) {
+        if (selectedAddr.latitude && selectedAddr.longitude) {
+          lat = selectedAddr.latitude;
+          lng = selectedAddr.longitude;
+        } else if (selectedAddr.line1 && selectedAddr.city) {
+          const fullAddress = `${selectedAddr.line1}, ${selectedAddr.city}, ${selectedAddr.state || ""}`;
+          const geo = await Location.geocodeAsync(fullAddress);
+          if (geo && geo.length > 0) {
+            lat = geo[0].latitude;
+            lng = geo[0].longitude;
+          }
+        }
+      }
+
+      if (lat && lng) {
+        const serviceCheck = await checkServiceAvailability(lat, lng);
+        setIsServiceAvailable(serviceCheck.serviceAvailable);
+
+        // If service is not available, default to Schedule tab
+        if (!serviceCheck.serviceAvailable && pickupType === "today") {
+          setPickupType("schedule");
+        }
+      } else {
+        setIsServiceAvailable(false);
+        if (pickupType === "today") {
+          setPickupType("schedule");
+        }
+      }
+    } catch (error) {
+      console.error("Service check error:", error);
+      setIsServiceAvailable(false);
+      if (pickupType === "today") {
+        setPickupType("schedule");
+      }
+    } finally {
+      setCheckingService(false);
+    }
+  };
+
   const isToday = (d: Date) => {
     const now = new Date();
     return (
@@ -240,6 +304,7 @@ export default function BookPickup() {
       d.getDate() === now.getDate()
     );
   };
+
   const formatDateLabel = (d: Date) =>
     isToday(d) ? "Today" : d.toDateString();
 
@@ -251,21 +316,17 @@ export default function BookPickup() {
   };
 
   const confirmPickup = async () => {
-    if (confirmLoading) return; // ✅ prevent double click
-
+    if (confirmLoading) return;
     try {
       setConfirmLoading(true);
-
-      // ✅ pickup address must be selected
-      if (!selectedAddressId) {
+      if (!selectedPickupAddressId) {
         Alert.alert("Missing Pickup Address", "Please select pickup address.");
         return;
       }
-
-      // ✅ delivery address id based on mode
       const deliveryId =
-        deliveryMode === "same" ? selectedAddressId : selectedDeliveryAddressId;
-
+        deliveryMode === "same"
+          ? selectedPickupAddressId
+          : selectedDeliveryAddressId;
       if (!deliveryId) {
         Alert.alert(
           "Missing Delivery Address",
@@ -273,94 +334,41 @@ export default function BookPickup() {
         );
         return;
       }
-
-      // ✅ date logic
       const scheduledDate = pickupType === "today" ? new Date() : date;
-
-      // ✅ slot is optional (only when schedule)
       const selectedSlot =
         pickupType === "schedule" && slot !== -1 ? TIME_SLOTS[slot] : undefined;
-
-      // ✅ request body
       const order_details: any = {
-        firstName: firstName,
-        lastName: lastName,
+        firstName,
+        lastName,
         contact: phone,
         appCustomerId: auth_id,
-        tempPickupAdresssId: selectedAddressId,
+        tempPickupAdresssId: selectedPickupAddressId,
         tempDeliveryAddressId: deliveryId,
         date: formatDateForApi(scheduledDate),
       };
-
-      // optional fields
       if (selectedSlot) order_details.slot = selectedSlot;
       if (note?.trim()) order_details.note = note.trim();
-
-      // 🔥 API call
       await createOrderApi(order_details);
-      if (pickupType === "today") {
+      if (pickupType === "today")
         openSuccessModal(
           "Sit & relax 😌\nYour pickup will be collected shortly!",
         );
-      } else {
-        openSuccessModal("Pickup scheduled successfully ✅");
-      }
-      //  router.back();
+      else openSuccessModal("Pickup scheduled successfully ✅");
     } catch (err: any) {
-      console.log("create order error:", err);
       Alert.alert("Error", err?.message || "Failed to create order");
     } finally {
       setConfirmLoading(false);
     }
   };
 
-  const getPickupAddr = async () => {
-    try {
-      console.log("this is the iddddd-->>>", id);
-      const data = await getAddressApi(auth_id);
-
-      const list = Array.isArray(data?.results) ? data.results : [];
-
-      // ✅ map API response to UI address format
-      const mappedList = list.map(mapApiAddressToUI);
-
-      // ✅ filter pickup + delivery
-      const pickupList = mappedList.filter(
-        (a: any) => a.addressType === "PICKUP",
-      );
-      const deliveryList = mappedList.filter(
-        (a: any) => a.addressType === "DELIVERY",
-      );
-
-      setAddresses(pickupList);
-      setDeliveryAddresses(deliveryList);
-
-      // auto select first pickup
-      setSelectedAddressId(pickupList?.[0]?.id || "");
-
-      // auto select first delivery
-      setSelectedDeliveryAddressId(deliveryList?.[0]?.id || "");
-    } catch (err) {
-      console.log("getPickupAddr error:", err);
-      setAddresses([]);
-      setDeliveryAddresses([]);
-      setSelectedAddressId("");
-      setSelectedDeliveryAddressId("");
-    }
-  };
-
-  useEffect(() => {
-    getPickupAddr();
-  }, []);
-
   useEffect(() => {
     if (pickupType === "today") {
       setDate(new Date());
       setSlot(-1);
     } else {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      setDate(tomorrow);
+      const t = new Date();
+      t.setDate(t.getDate() + 1);
+      setDate(t);
       setSlot(-1);
     }
   }, [pickupType]);
@@ -368,11 +376,7 @@ export default function BookPickup() {
   const fetchCurrentLocation = async () => {
     try {
       setLocLoading(true);
-
       const { status } = await Location.requestForegroundPermissionsAsync();
-
-      console.log("this is the statussss==>>",status)
-
       if (status !== "granted") {
         setLocLoading(false);
         Alert.alert(
@@ -381,26 +385,17 @@ export default function BookPickup() {
         );
         return;
       }
-
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
         timeInterval: 5000,
         distanceInterval: 10,
       });
-
       const coords = {
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
       };
-
       setLocation(coords);
-
-      console.log("this is loc",loc)
-
       const geo = await Location.reverseGeocodeAsync(coords);
-
-      console.log("this is geo",geo)
-
       if (geo && geo.length > 0) {
         const g = geo[0];
         setAddressForm((p) => ({
@@ -416,7 +411,6 @@ export default function BookPickup() {
         }));
       }
     } catch (e: any) {
-      console.error("Location error:", e);
       Alert.alert(
         "Location error",
         e?.message || "Unable to fetch current location",
@@ -425,30 +419,25 @@ export default function BookPickup() {
       setLocLoading(false);
     }
   };
-  const searchOnMap = async () => {
-    if (!mapQuery.trim()) return;
 
+  const searchOnMap = async (query?: string) => {
+    const q = query ?? mapQuery;
+    if (!q.trim()) return;
     try {
       setSearchLoading(true);
-
       const results = await Location.geocodeAsync(mapQuery);
-
       if (results && results.length > 0) {
         const coords = {
           latitude: results[0].latitude,
           longitude: results[0].longitude,
         };
-
         setLocation(coords);
-
         setAddressForm((p) => ({
           ...p,
           latitude: String(coords.latitude),
           longitude: String(coords.longitude),
         }));
-
         const geo = await Location.reverseGeocodeAsync(coords);
-
         if (geo && geo.length > 0) {
           const g = geo[0];
           setAddressForm((p) => ({
@@ -467,14 +456,12 @@ export default function BookPickup() {
         Alert.alert("Not found", "No location found for this search.");
       }
     } catch (e) {
-      console.error("Search error:", e);
       Alert.alert("Search failed", "Unable to search this place.");
     } finally {
       setSearchLoading(false);
     }
   };
 
-  // auto-fetch when modal opens
   useEffect(() => {
     if (addModalOpen) {
       setAddressForm({
@@ -492,22 +479,18 @@ export default function BookPickup() {
         longitude: "",
         isActive: true,
       });
-
       fetchCurrentLocation();
     }
   }, [addModalOpen]);
 
-  // Save address from form into pickup or delivery list based on addressType
   const saveAddress = async () => {
     try {
-      // label mapping for API
       const label =
         addressForm.label === "home"
           ? "Home"
           : addressForm.label === "work"
             ? "Office"
             : "Other";
-
       const payload: any = {
         label,
         addressLine1: `${addressForm.houseNo}, ${addressForm.street}`.trim(),
@@ -518,66 +501,436 @@ export default function BookPickup() {
         pincode: addressForm.pincode,
         latitude: Number(addressForm.latitude),
         longitude: Number(addressForm.longitude),
-
-        // pickup/delivery based on which button opened modal
         addressType: addressType === "pickup" ? "PICKUP" : "DELIVERY",
       };
-
-      // Optional fields only send if user entered
       if (addressForm.contactName?.trim())
         payload.contactName = addressForm.contactName.trim();
       if (addressForm.contactPhone?.trim())
         payload.contactPhone = addressForm.contactPhone.trim();
       if (addressForm.addressLine2?.trim())
         payload.addressLine2 = addressForm.addressLine2.trim();
-
-      // 🔥 API call
-      const saved = await saveAddressApi(payload);
-
-      // after saving, refresh list from backend
-      await getPickupAddr();
-
-      // close modal
+      await saveAddressApi(payload);
+      await refreshAddresses();
       setAddModalOpen(false);
-
       Alert.alert("Success", "Address saved successfully!");
     } catch (err: any) {
-      console.log("saveAddress error:", err);
       Alert.alert("Error", err?.message || "Failed to save address");
     }
   };
 
+  // ─── Derived data ─────────────────────────────────────────────
+  const nextDays = getNextDays(30);
+
+  const selectedPickupAddr = allAddresses.find(
+    (a) => a.id === selectedPickupAddressId,
+  );
+  const selectedDeliveryAddr = allAddresses.find(
+    (a) => a.id === selectedDeliveryAddressId,
+  );
+
+  const BreakRow = ({ label, value, total, strike }: any) => (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: strike ? "#6B8F7B" : total ? "#CFFFF1" : "#8CAFA0",
+          fontSize: total ? 16 : 13,
+          fontWeight: total ? "800" : "500",
+          textDecorationLine: strike ? "line-through" : "none",
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          color: strike ? "#6B8F7B" : total ? "#00E1A2" : "#CFFFF1",
+          fontSize: total ? 18 : 13,
+          fontWeight: total ? "900" : "600",
+          textDecorationLine: strike ? "line-through" : "none",
+        }}
+      >
+        ₹{value}
+      </Text>
+    </View>
+  );
+
+  const CartSection = () => {
+    if (!items?.length) return null;
+
+    const deliveryHandling = 40;
+    const serviceCharge = Math.round(cartSubtotal * 0.05);
+    const gst = Math.round((cartSubtotal + serviceCharge) * 0.09);
+    const igst = Math.round((cartSubtotal + serviceCharge) * 0.09);
+
+    const grandTotal = cartSubtotal;
+
+    return (
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>CART ITEMS</Text>
+
+        <View style={{ marginTop: 1 }}>
+          {items.map((item) => {
+            const lineTotal = item.qty * item.price;
+
+            return (
+              <View key={item.id}>
+                <View style={s.cartItem}>
+                  <View style={s.cartItemLeft}>
+                    <Text
+                      style={[s.itemTitle, { color: theme.text }]}
+                      numberOfLines={1}
+                    >
+                      {item.title}
+                    </Text>
+
+                    <View style={s.stepper}>
+                      <TouchableOpacity
+                        onPress={() => setQty(item.id, item.qty - 1)}
+                        style={s.stepBtn}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Ionicons name="remove" size={13} color="#CFFFF1" />
+                      </TouchableOpacity>
+
+                      <Text style={[s.qtyText, { color: theme.text }]}>
+                        {item.qty}
+                      </Text>
+
+                      <TouchableOpacity
+                        onPress={() => setQty(item.id, item.qty + 1)}
+                        style={[
+                          s.stepBtn,
+                          s.stepBtnActive,
+                          { backgroundColor: theme.primary },
+                        ]}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      >
+                        <Ionicons name="add" size={13} color="#000" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={s.cartItemRight}>
+                    <Text style={[s.lineTotal, { color: theme.text }]}>
+                      ₹{lineTotal}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => removeItem(item.id)}
+                      style={s.removeBtn}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={15}
+                        color="#6B8F7B"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={{ marginTop: 4 }}>
+          <View style={s.rowBetween}>
+            <Text style={s.sectionLabel}>APPLIED OFFERS</Text>
+
+            <TouchableOpacity onPress={() => setCouponOpen(true)}>
+              <Text style={{ color: theme.primary }}>View All &rsaquo;</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            onPress={() => setCouponOpen(true)}
+            style={{
+              marginTop: 6,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "#1E3327",
+              padding: 14,
+              backgroundColor: "#081612",
+            }}
+          >
+            <View style={s.rowBetween}>
+              <View>
+                <Text style={{ color: theme.text, fontWeight: "700" }}>
+                  {appliedCoupon?.code || "Tap to apply coupon"}
+                </Text>
+
+                <Text style={{ color: "#6B8F7B", fontSize: 12 }}>
+                  {appliedCoupon
+                    ? appliedCoupon.description
+                    : "Choose from available coupons"}
+                </Text>
+              </View>
+
+              <Text style={{ color: theme.primary }}>
+                {appliedCoupon ? "Change" : "Open"}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ marginTop: 18 }}>
+          <BreakRow label="Subtotal" value={cartSubtotal} />
+          <BreakRow label="Delivery Handling" value={deliveryHandling} strike />
+          <BreakRow label="Service Charge" value={serviceCharge} strike />
+          <BreakRow label="GST (9%)" value={gst} strike />
+          <BreakRow label="IGST (9%)" value={igst} strike />
+
+          <View
+            style={{
+              height: 1,
+              backgroundColor: "#1E3327",
+              marginVertical: 10,
+            }}
+          />
+
+          <BreakRow label="Total Payable" value={grandTotal} total />
+        </View>
+      </View>
+    );
+  };
+
+  // Special Instructions Section Component
+  const SpecialInstructionsSection = () => (
+    <View style={s.section}>
+      <Text style={s.sectionLabel}>SPECIAL INSTRUCTIONS</Text>
+      <LinearGradient colors={theme.gradient} style={{ borderRadius: 14 }}>
+        <TouchableOpacity
+          style={[s.noteBox, { borderColor: "#1E3327" }]}
+          onPress={() => {
+            setTempNote(note);
+            setNotesModalOpen(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Text
+            style={[
+              s.notePlaceholder,
+              note ? { color: theme.text } : { color: "#d7dbd7" },
+            ]}
+          >
+            {note ||
+              "E.g. Code 1234, leave with concierge, use scent-free detergent"}
+          </Text>
+          <View style={s.noteTagRow}>
+            {["FRAGILE", "ECO-WASH"].map((tag) => (
+              <View
+                key={tag}
+                style={[
+                  s.noteTag,
+                  {
+                    backgroundColor: "#1A2C22",
+                    borderColor: "#2A4A34",
+                  },
+                ]}
+              >
+                <Text style={[s.noteTagText, { color: "#d7dbd7" }]}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </LinearGradient>
+    </View>
+  );
+
+  // Delivery Address Section Component
+  const DeliveryAddressSection = () => (
+    <LinearGradient
+      colors={theme.gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[s.card, { marginTop: 10 }]}
+    >
+      <View style={s.rowBetween}>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.cardTitle, { color: theme.text }]}>
+            Delivery Address
+          </Text>
+          <Text style={s.cardSub}>Same as pickup location?</Text>
+        </View>
+        <Switch
+          value={deliveryMode === "same"}
+          onValueChange={(v) => setDeliveryMode(v ? "same" : "other")}
+          trackColor={{ false: "#1E3327", true: theme.primary }}
+          thumbColor={deliveryMode === "same" ? "#fff" : "#4E7060"}
+        />
+      </View>
+
+      {deliveryMode === "other" && (
+        <View style={{ marginTop: 10 }}>
+          <View style={s.rowBetween}>
+            <Text style={s.sectionLabel}>SELECT DELIVERY ADDRESS</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setAddModalOpen(true);
+                setAddressType("delivery");
+              }}
+            >
+              <Text style={[s.addLink, { color: theme.primary }]}>
+                + Add New
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <LinearGradient
+            colors={theme.gradient}
+            style={{
+              borderRadius: 16,
+              marginTop: 5,
+              padding: 8,
+              borderWidth: 1.5,
+              borderColor: theme.primary + "33",
+            }}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                setPickerType("delivery");
+                setAddressPickerOpen(true);
+              }}
+              activeOpacity={0.85}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+              }}
+            >
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  backgroundColor: theme.primary + "22",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 10,
+                }}
+              >
+                <Ionicons
+                  name="location-outline"
+                  size={18}
+                  color={theme.primary}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    color: "#7A9B87",
+                    fontWeight: "700",
+                  }}
+                >
+                  DELIVERY ADDRESS
+                </Text>
+
+                <Text
+                  style={{
+                    color: theme.text,
+                    fontWeight: "800",
+                    marginTop: 2,
+                  }}
+                >
+                  {selectedDeliveryAddr
+                    ? `${selectedDeliveryAddr.line1}, ${selectedDeliveryAddr.city}`
+                    : "Select address"}
+                </Text>
+              </View>
+
+              <Ionicons name="chevron-down" size={18} color="#7A9B87" />
+            </TouchableOpacity>
+          </LinearGradient>
+        </View>
+      )}
+    </LinearGradient>
+  );
+
+  // ─── RENDER ───────────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.safe, { backgroundColor: theme.background }]}>
+    <View style={[s.safe, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
-        style={[styles.safe, { backgroundColor: theme.background }]}
+        style={[s.safe, { backgroundColor: theme.background }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 75 + insets.top : 0}
       >
+        {/* ── FIXED HEADER ── */}
         <View
           style={[
-            styles.stackHeader,
-            {
-              paddingTop: insets.top,
-              backgroundColor: theme.background,
-              borderBottomColor: isDark ? "#1f2933" : "#e5e7eb",
-            },
+            s.header,
+            { paddingTop: insets.top + 12, backgroundColor: theme.background },
           ]}
         >
-          <TouchableOpacity onPress={goBackSafe} hitSlop={10}>
-            <Ionicons name="chevron-back" size={26} color={theme.primary} />
-          </TouchableOpacity>
-
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: theme.text, marginLeft: -12 }, // optical centering
-            ]}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
           >
-            Book Pickup
-          </Text>
+            <TouchableOpacity
+              onPress={goBackSafe}
+              hitSlop={10}
+              style={s.headerBack}
+            >
+              <Ionicons name="chevron-back" size={24} color={theme.text} />
+            </TouchableOpacity>
 
-          <View style={{ width: 26 }} />
+            <TouchableOpacity
+              style={{ flex: 1, alignItems: "flex-start" }}
+              activeOpacity={0.8}
+              onPress={() => {
+                setModalMode("pickup");
+                setModalVisible(true);
+              }}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+              >
+                <Ionicons name="navigate" size={14} color={theme.primary} />
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: theme.text,
+                    fontSize: 18,
+                    fontWeight: "800",
+                    maxWidth: 180,
+                  }}
+                >
+                  {selectedPickupAddr?.street ||
+                    selectedAddress?.street ||
+                    "Select Address"}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={theme.primary} />
+              </View>
+
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: "#6B8F7B",
+                  fontSize: 12,
+                  marginTop: 2,
+                  maxWidth: 200,
+                }}
+              >
+                {selectedPickupAddr
+                  ? ` ${selectedPickupAddr.city} , ${selectedPickupAddr.state} ${selectedPickupAddr.pincode || ""}`
+                  : selectedAddress
+                    ? ` ${selectedAddress.city} , ${selectedAddress.state}`
+                    : "Tap to choose pickup location"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={{ width: 36 }} />
+          </View>
         </View>
 
         <ScrollView
@@ -586,963 +939,641 @@ export default function BookPickup() {
           keyboardShouldPersistTaps="handled"
           style={{ flex: 1 }}
           contentContainerStyle={[
-            styles.container,
-            { paddingTop: 35 + insets.top + 0 }, // 👈 space for fixed header
+            s.scrollContent,
+            { paddingTop: 60 + insets.top },
           ]}
         >
-          {/* TITLE */}
-          <View style={styles.header}>
-            <Text style={[styles.title, { color: theme.text }]}>
-              Pickup Details
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.subText }]}>
-              Choose pickup date, time and address
-            </Text>
-          </View>
-
-          {/* PICKUP TYPE */}
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <Text style={[styles.cardHeading, { color: theme.text }]}>
-              Pickup Type
-            </Text>
-
-            <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
+          {/* ── PICKUP SCHEDULE TABS ── */}
+          <View style={s.section}>
+            <View style={[s.tabRow]}>
               <TouchableOpacity
-                onPress={() => setPickupType("today")}
+                onPress={() => {
+                  if (isServiceAvailable) {
+                    setPickupType("today");
+                  } else {
+                    Alert.alert(
+                      "Service Unavailable",
+                      "Our service is not available at your selected location for today. Please schedule a pickup for another day.",
+                      [{ text: "OK", style: "default" }],
+                    );
+                  }
+                }}
+                disabled={!isServiceAvailable || checkingService}
                 style={[
-                  styles.pickupTypeBtn,
-                  {
-                    flex: 1,
-                    backgroundColor:
-                      pickupType === "today"
-                        ? theme.primary
-                        : isDark
-                          ? "#1A2332"
-                          : "#F0F4F8",
-                    borderWidth: pickupType === "today" ? 0 : 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                  s.tab,
+                  pickupType === "today" && {
+                    borderColor: theme.primary,
+                    backgroundColor: "#0A1F14",
                   },
+                  !isServiceAvailable && s.tabDisabled,
                 ]}
                 activeOpacity={0.8}
               >
-                <Ionicons
-                  name="flash"
-                  size={20}
-                  color={pickupType === "today" ? "#000" : theme.primary}
-                />
                 <Text
-                  style={{
-                    fontWeight: "800",
-                    fontSize: 15,
-                    color: pickupType === "today" ? "#000" : theme.text,
-                    marginLeft: 6,
-                  }}
+                  style={[
+                    s.tabText,
+                    {
+                      color: pickupType === "today" ? theme.primary : "#4E7060",
+                      opacity: !isServiceAvailable ? 0.5 : 1,
+                    },
+                  ]}
                 >
-                  Today
+                  Today {!isServiceAvailable && "(Unavailable)"}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => setPickupType("schedule")}
                 style={[
-                  styles.pickupTypeBtn,
-                  {
-                    flex: 1,
-                    backgroundColor:
-                      pickupType === "schedule"
-                        ? theme.primary
-                        : isDark
-                          ? "#1A2332"
-                          : "#F0F4F8",
-                    borderWidth: pickupType === "schedule" ? 0 : 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
+                  s.tab,
+                  pickupType === "schedule" && {
+                    borderColor: theme.primary,
+                    backgroundColor: "#0A1F14",
                   },
                 ]}
                 activeOpacity={0.8}
               >
-                <Ionicons
-                  name="calendar"
-                  size={20}
-                  color={pickupType === "schedule" ? "#000" : theme.primary}
-                />
                 <Text
-                  style={{
-                    fontWeight: "800",
-                    fontSize: 15,
-                    color: pickupType === "schedule" ? "#000" : theme.text,
-                    marginLeft: 6,
-                  }}
+                  style={[
+                    s.tabText,
+                    {
+                      color:
+                        pickupType === "schedule" ? theme.primary : "#4E7060",
+                    },
+                  ]}
                 >
                   Schedule
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* Show warning message if service is unavailable */}
+            {/* {!isServiceAvailable && !checkingService && (
+              <View style={s.warningBox}>
+                <Ionicons name="alert-circle" size={18} color="#FFA500" />
+                <Text style={s.warningText}>
+                  Service not available today at your location. Please schedule
+                  a pickup.
+                </Text>
+              </View>
+            )} */}
           </View>
 
-          {/* DATE PICKER */}
-          {pickupType === "schedule" && (
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <Text style={[styles.cardHeading, { color: theme.text }]}>
-                Pickup Date
-              </Text>
-
+          {/* ══════════════════ TODAY VIEW ══════════════════ */}
+          {pickupType === "today" && (
+            <>
               <TouchableOpacity
-                style={[
-                  styles.dateBox,
-                  {
-                    backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                    borderWidth: 1.5,
-                    borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                  },
-                ]}
-                onPress={() => setShowDatePicker(true)}
+                onPress={() => router.push("/services/[service]")}
                 activeOpacity={0.8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginTop: 10,
+                  alignSelf: "flex-start",
+                }}
               >
-                <Ionicons
-                  name="calendar-outline"
-                  size={22}
-                  color={theme.primary}
+                <CirclePlus
+                  style={{
+                    color: theme.primary,
+                  }}
+                  size={14}
                 />
+
                 <Text
                   style={{
-                    marginLeft: 12,
-                    fontWeight: "800",
-                    fontSize: 15,
-                    color: theme.text,
-                    flex: 1,
+                    color: theme.primary,
+                    fontSize: 13,
+                    fontWeight: "600",
+                    marginLeft: 4,
                   }}
                 >
-                  {formatDateLabel(date)}
+                  Add Items
                 </Text>
-                <Ionicons name="chevron-down" size={20} color={theme.subText} />
               </TouchableOpacity>
 
-              {showDatePicker && (
-                <DateTimePicker
-                  value={date}
-                  mode="date"
-                  display={Platform.OS === "ios" ? "inline" : "default"}
-                  minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-                  onChange={(event, selectedDate) => {
-                    setShowDatePicker(false);
-                    if (selectedDate) {
-                      setDate(selectedDate);
-                      setSlot(-1);
-                    }
-                  }}
-                />
-              )}
-            </View>
-          )}
+              <DeliveryAddressSection />
 
-          {/* TIME SLOTS */}
-          {pickupType === "schedule" && (
-            <View style={[styles.card, { backgroundColor: theme.card }]}>
-              <Text style={[styles.cardHeading, { color: theme.text }]}>
-                Pickup Time
-              </Text>
+              <CartSection />
 
-              <View style={styles.slotWrap}>
-                {TIME_SLOTS.map((t, i) => {
-                  const active = slot === i;
-                  return (
-                    <TouchableOpacity
-                      key={t}
-                      onPress={() => setSlot(i)}
-                      style={[
-                        styles.slot,
-                        {
-                          backgroundColor: active
-                            ? theme.primary
-                            : isDark
-                              ? "#1A2332"
-                              : "#F0F4F8",
-                          borderWidth: active ? 0 : 1.5,
-                          borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                        },
-                      ]}
-                      activeOpacity={0.8}
-                    >
-                      <Ionicons
-                        name="time-outline"
-                        size={18}
-                        color={active ? "#000" : theme.primary}
-                      />
-                      <Text
-                        style={{
-                          fontWeight: "700",
-                          fontSize: 14,
-                          color: active ? "#000" : theme.text,
-                          marginLeft: 6,
-                        }}
-                      >
-                        {t}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* PICKUP ADDRESSES */}
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="location" size={20} color={theme.primary} />
-              <Text
-                style={[
-                  styles.cardHeading,
-                  { color: theme.text, marginLeft: 6, marginBottom: 0 },
-                ]}
-              >
-                Pickup Address
-              </Text>
-            </View>
-
-            <ScrollView
-              style={[
-                styles.addressScroll,
-                {
-                  maxHeight:
-                    addresses.length > 2 ? ADDRESS_LIST_MAX_HEIGHT : undefined,
-                },
-              ]}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
-            >
-              {addresses.length === 0 ? (
-                <TouchableOpacity
-                  style={[styles.addAddrBtn, { marginTop: 10 }]}
-                  onPress={() => {
-                    setAddModalOpen(true);
-                    setAddressType("pickup");
-                  }}
-                  activeOpacity={0.8}
+              <View style={s.section}>
+                <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
+                <LinearGradient
+                  colors={theme.gradient}
+                  style={{ borderRadius: 14 }}
                 >
-                  <Ionicons name="add-circle" size={20} color={theme.primary} />
-                  <Text
+                  <TouchableOpacity
+                    onPress={() => setHasHeavyItems(!hasHeavyItems)}
+                    activeOpacity={0.8}
                     style={{
-                      marginLeft: 8,
-                      color: theme.primary,
-                      fontWeight: "800",
-                      fontSize: 14,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
                     }}
                   >
-                    Add pickup address
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                addresses.map((item) => {
-                  const selected = item.id === selectedAddressId;
+                    <Ionicons
+                      name={hasHeavyItems ? "checkbox" : "square-outline"}
+                      size={20}
+                      color={hasHeavyItems ? theme.primary : "#4E7060"}
+                    />
 
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={[
-                        styles.addressItem,
-                        {
-                          backgroundColor: selected
-                            ? theme.primary
-                            : isDark
-                              ? "#1A2332"
-                              : "#F8FAFC",
-                          borderWidth: selected ? 0 : 1.5,
-                          borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                        },
-                      ]}
-                      onPress={() => setSelectedAddressId(item.id)}
-                      activeOpacity={0.8}
-                      onLongPress={() => openAddressPreview(item)}
-                      delayLongPress={300}
+                    <Text
+                      style={{
+                        marginLeft: 10,
+                        fontWeight: "700",
+                        color: hasHeavyItems ? theme.primary : theme.text,
+                      }}
                     >
-                      <View
-                        style={[
-                          styles.addressIconBox,
-                          {
-                            backgroundColor: selected
-                              ? "rgba(0,0,0,0.1)"
-                              : isDark
-                                ? "#0F1729"
-                                : "#E2E8F0",
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={item.label === "Home" ? "home" : "briefcase"}
-                          size={18}
-                          color={selected ? "#000" : theme.primary}
-                        />
-                      </View>
+                      I have heavy items (blankets, curtains, etc.)
+                    </Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
 
-                      <View style={{ flex: 1, marginLeft: 12 }}>
-                        <Text
-                          style={{
-                            fontWeight: "800",
-                            fontSize: 15,
-                            color: selected ? "#000" : theme.text,
-                          }}
-                        >
-                          {item.label}
-                        </Text>
+              <SpecialInstructionsSection />
+            </>
+          )}
 
-                        <Text
-                          style={{
-                            color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
-                            marginTop: 4,
-                            fontSize: 13,
-                          }}
-                        >
-                          {item.line1}
-                        </Text>
+          {/* ══════════════════ SCHEDULE VIEW ══════════════════ */}
+          {pickupType === "schedule" && (
+            <>
+              <View style={s.section}>
+                <View style={s.rowBetween}>
+                  <View>
+                    <Text style={[s.bigHeading, { color: theme.text }]}>
+                      Select Date
+                    </Text>
+                    <Text style={s.bigSubtitle}>
+                      Pick a day for your laundry collection
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={s.monthLabel}>MONTH</Text>
+                    <Text style={[s.monthName, { color: theme.primary }]}>
+                      {MONTH_NAMES[date.getMonth()]}
+                    </Text>
+                  </View>
+                </View>
 
-                        <Text
-                          style={{
-                            color: selected ? "rgba(0,0,0,0.7)" : theme.subText,
-                            marginTop: 2,
-                            fontSize: 13,
-                          }}
-                        >
-                          {item.city}, {item.state} • {item.pincode}
-                        </Text>
-                      </View>
-
-                      {selected && (
-                        <Ionicons
-                          name="checkmark-circle"
-                          size={24}
-                          color="#000"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </ScrollView>
-
-            {addresses.length > 0 && (
-              <TouchableOpacity
-                style={styles.addAddrBtn}
-                onPress={() => {
-                  setAddModalOpen(true);
-                  setAddressType("pickup");
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add-circle" size={20} color={theme.primary} />
-                <Text
-                  style={{
-                    marginLeft: 8,
-                    color: theme.primary,
-                    fontWeight: "800",
-                    fontSize: 14,
-                  }}
-                >
-                  Add new pickup address
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* DELIVERY ADDRESS SECTION */}
-          <View style={[styles.card, { backgroundColor: theme.card }]}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="navigate" size={20} color={theme.primary} />
-              <Text
-                style={[
-                  styles.cardHeading,
-                  { color: theme.text, marginLeft: 6, marginBottom: 0 },
-                ]}
-              >
-                Delivery Address
-              </Text>
-            </View>
-
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 12,
-                marginTop: 12,
-                marginBottom: 16,
-              }}
-            >
-              <TouchableOpacity
-                onPress={() => setDeliveryMode("same")}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor:
-                    deliveryMode === "same"
-                      ? theme.primary
-                      : isDark
-                        ? "#1A2332"
-                        : "#F0F4F8",
-                  borderWidth: deliveryMode === "same" ? 0 : 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="sync"
-                  size={18}
-                  color={deliveryMode === "same" ? "#000" : theme.primary}
-                />
-                <Text
-                  style={{
-                    marginLeft: 6,
-                    fontWeight: "800",
-                    fontSize: 14,
-                    color: deliveryMode === "same" ? "#000" : theme.text,
-                  }}
-                >
-                  Same as Pickup
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => setDeliveryMode("other")}
-                style={{
-                  flex: 1,
-                  paddingVertical: 14,
-                  borderRadius: 12,
-                  backgroundColor:
-                    deliveryMode === "other"
-                      ? theme.primary
-                      : isDark
-                        ? "#1A2332"
-                        : "#F0F4F8",
-                  borderWidth: deliveryMode === "other" ? 0 : 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name="location"
-                  size={18}
-                  color={deliveryMode === "other" ? "#000" : theme.primary}
-                />
-                <Text
-                  style={{
-                    marginLeft: 6,
-                    fontWeight: "800",
-                    fontSize: 14,
-                    color: deliveryMode === "other" ? "#000" : theme.text,
-                  }}
-                >
-                  Different Address
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {deliveryMode === "other" && (
-              <>
                 <ScrollView
-                  style={[
-                    styles.addressScroll,
-                    {
-                      maxHeight:
-                        deliveryAddresses.length > 2
-                          ? ADDRESS_LIST_MAX_HEIGHT
-                          : undefined,
-                    },
-                  ]}
-                  showsVerticalScrollIndicator={false}
-                  nestedScrollEnabled={true}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginTop: 14 }}
                 >
-                  {deliveryAddresses.map((item) => {
-                    const selected = item.id === selectedDeliveryAddressId;
+                  {nextDays.map((d, i) => {
+                    const isSelected = d.toDateString() === date.toDateString();
+
                     return (
                       <TouchableOpacity
-                        key={item.id}
-                        style={[
-                          styles.addressItem,
-                          {
-                            backgroundColor: selected
-                              ? theme.primary
-                              : isDark
-                                ? "#1A2332"
-                                : "#F8FAFC",
-                            borderWidth: selected ? 0 : 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                          },
-                        ]}
-                        onPress={() => setSelectedDeliveryAddressId(item.id)}
-                        onLongPress={() => openAddressPreview(item)}
-                        delayLongPress={300}
-                        activeOpacity={0.8}
+                        key={i}
+                        onPress={() => {
+                          setDate(d);
+                          setSlot(-1);
+                        }}
+                        activeOpacity={0.85}
+                        style={{ marginRight: 10 }}
                       >
-                        <View
+                        <LinearGradient
+                          colors={theme.gradient}
                           style={[
-                            styles.addressIconBox,
+                            s.dateCell,
                             {
-                              backgroundColor: selected
-                                ? "rgba(0,0,0,0.1)"
-                                : isDark
-                                  ? "#0F1729"
-                                  : "#E2E8F0",
+                              opacity: isSelected ? 1 : 0.75,
+                              borderColor: isSelected
+                                ? theme.primary
+                                : "#1E3327",
                             },
                           ]}
                         >
-                          <Ionicons
-                            name={item.label === "Home" ? "home" : "briefcase"}
-                            size={18}
-                            color={selected ? "#000" : theme.primary}
-                          />
-                        </View>
+                          <Text
+                            style={[
+                              s.dateDayName,
+                              { color: isSelected ? "#fff" : "#fff" },
+                            ]}
+                          >
+                            {DAY_NAMES[d.getDay()]}
+                          </Text>
 
-                        <View style={{ flex: 1, marginLeft: 12 }}>
                           <Text
-                            style={{
-                              fontWeight: "800",
-                              fontSize: 15,
-                              color: selected ? "#000" : theme.text,
-                            }}
+                            style={[
+                              s.dateNum,
+                              { color: isSelected ? "#fff" : "#fff" },
+                            ]}
                           >
-                            {item.label}
+                            {d.getDate()}
                           </Text>
-                          <Text
-                            style={{
-                              color: selected
-                                ? "rgba(0,0,0,0.7)"
-                                : theme.subText,
-                              marginTop: 4,
-                              fontSize: 13,
-                            }}
-                          >
-                            {item.flat}, {item.line1}
-                          </Text>
-                          <Text
-                            style={{
-                              color: selected
-                                ? "rgba(0,0,0,0.7)"
-                                : theme.subText,
-                              marginTop: 2,
-                              fontSize: 13,
-                            }}
-                          >
-                            {item.city}, {item.state}
-                          </Text>
-                        </View>
-
-                        {selected && (
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={24}
-                            color="#000"
-                          />
-                        )}
+                        </LinearGradient>
                       </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
+              </View>
 
-                <TouchableOpacity
-                  style={styles.addAddrBtn}
-                  onPress={() => {
-                    setAddModalOpen(true);
-                    setAddressType("delivery");
-                  }}
-                  activeOpacity={0.8}
+              <View style={s.section}>
+                <Text style={[s.bigHeading, { color: theme.text }]}>
+                  Pick Time
+                </Text>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginTop: 20 }}
                 >
-                  <Ionicons name="add-circle" size={20} color={theme.primary} />
-                  <Text
+                  {TIME_SLOTS.map((timeLabel, idx) => {
+                    const isActive = slot === idx;
+
+                    return (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => setSlot(idx)}
+                        activeOpacity={0.85}
+                        style={{ marginRight: 10 }}
+                      >
+                        <LinearGradient
+                          colors={theme.gradient}
+                          style={[
+                            s.slotChip,
+                            {
+                              minWidth: 140,
+                              opacity: isActive ? 1 : 0.8,
+                              borderColor: isActive ? theme.primary : "#1E3327",
+                              borderWidth: 1.5,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              s.slotText,
+                              { color: isActive ? "#fff" : "#fff" },
+                            ]}
+                          >
+                            {timeLabel}
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <CartSection />
+
+              <DeliveryAddressSection />
+
+              <View style={s.section}>
+                <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
+                <LinearGradient
+                  colors={theme.gradient}
+                  style={{ borderRadius: 14 }}
+                >
+                  <TouchableOpacity
+                    onPress={() => setHasHeavyItems(!hasHeavyItems)}
+                    activeOpacity={0.85}
                     style={{
-                      marginLeft: 8,
-                      color: theme.primary,
-                      fontWeight: "800",
-                      fontSize: 14,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      padding: 14,
+                      borderRadius: 14,
+                      borderWidth: 1.5,
+                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
                     }}
                   >
-                    Add new delivery address
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+                    <Ionicons
+                      name={hasHeavyItems ? "checkbox" : "square-outline"}
+                      size={20}
+                      color={hasHeavyItems ? theme.primary : "#4E7060"}
+                    />
 
-          {/* NOTE - Preview/Trigger */}
-          <TouchableOpacity
-            style={[styles.card, { backgroundColor: theme.card }]}
-            onPress={() => {
-              setTempNote(note);
-              setNotesModalOpen(true);
-            }}
-            activeOpacity={0.7}
-          >
-            <View style={styles.sectionHeader}>
-              <Ionicons name="document-text" size={20} color={theme.primary} />
-              <Text
-                style={[
-                  styles.cardHeading,
-                  { color: theme.text, marginLeft: 6, marginBottom: 0 },
-                ]}
-              >
-                Special Instructions (Optional)
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.notePreview,
-                {
-                  backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                  borderWidth: 1.5,
-                  borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: note ? theme.text : theme.subText,
-                  fontSize: 14,
-                  fontWeight: note ? "500" : "400",
-                }}
-                numberOfLines={2}
-              >
-                {note || "Tap to add special instructions..."}
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={theme.subText}
-              />
-            </View>
-          </TouchableOpacity>
-
-          {/* ADD THIS NEW MODAL - FLOATING NOTES MODAL */}
-          <Modal
-            visible={notesModalOpen}
-            animationType="slide"
-            transparent
-            onRequestClose={() => setNotesModalOpen(false)}
-          >
-            <KeyboardAvoidingView
-              style={modalStyles.backdrop}
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-            >
-              <TouchableWithoutFeedback
-                onPress={() => setNotesModalOpen(false)}
-              >
-                <View style={modalStyles.backdrop}>
-                  <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                    <View
-                      style={[
-                        modalStyles.notesModal,
-                        { backgroundColor: theme.card },
-                      ]}
+                    <Text
+                      style={{
+                        marginLeft: 10,
+                        fontWeight: "700",
+                        color: hasHeavyItems ? theme.primary : theme.text,
+                      }}
                     >
-                      {/* Header */}
-                      <View style={modalStyles.header}>
-                        <View>
-                          <Text
-                            style={[
-                              modalStyles.modalTitle,
-                              { color: theme.text },
-                            ]}
-                          >
-                            Special Instructions
-                          </Text>
-                          <Text
-                            style={[
-                              modalStyles.modalSubtitle,
-                              { color: theme.subText },
-                            ]}
-                          >
-                            Add any special requests or notes
-                          </Text>
-                        </View>
+                      I have heavy items (blankets, curtains, etc.)
+                    </Text>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
 
-                        <TouchableOpacity
-                          onPress={() => setNotesModalOpen(false)}
-                          style={[
-                            modalStyles.closeBtn,
-                            { backgroundColor: isDark ? "#1A2332" : "#F0F4F8" },
-                          ]}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="close" size={22} color={theme.text} />
-                        </TouchableOpacity>
-                      </View>
+              <SpecialInstructionsSection />
+            </>
+          )}
 
-                      {/* Notes Input */}
-                      <TextInput
-                        placeholder="e.g., Call before arrival, Ring doorbell twice, Gate code: 1234..."
-                        placeholderTextColor={theme.subText}
-                        value={tempNote}
-                        onChangeText={setTempNote}
-                        multiline
-                        autoFocus
-                        style={[
-                          styles.floatingNoteInput,
-                          {
-                            backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                            color: theme.text,
-                            borderWidth: 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                          },
-                        ]}
-                      />
+          {/* ── CONFIRM BUTTON ── */}
+          <View style={[s.footer, { backgroundColor: theme.background }]}>
+            {pickupType === "schedule" && slot !== -1 && (
+              <View style={s.estimatedRow}>
+                <Ionicons name="time-outline" size={14} color="#4E7060" />
+                <Text style={s.estimatedText}>
+                  ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
+                  {TIME_SLOTS[slot]}
+                </Text>
+              </View>
+            )}
+            {/* <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                paddingVertical: 10,
+                gap: 12,
+              }}
+            >
+              <TouchableOpacity
+                onPress={confirmPickup}
+                activeOpacity={0.7}
+                style={{
+                  paddingRight: 12,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#6B8F7B",
+                    fontSize: 20,
+                    fontWeight: "600",
+                  }}
+                >
+                  Book without pay
+                </Text>
+              </TouchableOpacity>
 
-                      {/* Quick Suggestions */}
-                      <View style={{ marginTop: 12 }}>
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: "700",
-                            color: theme.subText,
-                            marginBottom: 8,
-                          }}
-                        >
-                          Quick Suggestions
-                        </Text>
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            flexWrap: "wrap",
-                            gap: 8,
-                          }}
-                        >
-                          {[
-                            "Call before arrival",
-                            "Ring doorbell twice",
-                            "Leave at door",
-                            "Building security required",
-                          ].map((suggestion) => (
-                            <TouchableOpacity
-                              key={suggestion}
-                              onPress={() => {
-                                if (tempNote.trim()) {
-                                  setTempNote(tempNote + ", " + suggestion);
-                                } else {
-                                  setTempNote(suggestion);
-                                }
-                              }}
-                              style={{
-                                paddingHorizontal: 12,
-                                paddingVertical: 8,
-                                borderRadius: 20,
-                                backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                                borderWidth: 1,
-                                borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                              }}
-                              activeOpacity={0.7}
-                            >
-                              <Text
-                                style={{
-                                  fontSize: 12,
-                                  fontWeight: "600",
-                                  color: theme.text,
-                                }}
-                              >
-                                {suggestion}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      </View>
+              <TouchableOpacity
+                style={[
+                  s.confirmBtn,
+                  {
+                    flex: 1,
+                    backgroundColor: theme.primary,
+                    opacity: confirmLoading ? 0.7 : 1,
+                  },
+                ]}
+                onPress={confirmPickup}
+                activeOpacity={0.9}
+                disabled={confirmLoading}
+              >
+                {confirmLoading && (
+                  <Ionicons
+                    name="sync"
+                    size={20}
+                    color="#000"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
 
-                      {/* Action Buttons */}
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          gap: 12,
-                          marginTop: 20,
-                        }}
-                      >
-                        <TouchableOpacity
-                          onPress={() => {
-                            setTempNote("");
-                            setNote("");
-                            setNotesModalOpen(false);
-                          }}
-                          style={{
-                            flex: 1,
-                            paddingVertical: 14,
-                            borderRadius: 12,
-                            backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                            borderWidth: 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <Text
-                            style={{
-                              fontWeight: "800",
-                              fontSize: 15,
-                              color: theme.text,
-                            }}
-                          >
-                            Clear
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          onPress={() => {
-                            setNote(tempNote);
-                            setNotesModalOpen(false);
-                          }}
-                          style={{
-                            flex: 2,
-                            paddingVertical: 14,
-                            borderRadius: 12,
-                            backgroundColor: theme.primary,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexDirection: "row",
-                          }}
-                          activeOpacity={0.9}
-                        >
-                          <Ionicons
-                            name="checkmark-circle"
-                            size={20}
-                            color="#000"
-                          />
-                          <Text
-                            style={{
-                              marginLeft: 8,
-                              fontWeight: "900",
-                              fontSize: 15,
-                              color: "#000",
-                            }}
-                          >
-                            Save Instructions
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableWithoutFeedback>
-                </View>
-              </TouchableWithoutFeedback>
-            </KeyboardAvoidingView>
-          </Modal>
-          <TouchableOpacity
-            style={[
-              styles.primaryBtn,
-              {
-                backgroundColor: theme.primary,
-                opacity: confirmLoading ? 0.7 : 1,
-              },
-            ]}
-            onPress={confirmPickup}
-            activeOpacity={0.9}
-            disabled={confirmLoading}
-          >
-            <Ionicons
-              name={confirmLoading ? "sync" : "checkmark-circle"}
-              size={22}
-              color="#000"
-            />
-
-            <Text style={[styles.primaryText, { marginLeft: 8 }]}>
-              {confirmLoading ? "Booking..." : "Confirm Booking"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={goBackSafe}
-            activeOpacity={0.85}
-            style={[
-              styles.cancelBtn,
-              {
-                backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-                borderColor: isDark ? "#2D3748" : "#E2E8F0",
-              },
-            ]}
-          >
-            <Ionicons
-              name="close-circle-outline"
-              size={20}
-              color={theme.text}
-            />
-            <Text style={[styles.cancelText, { color: theme.text }]}>
-              Cancel Booking
-            </Text>
-          </TouchableOpacity>
+                <Text style={s.confirmText}>
+                  {confirmLoading
+                    ? "Booking..."
+                    : pickupType === "today"
+                      ? "Confirm Booking"
+                      : "Confirm Pickup"}
+                </Text>
+              </TouchableOpacity>
+            </View> */}
+          </View>
         </ScrollView>
 
-        {/* ADD ADDRESS MODAL */}
+        {/* ✅ FIXED FOOTER */}
+        <View
+          style={[
+            s.fixedFooter,
+            {
+              backgroundColor: theme.background,
+              paddingBottom: insets.bottom + 10,
+            },
+          ]}
+        >
+
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, margin: 10 }}>
+            <TouchableOpacity onPress={confirmPickup}>
+              <Text style={{ color: "#6B8F7B", fontSize: 20, fontWeight: "600" }}>
+                Book without pay
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                s.confirmBtn,
+                {
+                  flex: 1,
+                  backgroundColor: theme.primary,
+                  opacity: confirmLoading ? 0.7 : 1,
+                },
+              ]}
+              onPress={confirmPickup}
+              disabled={confirmLoading}
+            >
+              <Text style={s.confirmText}>
+                {confirmLoading
+                  ? "Booking..."
+                  : pickupType === "today"
+                    ? "Confirm Booking"
+                    : "Confirm Pickup"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ══════════════════ NOTES MODAL ══════════════════ */}
+        <Modal
+          visible={notesModalOpen}
+          animationType="slide"
+          transparent
+          onRequestClose={() => setNotesModalOpen(false)}
+        >
+          <KeyboardAvoidingView
+            style={ms.backdrop}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <TouchableWithoutFeedback onPress={() => setNotesModalOpen(false)}>
+              <View style={ms.backdrop}>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                  <View style={[ms.notesSheet, { backgroundColor: "#0F2318" }]}>
+                    <View style={ms.sheetHandle} />
+                    <View style={ms.sheetHeader}>
+                      <View>
+                        <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                          Special Instructions
+                        </Text>
+                        <Text style={ms.sheetSub}>
+                          Add any special requests or notes
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => setNotesModalOpen(false)}
+                        style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
+                      >
+                        <Ionicons name="close" size={20} color="#7A9B87" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <TextInput
+                      placeholder="e.g., Call before arrival, Ring doorbell twice..."
+                      placeholderTextColor="#3D6050"
+                      value={tempNote}
+                      onChangeText={setTempNote}
+                      multiline
+                      autoFocus
+                      style={[
+                        ms.notesInput,
+                        {
+                          backgroundColor: "#0A1A10",
+                          color: "#fff",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
+                    />
+
+                    <Text style={ms.suggestLabel}>Quick Suggestions</Text>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        marginTop: 8,
+                      }}
+                    >
+                      {[
+                        "Call before arrival",
+                        "Ring doorbell twice",
+                        "Leave at door",
+                        "Building security required",
+                      ].map((s) => (
+                        <TouchableOpacity
+                          key={s}
+                          onPress={() =>
+                            setTempNote((p) => (p.trim() ? p + ", " + s : s))
+                          }
+                          style={[
+                            ms.suggestChip,
+                            {
+                              backgroundColor: "#1A2C22",
+                              borderColor: "#2A4A34",
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: "600",
+                              color: "#7A9B87",
+                            }}
+                          >
+                            {s}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <View
+                      style={{ flexDirection: "row", gap: 12, marginTop: 20 }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          setTempNote("");
+                          setNote("");
+                          setNotesModalOpen(false);
+                        }}
+                        style={[
+                          ms.clearBtn,
+                          {
+                            backgroundColor: "#1A2C22",
+                            borderColor: "#2A4A34",
+                          },
+                        ]}
+                      >
+                        <Text style={{ fontWeight: "800", color: "#7A9B87" }}>
+                          Clear
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setNote(tempNote);
+                          setNotesModalOpen(false);
+                        }}
+                        style={[ms.saveBtn, { backgroundColor: theme.primary }]}
+                      >
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color="#000"
+                        />
+                        <Text
+                          style={{
+                            marginLeft: 6,
+                            fontWeight: "900",
+                            color: "#000",
+                          }}
+                        >
+                          Save Instructions
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* ══════════════════ ADD ADDRESS MODAL ══════════════════ */}
         <Modal visible={addModalOpen} animationType="slide" transparent>
           <KeyboardAvoidingView
-            style={modalStyles.backdrop}
+            style={ms.backdrop}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View
-                style={[modalStyles.modal, { backgroundColor: theme.card }]}
-              >
+              <View style={[ms.addSheet, { backgroundColor: "#0F2318" }]}>
                 <ScrollView
                   contentContainerStyle={{ paddingBottom: 24 }}
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={false}
                 >
-                  {/* Header */}
-                  <View style={modalStyles.header}>
+                  <View style={ms.sheetHandle} />
+                  <View style={ms.sheetHeader}>
                     <View>
-                      <Text
-                        style={[modalStyles.modalTitle, { color: theme.text }]}
-                      >
+                      <Text style={[ms.sheetTitle, { color: "#fff" }]}>
                         Add New Address
                       </Text>
-                      <Text
-                        style={[
-                          modalStyles.modalSubtitle,
-                          { color: theme.subText },
-                        ]}
-                      >
+                      <Text style={ms.sheetSub}>
                         {addressType === "pickup"
                           ? "Pickup Location"
                           : "Delivery Location"}
                       </Text>
                     </View>
-
                     <TouchableOpacity
                       onPress={() => setAddModalOpen(false)}
-                      style={[
-                        modalStyles.closeBtn,
-                        { backgroundColor: isDark ? "#1A2332" : "#F0F4F8" },
-                      ]}
-                      activeOpacity={0.8}
+                      style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
                     >
-                      <Ionicons name="close" size={22} color={theme.text} />
+                      <Ionicons name="close" size={20} color="#7A9B87" />
                     </TouchableOpacity>
                   </View>
 
-                  {/* MAP */}
-                  <View style={modalStyles.mapContainer}>
-                    {/* SEARCH BAR */}
-                    <View style={modalStyles.mapSearchBox}>
-                      <Ionicons name="search" size={18} color={theme.subText} />
+                  <View style={ms.mapContainer}>
+                    <View style={ms.mapSearchBox}>
+                      <Ionicons name="search" size={18} color="#666" />
                       <TextInput
                         placeholder="Search location..."
-                        placeholderTextColor={theme.subText}
+                        placeholderTextColor="#999"
                         value={mapQuery}
                         onChangeText={setMapQuery}
-                        onSubmitEditing={searchOnMap}
                         returnKeyType="search"
-                        style={[modalStyles.mapSearchInput, { color: "#000" }]}
+                        style={ms.mapSearchInput}
                       />
                       {searchLoading ? (
                         <Ionicons name="sync" size={18} color={theme.primary} />
                       ) : (
-                       <TouchableOpacity onPress={searchOnMap}>
+                        <TouchableOpacity onPress={() => searchOnMap(mapQuery)}>
                           <Ionicons
                             name="arrow-forward-circle"
-                            size={30}
+                            size={28}
                             color={theme.primary}
                           />
                         </TouchableOpacity>
                       )}
                     </View>
-
-                    {/* <PickupMap
+                    <PickupMap
                       location={location}
                       onSelect={(c) => {
                         setLocation(c);
@@ -1552,38 +1583,35 @@ export default function BookPickup() {
                           longitude: String(c.longitude),
                         }));
                       }}
-                    /> */}
-
+                    />
                     <TouchableOpacity
                       onPress={fetchCurrentLocation}
                       disabled={locLoading}
                       style={[
-                        modalStyles.currentLocBtn,
+                        ms.currentLocBtn,
                         {
                           backgroundColor: theme.primary,
                           opacity: locLoading ? 0.8 : 1,
                         },
                       ]}
-                      activeOpacity={0.8}
                     >
                       <Ionicons
                         name={locLoading ? "sync" : "locate"}
-                        size={18}
-                        color="#000" 
+                        size={16}
+                        color="#000"
                       />
-                      <Text style={modalStyles.currentLocText}>
+                      <Text style={ms.currentLocText}>
                         {locLoading ? "Fetching..." : "Use Current Location"}
                       </Text>
                     </TouchableOpacity>
                   </View>
 
-                  {/* ADDRESS LABEL SELECTION */}
                   <View
                     style={{
                       flexDirection: "row",
                       gap: 10,
+                      marginTop: 16,
                       marginBottom: 12,
-                      marginTop: 14,
                     }}
                   >
                     {[
@@ -1592,44 +1620,34 @@ export default function BookPickup() {
                       { key: "other", text: "Others", icon: "location" },
                     ].map((item) => {
                       const active = addressForm.label === item.key;
-
                       return (
                         <TouchableOpacity
                           key={item.key}
                           onPress={() =>
-                            setAddressForm((p) => ({
-                              ...p,
-                              label: item.key,
-                            }))
+                            setAddressForm((p) => ({ ...p, label: item.key }))
                           }
-                          style={{
-                            flex: 1,
-                            paddingVertical: 12,
-                            borderRadius: 12,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: active
-                              ? theme.primary
-                              : isDark
-                                ? "#1A2332"
-                                : "#F0F4F8",
-                            borderWidth: active ? 0 : 1.5,
-                            borderColor: isDark ? "#2D3748" : "#E2E8F0",
-                          }}
+                          style={[
+                            ms.labelTab,
+                            {
+                              backgroundColor: active
+                                ? theme.primary
+                                : "#1A2C22",
+                              borderColor: active ? theme.primary : "#2A4A34",
+                            },
+                          ]}
                           activeOpacity={0.85}
                         >
                           <Ionicons
                             name={item.icon as any}
-                            size={18}
-                            color={active ? "#000" : theme.primary}
+                            size={15}
+                            color={active ? "#000" : "#7A9B87"}
                           />
                           <Text
                             style={{
-                              marginLeft: 6,
+                              marginLeft: 5,
                               fontWeight: "800",
-                              fontSize: 14,
-                              color: active ? "#000" : theme.text,
+                              fontSize: 13,
+                              color: active ? "#000" : "#7A9B87",
                             }}
                           >
                             {item.text}
@@ -1639,140 +1657,142 @@ export default function BookPickup() {
                     })}
                   </View>
 
+                  {[
+                    {
+                      key: "contactName",
+                      placeholder: "Contact Name (Optional)",
+                    },
+                    {
+                      key: "contactPhone",
+                      placeholder: "Contact Phone (Optional)",
+                      keyboard: "phone-pad" as any,
+                    },
+                    { key: "houseNo", placeholder: "House No / Flat" },
+                    { key: "street", placeholder: "Street" },
+                    { key: "landmark", placeholder: "Landmark" },
+                    {
+                      key: "addressLine2",
+                      placeholder: "Address Line 2 (Optional)",
+                    },
+                  ].map((field) => (
+                    <TextInput
+                      key={field.key}
+                      placeholder={field.placeholder}
+                      placeholderTextColor="#3D6050"
+                      value={(addressForm as any)[field.key]}
+                      keyboardType={field.keyboard}
+                      onChangeText={(t) =>
+                        setAddressForm((p) => ({ ...p, [field.key]: t }))
+                      }
+                      style={[
+                        ms.formInput,
+                        {
+                          backgroundColor: "#0A1A10",
+                          color: "#fff",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
+                    />
+                  ))}
+
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <TextInput
+                      placeholder="City"
+                      placeholderTextColor="#3D6050"
+                      value={addressForm.city}
+                      onChangeText={(t) =>
+                        setAddressForm((p) => ({ ...p, city: t }))
+                      }
+                      style={[
+                        ms.formInputHalf,
+                        {
+                          backgroundColor: "#0A1A10",
+                          color: "#fff",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
+                    />
+                    <TextInput
+                      placeholder="State"
+                      placeholderTextColor="#3D6050"
+                      value={addressForm.state}
+                      onChangeText={(t) =>
+                        setAddressForm((p) => ({ ...p, state: t }))
+                      }
+                      style={[
+                        ms.formInputHalf,
+                        {
+                          backgroundColor: "#0A1A10",
+                          color: "#fff",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
+                    />
+                  </View>
+
                   <TextInput
-                    placeholder="Contact Name (Optional)"
-                    placeholderTextColor={theme.subText}
-                    value={addressForm.contactName}
+                    placeholder="Pincode"
+                    placeholderTextColor="#3D6050"
+                    value={addressForm.pincode}
                     onChangeText={(t) =>
-                      setAddressForm((p) => ({ ...p, contactName: t }))
+                      setAddressForm((p) => ({ ...p, pincode: t }))
                     }
-                    style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                    keyboardType="number-pad"
+                    style={[
+                      ms.formInput,
+                      {
+                        backgroundColor: "#0A1A10",
+                        color: "#fff",
+                        borderColor: "#1E3327",
+                      },
+                    ]}
                   />
 
-                  <TextInput
-                    placeholder="Contact Phone (Optional)"
-                    placeholderTextColor={theme.subText}
-                    value={addressForm.contactPhone}
-                    keyboardType="phone-pad"
-                    onChangeText={(t) =>
-                      setAddressForm((p) => ({ ...p, contactPhone: t }))
-                    }
-                    style={[modalStyles.input, fieldStyle(theme, isDark)]}
-                  />
-
-                  {/* FORM */}
-                  <View style={{ marginTop: 10 }}>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
                     <TextInput
-                      placeholder="House No / Flat"
-                      placeholderTextColor={theme.subText}
-                      value={addressForm.houseNo}
-                      onChangeText={(t) =>
-                        setAddressForm((p) => ({ ...p, houseNo: t }))
-                      }
-                      style={[modalStyles.input, fieldStyle(theme, isDark)]}
-                    />
-
-                    <TextInput
-                      placeholder="Street"
-                      placeholderTextColor={theme.subText}
-                      value={addressForm.street}
-                      onChangeText={(t) =>
-                        setAddressForm((p) => ({ ...p, street: t }))
-                      }
-                      style={[modalStyles.input, fieldStyle(theme, isDark)]}
-                    />
-
-                    <TextInput
-                      placeholder="Landmark"
-                      placeholderTextColor={theme.subText}
-                      value={addressForm.landmark}
-                      onChangeText={(t) =>
-                        setAddressForm((p) => ({ ...p, landmark: t }))
-                      }
-                      style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                      placeholder="Latitude"
+                      placeholderTextColor="#3D6050"
+                      value={addressForm.latitude}
+                      editable={false}
+                      style={[
+                        ms.formInputHalf,
+                        {
+                          backgroundColor: "#071A0E",
+                          color: "#4E7060",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
                     />
                     <TextInput
-                      placeholder="Address Line 2 (Optional)"
-                      placeholderTextColor={theme.subText}
-                      value={addressForm.addressLine2}
-                      onChangeText={(t) =>
-                        setAddressForm((p) => ({ ...p, addressLine2: t }))
-                      }
-                      style={[modalStyles.input, fieldStyle(theme, isDark)]}
+                      placeholder="Longitude"
+                      placeholderTextColor="#3D6050"
+                      value={addressForm.longitude}
+                      editable={false}
+                      style={[
+                        ms.formInputHalf,
+                        {
+                          backgroundColor: "#071A0E",
+                          color: "#4E7060",
+                          borderColor: "#1E3327",
+                        },
+                      ]}
                     />
-
-                    <View style={{ flexDirection: "row", gap: 10 }}>
-                      <TextInput
-                        placeholder="City"
-                        placeholderTextColor={theme.subText}
-                        value={addressForm.city}
-                        onChangeText={(t) =>
-                          setAddressForm((p) => ({ ...p, city: t }))
-                        }
-                        style={[
-                          modalStyles.inputHalf,
-                          fieldStyle(theme, isDark),
-                        ]}
-                      />
-                      <TextInput
-                        placeholder="State"
-                        placeholderTextColor={theme.subText}
-                        value={addressForm.state}
-                        onChangeText={(t) =>
-                          setAddressForm((p) => ({ ...p, state: t }))
-                        }
-                        style={[
-                          modalStyles.inputHalf,
-                          fieldStyle(theme, isDark),
-                        ]}
-                      />
-                    </View>
-
-                    <TextInput
-                      placeholder="Pincode"
-                      placeholderTextColor={theme.subText}
-                      value={addressForm.pincode}
-                      onChangeText={(t) =>
-                        setAddressForm((p) => ({ ...p, pincode: t }))
-                      }
-                      keyboardType="number-pad"
-                      style={[modalStyles.input, fieldStyle(theme, isDark)]}
-                    />
-
-                    <View style={{ flexDirection: "row", gap: 10 }}>
-                      <TextInput
-                        placeholder="Latitude"
-                        placeholderTextColor={theme.subText}
-                        value={addressForm.latitude}
-                        editable={false}
-                        style={[
-                          modalStyles.inputHalf,
-                          fieldStyle(theme, isDark),
-                        ]}
-                      />
-                      <TextInput
-                        placeholder="Longitude"
-                        placeholderTextColor={theme.subText}
-                        value={addressForm.longitude}
-                        editable={false}
-                        style={[
-                          modalStyles.inputHalf,
-                          fieldStyle(theme, isDark),
-                        ]}
-                      />
-                    </View>
                   </View>
 
                   <TouchableOpacity
-                    style={[
-                      styles.primaryBtn,
-                      { backgroundColor: theme.primary, marginTop: 14 },
-                    ]}
+                    style={[ms.saveAddrBtn, { backgroundColor: theme.primary }]}
                     onPress={saveAddress}
                     activeOpacity={0.9}
                   >
-                    <Ionicons name="checkmark-circle" size={20} color="#000" />
-                    <Text style={[styles.primaryText, { marginLeft: 8 }]}>
+                    <Ionicons name="checkmark-circle" size={18} color="#000" />
+                    <Text
+                      style={{
+                        marginLeft: 8,
+                        fontWeight: "900",
+                        fontSize: 15,
+                        color: "#000",
+                      }}
+                    >
                       Save Address
                     </Text>
                   </TouchableOpacity>
@@ -1782,129 +1802,79 @@ export default function BookPickup() {
           </KeyboardAvoidingView>
         </Modal>
 
-        {/* PREVIEW ADDRESS MODAL */}
+        {/* ══════════════════ PREVIEW ADDRESS MODAL ══════════════════ */}
         <Modal visible={previewOpen} transparent animationType="fade">
           <TouchableWithoutFeedback onPress={() => setPreviewOpen(false)}>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: "rgba(0,0,0,0.6)",
-                justifyContent: "center",
-                padding: 20,
-              }}
-            >
+            <View style={ms.centeredOverlay}>
               <TouchableWithoutFeedback>
-                <View
-                  style={{
-                    backgroundColor: theme.card,
-                    borderRadius: 18,
-                    padding: 18,
-                  }}
-                >
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 10,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 18,
-                        fontWeight: "900",
-                        color: theme.text,
-                      }}
-                    >
+                <View style={[ms.previewCard, { backgroundColor: "#0F2318" }]}>
+                  <View style={ms.sheetHeader}>
+                    <Text style={[ms.sheetTitle, { color: "#fff" }]}>
                       Address Preview
                     </Text>
-
-                    <TouchableOpacity onPress={() => setPreviewOpen(false)}>
-                      <Ionicons name="close" size={22} color={theme.text} />
+                    <TouchableOpacity
+                      onPress={() => setPreviewOpen(false)}
+                      style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
+                    >
+                      <Ionicons name="close" size={20} color="#7A9B87" />
                     </TouchableOpacity>
                   </View>
-
                   {previewAddress ? (
                     <>
                       <Text
                         style={{
                           fontWeight: "800",
                           fontSize: 16,
-                          color: theme.text,
+                          color: "#fff",
+                          marginTop: 10,
                         }}
                       >
                         {previewAddress.label}
                       </Text>
-
                       <Text
-                        style={{
-                          marginTop: 8,
-                          color: theme.subText,
-                          fontSize: 14,
-                        }}
+                        style={{ marginTop: 8, color: "#7A9B87", fontSize: 14 }}
                       >
                         {previewAddress.addressLine1 ||
                           previewAddress.line1 ||
                           previewAddress.street}
                       </Text>
-
                       {previewAddress.landmark ? (
                         <Text
                           style={{
                             marginTop: 4,
-                            color: theme.subText,
+                            color: "#7A9B87",
                             fontSize: 14,
                           }}
                         >
                           Landmark: {previewAddress.landmark}
                         </Text>
                       ) : null}
-
                       <Text
-                        style={{
-                          marginTop: 4,
-                          color: theme.subText,
-                          fontSize: 14,
-                        }}
+                        style={{ marginTop: 4, color: "#7A9B87", fontSize: 14 }}
                       >
                         {previewAddress.city}, {previewAddress.state} •{" "}
                         {previewAddress.pincode}
                       </Text>
-
                       {previewAddress.contactName ? (
                         <Text
-                          style={{
-                            marginTop: 10,
-                            color: theme.text,
-                            fontSize: 14,
-                          }}
+                          style={{ marginTop: 10, color: "#fff", fontSize: 14 }}
                         >
                           Contact: {previewAddress.contactName}
                         </Text>
                       ) : null}
-
                       {previewAddress.contactPhone ? (
                         <Text
-                          style={{
-                            marginTop: 2,
-                            color: theme.text,
-                            fontSize: 14,
-                          }}
+                          style={{ marginTop: 2, color: "#fff", fontSize: 14 }}
                         >
                           Phone: {previewAddress.contactPhone}
                         </Text>
                       ) : null}
-
                       <TouchableOpacity
                         onPress={() => setPreviewOpen(false)}
-                        style={{
-                          marginTop: 14,
-                          paddingVertical: 12,
-                          borderRadius: 12,
-                          backgroundColor: theme.primary,
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
+                        style={[
+                          ms.saveAddrBtn,
+                          { backgroundColor: theme.primary, marginTop: 16 },
+                        ]}
                       >
                         <Text style={{ fontWeight: "900", color: "#000" }}>
                           Close
@@ -1912,7 +1882,7 @@ export default function BookPickup() {
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <Text style={{ color: theme.subText }}>
+                    <Text style={{ color: "#7A9B87" }}>
                       No address selected
                     </Text>
                   )}
@@ -1921,409 +1891,710 @@ export default function BookPickup() {
             </View>
           </TouchableWithoutFeedback>
         </Modal>
-        <Modal visible={successOpen} transparent animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: "rgba(0,0,0,0.6)",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 20,
-            }}
-          >
-            <Animated.View
-              style={{
-                width: "100%",
-                maxWidth: 320,
-                backgroundColor: theme.card,
-                borderRadius: 18,
-                padding: 18,
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }, { translateY: slideAnim }],
-                alignItems: "center",
-              }}
-            >
-              <Image
-                source={require("@/assets/images/logo/greenLogo.png")}
-                style={{
-                  width: 84,
-                  height: 84,
-                  resizeMode: "contain",
-                }}
-              />
 
-              {/* Animated Check */}
-              <Animated.View
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 36,
-                  backgroundColor: theme.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 12,
-                  transform: [{ scale: scaleAnim }],
-                }}
-              >
-                <Ionicons name="checkmark" size={40} color="#000" />
-              </Animated.View>
+        {/* ══════════════════ ADDRESS PICKER MODAL ══════════════════ */}
+        <Modal visible={addressPickerOpen} animationType="slide" transparent>
+          <View style={ms.backdrop}>
+            <View style={[ms.addSheet, { backgroundColor: "#0F2318" }]}>
+              <View style={ms.sheetHeader}>
+                <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                  Select {pickerType === "pickup" ? "Pickup" : "Delivery"}{" "}
+                  Address
+                </Text>
 
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: "900",
-                  color: theme.text,
-                  textAlign: "center",
-                }}
-              >
-                {successMessage}
-              </Text>
+                <TouchableOpacity onPress={() => setAddressPickerOpen(false)}>
+                  <Ionicons name="close" size={22} color="#7A9B87" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ marginTop: 10 }}>
+                {allAddresses.map((addr) => {
+                  const isSelected =
+                    pickerType === "pickup"
+                      ? addr.id === selectedPickupAddressId
+                      : addr.id === selectedDeliveryAddressId;
+
+                  return (
+                    <TouchableOpacity
+                      key={addr.id}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        if (pickerType === "pickup") {
+                          setSelectedPickupAddressId(addr.id);
+                          setSelectedAddress(addr);
+                        } else {
+                          setSelectedDeliveryAddressId(addr.id);
+                        }
+                        setAddressPickerOpen(false);
+                      }}
+                      style={[
+                        s.pickerItem,
+                        {
+                          borderRadius: 14,
+                          marginBottom: 10,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? theme.primary : "#1E3327",
+                          backgroundColor: isSelected
+                            ? theme.primary + "15"
+                            : "#0A1A10",
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          addr.label?.toLowerCase() === "home"
+                            ? "home-outline"
+                            : "briefcase-outline"
+                        }
+                        size={18}
+                        color={isSelected ? theme.primary : "#4E7060"}
+                        style={{ marginRight: 10 }}
+                      />
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontWeight: "800",
+                            color: isSelected ? theme.primary : theme.text,
+                          }}
+                        >
+                          {addr.label}
+                        </Text>
+
+                        <Text
+                          style={{ fontSize: 12, color: "#4E7060" }}
+                          numberOfLines={2}
+                        >
+                          {addr.line1}, {addr.city}
+                        </Text>
+                      </View>
+
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={20}
+                          color={theme.primary}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
 
               <TouchableOpacity
                 onPress={() => {
-                  setSuccessOpen(false);
-                  router.back();
+                  setAddressPickerOpen(false);
+                  setAddModalOpen(true);
+                  setAddressType(pickerType);
                 }}
                 style={{
-                  marginTop: 16,
-                  width: "100%",
-                  paddingVertical: 12,
-                  borderRadius: 12,
-                  backgroundColor: theme.primary,
+                  marginTop: 10,
+                  padding: 14,
+                  borderRadius: 14,
+                  borderWidth: 1.5,
+                  borderColor: theme.primary,
                   alignItems: "center",
-                  justifyContent: "center",
                 }}
-                activeOpacity={0.9}
               >
-                <Text style={{ fontWeight: "900", color: "#000" }}>Done</Text>
+                <Text style={{ color: theme.primary, fontWeight: "800" }}>
+                  + Add New Address
+                </Text>
               </TouchableOpacity>
-            </Animated.View>
+            </View>
           </View>
         </Modal>
+
+        <SuccessModal
+          visible={successOpen}
+          address={
+            selectedPickupAddr
+              ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+              : undefined
+          }
+          orderId="LN-20489"
+          onHome={() => {
+            setSuccessOpen(false);
+            navigateHomeWithSuccess();
+          }}
+        />
       </KeyboardAvoidingView>
+
+      <LocationPickerModal
+        visible={modalVisible}
+        savedAddresses={allAddresses}
+        selectedId={
+          modalMode === "pickup"
+            ? selectedPickupAddressId
+            : selectedDeliveryAddressId
+        }
+        onSelect={(label, addr) => {
+          if (modalMode === "pickup") {
+            if (addr) {
+              setSelectedPickupAddressId(addr.id);
+              setSelectedAddress(addr);
+            }
+          } else {
+            setSelectedDeliveryAddressId(addr?.id || "");
+          }
+          setModalVisible(false);
+        }}
+        onClose={() => setModalVisible(false)}
+        onAddNewAddress={() => {
+          router.push("/select-address-location");
+        }}
+      />
+
+      <CouponCard
+        visible={couponOpen}
+        onClose={() => setCouponOpen(false)}
+        onApply={handleApplyCoupon}
+        appliedCode={appliedCoupon?.code || ""}
+      />
     </View>
   );
 }
 
-const fieldStyle = (theme: any, isDark: boolean) => ({
-  backgroundColor: isDark ? "#1A2332" : "#F0F4F8",
-  color: theme.text,
-  borderWidth: 1.5,
-  borderColor: isDark ? "#2D3748" : "#E2E8F0",
-});
-
-const styles = StyleSheet.create({
+// ─── Main Styles ──────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
   safe: { flex: 1 },
-  container: {
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 40 : 30,
-    flexGrow: 1, // This is key!
-  },
-  stackHeader: {
+
+  header: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 75,
+    zIndex: 100,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    zIndex: 100,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    elevation: 8, // 👈 keeps above scroll
+    borderBottomColor: "#0F2318",
   },
-
-  headerTitle: { fontSize: 17, fontWeight: "800" },
-  header: { marginBottom: 10 },
-  title: { fontSize: 20, fontWeight: "900", marginTop: 12 },
-  subtitle: { marginTop: 4, fontSize: 13, lineHeight: 22 },
-
-  card: {
-    borderRadius: 10,
-    padding: 13,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-
-  cardHeading: { fontSize: 16, fontWeight: "800", marginBottom: 4 },
-
-  pickupTypeBtn: {
-    flexDirection: "row",
+  headerBack: {
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 10,
   },
+  headerTitle: { fontSize: 17, fontWeight: "800" },
 
-  dateBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 12,
-    marginTop: 1,
-  },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
-  slotWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 6,
-    gap: 6,
-  },
+  section: { marginBottom: 6, marginTop: 6 },
 
-  slot: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: "30%",
-  },
-
-  addressScroll: {
-    // maxHeight: 240,
-    marginBottom: 8,
-  },
-  notePreview: {
-    padding: 14,
-    borderRadius: 12,
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  floatingNoteInput: {
-    padding: 16,
-    borderRadius: 12,
-    minHeight: 150,
-    maxHeight: 200,
-    textAlignVertical: "top",
-    fontSize: 15,
-    marginTop: 12,
-  },
-
-  addressItem: {
-    padding: 10,
-    borderRadius: 12,
-    flexDirection: "row",
-    alignItems: "center",
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#4E7060",
+    letterSpacing: 1.2,
     marginBottom: 10,
   },
 
-  addressIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+  rowBetween: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
   },
 
-  addAddrBtn: {
+  addLink: { fontSize: 13, fontWeight: "700" },
+
+  tabRow: {
+    flexDirection: "row",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#1E3327",
+    overflow: "hidden",
+    marginTop: 10,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    borderRadius: 12,
+  },
+  tabText: { fontSize: 15, fontWeight: "800" },
+
+  card: { borderRadius: 16, padding: 16, marginBottom: 0 },
+  cardTitle: { fontSize: 16, fontWeight: "800" },
+  cardSub: { fontSize: 12, color: "#BACBC0", marginTop: 3 },
+
+  emptyAddrBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
-    marginTop: 0,
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    marginTop: 10,
   },
+  emptyAddrText: { marginLeft: 8, fontWeight: "700", fontSize: 14 },
 
-  noteInput: {
+  dropdown: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 14,
     borderRadius: 12,
-    minHeight: 80,
-    textAlignVertical: "top",
-    fontSize: 14,
-    marginTop: 8,
-  },
-
-  primaryBtn: {
-    height: 46,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-    flexDirection: "row",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-
-  primaryText: {
-    color: "#000",
-    fontSize: 16,
-    fontWeight: "900",
-  },
-
-  cancelBtn: {
-    height: 42,
-    borderRadius: 10,
-    marginTop: 5,
-    marginBottom: 14,
     borderWidth: 1.5,
+    marginTop: 10,
+  },
+  dropdownText: { fontSize: 14, fontWeight: "700" },
+
+  pickerList: {
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginTop: 6,
+    overflow: "hidden",
+  },
+  pickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    marginBottom: 10,
+  },
+  pickerItemLabel: { fontSize: 14, fontWeight: "700" },
+  pickerItemSub: { fontSize: 12, color: "#4E7060", marginTop: 2 },
+
+  offerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  offerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerCode: { fontSize: 16, fontWeight: "900" },
+  promoBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  promoText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  offerDesc: { fontSize: 12, color: "#BACBC0", marginTop: 3 },
+  appliedBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  appliedText: { fontSize: 13, fontWeight: "800" },
+
+  noteBox: { borderRadius: 16, padding: 14, borderWidth: 1.5, minHeight: 80 },
+  notePlaceholder: { fontSize: 13, lineHeight: 20 },
+  noteTagRow: { flexDirection: "row", gap: 8, marginTop: 12 },
+  noteTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  noteTagText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+
+  bigHeading: { fontSize: 18, fontWeight: "900", marginBottom: 4 },
+  bigSubtitle: { fontSize: 13, color: "#d7dbd7" },
+  monthLabel: {
+    fontSize: 10,
+    color: "#4E7060",
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  monthName: { fontSize: 17, fontWeight: "900" },
+
+  dateCell: {
+    width: 58,
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#1E3327",
+  },
+  dateDayName: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  dateNum: { fontSize: 24, fontWeight: "900", marginTop: 4 },
+
+  slotChip: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: "center",
+  },
+  slotText: { fontSize: 13, fontWeight: "700", textAlign: "center" },
+
+  routeCard: { borderRadius: 16, padding: 16, borderWidth: 1.5, marginTop: 14 },
+  routeRow: { flexDirection: "row", alignItems: "flex-start" },
+  routeIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  routeTag: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#4E7060",
+    letterSpacing: 1,
+    marginBottom: 3,
+  },
+  routeAddrLabel: { fontSize: 15, fontWeight: "800" },
+  routeAddrDetail: {
+    fontSize: 12,
+    color: "#a9c5b8",
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  editAddrBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  editAddrText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#4E7060",
+    marginLeft: 5,
   },
 
-  cancelText: {
-    marginLeft: 8,
-    fontSize: 15,
+  footer: { paddingTop: 10, paddingBottom: 10 },
+  estimatedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  estimatedText: {
+    fontSize: 11,
+    color: "#4E7060",
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  confirmBtn: {
+    height: 45,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    shadowColor: "#00FF88",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  confirmText: { fontSize: 17, fontWeight: "900", color: "#000" },
+
+  cartItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0A1A10",
+    borderWidth: 1,
+    borderColor: "#1E3327",
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  cartItemLeft: {
+    flex: 1,
+    marginRight: 12,
+    gap: 8,
+  },
+  cartItemRight: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  itemTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  stepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    backgroundColor: "#0D2118",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#1E3327",
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  stepBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    backgroundColor: "#0A1A10",
+    borderWidth: 1,
+    borderColor: "#1E3327",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBtnActive: {
+    borderWidth: 0,
+  },
+  qtyText: {
     fontWeight: "800",
+    fontSize: 13,
+    minWidth: 20,
+    textAlign: "center",
+  },
+  lineTotal: {
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 0.3,
+  },
+  removeBtn: {
+    padding: 2,
   },
 });
 
-/* ---------- modal ---------- */
-const modalStyles = StyleSheet.create({
+// ─── Modal Styles ─────────────────────────────────────────────────────────────
+const ms = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "flex-end",
   },
-  notesModal: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 40 : 20,
-    maxHeight: SCREEN_HEIGHT * 0.7,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#2A4A34",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 16,
   },
-  modal: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: SCREEN_HEIGHT * 0.92,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-
-  header: {
+  sheetHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
+    marginBottom: 4,
   },
-
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-  },
-
-  modalSubtitle: {
-    fontSize: 12,
-    marginTop: 4,
-    fontWeight: "600",
-  },
-
+  sheetTitle: { fontSize: 20, fontWeight: "900" },
+  sheetSub: { fontSize: 12, color: "#4E7060", marginTop: 4 },
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
   },
 
+  notesSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 44 : 24,
+    maxHeight: SCREEN_HEIGHT * 0.72,
+  },
+  notesInput: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 14,
+    minHeight: 140,
+    maxHeight: 190,
+    textAlignVertical: "top",
+    fontSize: 14,
+    marginTop: 14,
+    lineHeight: 22,
+  },
+  suggestLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#4E7060",
+    letterSpacing: 0.8,
+    marginTop: 16,
+  },
+  suggestChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  clearBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  saveBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+
+  addSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    maxHeight: SCREEN_HEIGHT * 0.93,
+  },
   mapContainer: {
-    height: SCREEN_HEIGHT * 0.5,
-    minHeight: 300, // 👈 fallback
+    height: SCREEN_HEIGHT * 0.4,
+    minHeight: 260,
     borderRadius: 16,
     overflow: "hidden",
     position: "relative",
     marginBottom: 0,
   },
-
+  mapSearchBox: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    height: 42,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  mapSearchInput: {
+    flex: 1,
+    marginHorizontal: 8,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#000",
+  },
   currentLocBtn: {
     position: "absolute",
-    bottom: 0,
+    bottom: 12,
     alignSelf: "center",
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 25,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
-
   currentLocText: {
     color: "#000",
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 13,
     marginLeft: 6,
   },
-
-  input: {
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 12,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
-  inputHalf: {
+  labelTab: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 11,
     borderRadius: 12,
-    marginBottom: 12,
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  mapSearchBox: {
-    position: "absolute",
-    top: 10,
-    left: 12,
-    right: 12,
-    zIndex: 20,
+    borderWidth: 1.5,
     flexDirection: "row",
     alignItems: "center",
-
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-
-    paddingHorizontal: 14,
-    height: 44,
-
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.08)",
-
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-
-    elevation: 4, // 👈 softer Android shadow
+    justifyContent: "center",
   },
-
-  mapSearchInput: {
-    flex: 1,
-    marginHorizontal: 8,
+  formInput: {
+    padding: 13,
+    borderRadius: 12,
+    marginBottom: 10,
     fontSize: 14,
-    fontWeight: "600",
-    paddingVertical: 6,
+    fontWeight: "500",
+    borderWidth: 1.5,
   },
+  formInputHalf: {
+    flex: 1,
+    padding: 13,
+    borderRadius: 12,
+    marginBottom: 10,
+    fontSize: 14,
+    fontWeight: "500",
+    borderWidth: 1.5,
+  },
+  saveAddrBtn: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+  },
+
+  centeredOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  previewCard: { width: "100%", borderRadius: 20, padding: 18 },
+  successCard: {
+    width: "100%",
+    maxWidth: 320,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#00FF88",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  successCheck: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  fixedFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#1E3327",
+    zIndex: 1000,
+  },
+
+  // warningBox: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   backgroundColor: "#FFA50015",
+  //   borderRadius: 12,
+  //   padding: 12,
+  //   marginTop: 10,
+  //   gap: 10,
+  //   borderWidth: 1,
+  //   borderColor: "#FFA50030",
+  // },
+  // warningText: {
+  //   flex: 1,
+  //   fontSize: 12,
+  //   color: "#FFA500",
+  //   fontWeight: "600",
+  // },
+  // tabDisabled: {
+  //   opacity: 0.6,
+  // },
 });
