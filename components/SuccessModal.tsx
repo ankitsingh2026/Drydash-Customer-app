@@ -6,8 +6,7 @@ import {
   Modal,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -16,129 +15,105 @@ export function SuccessModal({
   address,
   orderId,
   onHome,
-  onTrack,
 }: {
   visible: boolean;
   address?: string;
   orderId?: string;
   onHome: () => void;
-  onTrack?: () => void;
 }) {
   const insets = useSafeAreaInsets();
 
   // Animation refs
-  const bgGlow      = useRef(new Animated.Value(0)).current;
+  const bgGlow = useRef(new Animated.Value(0)).current;
   const circleScale = useRef(new Animated.Value(0)).current;
-  const circleGlow  = useRef(new Animated.Value(0)).current;
-  const checkScale  = useRef(new Animated.Value(0)).current;
+  const circleGlow = useRef(new Animated.Value(0)).current;
+  const checkScale = useRef(new Animated.Value(0)).current;
   const checkRotate = useRef(new Animated.Value(0)).current;
-  const titleY      = useRef(new Animated.Value(24)).current;
-  const titleOpacity= useRef(new Animated.Value(0)).current;
-  const addrY       = useRef(new Animated.Value(20)).current;
+  const titleY = useRef(new Animated.Value(24)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const addrY = useRef(new Animated.Value(20)).current;
   const addrOpacity = useRef(new Animated.Value(0)).current;
-  const btnY        = useRef(new Animated.Value(40)).current;
-  const btnOpacity  = useRef(new Animated.Value(0)).current;
-  // Pulse loop for circle glow
-  const pulseAnim   = useRef(new Animated.Value(1)).current;
 
+  // const btnOpacity = useRef(new Animated.Value(0)).current;
+  // Pulse loop for circle glow
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulse loop — replaces Easing.sine
   useEffect(() => {
     if (!visible) return;
 
-    // Reset
-    [bgGlow, circleScale, circleGlow, checkScale, checkRotate,
-     titleY, titleOpacity, addrY, addrOpacity, btnY, btnOpacity].forEach(
-      (a) => a.setValue(typeof a === "object" ? 0 : 0)
-    );
-    bgGlow.setValue(0); circleScale.setValue(0); circleGlow.setValue(0);
-    checkScale.setValue(0); checkRotate.setValue(0);
-    titleY.setValue(24); titleOpacity.setValue(0);
-    addrY.setValue(20); addrOpacity.setValue(0);
-    btnY.setValue(40); btnOpacity.setValue(0);
-    pulseAnim.setValue(1);
+    // RESET
+    bgGlow.setValue(0);
+    circleScale.setValue(0);
+    checkScale.setValue(0);
+    checkRotate.setValue(0);
+    titleY.setValue(24);
+    titleOpacity.setValue(0);
+    addrY.setValue(20);
+    addrOpacity.setValue(0);
 
-  Animated.sequence([
-  // 1. Background glow
-  Animated.timing(bgGlow, {
-    toValue: 1, duration: 400,
-    easing: Easing.out(Easing.quad),
-    useNativeDriver: true,
-  }),
-  // 2. Circle springs in
-  Animated.spring(circleScale, {
-    toValue: 1, friction: 5, tension: 60,
-    useNativeDriver: true,
-  }),
-  // 3. Checkmark bounces in
-  Animated.parallel([
-    Animated.spring(checkScale, {
-      toValue: 1, friction: 4, tension: 80,
-      useNativeDriver: true,
-    }),
-    Animated.timing(checkRotate, {
-      toValue: 1, duration: 300,
-      easing: Easing.bezier(0.34, 1.56, 0.64, 1), // replaces Easing.back(1.5)
-      useNativeDriver: true,
-    }),
-  ]),
-  // 4. Title slides up
-  Animated.parallel([
-    Animated.timing(titleOpacity, {
-      toValue: 1, duration: 320,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }),
-    Animated.timing(titleY, {
-      toValue: 0, duration: 320,
-      easing: Easing.bezier(0.33, 1, 0.68, 1), // replaces Easing.cubic
-      useNativeDriver: true,
-    }),
-  ]),
-  // 5. Address fades in
-  Animated.parallel([
-    Animated.timing(addrOpacity, {
-      toValue: 1, duration: 280,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }),
-    Animated.timing(addrY, {
-      toValue: 0, duration: 280,
-      easing: Easing.bezier(0.33, 1, 0.68, 1),
-      useNativeDriver: true,
-    }),
-  ]),
-  // 6. Button slides up
-  Animated.parallel([
-    Animated.timing(btnOpacity, {
-      toValue: 1, duration: 300,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }),
-    Animated.spring(btnY, {
-      toValue: 0, friction: 7, tension: 50,
-      useNativeDriver: true,
-    }),
-  ]),
-]).start(() => {
-  // Pulse loop — replaces Easing.sine
-  Animated.loop(
-    Animated.sequence([
-      Animated.timing(pulseAnim, {
-        toValue: 1.18, duration: 1000,
-        easing: Easing.bezier(0.45, 0, 0.55, 1),
+    // btnOpacity.setValue(0);
+
+    // FAST + SMOOTH ANIMATION
+    Animated.parallel([
+      Animated.spring(circleScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 140,
         useNativeDriver: true,
       }),
-      Animated.timing(pulseAnim, {
-        toValue: 1, duration: 1000,
-        easing: Easing.bezier(0.45, 0, 0.55, 1),
+
+      Animated.spring(checkScale, {
+        toValue: 1,
+        friction: 4,
+        tension: 200, // 🔥 faster
         useNativeDriver: true,
       }),
-    ])
-  ).start();
-    setTimeout(() => {
-    onHome();
-  }, 1000);
-});
+
+      Animated.timing(checkRotate, {
+        toValue: 1,
+        duration: 120,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+
+      Animated.timing(titleOpacity, {
+        toValue: 1,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(titleY, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+
+      Animated.timing(addrOpacity, {
+        toValue: 1,
+        duration: 140,
+        useNativeDriver: true,
+      }),
+      Animated.timing(addrY, {
+        toValue: 0,
+        duration: 140,
+        useNativeDriver: true,
+      }),
+
+
+
+    ]).start();
   }, [visible]);
+
+
+useEffect(() => {
+  if (!visible) return;
+
+  const t = setTimeout(() => {
+    onHome();
+  }, 1500); // 👈 perfect UX timing
+
+  return () => clearTimeout(t);
+}, [visible]);
 
   const checkSpin = checkRotate.interpolate({
     inputRange: [0, 1],
@@ -147,20 +122,8 @@ export function SuccessModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade">
-      <View style={[s.root, { paddingTop: insets.top + 90, paddingBottom: insets.bottom + 24 }]}>
-
-        {/* Radial glow behind circle */}
-        <Animated.View
-          style={[s.radialGlow, { opacity: bgGlow, transform: [{ scale: pulseAnim }] }]}
-        />
-
-        {/* ── TOP ── */}
+      <View style={[s.root, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
         <View style={s.topContent}>
-
-          {/* Outer pulse ring */}
-          <Animated.View style={[s.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
-
-          {/* Circle */}
           <Animated.View style={[s.circle, { transform: [{ scale: circleScale }] }]}>
             <Animated.View style={{ transform: [{ scale: checkScale }, { rotate: checkSpin }] }}>
               <Ionicons name="checkmark" size={46} color="#ffffff" />
@@ -187,31 +150,24 @@ export function SuccessModal({
         </View>
 
         {/* ── BOTTOM ── */}
-        <Animated.View
-          style={[s.btnWrap, { opacity: btnOpacity, transform: [{ translateY: btnY }] }]}
-        >
-          <TouchableOpacity style={s.btnPrimary} onPress={onHome} activeOpacity={0.85}>
-            <Text style={s.btnPrimaryText}>Back to Home</Text>
-          </TouchableOpacity>
-
-          {onTrack && (
-            <TouchableOpacity style={s.btnSecondary} onPress={onTrack} activeOpacity={0.7}>
-              <Text style={s.btnSecondaryText}>Track Order</Text>
-            </TouchableOpacity>
-          )}
-        </Animated.View>
 
       </View>
     </Modal>
   );
+
 }
 
 const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#021410",
-    justifyContent: "space-between",
-    paddingHorizontal: 28,
+    justifyContent: "center",   // 🔥 FIX
+    alignItems: "center",
+    paddingHorizontal: 44,
+  }, btnWrap: {
+    gap: 12,
+    marginTop: 10, // 👈 spacing from center
+    width: "100%",
   },
 
   // Soft radial green glow in background
@@ -232,7 +188,7 @@ const s = StyleSheet.create({
 
   topContent: {
     alignItems: "center",
-    marginTop: 60,
+    marginTop: 20,
   },
 
   // Pulsing outer ring (larger, transparent)
@@ -261,7 +217,7 @@ const s = StyleSheet.create({
 
   title: {
     color: "#CFFFF1",
-    fontSize:24,
+    fontSize: 24,
     fontWeight: "900",
     textAlign: "center",
     marginTop: 28,
@@ -269,43 +225,41 @@ const s = StyleSheet.create({
     letterSpacing: 0.4,
   },
 
-addrRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  marginTop: 68,
-  gap: 6,
-  paddingHorizontal: 1,  // keeps it from touching screen edges
-},
-
-addrText: {
-  color: "#7FAF9B",
-  fontSize: 18,
-  lineHeight: 20,
-  textAlign: "center",   // ✅ add this
-  flexShrink: 1,         // ✅ replaces flex:1 — shrinks if needed but won't expand
-},
-
-  btnWrap: {
-    gap: 12,
+  addrRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 68,
+    gap: 6,
+    paddingHorizontal: 1,  // keeps it from touching screen edges
   },
 
+  addrText: {
+    color: "#7FAF9B",
+    fontSize: 18,
+    lineHeight: 20,
+    textAlign: "center",   // ✅ add this
+    flexShrink: 1,         // ✅ replaces flex:1 — shrinks if needed but won't expand
+  },
+
+
   btnPrimary: {
-    backgroundColor: "#27E2A4",
+    backgroundColor: "#00E1A2",
     borderRadius: 50,
-    paddingVertical: 17,
+    paddingVertical: 16,
     alignItems: "center",
-    shadowColor: "#27E2A4",
-    shadowOpacity: 0.4,
-    shadowRadius: 18,
-    elevation: 8,
+    shadowColor: "#00E1A2",
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
   },
 
   btnPrimaryText: {
-    fontWeight: "800",
+    fontWeight: "900",
     fontSize: 16,
-    color: "#052B25",
-    letterSpacing: 0.3,
+    color: "#00211B",
+    letterSpacing: 0.4,
   },
 
   btnSecondary: {
@@ -313,12 +267,13 @@ addrText: {
     paddingVertical: 15,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#12332A",
+    borderColor: "rgba(0,225,162,0.3)",
+    backgroundColor: "rgba(0,225,162,0.05)",
   },
 
   btnSecondaryText: {
-    color: "#7FAF9B",
-    fontWeight: "700",
+    color: "#00E1A2",
+    fontWeight: "800",
     fontSize: 15,
   },
 });
