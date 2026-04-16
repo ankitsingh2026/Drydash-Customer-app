@@ -1,4 +1,5 @@
 import { getMeApi } from "@/features/auth/auth.api";
+import { useAuth } from "@/hooks/useAuth";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
@@ -41,7 +42,7 @@ export default function EditProfile() {
   const [showSheet, setShowSheet] = useState(false);
 
   const params = useLocalSearchParams();
-  const [phone] = useState((params.phone as string) || "");
+  const [phone, setPhone] = useState((params.phone as string) || "");
 
   const [addresses, setAddresses] = useState<any[]>([]);
   const { user } = useAuth();
@@ -64,7 +65,6 @@ export default function EditProfile() {
   const [name, setName] = useState((params.name as string) || "");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
-
   /* entry animation */
   useEffect(() => {
     Animated.parallel([
@@ -95,7 +95,7 @@ export default function EditProfile() {
         }
         if (!phone) setPhone(me.user?.phone ?? me.phone ?? "");
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   /* android back */
@@ -228,7 +228,7 @@ export default function EditProfile() {
             </View>
 
             {/* ── SAVE ── */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               activeOpacity={0.88}
               onPress={handleSave}
               disabled={saving}
@@ -244,7 +244,7 @@ export default function EditProfile() {
                   {saving ? "Saving…" : "Save Changes"}
                 </Text>
               </LinearGradient>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -256,6 +256,7 @@ export default function EditProfile() {
 
 function Field({
   label,
+  editable = false,
   theme,
   ...props
 }: {
