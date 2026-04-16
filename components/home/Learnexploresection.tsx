@@ -2,14 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useRef } from "react";
 import {
-    Animated,
-    Dimensions,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -88,7 +88,7 @@ export default function LearnExploreSection() {
       </View>
 
       {/* ── Featured Video Card ── */}
-      
+
       <TouchableOpacity
         activeOpacity={0.9}
         onPressIn={onPlayPressIn}
@@ -108,7 +108,12 @@ export default function LearnExploreSection() {
           style={[styles.playButtonWrap, { transform: [{ scale: playScale }] }]}
         >
           <View style={styles.playButton}>
-            <Ionicons name="play" size={26} color="#000" style={{ marginLeft: 3 }} />
+            <Ionicons
+              name="play"
+              size={26}
+              color="#000"
+              style={{ marginLeft: 3 }}
+            />
           </View>
         </Animated.View>
 
@@ -136,13 +141,13 @@ export default function LearnExploreSection() {
             style={styles.articleCard}
             activeOpacity={0.85}
           >
-           <View style={styles.imageContainer}>
-  <Image
-    source={article.image}
-    style={styles.articleImage}
-    resizeMode="cover"
-  />
-</View>
+            <View style={styles.imageContainer}>
+              <Image
+                source={article.image}
+                style={styles.articleImage}
+                resizeMode="cover"
+              />
+            </View>
             <View style={styles.articleTextWrap}>
               <Text style={styles.articleTitle} numberOfLines={2}>
                 {article.title}
@@ -269,18 +274,18 @@ const styles = StyleSheet.create({
     borderColor: "#1A3330",
     overflow: "hidden",
   },
-imageContainer: {
-  margin: 10,         
-  borderRadius: 12,
-  overflow: "hidden",
-  backgroundColor: "#0A0F0E",
-  borderColor: "#1F3D38",
-},
+  imageContainer: {
+    margin: 10,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#0A0F0E",
+    borderColor: "#1F3D38",
+  },
 
-articleImage: {
-  width: "100%",
-  height: 120,
-},
+  articleImage: {
+    width: "100%",
+    height: 120,
+  },
   articleTextWrap: {
     padding: 10,
   },
