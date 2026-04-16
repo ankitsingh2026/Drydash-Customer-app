@@ -1,6 +1,5 @@
 // app/screens/BookPickup.tsx — Complete updated file with service availability check
 import CouponCard, { COUPONS } from "@/components/CouponCard";
-import LocationPickerModal from "@/components/LocationPickerModal";
 import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
 import { useAddress } from "@/context/AddressContext";
@@ -32,6 +31,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -2039,6 +2039,9 @@ export default function BookPickup() {
           setModalVisible(false);
         }}
         onClose={() => setModalVisible(false)}
+        onAddNewAddress={() => {
+          router.push("/select-address-location");
+        }}
       />
 
       <CouponCard

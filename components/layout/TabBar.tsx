@@ -1,5 +1,4 @@
 // TabBar.tsx - Updated
-import LocationPickerModal from "@/components/LocationPickerModal";
 import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
+import LocationPickerModal from "../LocationPickerModal";
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
@@ -146,6 +146,11 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
           setLocationText(`${area}, ${city}`);
         }
       }
+    } else {
+      // Current location path from the location modal.
+      if (label) {
+        setLocationText(label);
+      }
     }
   };
 
@@ -236,7 +241,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
         onSelect={handleAddressSelect}
         onClose={() => { setModalVisible(false); refreshAddresses(); }}
         onAddNewAddress={() => {
-          router.push("/edit-address");
+          router.push("/select-address-location");
         }}
       />
     </>
