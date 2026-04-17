@@ -219,7 +219,7 @@ export default function NotificationsTopSheet({
                         { backgroundColor: meta.softBg },
                       ]}
                     >
-                      <Ionicons name={meta.icon} size={20} color={meta.color} />
+                      <Ionicons name={meta.icon} size={20} color="#fff" />
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -227,13 +227,13 @@ export default function NotificationsTopSheet({
                         {n.title}
                       </Text>
                       {!!n.subtitle && (
-                        <Text style={{ color: theme.subText }}>
+                        <Text style={{ color: "#C5D2E8" }}>
                           {n.subtitle}
                         </Text>
                       )}
                       <Text
                         style={{
-                          color: theme.subText,
+                          color: "#C5D2E8",
                           fontSize: 11,
                           marginTop: 2,
                         }}

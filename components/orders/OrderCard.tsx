@@ -261,18 +261,20 @@ function ActionButton({
 }: {
     label: string;
     icon: React.ComponentProps<typeof Ionicons>["name"];
-    variant?: "ghost" | "solid";
+    variant?: "ghost" | "solid" | "danger";
     onPress?: () => void;
 }) {
+    const isDanger = variant === "danger";
+
     return (
         <TouchableOpacity
-            activeOpacity={0.86}
+            activeOpacity={0.85}
             onPress={onPress}
             style={[
                 styles.actionButton,
-                variant === "solid"
-                    ? styles.actionButtonSolid
-                    : styles.actionButtonGhost,
+                variant === "solid" && styles.actionButtonSolid,
+                variant === "ghost" && styles.actionButtonGhost,
+                isDanger && styles.actionButtonDanger,
             ]}
         >
             <Ionicons
@@ -281,20 +283,17 @@ function ActionButton({
                 color={
                     variant === "solid"
                         ? "#000"
-                        : label === "Cancel"
-                            ? "#f37e7e"
+                        : isDanger
+                            ? "#FF6B6B"
                             : ACCENT
                 }
             />
             <Text
                 style={[
                     styles.actionText,
-                    variant === "solid"
-                        ? styles.actionTextSolid
-                        : [
-                            styles.actionTextGhost,
-                            label === "Cancel" && { color: "#f37e7e" }
-                        ],
+                    variant === "solid" && styles.actionTextSolid,
+                    variant === "ghost" && styles.actionTextGhost,
+                    isDanger && styles.actionTextDanger,
                 ]}
             >
                 {label}
@@ -340,7 +339,7 @@ function ScheduledPickupCard({ pickup, onClose }: PickupStatusCardProps) {
                 </Text>
             </View>
 
-            <View style={styles.buttonRow}>
+            <View style={[styles.buttonRow, {}]}>
                 <ActionButton label="Reschedule" icon="calendar-outline" />
                 <ActionButton label="Cancel" icon="close-circle-outline" />
             </View>
@@ -355,7 +354,7 @@ function AssignedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
             badgeAccent={ACCENT}
             badgeIcon="person-outline"
             title={`${pickup.riderName || pickup.contactName || pickup.Name || "Your rider"} is on the way to pick up.`}
-            subtitle={pickup.slot && pickup.slot !== "NA" ? pickup.slot : "Your pickup is confirmed and queued for collection."}
+            // subtitle={pickup.slot && pickup.slot !== "NA" ? pickup.slot : "Your pickup is confirmed and queued for collection."}
             onClose={onClose}
         >
             <MetaRow pickup={pickup} />
@@ -557,7 +556,7 @@ const styles = StyleSheet.create({
     },
 
     inner: {
-        padding: 14,
+        padding: 24,
         gap: 10,
     },
     topRow: {
@@ -574,7 +573,7 @@ const styles = StyleSheet.create({
     },
     subtitle: {
         color: MUTED,
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: "500",
         lineHeight: 17,
     },
@@ -584,8 +583,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     avatar: {
-        width: 36,
-        height: 36,
+        width: 26,
+        height: 26,
         borderRadius: 18,
         backgroundColor: "#071A17",
         borderWidth: 1,
@@ -596,7 +595,7 @@ const styles = StyleSheet.create({
     avatarText: {
         color: ACCENT,
         fontSize: 12,
-        fontWeight: "800",
+        fontWeight: "600",
     },
     metaTitle: {
         color: "#FFFFFF",
@@ -625,36 +624,57 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
     },
     actionButton: {
-        minHeight: 30,
-        paddingHorizontal: 12,
-        borderRadius: 999,
+        flex: 1,
+        height: 42,
+        borderRadius: 12,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
         gap: 6,
     },
+
+    reviewRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+
+
     actionButtonSolid: {
         backgroundColor: ACCENT,
+        shadowColor: ACCENT,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 4,
     },
+
     actionButtonGhost: {
         backgroundColor: "#071A17",
         borderWidth: 1,
         borderColor: BORDER,
     },
-    actionText: {
-        fontSize: 12,
-        fontWeight: "800",
+
+    actionButtonDanger: {
+        backgroundColor: "rgba(255,107,107,0.08)",
+        borderWidth: 1,
+        borderColor: "rgba(255,107,107,0.3)",
     },
+
+    actionText: {
+        fontSize: 13,
+        fontWeight: "700",
+    },
+
     actionTextSolid: {
         color: "#000",
     },
+
     actionTextGhost: {
         color: ACCENT,
     },
-    reviewRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
+
+    actionTextDanger: {
+        color: "#FF6B6B",
     },
 });
 
