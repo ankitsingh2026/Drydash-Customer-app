@@ -119,7 +119,7 @@ const HERO_SLIDES = [
   },
   {
     key: "laundry-2",
-    tag: "PREMIUM",
+    tag: "Charges",
     title: "",
     subtitle: "",
     image: {
@@ -599,8 +599,6 @@ export default function Home() {
       />
       <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
         <View
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
         >
           {/* ── SEARCH BAR ── */}
 
@@ -774,9 +772,9 @@ export default function Home() {
                   {/* <View style={styles.heroOverlay} /> */}
 
                   {/* Tag badge */}
-                  {/* <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
+                  <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
                     <Text style={styles.heroTagText}>{slide.tag}</Text>
-                  </View> */}
+                  </View>
 
                   {/* Text */}
                   <View style={styles.heroTextWrap}>
@@ -1455,7 +1453,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
-    marginLeft: 20,
+    marginLeft: 30,
   },
   swipeDraggable: {
     width: 44,
