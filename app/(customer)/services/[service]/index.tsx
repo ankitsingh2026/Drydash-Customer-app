@@ -15,6 +15,7 @@ import {
   Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,6 +24,9 @@ import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
 import { useCart } from "../../../../context/CartContext";
 import { useTheme } from "../../../../context/ThemeContext";
+import { catalogData } from "@/constants/catalog";
+import { Ionicons } from "@expo/vector-icons";
+import ProductServicePopup from "@/components/ProductServicePopup";
 
 /* ---------- TABS ---------- */
 const TABS = [

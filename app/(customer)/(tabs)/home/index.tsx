@@ -4,19 +4,26 @@ import FloatingCart from "@/components/FloatingCart";
 import LearnExploreSection from "@/components/home/Learnexploresection";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
+import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
+import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
 import { catalogData } from "@/constants/catalog";
-import { useAuthContext } from "@/context/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
 import { getMeApi } from "@/features/auth/auth.api";
+import { getOrdersApi } from "@/features/orders/orders.api";
+import { getCustomerPickups } from "@/features/pickups/pickup.api";
+import { PickupRecord } from "@/features/pickups/pickup.types";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
+  AppState,
+  AppStateStatus,
   Image,
   PanResponder,
   ScrollView,
@@ -34,6 +41,18 @@ import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
+
+type HomeOrder = {
+  _id?: string;
+  order_id?: string;
+  status?: string;
+  isPaid?: boolean;
+  totalAmount?: number;
+  price?: number;
+  items?: Array<unknown>;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 const QUICK_SERVICES = [
   {
@@ -129,137 +148,6 @@ const HERO_SLIDES = [
 ];
 
 // ─── Active Order Status Card ──────────────────────────────────────────────
-function ActiveOrderCard({ onDismiss }: { onDismiss: () => void }) {
-  const slideAnim = useRef(new Animated.Value(40)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 380,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 380,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const STATUS_STEPS = ["PICKED UP", "IN TRANSIT", "DELIVERED"];
-  const currentStep = 1; // IN TRANSIT
-
-  return (
-    <Animated.View
-      style={[
-        styles.activeOrderCard,
-        { opacity: opacityAnim, transform: [{ translateY: slideAnim }] },
-      ]}
-    >
-      {/* Header row */}
-      <View style={styles.activeOrderHeader}>
-        <View style={styles.activeOrderBadgeRow}>
-          <View style={styles.activeDot} />
-          <Text style={styles.activeOrderLabel}>ACTIVE ORDER</Text>
-        </View>
-        <TouchableOpacity
-          onPress={onDismiss}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="close" size={16} color="#6B7280" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Status text */}
-      <View style={styles.activeOrderStatusRow}>
-        <View>
-          <Text style={styles.activeOrderTitle}>Rider is on the way</Text>
-          <Text style={styles.activeOrderEta}>Expected arrival in 8 mins</Text>
-        </View>
-        {/* Bike icon */}
-        <View style={styles.bikeIconWrap}>
-          <Ionicons name="bicycle" size={22} color="#00C896" />
-        </View>
-      </View>
-
-      {/* Progress tracker */}
-      <View style={styles.progressRow}>
-        {STATUS_STEPS.map((step, idx) => {
-          const isCompleted = idx < currentStep;
-          const isActive = idx === currentStep;
-          return (
-            <View key={step} style={styles.progressStepWrap}>
-              {/* Connector line before */}
-              {idx > 0 && (
-                <View
-                  style={[
-                    styles.progressLine,
-                    {
-                      backgroundColor:
-                        idx <= currentStep ? "#00C896" : "#1E3530",
-                    },
-                  ]}
-                />
-              )}
-              <View
-                style={[
-                  styles.progressDot,
-                  isCompleted || isActive
-                    ? { backgroundColor: "#00C896", borderColor: "#00C896" }
-                    : {
-                        backgroundColor: "transparent",
-                        borderColor: "#1E3530",
-                      },
-                ]}
-              >
-                {isCompleted && (
-                  <Ionicons name="checkmark" size={10} color="#000" />
-                )}
-                {isActive && <View style={styles.progressDotInner} />}
-              </View>
-              <Text
-                style={[
-                  styles.progressLabel,
-                  { color: isCompleted || isActive ? "#00C896" : "#4B5563" },
-                ]}
-              >
-                {step}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-
-      {/* Divider */}
-      <View style={styles.activeOrderDivider} />
-
-      {/* Rider info */}
-      <View style={styles.riderRow}>
-        {/* Avatar */}
-        <View style={styles.riderAvatar}>
-          <Text style={styles.riderAvatarText}>RS</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.riderName}>Rahul Sharma</Text>
-          <View style={styles.riderRatingRow}>
-            <Ionicons name="star" size={11} color="#F59E0B" />
-            <Text style={styles.riderRating}> 4.92 · Professional Partner</Text>
-          </View>
-        </View>
-        {/* Actions */}
-        <TouchableOpacity style={styles.riderActionBtn}>
-          <Ionicons name="call-outline" size={18} color="#00C896" />
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.riderActionBtn, { marginLeft: 8 }]}>
-          <Ionicons name="chatbubble-outline" size={18} color="#00C896" />
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
-  );
-}
 export default function Home() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -268,8 +156,7 @@ export default function Home() {
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState("Ankit");
-  const [orderBooked, setOrderBooked] = useState(false);
-  const { setAuthUser, logout } = useAuthContext();
+  const { user, setAuthUser, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
@@ -279,6 +166,11 @@ export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [popupVisible, setPopupVisible] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [pickups, setPickups] = useState<PickupRecord[]>([]);
+  const [orders, setOrders] = useState<HomeOrder[]>([]);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [dismissedOrderKey, setDismissedOrderKey] = useState<string | null>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -293,6 +185,118 @@ export default function Home() {
     };
     checkAuth();
   }, []);
+
+  const customerPhone = user?.user?.phone ?? user?.phone ?? "";
+
+  const phoneCandidates = useMemo(() => {
+    const digits = String(customerPhone ?? "").replace(/\D/g, "");
+    if (!digits) return [] as string[];
+
+    const with91 = digits.startsWith("91") ? digits : `91${digits}`;
+    const without91 = digits.startsWith("91") ? digits.slice(2) : digits;
+
+    return Array.from(new Set([with91, without91, digits])).filter(Boolean);
+  }, [customerPhone]);
+
+  const refreshPickups = useCallback(async () => {
+    if (!phoneCandidates.length) {
+      setPickups([]);
+      setOrders([]);
+      setPickupLoading(false);
+      return;
+    }
+
+    try {
+      setPickupLoading(true);
+      const fetchPickups = async () => {
+        let fetchedPickups: PickupRecord[] = [];
+        let usedPhone = "";
+
+        for (const candidate of phoneCandidates) {
+          usedPhone = candidate;
+          try {
+            const res = await getCustomerPickups(candidate);
+            const candidatePickups = Array.isArray(res?.pickups)
+              ? res.pickups
+              : [];
+            if (candidatePickups.length > 0) {
+              fetchedPickups = candidatePickups;
+              break;
+            }
+          } catch (error) {
+            if (__DEV__) {
+              console.log("[home] pickup candidate failed", {
+                candidate,
+                error,
+              });
+            }
+          }
+        }
+
+        return { fetchedPickups, usedPhone };
+      };
+
+      const fetchOrders = async () => {
+        let fetchedOrders: HomeOrder[] = [];
+        let usedPhone = "";
+
+        for (const candidate of phoneCandidates) {
+          usedPhone = candidate;
+          try {
+            const res = await getOrdersApi(candidate);
+            const candidateOrders = Array.isArray(res?.orders) ? res.orders : [];
+            if (candidateOrders.length > 0) {
+              fetchedOrders = candidateOrders;
+              break;
+            }
+          } catch (error) {
+            if (__DEV__) {
+              console.log("[home] order candidate failed", {
+                candidate,
+                error,
+              });
+            }
+          }
+        }
+
+        return { fetchedOrders, usedPhone };
+      };
+
+      const [pickupResult, orderResult] = await Promise.all([
+        fetchPickups(),
+        fetchOrders(),
+      ]);
+
+      const { fetchedPickups, usedPhone: pickupPhone } = pickupResult;
+      const { fetchedOrders, usedPhone: orderPhone } = orderResult;
+
+      setPickups(fetchedPickups);
+      setOrders(fetchedOrders);
+      console.log("Fetched pickups and orders====>", { fetchedPickups, fetchedOrders });
+
+      if (__DEV__) {
+        const latest = fetchedPickups[0] ?? null;
+        const latestOrder = fetchedOrders[0] ?? null;
+        console.log("[home] pickup refresh", {
+          requestedPhones: phoneCandidates,
+          usedPickupPhone: pickupPhone,
+          pickupCount: fetchedPickups.length,
+          latestStatus: latest?.PickupStatus,
+          latestId: latest?._id,
+          usedOrderPhone: orderPhone,
+          orderCount: fetchedOrders.length,
+          latestOrderStatus: latestOrder?.status,
+          latestOrderId: latestOrder?.order_id,
+        });
+      }
+    } catch (error) {
+      console.log("Home status refresh error:", error);
+      setPickups([]);
+      setOrders([]);
+    } finally {
+      setPickupLoading(false);
+    }
+  }, [phoneCandidates]);
 
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
 
@@ -328,6 +332,93 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, [j, deleting, i, isFocused]);
+  useEffect(() => {
+    if (!phoneCandidates.length) return;
+    refreshPickups();
+  }, [phoneCandidates, refreshPickups]);
+
+  useEffect(() => {
+    if (!phoneCandidates.length) return;
+
+    const interval = setInterval(() => {
+      refreshPickups();
+    }, 15000);
+
+    const subscription = AppState.addEventListener(
+      "change",
+      (nextAppState: AppStateStatus) => {
+        if (
+          appState.current.match(/inactive|background/) &&
+          nextAppState === "active"
+        ) {
+          refreshPickups();
+        }
+        appState.current = nextAppState;
+      },
+    );
+
+    return () => {
+      clearInterval(interval);
+      subscription.remove();
+    };
+  }, [phoneCandidates, refreshPickups]);
+
+  const latestPickup = useMemo(() => {
+    const sorted = [...pickups]
+      .filter((pickup) => !pickup.isDeleted)
+      .sort((left, right) => {
+        const leftTime = new Date(
+          left.updatedAt || left.createdAt || left.pickup_date || 0,
+        ).getTime();
+        const rightTime = new Date(
+          right.updatedAt || right.createdAt || right.pickup_date || 0,
+        ).getTime();
+        return rightTime - leftTime;
+      });
+
+    const activePickup = sorted.find((pickup) => {
+      const status = String(pickup.PickupStatus ?? "").toLowerCase();
+      return ![
+        "complete",
+        "completed",
+        "delivered",
+        "cancelled",
+        "canceled",
+      ].includes(status) && !pickup.cancelledAt;
+    });
+
+    return activePickup ?? null;
+  }, [pickups]);
+
+  const latestPickupKey =
+    latestPickup?._id || latestPickup?.PickupId || latestPickup?.PickupID || null;
+
+  useEffect(() => {
+    if (!dismissedOrderKey) return;
+
+    if (latestPickupKey || !isDeliveredOrder) {
+      setDismissedOrderKey(null);
+    }
+  }, [dismissedOrderKey, latestPickupKey, isDeliveredOrder]);
+
+  const latestOrder = useMemo(() => {
+    const sorted = [...orders].sort((left, right) => {
+      const leftTime = new Date(left.updatedAt || left.createdAt || 0).getTime();
+      const rightTime = new Date(right.updatedAt || right.createdAt || 0).getTime();
+      return rightTime - leftTime;
+    });
+
+    return sorted[0] ?? null;
+  }, [orders]);
+
+  const latestOrderKey =
+    latestOrder?._id || latestOrder?.order_id || null;
+  const latestOrderStatus = String(latestOrder?.status ?? "")
+    .trim()
+    .toLowerCase();
+  const isDeliveredOrder = latestOrderStatus === "delivered";
+  const hideDeliveredCard =
+    isDeliveredOrder && dismissedOrderKey === latestOrderKey;
   const allProducts = Object.values(catalogData).flat();
 
   const filteredProducts = allProducts.filter((item) =>
@@ -571,11 +662,11 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       dragXJS.setValue(0);
+      refreshPickups();
       if (params.orderPlaced === "1") {
-        setOrderBooked(true);
         router.setParams({ orderPlaced: undefined });
       }
-    }, [params.orderPlaced]),
+    }, [params.orderPlaced, refreshPickups]),
   );
 
   if (loading) return <AppLoader />;
@@ -805,18 +896,127 @@ export default function Home() {
             ))}
           </View>
 
-          {/* ── ACTIVE ORDER CARD (shown after booking) ── */}
-          {orderBooked && (
-            <TouchableOpacity
-              activeOpacity={0.92}
-              onPress={() => router.push("/(customer)/order-tracking")}
+          {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
+          {latestPickup ? (
+            <View style={{ marginHorizontal: 16, marginTop: 14 }}>
+              <PickupStatusCard
+                pickup={latestPickup}
+                onPress={() => router.push("/(customer)/order-tracking")}
+              />
+            </View>
+          ) : hideDeliveredCard ? (
+            <View
+              collapsable={false}
+              style={{ marginHorizontal: 16, marginTop: 14 }}
             >
-              <ActiveOrderCard onDismiss={() => setOrderBooked(false)} />
-            </TouchableOpacity>
-          )}
+              <Animated.View
+                style={[
+                  styles.pickupCard,
+                  {
+                    opacity: fadeAnim,
+                    backgroundColor: "#0D1F1C",
+                    borderColor: "#1A3330",
+                    transform: [
+                      {
+                        translateY: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [12, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.swipeContainer,
+                    { backgroundColor: "#071018" },
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.swipeTrackFill,
+                      {
+                        width: trackFillWidth,
+                        opacity: trackFillOpacity,
+                      },
+                    ]}
+                    pointerEvents="none"
+                  />
 
-          {/* ── SWIPE TO BOOK STRIP ── */}
-          {!orderBooked && (
+                  <Animated.View
+                    style={[
+                      styles.swipeDraggable,
+                      {
+                        backgroundColor: PRIMARY,
+                        transform: [
+                          { translateX: dragXNative },
+                          { scale: thumbScale },
+                        ],
+                      },
+                    ]}
+                    {...panResponder.panHandlers}
+                  >
+                    <TouchableOpacity
+                      activeOpacity={0.85}
+                      onPress={onPressBook}
+                      style={styles.swipeDraggableInner}
+                    >
+                      <Ionicons
+                        name="bag-check-outline"
+                        size={20}
+                        color="#000"
+                      />
+                    </TouchableOpacity>
+                  </Animated.View>
+
+                  <Animated.View
+                    style={[
+                      styles.swipeTextWrap,
+                      {
+                        opacity: swipeTextOpacity,
+                        transform: [{ translateX: swipeTextTranslateX }],
+                      },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={styles.swipeHint}>
+                        SWIPE FOR INSTANT PICKUP
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={14}
+                        color="#4B5563"
+                      />
+                    </View>
+                  </Animated.View>
+                </View>
+              </Animated.View>
+            </View>
+          ) : !hideDeliveredCard && latestOrder ? (
+            <View style={{ marginHorizontal: 16, marginTop: 14 }}>
+              <HomeActiveOrderCard
+                order={latestOrder}
+                onPress={() =>
+                  latestOrder.order_id
+                    ? router.push(`/orders/${latestOrder.order_id}`)
+                    : router.push("/(customer)/(tabs)/orders")
+                }
+                onClose={
+                  isDeliveredOrder && latestOrderKey
+                    ? () => setDismissedOrderKey(latestOrderKey)
+                    : undefined
+                }
+              />
+            </View>
+          ) : pickupLoading ? null : (
             <View
               collapsable={false}
               style={{ marginHorizontal: 16, marginTop: 14 }}

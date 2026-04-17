@@ -1,0 +1,348 @@
+import { DarkTheme } from "@/app/(customer)/order-tracking";
+import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
+type HomeOrder = {
+  _id?: string;
+  order_id?: string;
+  status?: string;
+  isPaid?: boolean;
+  totalAmount?: number;
+  price?: number;
+  customerName?: string;
+  address?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  items?: Array<unknown>;
+};
+
+type HomeActiveOrderCardProps = {
+  order: HomeOrder;
+  onPress?: () => void;
+  onClose?: () => void;
+};
+
+const ACCENT = "#29E6B0";
+const BORDER = "#1A3330";
+const SURFACE = "#0D1F1C";
+const MUTED = "#6B7280";
+
+const normalize = (status?: string) => String(status ?? "").trim().toLowerCase();
+
+const statusMeta = (status?: string) => {
+  const s = normalize(status);
+
+  if (s === "delivered") {
+    return {
+      label: "Order Completed",
+      accent: ACCENT,
+      icon: "checkmark-done-outline" as const,
+      title: "Delivered Successfully",
+      subtitle: "Your order has been successfully delivered to your doorstep.",
+      actionText: "Write a Review",
+      showClose: true,
+    };
+  }
+
+  if (s === "cancelled" || s === "canceled") {
+    return {
+      label: "Order Cancelled",
+      accent: "#EF4444",
+      icon: "close-circle-outline" as const,
+      title: "This order was cancelled",
+      subtitle: "You can book a new pickup anytime.",
+      actionText: "Book Again",
+      showClose: false,
+    };
+  }
+
+  if (s === "intransit" || s === "ready for delivery" || s === "delivery rider assigned") {
+    return {
+      label: "Out For Delivery",
+      accent: ACCENT,
+      icon: "bicycle-outline" as const,
+      title: "Your order is on the way",
+      subtitle: "Track the rider while your order is in transit.",
+      actionText: "Track",
+      showClose: false,
+    };
+  }
+
+  return {
+    label: "Active Order",
+    accent: ACCENT,
+    icon: "time-outline" as const,
+    title: "Processing your order",
+    subtitle: "Pay now to choose delivery slot.",
+    actionText: "Pay Now",
+    showClose: false,
+  };
+};
+
+export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeActiveOrderCardProps) {
+  const meta = statusMeta(order.status);
+  const amount = order.totalAmount ?? order.price ?? 0;
+  const itemCount = Array.isArray(order.items) ? order.items.length : 0;
+  const isDelivered = normalize(order.status) === "delivered";
+  const isCancelled = normalize(order.status) === "cancelled" || normalize(order.status) === "canceled";
+
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+      <View style={styles.card}>
+        <View style={[ { backgroundColor: meta.accent }]} />
+        {meta.showClose && onClose ? (
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.closeFloatingBtn}
+          >
+            <Ionicons name="close" size={22} color="#88A79D" />
+          </TouchableOpacity>
+        ) : null}
+        <View style={styles.inner}>
+          <View style={styles.headerRow}>
+            <OrderStatusBadge label={meta.label} accent={meta.accent} icon={meta.icon} />
+            <View style={styles.rightHeaderRow}>
+              {/* {order.order_id ? <Text style={styles.orderId}>Order #{order.order_id}</Text> : null} */}
+              {!isCancelled ? (
+                <OrderStatusBadge
+                  label={order.isPaid ? "Paid" : "Payment Pending"}
+                  accent={order.isPaid ? ACCENT : "#F59E0B"}
+                  icon={order.isPaid ? "checkmark-circle-outline" : "wallet-outline"}
+                />
+              ) : null}
+              {meta.showClose && onClose ? (
+                <TouchableOpacity
+                  onPress={onClose}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.closeBtn}
+                >
+                  <Ionicons name="close" size={18} color="#31423D" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          <Text style={styles.title}>{meta.title}</Text>
+          {meta.subtitle ? <Text style={styles.subtitle}>{meta.subtitle}</Text> : null}
+
+          <View style={styles.midRow}>
+            <View style={styles.itemAvatarGroup}>
+              <View style={styles.circleIcon}>
+                <Ionicons name="shirt-outline" size={18} color="#9EE8D1" />
+              </View>
+              <View style={[styles.circleIcon, { marginLeft: -10 }]}>
+                <Ionicons name="pricetag-outline" size={18} color="#9EE8D1" />
+              </View>
+            </View>
+            <View style={styles.countPill}>
+              <Text style={styles.countPillText}>{itemCount} Items {isDelivered ? "Delivered" : normalize(order.status) === "processing" ? "Processing" : "In Your Cart"}</Text>
+            </View>
+          </View>
+
+          <View style={styles.footerRow}>
+            {isDelivered ? (
+              <View style={styles.reviewWrap}>
+                <View style={styles.reviewRow}>
+                  <Ionicons name="star" size={18} color={ACCENT} />
+                  <Ionicons name="star" size={18} color={ACCENT} />
+                  <Ionicons name="star" size={18} color={ACCENT} />
+                  <Ionicons name="star" size={18} color={ACCENT} />
+                  <Ionicons name="star" size={18} color="#31423D" />
+                </View>
+                <Text style={styles.reviewCta}>{meta.actionText}</Text>
+              </View>
+            ) : !order.isPaid ? (
+              <View style={styles.primaryCta}>
+                <Text style={styles.primaryCtaText}>{meta.actionText}</Text>
+                <Ionicons name="arrow-forward" size={16} color="#000" />
+              </View>
+            ) : (
+              <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
+            )}
+            <View style={styles.chatBtn}>
+              <Ionicons name="chatbubble-ellipses" size={26} color={DarkTheme.card} />
+            </View>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: SURFACE,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    overflow: "hidden",
+    position: "relative",
+  },
+  closeFloatingBtn: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10, 35, 30, 0.9)",
+    borderWidth: 1,
+    borderColor: "#24463F",
+    zIndex: 5,
+    elevation: 6,
+  },
+
+  inner: {
+    paddingHorizontal: 14,
+    paddingTop: 16,
+    paddingBottom: 14,
+    gap: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  rightHeaderRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    flexShrink: 1,
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orderId: {
+    color: "#D1D5DB",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 20,
+    lineHeight: 36,
+    fontWeight: "900",
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    color: "#7DA79D",
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: -2,
+  },
+  midRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 1,
+  },
+  itemAvatarGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  circleIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#16332E",
+    borderWidth: 1,
+    borderColor: BORDER,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  countPill: {
+    minHeight: 28,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: "#37655B",
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10, 35, 30, 0.7)",
+  },
+  countPillText: {
+    color: "#9EE8D1",
+    fontSize: 16,
+    fontWeight: "400",
+    letterSpacing: 0.3,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "#071A17",
+  },
+  pillText: {
+    color: "#A7B8B2",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 2,
+  },
+  primaryCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 22,
+    backgroundColor: ACCENT,
+  },
+  primaryCtaText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 16,
+  },
+  successText: {
+    color: "#9EE8D1",
+    fontSize: 15,
+    fontWeight: "500",
+    flex: 1,
+  },
+  chatBtn: {
+    width: 50,
+    height: 50,
+    borderRadius: 28,
+    backgroundColor: ACCENT,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: ACCENT,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  reviewWrap: {
+    flex: 1,
+    gap: 12,
+  },
+  reviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  reviewCta: {
+    color: "#9EE8D1",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+});
