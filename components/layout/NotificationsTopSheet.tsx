@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../context/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
-const SHEET_HEIGHT = Math.min(640, Math.round(height * 0.82));
+const SHEET_HEIGHT = Math.min(640, Math.round(height * 0.62));
 
 type NotificationItem = {
   id: string;
@@ -146,7 +146,7 @@ export default function NotificationsTopSheet({
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(0,0,0,0.48)", opacity: backdrop },
+            { backgroundColor: "rgba(0,0,0,0.75)", opacity: backdrop },
           ]}
         />
       </Pressable>
@@ -180,7 +180,7 @@ export default function NotificationsTopSheet({
 
             {/* ❌ Close Button */}
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={22} color={theme.text} />
+              <Ionicons name="close" size={28} color={theme.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -188,7 +188,7 @@ export default function NotificationsTopSheet({
         {/* List */}
         <ScrollView>
           {notifications.length === 0 ? (
-            <Text style={{ textAlign: "center", marginTop: 40 }}>
+            <Text style={{color:"#fff", textAlign: "center", marginTop: 40 }}>
               No notifications
             </Text>
           ) : (
@@ -219,7 +219,7 @@ export default function NotificationsTopSheet({
                         { backgroundColor: meta.softBg },
                       ]}
                     >
-                      <Ionicons name={meta.icon} size={20} color={meta.color} />
+                      <Ionicons name={meta.icon} size={20} color="#fff" />
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -227,13 +227,13 @@ export default function NotificationsTopSheet({
                         {n.title}
                       </Text>
                       {!!n.subtitle && (
-                        <Text style={{ color: theme.subText }}>
+                        <Text style={{ color: "#C5D2E8" }}>
                           {n.subtitle}
                         </Text>
                       )}
                       <Text
                         style={{
-                          color: theme.subText,
+                          color: "#C5D2E8",
                           fontSize: 11,
                           marginTop: 2,
                         }}

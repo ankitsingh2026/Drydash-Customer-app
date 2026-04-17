@@ -1,6 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useRef } from "react";
+import { VideoView, useVideoPlayer } from "expo-video";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
@@ -18,8 +19,8 @@ const FEATURE_VIDEO = {
   title: "See How DryDash Works",
   subtitle: "Watch our premium cleaning process",
   duration: "1:20",
-  thumbnail: {
-    uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
+  video: {
+    uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/app-videos/clothing.mp4",
   },
 };
 
@@ -76,35 +77,77 @@ export default function LearnExploreSection() {
       bounciness: 6,
     }).start();
   };
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.05,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+
+const player = useVideoPlayer(FEATURE_VIDEO.video.uri);
+
+useEffect(() => {
+  if (!player) return;
+
+  player.loop = true;
+  player.muted = true;
+
+  const playVideo = async () => {
+    try {
+      await player.play();
+    } catch (e) {
+      console.log("Video play error:", e);
+    }
+  };
+
+  const timeout = setTimeout(playVideo, 300);
+
+  return () => {
+    clearTimeout(timeout);
+    // ❌ DO NOTHING HERE (no pause)
+  };
+}, [player]);
+
 
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Learn & Explore</Text>
-        <TouchableOpacity>
+        {/* <TouchableOpacity>
           <Text style={styles.viewAll}>View All</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* ── Featured Video Card ── */}
 
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPressIn={onPlayPressIn}
-        onPressOut={onPlayPressOut}
-        style={styles.videoCard}
-      >
-        <Image
-          source={FEATURE_VIDEO.thumbnail}
+      <View style={styles.videoCard} pointerEvents="none">
+        <VideoView
+          player={player}
           style={styles.videoThumbnail}
-          resizeMode="cover"
+          contentFit="cover"
         />
         {/* Dark overlay */}
-        <View style={styles.videoOverlay} />
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.7)"]}
+          style={StyleSheet.absoluteFill}
+        />
 
         {/* Play button */}
-        <Animated.View
+        {/* <Animated.View
           style={[styles.playButtonWrap, { transform: [{ scale: playScale }] }]}
         >
           <View style={styles.playButton}>
@@ -115,7 +158,7 @@ export default function LearnExploreSection() {
               style={{ marginLeft: 3 }}
             />
           </View>
-        </Animated.View>
+        </Animated.View> */}
 
         {/* Text */}
         <View style={styles.videoTextWrap}>
@@ -124,10 +167,10 @@ export default function LearnExploreSection() {
         </View>
 
         {/* Duration badge */}
-        <View style={styles.durationBadge}>
+        {/* <View style={styles.durationBadge}>
           <Text style={styles.durationText}>{FEATURE_VIDEO.duration}</Text>
-        </View>
-      </TouchableOpacity>
+        </View> */}
+      </View>
 
       {/* ── Article Cards (horizontal scroll) ── */}
       <ScrollView

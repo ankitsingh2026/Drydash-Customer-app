@@ -8,11 +8,11 @@ import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
 import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
 import { catalogData } from "@/constants/catalog";
-import { useAuth } from "@/hooks/useAuth";
 import { getMeApi } from "@/features/auth/auth.api";
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { PickupRecord } from "@/features/pickups/pickup.types";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -20,10 +20,10 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  Dimensions,
-  Easing,
   AppState,
   AppStateStatus,
+  Dimensions,
+  Easing,
   Image,
   PanResponder,
   ScrollView,
@@ -138,7 +138,7 @@ const HERO_SLIDES = [
   },
   {
     key: "laundry-2",
-    tag: "PREMIUM",
+    tag: "Charges",
     title: "",
     subtitle: "",
     image: {
@@ -328,7 +328,7 @@ export default function Home() {
           setI((prev) => (prev + 1) % words.length);
         }
       }
-    }, 5);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [j, deleting, i, isFocused]);
@@ -690,8 +690,6 @@ export default function Home() {
       />
       <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
         <View
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
         >
           {/* ── SEARCH BAR ── */}
 
@@ -744,7 +742,7 @@ export default function Home() {
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity>
-                    <Ionicons name="mic-outline" size={18} color="#6B7280" />
+                    {/* <Ionicons name="mic-outline" size={18} color="#6B7280" /> */}
                   </TouchableOpacity>
                 )}
               </View>
@@ -1655,7 +1653,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#FFFFFF",
     letterSpacing: 1.5,
-    marginLeft: 20,
+    marginLeft: 30,
   },
   swipeDraggable: {
     width: 44,
