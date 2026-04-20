@@ -299,39 +299,28 @@ export default function Home() {
   }, [phoneCandidates]);
 
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
-
-  const [text, setText] = useState("");
-  const [i, setI] = useState(0);
-  const [j, setJ] = useState(0);
-  const [deleting, setDeleting] = useState(false);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const placeholderAnim = useRef(new Animated.Value(0)).current;
   const [isFocused, setIsFocused] = useState(false);
+  const PLACEHOLDER_LINE_HEIGHT = 20;
 
   useEffect(() => {
-    if (isFocused) return;
-
-    const word = words[i];
+    if (isFocused || searchQuery.length > 0) return;
 
     const timer = setTimeout(() => {
-      if (!deleting) {
-        setText(word.slice(0, j + 1));
-        setJ((prev) => prev + 1);
-
-        if (j + 1 === word.length) {
-          setDeleting(true);
-        }
-      } else {
-        setText(word.slice(0, j - 1));
-        setJ((prev) => prev - 1);
-
-        if (j - 1 === 0) {
-          setDeleting(false);
-          setI((prev) => (prev + 1) % words.length);
-        }
-      }
-    }, 200);
+      Animated.timing(placeholderAnim, {
+        toValue: -PLACEHOLDER_LINE_HEIGHT,
+        duration: 600,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        setPlaceholderIndex((prev) => (prev + 1) % words.length);
+        placeholderAnim.setValue(0);
+      });
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [j, deleting, i, isFocused]);
+  }, [placeholderIndex, isFocused, searchQuery, placeholderAnim]);
   useEffect(() => {
     if (!phoneCandidates.length) return;
     refreshPickups();
@@ -721,15 +710,20 @@ export default function Home() {
                   style={[styles.searchInput, { color: theme.text }]}
                 />
                 {searchQuery === "" && !isFocused && (
-                  <Text
-                    style={{
-                      position: "absolute",
-                      left: 36,
-                      color: "#4B5563",
-                    }}
-                  >
-                    {`Search "${text}"`}
-                  </Text>
+                  <View style={styles.placeholderTicker} pointerEvents="none">
+                    <Animated.View
+                      style={{
+                        transform: [{ translateY: placeholderAnim }],
+                      }}
+                    >
+                      <Text style={styles.placeholderText}>
+                        {`Search "${words[placeholderIndex]}"`}
+                      </Text>
+                      <Text style={styles.placeholderText}>
+                        {`Search "${words[(placeholderIndex + 1) % words.length]}"`}
+                      </Text>
+                    </Animated.View>
+                  </View>
                 )}
                 {searchQuery.length > 0 ? (
                   <TouchableOpacity
@@ -900,6 +894,7 @@ export default function Home() {
               <PickupStatusCard
                 pickup={latestPickup}
                 onPress={() => router.push("/(customer)/order-tracking")}
+                onActionComplete={refreshPickups}
               />
             </View>
           ) : hideDeliveredCard ? (
@@ -1383,6 +1378,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     paddingVertical: 0,
+  },
+  placeholderTicker: {
+    position: "absolute",
+    left: 36,
+    right: 46,
+    top: 14,
+    height: 18,
+    justifyContent: "flex-start",
+    overflow: "hidden",
+  },
+  placeholderText: {
+    color: "#4B5563",
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 18,
+    includeFontPadding: false,
   },
   swipeTrackFill: {
     position: "absolute",

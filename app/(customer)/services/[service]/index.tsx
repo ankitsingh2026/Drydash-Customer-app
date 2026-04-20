@@ -1,3 +1,6 @@
+import ProductServicePopup from "@/components/ProductServicePopup";
+import { catalogData } from "@/constants/catalog";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import {
@@ -24,9 +27,6 @@ import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
 import { useCart } from "../../../../context/CartContext";
 import { useTheme } from "../../../../context/ThemeContext";
-import { catalogData } from "@/constants/catalog";
-import { Ionicons } from "@expo/vector-icons";
-import ProductServicePopup from "@/components/ProductServicePopup";
 
 /* ---------- TABS ---------- */
 const TABS = [
@@ -710,7 +710,12 @@ export default function ServiceDetail() {
         renderItem={({ item }) => {
           const qty = cart.getQty(item.id);
           return (
-            <View
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedProduct(item);
+                setPopupVisible(true);
+              }}
+              activeOpacity={0.7}
               style={[
                 styles.row,
                 {
@@ -813,7 +818,7 @@ export default function ServiceDetail() {
                   </TouchableOpacity>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         }}
       />

@@ -5,7 +5,12 @@ import { SuccessModal } from "@/components/SuccessModal";
 import { useAddress } from "@/context/AddressContext";
 import { useCart } from "@/context/CartContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
-import { createOrderApi, saveAddressApi } from "@/features/orders/orders.api";
+import {
+  createOrderApi,
+  getOrdersApi,
+  saveAddressApi,
+} from "@/features/orders/orders.api";
+import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -106,6 +111,8 @@ export default function BookPickup() {
   // Service availability states
   const [isServiceAvailable, setIsServiceAvailable] = useState(true);
   const [checkingService, setCheckingService] = useState(true);
+  const [hasActiveBooking, setHasActiveBooking] = useState(false);
+  const [checkingActiveBooking, setCheckingActiveBooking] = useState(true);
 
   // Use Address Context
   const {
@@ -164,6 +171,19 @@ export default function BookPickup() {
   const { firstName, lastName } = user;
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
   const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
+  const phoneCandidates = React.useMemo(() => {
+    const digits = String(user?.user?.phone ?? user?.phone ?? "").replace(
+      /\D/g,
+      "",
+    );
+
+    if (!digits) return [] as string[];
+
+    const with91 = digits.startsWith("91") ? digits : `91${digits}`;
+    const without91 = digits.startsWith("91") ? digits.slice(2) : digits;
+
+    return Array.from(new Set([with91, without91, digits])).filter(Boolean);
+  }, [user?.phone, user?.user?.phone]);
 
   const [couponOpen, setCouponOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<
@@ -247,6 +267,90 @@ export default function BookPickup() {
   useEffect(() => {
     checkServiceForSelectedAddress();
   }, [selectedPickupAddressId, selectedAddress]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const isActivePickup = (pickup: any) => {
+      const status = String(pickup?.PickupStatus ?? "").toLowerCase();
+      return ![
+        "complete",
+        "completed",
+        "delivered",
+        "cancelled",
+        "canceled",
+      ].includes(status) && !pickup?.cancelledAt;
+    };
+
+    const isActiveOrder = (order: any) => {
+      const status = String(order?.status ?? "").trim().toLowerCase();
+      return ![
+        "delivered",
+        "complete",
+        "completed",
+        "cancelled",
+        "canceled",
+      ].includes(status);
+    };
+
+    const checkActiveBookings = async () => {
+      if (!phoneCandidates.length) {
+        if (isMounted) {
+          setHasActiveBooking(false);
+          setCheckingActiveBooking(false);
+        }
+        return;
+      }
+
+      if (isMounted) setCheckingActiveBooking(true);
+
+      try {
+        const [pickupResult, orderResult] = await Promise.all([
+          (async () => {
+            for (const candidate of phoneCandidates) {
+              try {
+                const res = await getCustomerPickups(candidate);
+                const pickups = Array.isArray(res?.pickups) ? res.pickups : [];
+                if (pickups.some(isActivePickup)) return true;
+              } catch {
+                // Try the next phone format.
+              }
+            }
+            return false;
+          })(),
+          (async () => {
+            for (const candidate of phoneCandidates) {
+              try {
+                const res = await getOrdersApi(candidate);
+                const orders = Array.isArray(res?.orders) ? res.orders : [];
+                if (orders.some(isActiveOrder)) return true;
+              } catch {
+                // Try the next phone format.
+              }
+            }
+            return false;
+          })(),
+        ]);
+
+        if (isMounted) {
+          setHasActiveBooking(Boolean(pickupResult || orderResult));
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.log("[book-pickup] active booking check failed", error);
+        }
+        if (isMounted) setHasActiveBooking(false);
+      } finally {
+        if (isMounted) setCheckingActiveBooking(false);
+      }
+    };
+
+    checkActiveBookings();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [phoneCandidates]);
 
   const checkServiceForSelectedAddress = async () => {
     try {
@@ -699,6 +803,10 @@ export default function BookPickup() {
       </View>
     );
   };
+
+  const bookingBlocked = confirmLoading || checkingActiveBooking || hasActiveBooking;
+  const bookingBlockedMessage =
+    "You already have an active pickup or order. You can create new pickup once your current order is delivered.";
 
   // Special Instructions Section Component
   const SpecialInstructionsSection = () => (
@@ -1288,6 +1396,17 @@ export default function BookPickup() {
           ]}
         >
 
+          {hasActiveBooking && (
+            <View style={s.bookingBlockedNotice}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color="#FFB86B"
+              />
+              <Text style={s.bookingBlockedText}>{bookingBlockedMessage}</Text>
+            </View>
+          )}
+
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, margin: 10 }}>
           
 
@@ -1297,14 +1416,16 @@ export default function BookPickup() {
                 {
                   flex: 1,
                   backgroundColor: theme.primary,
-                  opacity: confirmLoading ? 0.7 : 1,
+                  opacity: bookingBlocked ? 0.55 : 1,
                 },
               ]}
               onPress={confirmPickup}
-              disabled={confirmLoading}
+              disabled={bookingBlocked}
             >
               <Text style={s.confirmText}>
-                {confirmLoading
+                {checkingActiveBooking
+                  ? "Checking..."
+                  : confirmLoading
                   ? "Booking..."
                   : pickupType === "today"
                     ? "Confirm Booking"
@@ -2220,6 +2341,27 @@ const s = StyleSheet.create({
     color: "#4E7060",
     fontWeight: "700",
     letterSpacing: 0.5,
+  },
+
+  bookingBlockedNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+    marginHorizontal: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,184,107,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,184,107,0.25)",
+  },
+  bookingBlockedText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: "600",
+    color: "#FFCF9B",
   },
 
   confirmBtn: {

@@ -24,3 +24,15 @@ export const getCustomerPickups = async (phone: any, status?: any) => {
 
   return data;
 };
+
+export const cancelPickupApi = async (id: string) => {
+  const { data } = await oldApiClient.put(`/v1/rider/deletePickup/${id}`);
+  return data;
+};
+
+export const reschedulePickupApi = async (id: string, newDate: string) => {
+  const { data } = await oldApiClient.put(`/v1/rider/reschedulePickup/${id}`, {
+    newDate,
+  });
+  return data;
+};

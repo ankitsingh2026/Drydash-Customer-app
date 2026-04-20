@@ -1,20 +1,23 @@
+import { cancelPickupApi, reschedulePickupApi } from "@/features/pickups/pickup.api";
 import { PickupRecord } from "@/features/pickups/pickup.types";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
     Easing,
+    Modal,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import OrderStatusBadge from "./OrderStatusBadge";
-
+import CancelPickupConfirmModal from "./CancelPickupConfirmModal";
+import ReschedulePickupModal from "./ReschedulePickupModal";
 type PickupStatusCardProps = {
     pickup: PickupRecord;
     onPress?: () => void;
     onClose?: () => void;
+    onActionComplete?: () => void;
 };
 
 type CardVariant =
@@ -25,15 +28,6 @@ type CardVariant =
     | "delivery"
     | "completed"
     | "cancelled";
-
-type VariantConfig = {
-    variant: CardVariant;
-    label: string;
-    accent: string;
-    icon: React.ComponentProps<typeof Ionicons>["name"];
-    title: string;
-    subtitle?: string;
-};
 
 const ACCENT = "#29E6B0";
 const SURFACE = "#0D1F1C";
@@ -84,6 +78,40 @@ const formatTime = (dateString?: string) => {
     });
 };
 
+const isToday = (value?: string) => {
+    if (!value) return true;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return true;
+
+    const now = new Date();
+    return (
+        date.getFullYear() === now.getFullYear() &&
+        date.getMonth() === now.getMonth() &&
+        date.getDate() === now.getDate()
+    );
+};
+
+const getSlotEndLabel = (slot?: string) => {
+    if (!slot || slot === "NA") return "6:00 PM";
+    const parts = slot.split("-");
+    if (parts.length < 2) return slot;
+    return parts[1].trim();
+};
+
+const getScheduledTitle = (pickup: PickupRecord) => {
+    const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
+    const endLabel = getSlotEndLabel(pickup.slot);
+
+    if (isToday(scheduleDate)) {
+        return `Pickup today before ${endLabel}`;
+    }
+
+    const dateLabel = formatDate(scheduleDate);
+    return dateLabel
+        ? `Pickup on ${dateLabel} before ${endLabel}`
+        : `Pickup before ${endLabel}`;
+};
+
 const initials = (name?: string) => {
     const parts = (name || "").trim().split(/\s+/).filter(Boolean);
     if (!parts.length) return "DD";
@@ -113,366 +141,427 @@ const normalizeStatus = (pickup: PickupRecord): CardVariant => {
     return STATUS_ALIASES[key] ?? "scheduled";
 };
 
-const getVariantConfig = (pickup: PickupRecord): VariantConfig => {
-    const variant = normalizeStatus(pickup);
-    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "";
-    const pickupDate = formatDate(pickup.rescheduledDate || pickup.pickup_date);
-    const pickupTime = formatTime(pickup.rescheduledDate || pickup.pickup_date);
-
-    switch (variant) {
-        case "assigned":
-            return {
-                variant,
-                label: "Rider Assigned",
-                accent: ACCENT,
-                icon: "person-outline",
-                title: riderName
-                    ? `${riderName} is on the way to pick up.`
-                    : "Your rider is on the way to pick up.",
-                subtitle: pickupDate
-                    ? `${pickupDate}${pickupTime ? ` • ${pickupTime}` : ""}`
-                    : "We are preparing your pickup.",
-            };
-        case "processing":
-            return {
-                variant,
-                label: "Active Order",
-                accent: ACCENT,
-                icon: "time-outline",
-                title: "Processing your order",
-                subtitle:
-                    pickup.slot && pickup.slot !== "NA"
-                        ? `Slot: ${pickup.slot}`
-                        : "Your items are being prepared for the next step.",
-            };
-        case "paid":
-            return {
-                variant,
-                label: "Paid",
-                accent: ACCENT,
-                icon: "checkmark-circle-outline",
-                title: "Payment successful. Sit back and relax.",
-                subtitle: pickupDate
-                    ? `${pickupDate}${pickupTime ? ` • ${pickupTime}` : ""}`
-                    : "Your payment has been received.",
-            };
-        case "delivery":
-            return {
-                variant,
-                label: "Out For Delivery",
-                accent: ACCENT,
-                icon: "bicycle-outline",
-                title: riderName
-                    ? `${riderName} is on the way to deliver.`
-                    : "Your order is on the way to deliver.",
-                subtitle: pickup._id
-                    ? `Order #${pickup._id.slice(-6).toUpperCase()} • ${pickupDate || "Today"}`
-                    : "Your delivery is in progress.",
-            };
-        case "completed":
-            return {
-                variant,
-                label: "Order Completed",
-                accent: ACCENT,
-                icon: "checkmark-done-outline",
-                title: riderName ? `Delivered by ${riderName}` : "Delivered successfully",
-                subtitle:
-                    "Your order has been successfully delivered to your doorstep.",
-            };
-        case "cancelled":
-            return {
-                variant,
-                label: "Order Cancelled",
-                accent: "#EF4444",
-                icon: "close-circle-outline",
-                title: "This pickup was cancelled.",
-                subtitle: pickup.cancelNote || "You can book a new pickup anytime.",
-            };
-        case "scheduled":
-        default:
-            return {
-                variant: "scheduled",
-                label: pickup.isRescheduled ? "Rescheduled Pickup" : "Pickup Scheduled",
-                accent: ACCENT,
-                icon: "calendar-outline",
-                title: pickupDate
-                    ? `Pickup scheduled for ${pickupDate}`
-                    : "Pickup scheduled for today",
-                subtitle: pickupTime
-                    ? `Pickup time ${pickupTime}`
-                    : pickup.slot && pickup.slot !== "NA"
-                        ? pickup.slot
-                        : "We will assign a rider shortly.",
-            };
-    }
+const getOrderCode = (pickup: PickupRecord) => {
+    if (!pickup._id) return "";
+    const suffix = pickup._id.slice(-4).toUpperCase();
+    return `Order #DX-${suffix}`;
 };
 
-function CardShell({
-    badgeLabel,
-    badgeAccent,
-    badgeIcon,
-    title,
-    subtitle,
-    onClose,
-    children,
-}: {
-    badgeLabel: string;
-    badgeAccent: string;
-    badgeIcon: React.ComponentProps<typeof Ionicons>["name"];
-    title: string;
-    subtitle?: string;
-    onClose?: () => void;
-    children?: React.ReactNode;
-}) {
+function StatusPill({ label }: { label: string }) {
     return (
-        <View style={styles.card}>
-            <View style={[{ backgroundColor: badgeAccent }]} />
-            <View style={styles.inner}>
-                <View style={styles.topRow}>
-                    <OrderStatusBadge
-                        label={badgeLabel}
-                        accent={badgeAccent}
-                        icon={badgeIcon}
-                    />
-                    {onClose ? (
-                        <TouchableOpacity
-                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            onPress={onClose}
-                        >
-                            <Ionicons name="close" size={16} color={MUTED} />
-                        </TouchableOpacity>
-                    ) : null}
-                </View>
-
-                <Text style={styles.title}>{title}</Text>
-                {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-
-                {children}
-            </View>
+        <View style={styles.statusPill}>
+            <Ionicons name="ellipse" size={10} color={ACCENT} />
+            <Text style={styles.statusPillText}>{label}</Text>
         </View>
     );
 }
 
-function ActionButton({
+function TagPill({
     label,
     icon,
-    variant = "ghost",
-    onPress,
+    tone = "default",
 }: {
     label: string;
-    icon: React.ComponentProps<typeof Ionicons>["name"];
-    variant?: "ghost" | "solid" | "danger";
-    onPress?: () => void;
+    icon?: React.ComponentProps<typeof Ionicons>["name"];
+    tone?: "default" | "danger";
 }) {
-    const isDanger = variant === "danger";
-
     return (
-        <TouchableOpacity
-            activeOpacity={0.85}
-            onPress={onPress}
-            style={[
-                styles.actionButton,
-                variant === "solid" && styles.actionButtonSolid,
-                variant === "ghost" && styles.actionButtonGhost,
-                isDanger && styles.actionButtonDanger,
-            ]}
-        >
-            <Ionicons
-                name={icon}
-                size={14}
-                color={
-                    variant === "solid"
-                        ? "#000"
-                        : isDanger
-                            ? "#FF6B6B"
-                            : ACCENT
-                }
-            />
+        <View style={styles.tagPill}>
+            {icon ? (
+                <Ionicons
+                    name={icon}
+                    size={13}
+                    color={tone === "danger" ? "#FF9FA8" : "#A5F5D7"}
+                />
+            ) : null}
             <Text
                 style={[
-                    styles.actionText,
-                    variant === "solid" && styles.actionTextSolid,
-                    variant === "ghost" && styles.actionTextGhost,
-                    isDanger && styles.actionTextDanger,
+                    styles.tagPillText,
+                    tone === "danger" && styles.tagPillTextDanger,
                 ]}
             >
                 {label}
             </Text>
+        </View>
+    );
+}
+
+function ActionTagButton({
+    label,
+    icon,
+    onPress,
+    tone = "default",
+}: {
+    label: string;
+    icon?: React.ComponentProps<typeof Ionicons>["name"];
+    onPress: () => void;
+    tone?: "default" | "danger";
+}) {
+    return (
+        <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
+            <TagPill label={label} icon={icon} tone={tone} />
         </TouchableOpacity>
     );
 }
 
-function MetaRow({ pickup }: { pickup: PickupRecord }) {
+function IconPair() {
     return (
-        <View style={styles.metaRow}>
-            <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                    {initials(pickup.riderName || pickup.contactName || pickup.Name)}
-                </Text>
+        <View style={styles.iconPairWrap}>
+            <View style={styles.iconCircle}>
+                <Ionicons name="sparkles-outline" size={16} color="#8FD9BE" />
             </View>
-            <View style={{ flex: 1 }}>
-                <Text style={styles.metaTitle} numberOfLines={1}>
-                    {pickup.riderName || pickup.contactName || pickup.Name || "Drydash rider"}
+            <View style={[styles.iconCircle, styles.iconCircleOverlap]}>
+                <Ionicons name="shirt-outline" size={16} color="#8FD9BE" />
+            </View>
+        </View>
+    );
+}
+
+function ChatFab() {
+    return (
+        <TouchableOpacity style={styles.chatFab}>
+            <Ionicons name="chatbubble-ellipses" size={20} color="#003C31" />
+        </TouchableOpacity>
+    );
+}
+
+function RiderAvatar({ pickup }: { pickup: PickupRecord }) {
+    return (
+        <View style={styles.riderAvatar}>
+            <Text style={styles.riderAvatarText}>
+                {initials(pickup.riderName || pickup.contactName || pickup.Name)}
+            </Text>
+        </View>
+    );
+}
+
+function ScheduledPickupCard({
+    pickup,
+    onReschedule,
+    onCancel,
+}: {
+    pickup: PickupRecord;
+    onReschedule: () => void;
+    onCancel: () => void;
+}) {
+    const itemCount = pickup.items?.length ?? 0;
+    const scheduleTitle = getScheduledTitle(pickup);
+    const highlightTime = getSlotEndLabel(pickup.slot);
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <View style={styles.headerRowCompact}>
+                    <StatusPill label={pickup.isRescheduled ? "RESCHEDULED" : "PICKUP SCHEDULED"} />
+                    <View style={styles.rightStack}>
+                        <ActionTagButton
+                            label="Reschedule"
+                            icon="calendar-outline"
+                            onPress={onReschedule}
+                        />
+                        <ActionTagButton
+                            label="Cancel"
+                            icon="close-outline"
+                            tone="danger"
+                            onPress={onCancel}
+                        />
+                    </View>
+                </View>
+
+                <Text style={styles.mainLine}>
+                    {scheduleTitle.replace(highlightTime, "")}
+                    <Text style={styles.mainLineAccent}>{highlightTime}</Text>
                 </Text>
-                <Text style={styles.metaSubtitle} numberOfLines={1}>
-                    {pickup.Address || pickup.deliveryAddress || pickup.plantName || "Pickup details are being prepared."}
+
+                <View style={styles.infoLine}>
+                    <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
+                    <Text style={styles.infoLineText}>Add More Items</Text>
+                </View>
+
+                <View style={styles.bottomRowCompact}>
+                    <View style={styles.bottomLeftCompact}>
+                        <IconPair />
+                        <TagPill label={`${itemCount} ITEMS IN YOUR CART`} />
+                    </View>
+                    <ChatFab />
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
+    const itemCount = pickup.items?.length ?? 0;
+    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Your rider";
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <StatusPill label="RIDER ASSIGNED" />
+
+                <View style={styles.riderLine}>
+                    <RiderAvatar pickup={pickup} />
+                    <Text style={styles.softTitle}>{`${riderName} is on the way to pick up.`}</Text>
+                </View>
+
+                <View style={styles.infoLine}>
+                    <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
+                    <Text style={styles.infoLineText}>Add Items</Text>
+                </View>
+
+                <View style={styles.bottomRowCompact}>
+                    <View style={styles.bottomLeftCompact}>
+                        <IconPair />
+                        <TagPill label={`${itemCount} ITEMS IN YOUR CART`} />
+                    </View>
+                    <ChatFab />
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function ProcessingPickupCard({ pickup }: PickupStatusCardProps) {
+    const itemCount = pickup.items?.length ?? 0;
+    const orderCode = getOrderCode(pickup);
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <View style={styles.headerRowCompact}>
+                    <StatusPill label="ACTIVE ORDER" />
+                    {orderCode ? <Text style={styles.orderCodeText}>{orderCode}</Text> : null}
+                </View>
+
+                <Text style={styles.strongTitle}>Processing Your Order</Text>
+
+                <View style={styles.bottomLeftCompact}>
+                    <IconPair />
+                    <TagPill label={`${itemCount} Items Processing`} />
+                </View>
+
+                <View style={styles.payRow}>
+                    <TouchableOpacity style={styles.payNowBtn}>
+                        <Text style={styles.payNowText}>Pay Now</Text>
+                        <Ionicons name="arrow-forward" size={20} color="#00382D" />
+                    </TouchableOpacity>
+                    <Text style={styles.payHintText}>Pay now to choose delivery slot</Text>
+                </View>
+
+                <View style={styles.chatOnlyRow}>
+                    <ChatFab />
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function PaidPickupCard({
+    pickup,
+    onReschedule,
+}: {
+    pickup: PickupRecord;
+    onReschedule: () => void;
+}) {
+    const itemCount = pickup.items?.length ?? 0;
+    const orderCode = getOrderCode(pickup);
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <View style={styles.headerRowCompact}>
+                    <View style={styles.headerLeftGroup}>
+                        <StatusPill label="ACTIVE ORDER" />
+                        {orderCode ? <Text style={styles.orderCodeText}>{orderCode}</Text> : null}
+                    </View>
+                    <TagPill label="Paid" icon="checkmark-circle-outline" />
+                </View>
+
+                <View style={styles.headerRightSingle}>
+                    <ActionTagButton
+                        label="Reschedule Delivery"
+                        icon="calendar-outline"
+                        onPress={onReschedule}
+                    />
+                </View>
+
+                <Text style={styles.strongTitle}>Processing Your Order</Text>
+
+                <View style={styles.bottomRowCompact}>
+                    <View style={styles.bottomLeftCompact}>
+                        <IconPair />
+                        <TagPill label={`${itemCount} Items Processing`} />
+                    </View>
+                    <ChatFab />
+                </View>
+
+                <View style={styles.successRow}>
+                    <Ionicons name="bag-check-outline" size={24} color="#95F7D5" />
+                    <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
+    const orderCode = getOrderCode(pickup);
+    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Your rider";
+    const deliveryTime = formatTime(pickup.updatedAt || pickup.pickup_date);
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <View style={styles.headerRowCompact}>
+                    <StatusPill label="OUT FOR DELIVERY" />
+                    <TagPill label="Paid" icon="checkmark-circle-outline" />
+                </View>
+
+                <View style={styles.riderLine}>
+                    <RiderAvatar pickup={pickup} />
+                    <Text style={styles.softTitle}>{`${riderName} is on the way to Deliver.`}</Text>
+                </View>
+
+                <Text style={styles.deliveryMetaText}>
+                    {orderCode || "Order"}
+                    {` • ${isToday(pickup.pickup_date || pickup.updatedAt) ? "Today" : formatDate(pickup.pickup_date || pickup.updatedAt)}`}
+                    {deliveryTime ? `, ${deliveryTime}` : ""}
+                </Text>
+
+                <View style={styles.bottomRowCompact}>
+                    <View style={styles.bottomLeftCompact}>
+                        <IconPair />
+                        <TagPill label="Your Item Is On The Way" />
+                    </View>
+                    <ChatFab />
+                </View>
+            </View>
+        </View>
+    );
+}
+
+function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
+    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Rider";
+
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <View style={styles.headerRowCompact}>
+                    <StatusPill label="ORDER COMPLETED" />
+                    <View style={styles.completedRightTop}>
+                        <TagPill label="Paid" icon="checkmark-circle-outline" />
+                        {onClose ? (
+                            <TouchableOpacity onPress={onClose} style={styles.closeButtonCompact}>
+                                <Ionicons name="close" size={18} color="#2F5148" />
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
+                </View>
+
+                <View style={styles.bottomRowCompact}>
+                    <View style={styles.deliveryContentWrap}>
+                        <View style={styles.riderLine}>
+                            <RiderAvatar pickup={pickup} />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.strongTitle}>{`Delivered By ${riderName}`}</Text>
+                                <Text style={styles.softTitleSmall}>
+                                    Your order has been successfully delivered to your doorstep.
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+                    <ChatFab />
+                </View>
+
+                <View style={styles.compDivider} />
+
+                <Text style={styles.rateTitle}>Rate Your Experience</Text>
+                <View style={styles.reviewRowCompact}>
+                    <Ionicons name="star" size={34} color="#95F7D5" />
+                    <Ionicons name="star" size={34} color="#95F7D5" />
+                    <Ionicons name="star" size={34} color="#95F7D5" />
+                    <Ionicons name="star" size={34} color="#95F7D5" />
+                    <Ionicons name="star-outline" size={34} color="#325348" />
+                </View>
+                <TouchableOpacity style={styles.reviewLinkRow}>
+                    <Text style={styles.reviewLinkText}>Write a Review</Text>
+                    <Ionicons name="arrow-forward" size={28} color="#95F7D5" />
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+}
+
+function CancelledPickupCard({ pickup }: PickupStatusCardProps) {
+    return (
+        <View style={styles.card}>
+            <View style={styles.innerCompact}>
+                <StatusPill label="ORDER CANCELLED" />
+                <Text style={styles.strongTitle}>This pickup was cancelled.</Text>
+                <Text style={styles.softTitleSmall}>
+                    {pickup.cancelNote || "You can book a new pickup anytime."}
                 </Text>
             </View>
         </View>
     );
 }
 
-function ScheduledPickupCard({ pickup, onClose }: PickupStatusCardProps) {
+function PickupFeedbackModal({
+    visible,
+    title,
+    message,
+    tone,
+    onClose,
+}: {
+    visible: boolean;
+    title: string;
+    message: string;
+    tone: "success" | "error" | "info";
+    onClose: () => void;
+}) {
+    const isError = tone === "error";
+    const isSuccess = tone === "success";
+
     return (
-        <CardShell
-            badgeLabel={pickup.isRescheduled ? "Rescheduled Pickup" : "Pickup Scheduled"}
-            badgeAccent={ACCENT}
-            badgeIcon="calendar-outline"
-            title={formatDate(pickup.rescheduledDate || pickup.pickup_date) ? `Pickup scheduled for ${formatDate(pickup.rescheduledDate || pickup.pickup_date)}` : "Pickup scheduled for today"}
-            subtitle={pickup.slot && pickup.slot !== "NA" ? `Pickup time ${pickup.slot}` : "We will assign a rider shortly."}
-            onClose={onClose}
-        >
-            <View style={styles.detailRow}>
-                <Ionicons name="location-outline" size={13} color={MUTED} />
-                <Text style={styles.detailText} numberOfLines={1}>
-                    {pickup.Address || pickup.deliveryAddress || "Pickup address will appear here."}
-                </Text>
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+            <View style={styles.feedbackOverlay}>
+                <View style={styles.feedbackSheet}>
+                    <View style={styles.feedbackHeaderRow}>
+                        <View style={styles.feedbackTitleWrap}>
+                            <Ionicons
+                                name={
+                                    isError
+                                        ? "close-circle-outline"
+                                        : isSuccess
+                                            ? "checkmark-circle-outline"
+                                            : "information-circle-outline"
+                                }
+                                size={18}
+                                color={isError ? "#FF9FA8" : isSuccess ? "#95F7D5" : "#9CCFC0"}
+                            />
+                            <Text
+                                style={[
+                                    styles.feedbackTitle,
+                                    isError && styles.feedbackTitleError,
+                                    isSuccess && styles.feedbackTitleSuccess,
+                                ]}
+                            >
+                                {title}
+                            </Text>
+                        </View>
+                        <TouchableOpacity onPress={onClose} style={styles.feedbackCloseBtn}>
+                            <Ionicons name="close" size={16} color="#7A9B91" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.feedbackMessage}>{message}</Text>
+
+                    <TouchableOpacity style={styles.feedbackActionBtn} onPress={onClose}>
+                        <Text style={styles.feedbackActionText}>Okay</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
-
-            <View style={[styles.buttonRow, {}]}>
-                <ActionButton label="Reschedule" icon="calendar-outline" />
-                <ActionButton label="Cancel" icon="close-circle-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function AssignedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Rider Assigned"
-            badgeAccent={ACCENT}
-            badgeIcon="person-outline"
-            title={`${pickup.riderName || pickup.contactName || pickup.Name || "Your rider"} is on the way to pick up.`}
-            // subtitle={pickup.slot && pickup.slot !== "NA" ? pickup.slot : "Your pickup is confirmed and queued for collection."}
-            onClose={onClose}
-        >
-            <MetaRow pickup={pickup} />
-
-            <View style={styles.buttonRow}>
-                <ActionButton label="Add Items" icon="add-outline" variant="solid" />
-                <ActionButton label="Chat" icon="chatbubble-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function ProcessingPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Active Order"
-            badgeAccent={ACCENT}
-            badgeIcon="time-outline"
-            title="Processing your order"
-            subtitle={pickup.slot && pickup.slot !== "NA" ? `Slot: ${pickup.slot}` : "Your items are being processed."}
-            onClose={onClose}
-        >
-            <View style={styles.detailRow}>
-                <Ionicons name="shirt-outline" size={13} color={MUTED} />
-                <Text style={styles.detailText} numberOfLines={1}>
-                    {`${pickup.items?.length ?? 0} items in progress`}
-                </Text>
-            </View>
-
-            <View style={styles.buttonRow}>
-                <ActionButton label="Pay Now" icon="arrow-forward" variant="solid" />
-                <ActionButton label="Track" icon="navigate-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function PaidPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Paid"
-            badgeAccent={ACCENT}
-            badgeIcon="checkmark-circle-outline"
-            title="Payment successful. Sit back and relax."
-            subtitle={formatDate(pickup.updatedAt || pickup.createdAt) ? `${formatDate(pickup.updatedAt || pickup.createdAt)} • ${formatTime(pickup.updatedAt || pickup.createdAt)}` : "Your payment has been received."}
-            onClose={onClose}
-        >
-            <MetaRow pickup={pickup} />
-
-            <View style={styles.buttonRow}>
-                <ActionButton label="Reschedule Delivery" icon="calendar-outline" />
-                <ActionButton label="Chat" icon="chatbubble-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function DeliveryPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Out For Delivery"
-            badgeAccent={ACCENT}
-            badgeIcon="bicycle-outline"
-            title={`${pickup.riderName || pickup.contactName || pickup.Name || "Your rider"} is on the way to deliver.`}
-            subtitle={pickup._id ? `Order #${pickup._id.slice(-6).toUpperCase()} • ${formatDate(pickup.pickup_date || pickup.updatedAt) || "Today"}` : "Your delivery is in transit."}
-            onClose={onClose}
-        >
-            <MetaRow pickup={pickup} />
-
-            <View style={styles.buttonRow}>
-                <ActionButton label="Track" icon="navigate-outline" variant="solid" />
-                <ActionButton label="Chat Rider" icon="chatbubble-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Order Completed"
-            badgeAccent={ACCENT}
-            badgeIcon="checkmark-done-outline"
-            title={pickup.riderName ? `Delivered by ${pickup.riderName}` : "Delivered successfully"}
-            subtitle="Your order has been successfully delivered to your doorstep."
-            onClose={onClose}
-        >
-            <View style={styles.reviewRow}>
-                <Ionicons name="star" size={18} color={ACCENT} />
-                <Ionicons name="star" size={18} color={ACCENT} />
-                <Ionicons name="star" size={18} color={ACCENT} />
-                <Ionicons name="star" size={18} color={ACCENT} />
-                <Ionicons name="star" size={18} color="#31423D" />
-            </View>
-
-            <View style={styles.buttonRow}>
-                <ActionButton label="Write a Review" icon="create-outline" variant="solid" />
-                <ActionButton label="View Receipt" icon="receipt-outline" />
-            </View>
-        </CardShell>
-    );
-}
-
-function CancelledPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    return (
-        <CardShell
-            badgeLabel="Order Cancelled"
-            badgeAccent="#EF4444"
-            badgeIcon="close-circle-outline"
-            title="This pickup was cancelled."
-            subtitle={pickup.cancelNote || "You can book a new pickup anytime."}
-            onClose={onClose}
-        >
-            <View style={styles.buttonRow}>
-                <ActionButton label="Book Again" icon="add-outline" variant="solid" />
-                <ActionButton label="Support" icon="help-circle-outline" />
-            </View>
-        </CardShell>
+        </Modal>
     );
 }
 
@@ -480,10 +569,84 @@ export default function PickupStatusCard({
     pickup,
     onPress,
     onClose,
+    onActionComplete,
 }: PickupStatusCardProps) {
-    const config = useMemo(() => getVariantConfig(pickup), [pickup]);
+    const variant = useMemo(() => normalizeStatus(pickup), [pickup]);
     const opacityAnim = useRef(new Animated.Value(0)).current;
     const translateAnim = useRef(new Animated.Value(14)).current;
+    const [cancelModalVisible, setCancelModalVisible] = useState(false);
+    const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [feedbackVisible, setFeedbackVisible] = useState(false);
+    const [feedbackTitle, setFeedbackTitle] = useState("");
+    const [feedbackMessage, setFeedbackMessage] = useState("");
+    const [feedbackTone, setFeedbackTone] = useState<"success" | "error" | "info">("info");
+
+    const showFeedback = (
+        title: string,
+        message: string,
+        tone: "success" | "error" | "info" = "info",
+    ) => {
+        setFeedbackTitle(title);
+        setFeedbackMessage(message);
+        setFeedbackTone(tone);
+        setFeedbackVisible(true);
+    };
+
+    const openCancelModal = () => setCancelModalVisible(true);
+    const openRescheduleModal = () => setRescheduleModalVisible(true);
+
+    const closeCancelModal = () => {
+        if (actionLoading) return;
+        setCancelModalVisible(false);
+    };
+
+    const closeRescheduleModal = () => {
+        if (actionLoading) return;
+        setRescheduleModalVisible(false);
+    };
+
+    const closeFeedbackModal = () => {
+        setFeedbackVisible(false);
+    };
+
+    const handleCancelPickup = async () => {
+        if (!pickup?._id) {
+            showFeedback("Missing pickup", "Unable to cancel this pickup right now.", "error");
+            return;
+        }
+
+        try {
+            setActionLoading(true);
+            await cancelPickupApi(pickup._id);
+            setCancelModalVisible(false);
+            showFeedback("Pickup cancelled", "Your pickup has been cancelled successfully.", "success");
+            onActionComplete?.();
+        } catch (error: any) {
+            showFeedback("Cancel failed", error?.message || "Unable to cancel pickup.", "error");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleReschedulePickup = async (newDate: string) => {
+        if (!pickup?._id) {
+            showFeedback("Missing pickup", "Unable to reschedule this pickup right now.", "error");
+            return;
+        }
+
+        try {
+            setActionLoading(true);
+            await reschedulePickupApi(pickup._id, newDate);
+            setRescheduleModalVisible(false);
+            showFeedback("Pickup rescheduled", "Your pickup date has been updated.", "success");
+            onActionComplete?.();
+        } catch (error: any) {
+            showFeedback("Reschedule failed", error?.message || "Unable to reschedule pickup.", "error");
+        } finally {
+            setActionLoading(false);
+        }
+    };
 
     useEffect(() => {
         Animated.parallel([
@@ -503,13 +666,18 @@ export default function PickupStatusCard({
     }, [opacityAnim, translateAnim, pickup._id]);
 
     const card = (() => {
-        switch (config.variant) {
+        switch (variant) {
             case "assigned":
                 return <AssignedPickupCard pickup={pickup} onClose={onClose} />;
             case "processing":
                 return <ProcessingPickupCard pickup={pickup} onClose={onClose} />;
             case "paid":
-                return <PaidPickupCard pickup={pickup} onClose={onClose} />;
+                return (
+                    <PaidPickupCard
+                        pickup={pickup}
+                        onReschedule={openRescheduleModal}
+                    />
+                );
             case "delivery":
                 return <DeliveryPickupCard pickup={pickup} onClose={onClose} />;
             case "completed":
@@ -518,7 +686,13 @@ export default function PickupStatusCard({
                 return <CancelledPickupCard pickup={pickup} onClose={onClose} />;
             case "scheduled":
             default:
-                return <ScheduledPickupCard pickup={pickup} onClose={onClose} />;
+                return (
+                    <ScheduledPickupCard
+                        pickup={pickup}
+                        onReschedule={openRescheduleModal}
+                        onCancel={openCancelModal}
+                    />
+                );
         }
     })();
 
@@ -530,151 +704,370 @@ export default function PickupStatusCard({
         </Animated.View>
     );
 
-    if (!onPress) {
-        return content;
-    }
-
-    return (
+    const wrappedContent = onPress ? (
         <TouchableOpacity activeOpacity={0.92} onPress={onPress}>
             {content}
         </TouchableOpacity>
+    ) : (
+        content
+    );
+
+    return (
+        <>
+            {wrappedContent}
+            <CancelPickupConfirmModal
+                visible={cancelModalVisible}
+                loading={actionLoading}
+                onClose={closeCancelModal}
+                onConfirm={handleCancelPickup}
+            />
+            <ReschedulePickupModal
+                visible={rescheduleModalVisible}
+                loading={actionLoading}
+                initialDate={pickup.rescheduledDate || pickup.pickup_date}
+                onClose={closeRescheduleModal}
+                onConfirm={handleReschedulePickup}
+            />
+            <PickupFeedbackModal
+                visible={feedbackVisible}
+                title={feedbackTitle}
+                message={feedbackMessage}
+                tone={feedbackTone}
+                onClose={closeFeedbackModal}
+            />
+        </>
     );
 }
 
 const styles = StyleSheet.create({
     card: {
         backgroundColor: SURFACE,
-        borderRadius: 20,
+        borderRadius: 18,
         borderWidth: 1,
         borderColor: BORDER,
         overflow: "hidden",
         shadowColor: "#000",
-        shadowOpacity: 0.22,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 5 },
         elevation: 4,
     },
-
-    inner: {
-        padding: 24,
+    innerCompact: {
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         gap: 10,
     },
-    topRow: {
+    headerRowCompact: {
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
-        gap: 12,
-    },
-    title: {
-        color: "#FFFFFF",
-        fontSize: 18,
-        fontWeight: "800",
-        lineHeight: 24,
-    },
-    subtitle: {
-        color: MUTED,
-        fontSize: 14,
-        fontWeight: "500",
-        lineHeight: 17,
-    },
-    metaRow: {
-        flexDirection: "row",
         alignItems: "center",
-        gap: 10,
+        gap: 8,
     },
-    avatar: {
-        width: 26,
-        height: 26,
-        borderRadius: 18,
-        backgroundColor: "#071A17",
-        borderWidth: 1,
-        borderColor: BORDER,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    avatarText: {
-        color: ACCENT,
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    metaTitle: {
-        color: "#FFFFFF",
-        fontSize: 14,
-        fontWeight: "700",
-    },
-    metaSubtitle: {
-        color: MUTED,
-        fontSize: 11,
-        marginTop: 2,
-    },
-    detailRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-    },
-    detailText: {
-        color: "#A7B8B2",
-        fontSize: 12,
-        fontWeight: "500",
-        flex: 1,
-    },
-    buttonRow: {
-        flexDirection: "row",
-        gap: 10,
-        flexWrap: "wrap",
-    },
-    actionButton: {
-        flex: 1,
-        height: 42,
-        borderRadius: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-    },
-
-    reviewRow: {
+    headerLeftGroup: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
     },
-
-
-    actionButtonSolid: {
-        backgroundColor: ACCENT,
-        shadowColor: ACCENT,
-        shadowOpacity: 0.4,
-        shadowRadius: 8,
-        elevation: 4,
+    headerRightSingle: {
+        alignItems: "flex-end",
+        marginTop: -4,
     },
-
-    actionButtonGhost: {
-        backgroundColor: "#071A17",
+    rightStack: {
+        alignItems: "flex-end",
+        gap: 6,
+    },
+    statusPill: {
+        minHeight: 34,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: "#1F4E42",
+        backgroundColor: "#103126",
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    statusPillText: {
+        color: "#B2F8DC",
+        fontSize: 9.5,
+        letterSpacing: 1,
+        fontWeight: "800",
+    },
+    tagPill: {
+        minHeight: 25,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#2A715D",
+        backgroundColor: "#12372D",
+        paddingHorizontal: 12,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+    },
+    tagPillText: {
+        color: "#9BF0CF",
+        fontSize: 11,
+        fontWeight: "800",
+        letterSpacing: 0.5,
+    },
+    tagPillTextDanger: {
+        color: "#FF9FA8",
+    },
+    orderCodeText: {
+        color: "#9AB7AE",
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    mainLine: {
+        color: "#E9F8F3",
+        fontSize: 17,
+        lineHeight: 22,
+        fontWeight: "500",
+    },
+    mainLineAccent: {
+        color: ACCENT,
+        fontWeight: "800",
+    },
+    strongTitle: {
+        color: "#D4ECE5",
+        fontSize: 17,
+        lineHeight: 22,
+        fontWeight: "800",
+    },
+    softTitle: {
+        color: "#82BDAE",
+        fontSize: 15,
+        lineHeight: 20,
+        flex: 1,
+    },
+    softTitleSmall: {
+        color: "#95B6AD",
+        fontSize: 12.5,
+        lineHeight: 18,
+    },
+    infoLine: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    infoLineText: {
+        color: "#86DCC0",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    riderLine: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    riderAvatar: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: "#0A1D18",
         borderWidth: 1,
         borderColor: BORDER,
+        alignItems: "center",
+        justifyContent: "center",
     },
-
-    actionButtonDanger: {
-        backgroundColor: "rgba(255,107,107,0.08)",
-        borderWidth: 1,
-        borderColor: "rgba(255,107,107,0.3)",
-    },
-
-    actionText: {
-        fontSize: 13,
+    riderAvatarText: {
+        color: ACCENT,
+        fontSize: 12,
         fontWeight: "700",
     },
-
-    actionTextSolid: {
-        color: "#000",
+    bottomRowCompact: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
     },
-
-    actionTextGhost: {
-        color: ACCENT,
+    bottomLeftCompact: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        flex: 1,
     },
-
-    actionTextDanger: {
-        color: "#FF6B6B",
+    iconPairWrap: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginRight: 2,
+    },
+    iconCircle: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        borderWidth: 1,
+        borderColor: "#1F4E42",
+        backgroundColor: "#102E27",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    iconCircleOverlap: {
+        marginLeft: -8,
+    },
+    chatFab: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        backgroundColor: ACCENT,
+        alignItems: "center",
+        justifyContent: "center",
+        marginLeft: 10,
+    },
+    payRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    payNowBtn: {
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: ACCENT,
+        paddingHorizontal: 16,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    payNowText: {
+        color: "#00382D",
+        fontSize: 15,
+        fontWeight: "800",
+    },
+    payHintText: {
+        color: "#5B786F",
+        fontSize: 10.5,
+        flex: 1,
+    },
+    chatOnlyRow: {
+        alignItems: "flex-end",
+        marginTop: -2,
+    },
+    successRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 4,
+    },
+    successText: {
+        color: "#8AE4C4",
+        fontSize: 13,
+        fontWeight: "500",
+    },
+    deliveryMetaText: {
+        color: "#A9C3BB",
+        fontSize: 12,
+        fontWeight: "500",
+    },
+    deliveryContentWrap: {
+        flex: 1,
+        paddingRight: 8,
+    },
+    completedRightTop: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    closeButtonCompact: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    compDivider: {
+        height: 1,
+        backgroundColor: "#133A31",
+        marginTop: 2,
+    },
+    rateTitle: {
+        color: "#A9C3BB",
+        fontSize: 12,
+        fontWeight: "700",
+    },
+    reviewRowCompact: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    reviewLinkRow: {
+        marginTop: -2,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        alignSelf: "flex-start",
+    },
+    reviewLinkText: {
+        color: "#95F7D5",
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    feedbackOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.55)",
+        justifyContent: "center",
+        alignItems: "center",
+        paddingHorizontal: 20,
+    },
+    feedbackSheet: {
+        width: "100%",
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#1A3330",
+        backgroundColor: "#0D1F1C",
+        padding: 16,
+        gap: 10,
+    },
+    feedbackHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+    },
+    feedbackTitleWrap: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        flex: 1,
+    },
+    feedbackTitle: {
+        color: "#CDECE2",
+        fontSize: 16,
+        fontWeight: "800",
+    },
+    feedbackTitleError: {
+        color: "#FFB1B7",
+    },
+    feedbackTitleSuccess: {
+        color: "#95F7D5",
+    },
+    feedbackCloseBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#123329",
+        borderWidth: 1,
+        borderColor: "#23453E",
+    },
+    feedbackMessage: {
+        color: "#94B8AD",
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    feedbackActionBtn: {
+        height: 40,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "#2A715D",
+        backgroundColor: "#29E6B0",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 2,
+    },
+    feedbackActionText: {
+        color: "#00382D",
+        fontSize: 13,
+        fontWeight: "800",
     },
 });
 

@@ -591,10 +591,10 @@ const AppLoader = ({ onFinish }: { onFinish?: () => void }) => {
       </Animated.View>
 
       {/* Text */}
-      {/* <Animated.View style={{ opacity }}>
-        <Text style={styles.mainText}>{item.text}</Text>
-        <Text style={styles.subText}>{item.subtext}</Text>
-      </Animated.View> */}
+      <View >
+        <Text style={styles.mainText}>Restored by morning</Text>
+        {/* <Text style={styles.subText}>{item.subtext}</Text> */}
+      </View>
 
       {/* Brand */}
       <View style={styles.brandRow}>
