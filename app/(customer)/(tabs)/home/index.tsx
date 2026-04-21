@@ -7,8 +7,8 @@ import { TabBar } from "@/components/layout/TabBar";
 import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
 import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
-import { catalogData } from "@/constants/catalog";
 import { getMeApi } from "@/features/auth/auth.api";
+import { getAllSearchedActiveItems } from "@/features/catalog/catalog.api";
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { PickupRecord } from "@/features/pickups/pickup.types";
@@ -38,6 +38,7 @@ import {
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";
+
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
@@ -51,6 +52,29 @@ type HomeOrder = {
   items?: Array<unknown>;
   createdAt?: string;
   updatedAt?: string;
+};
+
+// Type for API search result items
+type SearchResultItem = {
+  _id: string;
+  label: string;
+  price: number;
+  displayPrice: string;
+  unit: string;
+  type: string;
+  mainHeading: string;
+  mainDescription: string;
+  images: Array<{ url: string }>;
+  process: Array<{
+    step: number;
+    heading: string;
+    description: string;
+  }>;
+  category: {
+    _id: string;
+    label: string;
+    slug: string;
+  };
 };
 
 const QUICK_SERVICES = [
@@ -81,7 +105,7 @@ const QUICK_SERVICES = [
     slug: "onsite",
     label: "On-Site",
     subtitle: "At-home service",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg", // ✅ FIXED
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg",
   },
   {
     key: "carwash",
@@ -98,6 +122,7 @@ const QUICK_SERVICES = [
     icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/express.svg",
   },
 ];
+
 const HERO_SLIDES = [
   {
     key: "shoe-1",
@@ -146,7 +171,6 @@ const HERO_SLIDES = [
   },
 ];
 
-// ─── Active Order Status Card ──────────────────────────────────────────────
 export default function Home() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -168,7 +192,14 @@ export default function Home() {
   const [pickups, setPickups] = useState<PickupRecord[]>([]);
   const [orders, setOrders] = useState<HomeOrder[]>([]);
   const [pickupLoading, setPickupLoading] = useState(false);
-  const [dismissedOrderKey, setDismissedOrderKey] = useState<string | null>(null);
+  const [dismissedOrderKey, setDismissedOrderKey] = useState<string | null>(
+    null,
+  );
+
+  // Search states
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -191,6 +222,82 @@ export default function Home() {
     () => buildPhoneCandidates(customerPhone),
     [customerPhone],
   );
+
+  // Debounced search function
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await getAllSearchedActiveItems(query);
+      if (response?.data?.data && Array.isArray(response.data.data)) {
+        setSearchResults(response.data.data);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // Handle search input with debounce
+  const handleSearchChange = (text: string) => {
+    setSearchQuery(text);
+    setShowSearchResults(text.length > 0);
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Debounce search to avoid too many API calls
+    if (text.length > 0) {
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearch(text);
+      }, 500);
+    } else {
+      setSearchResults([]);
+    }
+  };
+
+  // Transform API search result to match ProductServicePopup format
+  const transformSearchResult = (item: SearchResultItem) => {
+    const categoryMap: Record<string, string> = {
+      dryclean: "DryClean",
+      laundry: "Laundry",
+      shoe: "Shoe Spa",
+    };
+
+    const categoryLabel =
+      item.category?.label || categoryMap[item.type] || item.type;
+
+    return {
+      id: item._id,
+      title: item.label,
+      price: item.price,
+      category: categoryLabel,
+      image: item.images?.[0]?.url || "",
+      description: item.mainDescription,
+      process: item.process,
+      displayPrice: item.displayPrice,
+      unit: item.unit,
+    };
+  };
+
+  const handleProductPress = (item: SearchResultItem) => {
+    const transformedProduct = transformSearchResult(item);
+    setSelectedProduct(transformedProduct);
+    setPopupVisible(true);
+    setShowSearchResults(false);
+    setSearchQuery("");
+    setSearchResults([]);
+  };
 
   const refreshPickups = useCallback(async () => {
     if (!phoneCandidates.length) {
@@ -253,7 +360,9 @@ export default function Home() {
           usedPhone = candidate;
           try {
             const res = await getOrdersApi(candidate);
-            const candidateOrders = Array.isArray(res?.orders) ? res.orders : [];
+            const candidateOrders = Array.isArray(res?.orders)
+              ? res.orders
+              : [];
             if (candidateOrders.length > 0) {
               fetchedOrders = candidateOrders;
               break;
@@ -296,7 +405,10 @@ export default function Home() {
 
       setPickups(fetchedPickups);
       setOrders(fetchedOrders);
-      console.log("Fetched pickups and orders====>", { fetchedPickups, fetchedOrders });
+      console.log("Fetched pickups and orders====>", {
+        fetchedPickups,
+        fetchedOrders,
+      });
 
       if (__DEV__) {
         const latest = fetchedPickups[0] ?? null;
@@ -345,6 +457,7 @@ export default function Home() {
 
     return () => clearTimeout(timer);
   }, [placeholderIndex, isFocused, searchQuery, placeholderAnim]);
+
   useEffect(() => {
     if (!phoneCandidates.length) return;
     refreshPickups();
@@ -365,13 +478,15 @@ export default function Home() {
 
     const activePickup = sorted.find((pickup) => {
       const status = String(pickup.PickupStatus ?? "").toLowerCase();
-      return ![
-        "complete",
-        "completed",
-        "delivered",
-        "cancelled",
-        "canceled",
-      ].includes(status) && !pickup.cancelledAt;
+      return (
+        ![
+          "complete",
+          "completed",
+          "delivered",
+          "cancelled",
+          "canceled",
+        ].includes(status) && !pickup.cancelledAt
+      );
     });
 
     return activePickup ?? null;
@@ -380,7 +495,9 @@ export default function Home() {
   const latestPickupKey = latestPickup?._id || null;
 
   const hasDeliveredLatestOrder =
-    String(orders?.[0]?.status ?? "").trim().toLowerCase() === "delivered";
+    String(orders?.[0]?.status ?? "")
+      .trim()
+      .toLowerCase() === "delivered";
 
   useEffect(() => {
     if (!dismissedOrderKey) return;
@@ -392,39 +509,41 @@ export default function Home() {
 
   const latestOrder = useMemo(() => {
     const sorted = [...orders].sort((left, right) => {
-      const leftTime = new Date(left.updatedAt || left.createdAt || 0).getTime();
-      const rightTime = new Date(right.updatedAt || right.createdAt || 0).getTime();
+      const leftTime = new Date(
+        left.updatedAt || left.createdAt || 0,
+      ).getTime();
+      const rightTime = new Date(
+        right.updatedAt || right.createdAt || 0,
+      ).getTime();
       return rightTime - leftTime;
     });
 
     return sorted[0] ?? null;
   }, [orders]);
 
-  const latestOrderKey =
-    latestOrder?._id || latestOrder?.order_id || null;
+  const latestOrderKey = latestOrder?._id || latestOrder?.order_id || null;
   const latestOrderStatus = String(latestOrder?.status ?? "")
     .trim()
     .toLowerCase();
   const isDeliveredOrder = latestOrderStatus === "delivered";
   const hideDeliveredCard =
     isDeliveredOrder && dismissedOrderKey === latestOrderKey;
-  const allProducts = Object.values(catalogData).flat();
 
-  const filteredProducts = allProducts.filter((item) =>
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
-  const handleProductPress = (product: any) => {
-    setSelectedProduct(product);
-    setPopupVisible(true);
-    setShowSearchResults(false);
-    setSearchQuery(""); // Clear search after selection
-  };
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // ─── Constants ────────────────────────────────────────────────────────────────
   const THUMB_SIZE = 44;
   const PADDING = 4;
-  const swipeContainerWidth = width - 32; // matches pickupCard marginHorizontal
-  const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8; // true travel range
-  const SWIPE_THRESHOLD = MAX_DRAG * 0.5; // trigger at 60%
+  const swipeContainerWidth = width - 32;
+  const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8;
+  const SWIPE_THRESHOLD = MAX_DRAG * 0.5;
 
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
@@ -503,11 +622,10 @@ export default function Home() {
   }, []);
 
   // ─── Two animated values: native for thumb, JS for fill ───────────────────────
-  const dragXNative = useRef(new Animated.Value(0)).current; // thumb (native thread ✅)
-  const dragXJS = useRef(new Animated.Value(0)).current; // fill track (JS thread)
-  const dragXValue = useRef(0); // plain ref, always accurate
+  const dragXNative = useRef(new Animated.Value(0)).current;
+  const dragXJS = useRef(new Animated.Value(0)).current;
+  const dragXValue = useRef(0);
 
-  // Derived: fill track width (JS driver — width can't use native)
   const trackFillWidth = dragXJS.interpolate({
     inputRange: [0, MAX_DRAG],
     outputRange: [THUMB_SIZE + PADDING * 2, swipeContainerWidth - 8],
@@ -520,7 +638,6 @@ export default function Home() {
     extrapolate: "clamp",
   });
 
-  // Derived: thumb + text (native driver ✅ — smooth!)
   const thumbScale = dragXNative.interpolate({
     inputRange: [0, 10, SWIPE_THRESHOLD],
     outputRange: [1, 1.06, 1.12],
@@ -545,11 +662,12 @@ export default function Home() {
     dragXJS.setValue(clamped);
     dragXValue.current = clamped;
   };
+
   const resetDrag = useCallback(() => {
     Animated.parallel([
       Animated.spring(dragXNative, {
         toValue: 0,
-        useNativeDriver: true, // ✅ smooth spring
+        useNativeDriver: true,
         damping: 20,
         stiffness: 50,
         mass: 0.5,
@@ -566,7 +684,6 @@ export default function Home() {
     });
   }, []);
 
-  // ─── Complete swipe (snap to end → navigate) ──────────────────────────────────
   const completeSwipe = useCallback(() => {
     Animated.parallel([
       Animated.timing(dragXNative, {
@@ -587,7 +704,6 @@ export default function Home() {
     });
   }, [resetDrag]);
 
-  // Keep refs fresh (no stale closures in PanResponder)
   const completeSwipeRef = useRef(completeSwipe);
   const resetDragRef = useRef(resetDrag);
   useEffect(() => {
@@ -595,7 +711,6 @@ export default function Home() {
     resetDragRef.current = resetDrag;
   }, [completeSwipe, resetDrag]);
 
-  // ─── Tap fallback ─────────────────────────────────────────────────────────────
   const onPressBook = () => {
     const animate = (val: Animated.Value, useNative: boolean) =>
       Animated.timing(val, {
@@ -611,10 +726,8 @@ export default function Home() {
     ]).start(() => completeSwipeRef.current());
   };
 
-  // ─── PanResponder ─────────────────────────────────────────────────────────────
   const panResponder = useRef(
     PanResponder.create({
-      // Capture horizontal moves before ScrollView sees them
       onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
         Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
       onStartShouldSetPanResponder: () => true,
@@ -627,14 +740,11 @@ export default function Home() {
       },
 
       onPanResponderMove: (_, { dx }) => {
-        // dx is relative to gesture start, add to position at grant time
-        // But we reset to 0 on grant so dx IS the delta from start position
         setDrag(dx);
       },
 
       onPanResponderRelease: (_, { dx, vx }) => {
         const current = dragXValue.current;
-        // Also trigger if velocity is high (quick flick)
         if (current >= SWIPE_THRESHOLD || vx > 0.8) {
           completeSwipeRef.current();
         } else {
@@ -647,7 +757,7 @@ export default function Home() {
       },
     }),
   ).current;
-  // ─── useFocusEffect: always reset on return ───────────────────────────────────
+
   useFocusEffect(
     useCallback(() => {
       dragXJS.setValue(0);
@@ -660,7 +770,7 @@ export default function Home() {
 
   if (loading) return <AppLoader />;
 
-  const PRIMARY = theme.primary; // teal/green
+  const PRIMARY = theme.primary;
 
   return (
     <SafeAreaProvider>
@@ -678,10 +788,8 @@ export default function Home() {
         translucent={false}
       />
       <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
-        <View
-        >
+        <View>
           {/* ── SEARCH BAR ── */}
-
           <View style={{ position: "relative", zIndex: 1000 }}>
             <Animated.View
               style={[styles.searchBarWrap, { opacity: fadeAnim }]}
@@ -700,12 +808,9 @@ export default function Home() {
                 />
                 <TextInput
                   value={searchQuery}
-                  onChangeText={(text) => {
-                    setSearchQuery(text);
-                    setShowSearchResults(text.length > 0);
-                  }}
-                  onFocus={() => setIsFocused(true)} // ✅ stop animation
-                  onBlur={() => setIsFocused(false)} // ✅ resume animation
+                  onChangeText={handleSearchChange}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
                   placeholder=""
                   style={[styles.searchInput, { color: theme.text }]}
                 />
@@ -730,6 +835,7 @@ export default function Home() {
                     onPress={() => {
                       setSearchQuery("");
                       setShowSearchResults(false);
+                      setSearchResults([]);
                     }}
                   >
                     <Ionicons name="close-circle" size={18} color="#6B7280" />
@@ -741,6 +847,7 @@ export default function Home() {
                 )}
               </View>
             </Animated.View>
+
             {showSearchResults && (
               <View
                 style={[
@@ -748,21 +855,30 @@ export default function Home() {
                   { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
                 ]}
               >
-                {filteredProducts.length > 0 ? (
+                {searchLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <Ionicons name="reload-outline" size={30} color="#56BFAB" />
+                    <Text
+                      style={[styles.loadingText, { color: theme.subText }]}
+                    >
+                      Searching...
+                    </Text>
+                  </View>
+                ) : searchResults.length > 0 ? (
                   <ScrollView
                     style={styles.searchResultsList}
                     showsVerticalScrollIndicator={false}
                     nestedScrollEnabled={true}
                   >
-                    {filteredProducts.map((item) => (
+                    {searchResults.map((item) => (
                       <TouchableOpacity
-                        key={item.id}
+                        key={item._id}
                         style={styles.searchResultItem}
                         onPress={() => handleProductPress(item)}
                       >
                         <View style={styles.searchResultImageContainer}>
                           <Image
-                            source={{ uri: item.image }}
+                            source={{ uri: item.images?.[0]?.url || "" }}
                             style={styles.searchResultImage}
                             resizeMode="cover"
                           />
@@ -774,7 +890,7 @@ export default function Home() {
                               { color: theme.text },
                             ]}
                           >
-                            {item.title}
+                            {item.label}
                           </Text>
                           <Text
                             style={[
@@ -782,7 +898,7 @@ export default function Home() {
                               { color: theme.subText },
                             ]}
                           >
-                            {item.category}
+                            {item.category?.label || item.type}
                           </Text>
                           <Text
                             style={[
@@ -790,7 +906,7 @@ export default function Home() {
                               { color: theme.primary },
                             ]}
                           >
-                            ₹{item.price}
+                            {item.displayPrice || `₹${item.price}`}
                           </Text>
                         </View>
                       </TouchableOpacity>
@@ -854,14 +970,6 @@ export default function Home() {
                       resizeMode="cover"
                     />
                   )}
-                  {/* <View style={styles.heroOverlay} /> */}
-
-                  {/* Tag badge */}
-                  {/* <View style={[styles.heroTagBadge, { backgroundColor: PRIMARY }]}>
-                    <Text style={styles.heroTagText}>{slide.tag}</Text>
-                  </View> */}
-
-                  {/* Text */}
                   <View style={styles.heroTextWrap}>
                     <Text style={styles.heroTitle}>{slide.title}</Text>
                     {slide.subtitle && (
@@ -1045,7 +1153,6 @@ export default function Home() {
                     { backgroundColor: "#071018" },
                   ]}
                 >
-                  {/* ── Animated green fill track ── */}
                   <Animated.View
                     style={[
                       styles.swipeTrackFill,
@@ -1057,16 +1164,14 @@ export default function Home() {
                     pointerEvents="none"
                   />
 
-                  {/* ── Draggable thumb ── */}
-                  {/* ── Draggable thumb — native driver = buttery smooth ── */}
                   <Animated.View
                     style={[
                       styles.swipeDraggable,
                       {
                         backgroundColor: PRIMARY,
                         transform: [
-                          { translateX: dragXNative }, // ✅ native thread
-                          { scale: thumbScale }, // ✅ native thread
+                          { translateX: dragXNative },
+                          { scale: thumbScale },
                         ],
                       },
                     ]}
@@ -1085,7 +1190,6 @@ export default function Home() {
                     </TouchableOpacity>
                   </Animated.View>
 
-                  {/* ── Fill track — JS driver (width can't be native) ── */}
                   <Animated.View
                     style={[
                       styles.swipeTrackFill,
@@ -1094,13 +1198,12 @@ export default function Home() {
                     pointerEvents="none"
                   />
 
-                  {/* ── Hint label — native driver ── */}
                   <Animated.View
                     style={[
                       styles.swipeTextWrap,
                       {
-                        opacity: swipeTextOpacity, // ✅ native
-                        transform: [{ translateX: swipeTextTranslateX }], // ✅ native
+                        opacity: swipeTextOpacity,
+                        transform: [{ translateX: swipeTextTranslateX }],
                       },
                     ]}
                     pointerEvents="none"
@@ -1123,7 +1226,6 @@ export default function Home() {
                     </View>
                   </Animated.View>
 
-                  {/* ── Hint label (fades + shifts as you drag) ── */}
                   <Animated.View
                     style={[
                       styles.swipeTextWrap,
@@ -1159,16 +1261,6 @@ export default function Home() {
           {/* ── SERVICES ── */}
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                {/* <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Our Services
-                </Text> */}
-                {/* <TouchableOpacity>
-                  <Text style={[styles.viewAll, { color: PRIMARY }]}>View All</Text>
-                </TouchableOpacity> */}
-              </View>
-
-              {/* 2-column grid */}
               <View style={styles.servicesGrid}>
                 {QUICK_SERVICES.map((s) => {
                   const isFeatured = s.key === "Shoe Spa";
@@ -1185,7 +1277,6 @@ export default function Home() {
                       activeOpacity={0.85}
                       onPress={() => {
                         if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-                          // console.log("service param:");
                           router.push({
                             pathname: "/services/[service]",
                             params: {
@@ -1221,11 +1312,6 @@ export default function Home() {
                         >
                           {s.label}
                         </Text>
-                        {/* <Text
-                          style={[styles.serviceSubtitle, { color: theme.subText }]}
-                        >
-                          {s.subtitle}
-                        </Text> */}
                       </View>
                     </TouchableOpacity>
                   );
@@ -1237,17 +1323,14 @@ export default function Home() {
         <LearnExploreSection />
 
         <View style={styles.wrapper}>
-          {/* Background Gradient */}
           <LinearGradient
             colors={["#001A17", "#00332B", "#004D3F"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0.7 }}
             style={styles.card}
           >
-            {/* Soft Glow Circle (right bottom curve) */}
             <View style={styles.glowCircle} />
 
-            {/* Content */}
             <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
 
             <Text style={styles.title}>
@@ -1266,20 +1349,8 @@ export default function Home() {
 
       <FloatingCart onOpen={() => setCartOpen(true)} />
 
-      {/* <FloatingOfferCard
-        visible={offerVisible}
-        title="Welcome Offer"
-        subtitle="Get 20% OFF on your first booking"
-        imageUri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/one.jpg"
-        ctaText="CLAIM"
-        onPress={() => {
-          setOfferVisible(false);
-          router.push("/book-pickup");
-        }}
-        onClose={() => setOfferVisible(false)}
-      /> */}
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-      {/* Product Service Popup */}
+
       <ProductServicePopup
         visible={popupVisible}
         onOpenCart={() => setCartOpen(true)}
@@ -1289,6 +1360,7 @@ export default function Home() {
         }}
         product={selectedProduct}
       />
+
       <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} />
     </SafeAreaProvider>
   );
@@ -1299,7 +1371,7 @@ const styles = StyleSheet.create({
 
   searchResultsContainer: {
     position: "absolute",
-    top: 70, // Adjust this value based on your search bar height
+    top: 70,
     left: 16,
     right: 16,
     maxHeight: 400,
@@ -1351,6 +1423,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
   },
+  loadingContainer: {
+    padding: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 10,
+  },
   noResultsContainer: {
     padding: 32,
     alignItems: "center",
@@ -1366,7 +1447,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
   },
-
   searchBarWrap: {
     paddingHorizontal: 16,
     paddingBottom: 15,
@@ -1410,7 +1490,6 @@ const styles = StyleSheet.create({
     borderRadius: 34,
     backgroundColor: "#00C896",
   },
-  /* ── Hero ── */
   heroCard: {
     width: CARD_WIDTH,
     height: 200,
@@ -1423,26 +1502,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 40, 30, 0.55)",
-  },
-  heroTagBadge: {
-    position: "absolute",
-    bottom: 70,
-    left: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  heroTagText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#000",
-    letterSpacing: 1,
-  },
   heroTextWrap: {
     padding: 12,
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   heroTitle: {
     fontSize: 20,
@@ -1456,8 +1518,6 @@ const styles = StyleSheet.create({
     color: "#D1FAE5",
     marginTop: 4,
   },
-
-  /* Dots */
   dotsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1469,163 +1529,6 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-
-  /* ── Active Order Card ── */
-  activeOrderCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    backgroundColor: "#0D1F1C",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    padding: 14,
-    gap: 10,
-  },
-  activeOrderHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  activeOrderBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  activeDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#00C896",
-  },
-  activeOrderLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#00C896",
-    letterSpacing: 1.2,
-  },
-  activeOrderStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  activeOrderTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  activeOrderEta: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#6B7280",
-    marginTop: 2,
-  },
-  bikeIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "#071A17",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-  },
-
-  /* Progress */
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    position: "relative",
-    marginTop: 2,
-  },
-  progressStepWrap: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-    position: "relative",
-  },
-  progressLine: {
-    position: "absolute",
-    top: 9,
-    right: "50%",
-    left: "-50%",
-    height: 2,
-    zIndex: 0,
-  },
-  progressDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  progressDotInner: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: "#000",
-  },
-  progressLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    textAlign: "center",
-  },
-
-  activeOrderDivider: {
-    height: 1,
-    backgroundColor: "#1A3330",
-    marginHorizontal: -14,
-  },
-
-  /* Rider row */
-  riderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  riderAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#00C896",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  riderAvatarText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#000",
-  },
-  riderName: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  riderRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 1,
-  },
-  riderRating: {
-    fontSize: 11,
-    color: "#6B7280",
-    fontWeight: "500",
-  },
-  riderActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#071A17",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  /* ── Pickup Card ── */
   pickupCard: {
     marginHorizontal: 16,
     marginTop: 14,
@@ -1637,19 +1540,6 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     gap: 10,
   },
-  pickupRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  pickupTitle: { fontSize: 15, fontWeight: "800", marginBottom: 2 },
-  pickupSubtitle: { fontSize: 12, fontWeight: "500" },
-  pickupDivider: {
-    height: 1,
-    marginHorizontal: -14,
-    opacity: 0.6,
-  },
-
-  /* ── Swipe button ── */
   swipeContainer: {
     height: 52,
     borderRadius: 34,
@@ -1691,16 +1581,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  /* Services */
   section: { marginTop: 20, paddingHorizontal: 16 },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  sectionTitle: { fontSize: 18, fontWeight: "800" },
-  viewAll: { fontSize: 13, fontWeight: "700" },
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1723,18 +1604,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
-  serviceSubtitle: { fontSize: 11, fontWeight: "500" },
-
   wrapper: {
     padding: 16,
   },
-
   card: {
     borderRadius: 24,
     padding: 22,
     overflow: "hidden",
   },
-
   tag: {
     fontSize: 10,
     letterSpacing: 2,
@@ -1742,7 +1619,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     fontWeight: "700",
   },
-
   title: {
     fontSize: 22,
     fontWeight: "900",
@@ -1750,21 +1626,12 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     marginBottom: 12,
   },
-
   desc: {
     fontSize: 13,
     color: "#9CCFC0",
     lineHeight: 18,
     marginBottom: 16,
   },
-
-  link: {
-    fontSize: 13,
-    color: "#33F0A2",
-    fontWeight: "700",
-  },
-
-  /* Glow curve */
   glowCircle: {
     position: "absolute",
     right: -40,
