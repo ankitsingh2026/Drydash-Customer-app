@@ -13,6 +13,7 @@ import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { PickupRecord } from "@/features/pickups/pickup.types";
 import { useAuth } from "@/hooks/useAuth";
+import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -20,8 +21,6 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  AppState,
-  AppStateStatus,
   Dimensions,
   Easing,
   Image,
@@ -170,7 +169,6 @@ export default function Home() {
   const [orders, setOrders] = useState<HomeOrder[]>([]);
   const [pickupLoading, setPickupLoading] = useState(false);
   const [dismissedOrderKey, setDismissedOrderKey] = useState<string | null>(null);
-  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -187,16 +185,12 @@ export default function Home() {
   }, []);
 
   const customerPhone = user?.user?.phone ?? user?.phone ?? "";
+  const customerId = user?.user?.id ?? user?.id ?? "";
 
-  const phoneCandidates = useMemo(() => {
-    const digits = String(customerPhone ?? "").replace(/\D/g, "");
-    if (!digits) return [] as string[];
-
-    const with91 = digits.startsWith("91") ? digits : `91${digits}`;
-    const without91 = digits.startsWith("91") ? digits.slice(2) : digits;
-
-    return Array.from(new Set([with91, without91, digits])).filter(Boolean);
-  }, [customerPhone]);
+  const phoneCandidates = useMemo(
+    () => buildPhoneCandidates(customerPhone),
+    [customerPhone],
+  );
 
   const refreshPickups = useCallback(async () => {
     if (!phoneCandidates.length) {
@@ -233,6 +227,21 @@ export default function Home() {
           }
         }
 
+        if (!fetchedPickups.length && customerId) {
+          try {
+            const res = await getCustomerPickups(customerId);
+            fetchedPickups = Array.isArray(res?.pickups) ? res.pickups : [];
+            usedPhone = customerId;
+          } catch (error) {
+            if (__DEV__) {
+              console.log("[home] pickup customer-id fallback failed", {
+                customerId,
+                error,
+              });
+            }
+          }
+        }
+
         return { fetchedPickups, usedPhone };
       };
 
@@ -253,6 +262,21 @@ export default function Home() {
             if (__DEV__) {
               console.log("[home] order candidate failed", {
                 candidate,
+                error,
+              });
+            }
+          }
+        }
+
+        if (!fetchedOrders.length && customerId) {
+          try {
+            const res = await getOrdersApi(customerId);
+            fetchedOrders = Array.isArray(res?.orders) ? res.orders : [];
+            usedPhone = customerId;
+          } catch (error) {
+            if (__DEV__) {
+              console.log("[home] order customer-id fallback failed", {
+                customerId,
                 error,
               });
             }
@@ -326,32 +350,6 @@ export default function Home() {
     refreshPickups();
   }, [phoneCandidates, refreshPickups]);
 
-  useEffect(() => {
-    if (!phoneCandidates.length) return;
-
-    const interval = setInterval(() => {
-      refreshPickups();
-    }, 15000);
-
-    const subscription = AppState.addEventListener(
-      "change",
-      (nextAppState: AppStateStatus) => {
-        if (
-          appState.current.match(/inactive|background/) &&
-          nextAppState === "active"
-        ) {
-          refreshPickups();
-        }
-        appState.current = nextAppState;
-      },
-    );
-
-    return () => {
-      clearInterval(interval);
-      subscription.remove();
-    };
-  }, [phoneCandidates, refreshPickups]);
-
   const latestPickup = useMemo(() => {
     const sorted = [...pickups]
       .filter((pickup) => !pickup.isDeleted)
@@ -379,16 +377,18 @@ export default function Home() {
     return activePickup ?? null;
   }, [pickups]);
 
-  const latestPickupKey =
-    latestPickup?._id || latestPickup?.PickupId || latestPickup?.PickupID || null;
+  const latestPickupKey = latestPickup?._id || null;
+
+  const hasDeliveredLatestOrder =
+    String(orders?.[0]?.status ?? "").trim().toLowerCase() === "delivered";
 
   useEffect(() => {
     if (!dismissedOrderKey) return;
 
-    if (latestPickupKey || !isDeliveredOrder) {
+    if (latestPickupKey || !hasDeliveredLatestOrder) {
       setDismissedOrderKey(null);
     }
-  }, [dismissedOrderKey, latestPickupKey, isDeliveredOrder]);
+  }, [dismissedOrderKey, latestPickupKey, hasDeliveredLatestOrder]);
 
   const latestOrder = useMemo(() => {
     const sorted = [...orders].sort((left, right) => {
@@ -893,7 +893,14 @@ export default function Home() {
             <View style={{ marginHorizontal: 16, marginTop: 14 }}>
               <PickupStatusCard
                 pickup={latestPickup}
-                onPress={() => router.push("/(customer)/order-tracking")}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(customer)/order-tracking",
+                    params: {
+                      pickupId: latestPickup?._id,
+                    },
+                  })
+                }
                 onActionComplete={refreshPickups}
               />
             </View>

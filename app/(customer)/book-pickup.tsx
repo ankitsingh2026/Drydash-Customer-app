@@ -12,6 +12,7 @@ import {
 } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
+import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -171,19 +172,10 @@ export default function BookPickup() {
   const { firstName, lastName } = user;
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
   const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
-  const phoneCandidates = React.useMemo(() => {
-    const digits = String(user?.user?.phone ?? user?.phone ?? "").replace(
-      /\D/g,
-      "",
-    );
-
-    if (!digits) return [] as string[];
-
-    const with91 = digits.startsWith("91") ? digits : `91${digits}`;
-    const without91 = digits.startsWith("91") ? digits.slice(2) : digits;
-
-    return Array.from(new Set([with91, without91, digits])).filter(Boolean);
-  }, [user?.phone, user?.user?.phone]);
+  const phoneCandidates = React.useMemo(
+    () => buildPhoneCandidates(user?.user?.phone ?? user?.phone ?? ""),
+    [user?.phone, user?.user?.phone],
+  );
 
   const [couponOpen, setCouponOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<
@@ -332,8 +324,36 @@ export default function BookPickup() {
           })(),
         ]);
 
+        const pickupById = pickupResult
+          ? true
+          : auth_id
+            ? await (async () => {
+                try {
+                  const res = await getCustomerPickups(auth_id);
+                  const pickups = Array.isArray(res?.pickups) ? res.pickups : [];
+                  return pickups.some(isActivePickup);
+                } catch {
+                  return false;
+                }
+              })()
+            : false;
+
+        const orderById = orderResult
+          ? true
+          : auth_id
+            ? await (async () => {
+                try {
+                  const res = await getOrdersApi(auth_id);
+                  const orders = Array.isArray(res?.orders) ? res.orders : [];
+                  return orders.some(isActiveOrder);
+                } catch {
+                  return false;
+                }
+              })()
+            : false;
+
         if (isMounted) {
-          setHasActiveBooking(Boolean(pickupResult || orderResult));
+          setHasActiveBooking(Boolean(pickupById || orderById));
         }
       } catch (error) {
         if (__DEV__) {

@@ -1,15 +1,71 @@
 import { oldApiClient } from "@/lib/api/client";
+import { normalizeDigits } from "@/utils/phone";
 
-const normalizePhone = (phone: any) => String(phone ?? "").replace(/\D/g, "");
+const normalizePhone = (phone: any) => normalizeDigits(phone);
+const isCustomerId = (value: any) => /[a-z]/i.test(String(value ?? ""));
 
-export const getCustomerPickups = async (phone: any, status?: any) => {
+const buildPickupPhoneParams = (phone: any) => {
   const normalizedPhone = normalizePhone(phone);
-  const params = new URLSearchParams();
+  const candidates = new Set<string>();
 
   if (normalizedPhone) {
-    params.set("phone", normalizedPhone);
+    candidates.add(normalizedPhone);
+
+    if (normalizedPhone.length === 10) {
+      candidates.add(`91${normalizedPhone}`);
+    }
+
+    if (normalizedPhone.length > 10 && normalizedPhone.startsWith("91")) {
+      const withoutCountryCode = normalizedPhone.slice(2);
+      if (withoutCountryCode.length === 10) {
+        candidates.add(withoutCountryCode);
+      }
+    }
   }
-  console.log("Normalized Phone =>>>>:", normalizedPhone);
+
+  return Array.from(candidates);
+};
+
+export const getCustomerPickups = async (phone: any, status?: any) => {
+  const params = new URLSearchParams();
+
+  if (isCustomerId(phone)) {
+    params.set("customerid", String(phone));
+  } else {
+    const phoneCandidates = buildPickupPhoneParams(phone);
+    let responseData: any = null;
+
+    for (const candidate of phoneCandidates) {
+      params.set("phone", candidate);
+
+      if (status) {
+        params.set(
+          "status",
+          Array.isArray(status) ? status.join(",") : String(status),
+        );
+      }
+
+      console.log("Normalized Phone =>>>:", candidate);
+
+      const { data } = await oldApiClient.get(
+        `/app/getCustomerPickups?${params.toString()}`,
+      );
+
+      responseData = data;
+      if (Array.isArray(responseData?.pickups) && responseData.pickups.length > 0) {
+        return responseData;
+      }
+
+      params.delete("phone");
+      params.delete("status");
+    }
+
+    return responseData ?? { pickups: [] };
+  }
+
+  if (isCustomerId(phone)) {
+    console.log("Customer ID =>>>:", String(phone));
+  }
 
   if (status) {
     params.set(

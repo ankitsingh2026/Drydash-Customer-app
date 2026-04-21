@@ -1,5 +1,8 @@
 import { apiClient, oldApiClient } from "@/lib/api/client";
+import { buildPhoneCandidates } from "@/utils/phone";
 import { order_details } from "./orders.types";
+
+const isCustomerId = (value: any) => /[a-z]/i.test(String(value ?? ""));
 
 export const createOrderApi = async (order_details: order_details) => {
   const { data } = await oldApiClient.post(
@@ -35,9 +38,18 @@ export const deleteAddressApi = async (id: any) => {
 
 export const getOrdersApi = async (phoneNumber: any) => {
   console.log("phoneNumber", phoneNumber);
-  const { data } = await oldApiClient.get(
-    `/app/getCustomerOrders/${phoneNumber}`,
-  );
+  const candidates = isCustomerId(phoneNumber)
+    ? [String(phoneNumber)]
+    : buildPhoneCandidates(phoneNumber);
+
+  let data: any = null;
+
+  for (const candidate of candidates) {
+    const response = await oldApiClient.get(`/app/getCustomerOrders/${candidate}`);
+    data = response.data;
+    if (Array.isArray(data?.orders) && data.orders.length > 0) break;
+  }
+
   console.log("thi is the all data: : : ", data);
   return data;
 };

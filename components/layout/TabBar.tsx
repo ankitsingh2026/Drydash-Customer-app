@@ -1,3 +1,4 @@
+import LocationPickerModal from "@/components/LocationPickerModal";
 import { useAddress } from "@/context/AddressContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,22 +8,25 @@ import { Bell, MousePointer2 } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  StyleProp,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
-import LocationPickerModal from "@/components/LocationPickerModal";
 
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
+  onWalletPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
-export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
+export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -187,7 +191,7 @@ export const TabBar = ({ onOpenNotifications }: TabBarProps) => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
+      <View style={[styles.container, { paddingTop: insets.top + 6 }, style]}>
         <ActivityIndicator color="#2FE6A6" />
       </View>
     );

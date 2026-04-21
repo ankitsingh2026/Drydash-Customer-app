@@ -1,7 +1,14 @@
+import { getOrdersApi } from "@/features/orders/orders.api";
+import { getCustomerPickups } from "@/features/pickups/pickup.api";
+import { PickupRecord } from "@/features/pickups/pickup.types";
+import { useAuth } from "@/hooks/useAuth";
+import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
 
   ScrollView,
@@ -33,6 +40,36 @@ type OrderItem = {
   icon: "shoe-sandal" | "shoe-heel" | "shoe-formal";
   accent: string;
 };
+
+type ApiOrderItem = {
+  heading?: string;
+  quantity?: number;
+  price?: number;
+  newQtyPrice?: number;
+  type?: string;
+};
+
+type ApiOrder = {
+  _id?: string;
+  order_id?: string;
+  status?: string;
+  statusHistory?: {
+    delivered?: string | null;
+  };
+  items?: ApiOrderItem[];
+  address?: string;
+  deliveryCharges?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  totalAmount?: number;
+  price?: number;
+  isPaid?: boolean;
+  customerName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+type ScreenMode = "pickup-scheduled" | "pickup-assigned" | "order-delivered";
 
 const ORDER: {
   storeName: string;
@@ -110,6 +147,44 @@ function money(value: number) {
   return `₹${Number(value).toLocaleString("en-IN")}`;
 }
 
+function toTitleCase(value?: string) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
+}
+
+function formatTime(value?: string | null) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return ORDER.orderDate;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return ORDER.orderDate;
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function inferItemIcon(name: string): OrderItem["icon"] {
+  const text = name.toLowerCase();
+  if (text.includes("heel") || text.includes("stiletto")) return "shoe-heel";
+  if (text.includes("boot") || text.includes("formal")) return "shoe-formal";
+  return "shoe-sandal";
+}
+
 function ItemIcon({ icon, accent }: { icon: OrderItem["icon"]; accent: string }) {
   return (
     <View style={[styles.itemIconInner, { borderColor: `${accent}55` }]}>
@@ -118,7 +193,15 @@ function ItemIcon({ icon, accent }: { icon: OrderItem["icon"]; accent: string })
   );
 }
 
-function Header({ onBack }: { onBack?: () => void }) {
+function Header({
+  onBack,
+  storeName,
+  storeSubtitle,
+}: {
+  onBack?: () => void;
+  storeName: string;
+  storeSubtitle: string;
+}) {
   return (
     <View style={styles.header}>
       <TouchableOpacity
@@ -133,11 +216,11 @@ function Header({ onBack }: { onBack?: () => void }) {
       </TouchableOpacity>
       <View style={styles.headerCenter}>
         <View style={styles.titleRow}>
-          <Text style={styles.storeName}>{ORDER.storeName}</Text>
+          <Text style={styles.storeName}>{storeName}</Text>
           <Ionicons name="chevron-down" size={14} color="#7F948A" />
         </View>
         <Text style={styles.storeSubtitle} numberOfLines={1}>
-          {ORDER.storeSubtitle}
+          {storeSubtitle}
         </Text>
       </View>
 
@@ -148,16 +231,24 @@ function Header({ onBack }: { onBack?: () => void }) {
   );
 }
 
-function StatusBanner() {
+function StatusBanner({
+  title,
+  subtitle,
+  icon,
+}: {
+  title: string;
+  subtitle: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+}) {
   return (
     <View style={styles.statusBanner}>
       <View style={styles.statusIconWrap}>
-        <Ionicons name="checkmark" size={20} color={DarkTheme.background} />
+        <Ionicons name={icon} size={20} color={DarkTheme.background} />
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={styles.statusTitle}>Order was delivered at {ORDER.deliveredAt}</Text>
-        <Text style={styles.statusSub}>Successfully picked up &amp; delivered</Text>
+        <Text style={styles.statusTitle}>{title}</Text>
+        <Text style={styles.statusSub}>{subtitle}</Text>
       </View>
     </View>
   );
@@ -219,7 +310,13 @@ function BillRow({
   );
 }
 
-function BillCard() {
+function BillCard({
+  bill,
+  showExpanded,
+}: {
+  bill: typeof ORDER.bill;
+  showExpanded: boolean;
+}) {
   const [open, setOpen] = useState(false);
 
   const {
@@ -231,7 +328,7 @@ function BillCard() {
     gst,
     gstPercent,
     total,
-  } = ORDER.bill;
+  } = bill;
 
   return (
     <View style={styles.sectionCard}>
@@ -253,7 +350,7 @@ function BillCard() {
       </TouchableOpacity>
 
       {/* COLLAPSIBLE CONTENT */}
-      {open && (
+      {(open || showExpanded) && (
         <>
           <View style={styles.billDivider} />
 
@@ -282,7 +379,18 @@ function BillCard() {
   );
 }
 
-function OrderDetailsCard() {
+function OrderDetailsCard({
+  details,
+}: {
+  details: {
+    orderId: string;
+    payment: string;
+    deliveredTo: string;
+    deliveredBy: string;
+    deliveryAddress: string;
+    orderDate: string;
+  };
+}) {
   return (
     <View style={styles.sectionCard}>
       <View style={styles.sectionTopRow}>
@@ -300,7 +408,7 @@ function OrderDetailsCard() {
         <View style={styles.detailCell}>
           <Text style={styles.detailLabel}>ORDER ID</Text>
           <View style={styles.inlineRow}>
-            <Text style={styles.detailValue}>{ORDER.orderId}</Text>
+            <Text style={styles.detailValue}>{details.orderId}</Text>
             <TouchableOpacity style={styles.copyBtn} activeOpacity={0.75}>
               <Ionicons name="copy-outline" size={13} color="#93A39B" />
             </TouchableOpacity>
@@ -313,33 +421,33 @@ function OrderDetailsCard() {
             <View style={styles.upiBadge}>
               <Text style={styles.upiBadgeText}>U</Text>
             </View>
-            <Text style={styles.detailValue}>{ORDER.payment}</Text>
+            <Text style={styles.detailValue}>{details.payment}</Text>
           </View>
         </View>
 
         <View style={styles.detailCell}>
           <Text style={styles.detailLabel}>DELIVERED TO</Text>
-          <Text style={styles.detailValue}>{ORDER.deliveredTo}</Text>
+          <Text style={styles.detailValue}>{details.deliveredTo}</Text>
         </View>
 
         <View style={styles.detailCell}>
           <Text style={styles.detailLabel}>DELIVERED BY</Text>
           <View style={styles.inlineRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{ORDER.deliveredBy.charAt(0)}</Text>
+              <Text style={styles.avatarText}>{details.deliveredBy.charAt(0)}</Text>
             </View>
-            <Text style={styles.detailValue}>{ORDER.deliveredBy}</Text>
+            <Text style={styles.detailValue}>{details.deliveredBy}</Text>
           </View>
         </View>
 
         <View style={styles.fullCell}>
           <Text style={styles.detailLabel}>DELIVERY ADDRESS</Text>
-          <Text style={styles.addressText}>{ORDER.deliveryAddress}</Text>
+          <Text style={styles.addressText}>{details.deliveryAddress}</Text>
         </View>
 
         <View style={styles.fullCell}>
           <Text style={styles.detailLabel}>ORDER PLACED DATE &amp; TIME</Text>
-          <Text style={styles.detailValue}>{ORDER.orderDate}</Text>
+          <Text style={styles.detailValue}>{details.orderDate}</Text>
         </View>
       </View>
     </View>
@@ -367,12 +475,16 @@ function HelpCard() {
   );
 }
 
-function BottomCTA() {
+function BottomCTA({ mode }: { mode: ScreenMode }) {
+  const title = mode === "pickup-scheduled" ? "Reschedule" : "Repeat Order";
+  const subtitle =
+    mode === "pickup-scheduled" ? "Update pickup date & slot" : "View Cart On Next Step";
+
   return (
     <View style={styles.bottomWrap}>
       <TouchableOpacity activeOpacity={0.9} style={styles.repeatBtn}>
-        <Text style={styles.repeatBtnTitle}>Repeat Order</Text>
-        <Text style={styles.repeatBtnSub}>View Cart On Next Step</Text>
+        <Text style={styles.repeatBtnTitle}>{title}</Text>
+        <Text style={styles.repeatBtnSub}>{subtitle}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -380,6 +492,282 @@ function BottomCTA() {
 
 export default function OrderTrackingScreen() {
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const params = useLocalSearchParams<{
+    pickupId?: string;
+    orderId?: string;
+  }>();
+  const [loading, setLoading] = useState(true);
+  const [pickups, setPickups] = useState<PickupRecord[]>([]);
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+
+  const rawPhone = user?.user?.phone ?? user?.phone ?? "";
+  const customerId = user?.user?.id ?? user?.id ?? "";
+  const phoneCandidates = useMemo(
+    () => buildPhoneCandidates(rawPhone),
+    [rawPhone],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      if (!phoneCandidates.length) {
+        if (mounted) {
+          setPickups([]);
+          setOrders([]);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        if (mounted) setLoading(true);
+
+        const fetchPickups = async () => {
+          for (const candidate of phoneCandidates) {
+            try {
+              const res = await getCustomerPickups(candidate);
+              const rows = Array.isArray(res?.pickups) ? res.pickups : [];
+              if (rows.length) return rows;
+            } catch {
+              // keep trying alternate phone formats
+            }
+          }
+
+          if (customerId) {
+            try {
+              const res = await getCustomerPickups(customerId);
+              const rows = Array.isArray(res?.pickups) ? res.pickups : [];
+              if (rows.length) return rows;
+            } catch {
+              // keep falling back
+            }
+          }
+          return [] as PickupRecord[];
+        };
+
+        const fetchOrders = async () => {
+          for (const candidate of phoneCandidates) {
+            try {
+              const res = await getOrdersApi(candidate);
+              const rows = Array.isArray(res?.orders) ? res.orders : [];
+              if (rows.length) return rows as ApiOrder[];
+            } catch {
+              // keep trying alternate phone formats
+            }
+          }
+
+          if (customerId) {
+            try {
+              const res = await getOrdersApi(customerId);
+              const rows = Array.isArray(res?.orders) ? res.orders : [];
+              if (rows.length) return rows as ApiOrder[];
+            } catch {
+              // keep falling back
+            }
+          }
+          return [] as ApiOrder[];
+        };
+
+        const [pickupRows, orderRows] = await Promise.all([
+          fetchPickups(),
+          fetchOrders(),
+        ]);
+
+        if (!mounted) return;
+        setPickups(pickupRows);
+        setOrders(orderRows);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, [phoneCandidates]);
+
+  const selectedPickup = useMemo(() => {
+    if (!pickups.length) return null;
+    if (params.pickupId) {
+      return pickups.find((row) => row._id === params.pickupId) ?? null;
+    }
+
+    const sorted = [...pickups].sort((a, b) => {
+      const at = new Date(a.updatedAt || a.createdAt || a.pickup_date || 0).getTime();
+      const bt = new Date(b.updatedAt || b.createdAt || b.pickup_date || 0).getTime();
+      return bt - at;
+    });
+
+    return sorted[0] ?? null;
+  }, [pickups, params.pickupId]);
+
+  const selectedOrder = useMemo(() => {
+    if (!orders.length) return null;
+    if (params.orderId) {
+      return (
+        orders.find((row) => row.order_id === params.orderId || row._id === params.orderId) ?? null
+      );
+    }
+
+    const sorted = [...orders].sort((a, b) => {
+      const at = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const bt = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return bt - at;
+    });
+
+    return sorted[0] ?? null;
+  }, [orders, params.orderId]);
+
+  const pickupStatus = String(selectedPickup?.PickupStatus ?? "").trim().toLowerCase();
+  const normalizedPickupStatus = pickupStatus.replace(/[^a-z]/g, "");
+  const orderStatus = String(selectedOrder?.status ?? "").trim().toLowerCase();
+
+  const screenMode: ScreenMode = useMemo(() => {
+    const isAssigned = ["assigned", "riderassigned", "pickupassigned"].includes(
+      normalizedPickupStatus,
+    );
+    const isScheduled = ["pending", "scheduled", "schedule"].includes(
+      normalizedPickupStatus,
+    );
+
+    if (isAssigned) return "pickup-assigned";
+    if (isScheduled) return "pickup-scheduled";
+    if (orderStatus === "delivered") return "order-delivered";
+    return "order-delivered";
+  }, [normalizedPickupStatus, orderStatus]);
+
+  const items: OrderItem[] = useMemo(() => {
+    const fromOrder = (selectedOrder?.items ?? []).map((item, index) => {
+      const qty = Number(item.quantity ?? 1);
+      const unitPrice = Number(item.newQtyPrice ?? item.price ?? 0);
+      const linePrice = qty > 0 && unitPrice > 0 ? unitPrice : Number(item.price ?? 0);
+      const name = item.heading || `Item ${index + 1}`;
+      return {
+        id: index + 1,
+        name,
+        qty,
+        price: linePrice,
+        icon: inferItemIcon(name),
+        accent: "#00E1A2",
+      };
+    });
+
+    const fromPickup = (selectedPickup?.items ?? []).map((item, index) => {
+      const name = String(item?.heading || item?.name || `Item ${index + 1}`);
+      const qty = Number(item?.quantity ?? item?.qty ?? 1);
+      const linePrice = Number(item?.newQtyPrice ?? item?.price ?? 0);
+      return {
+        id: index + 1,
+        name,
+        qty,
+        price: linePrice,
+        icon: inferItemIcon(name),
+        accent: "#00E1A2",
+      };
+    });
+
+    if (fromOrder.length) return fromOrder;
+    if (fromPickup.length) return fromPickup;
+    return [];
+  }, [selectedOrder?.items, selectedPickup?.items]);
+
+  const bill = useMemo(() => {
+    const subtotalFromItems = items.reduce((sum, item) => sum + item.price, 0);
+    const subtotal = subtotalFromItems || ORDER.bill.subtotal;
+    const deliveryHandling = Number(selectedOrder?.deliveryCharges ?? ORDER.bill.deliveryHandling);
+    const serviceCharge =
+      Number(selectedOrder?.taxAmount ?? 0) > 0
+        ? 0
+        : ORDER.bill.serviceCharge;
+    const itemDiscount = Number(selectedOrder?.discountAmount ?? ORDER.bill.itemDiscount);
+    const gst = Number(selectedOrder?.taxAmount ?? ORDER.bill.gst);
+
+    const total =
+      Number(selectedOrder?.totalAmount ?? selectedOrder?.price ?? selectedPickup?.totalAmount ?? selectedPickup?.price ?? 0) ||
+      ORDER.bill.total;
+
+    return {
+      subtotal,
+      deliveryHandling,
+      serviceCharge,
+      itemDiscount,
+      platformFee: ORDER.bill.platformFee,
+      gst,
+      gstPercent: ORDER.bill.gstPercent,
+      total,
+    };
+  }, [items, selectedOrder, selectedPickup]);
+
+  const details = useMemo(() => {
+    const pickupOrderId = selectedPickup?._id
+      ? `DX-${selectedPickup._id.slice(-6).toUpperCase()}`
+      : ORDER.orderId;
+
+    return {
+      orderId: selectedOrder?.order_id || pickupOrderId || ORDER.orderId,
+      payment:
+        selectedOrder?.isPaid || selectedPickup?.isPaid
+          ? "Paid via UPI"
+          : "Payment Pending",
+      deliveredTo:
+        selectedOrder?.customerName ||
+        selectedPickup?.Name ||
+        selectedPickup?.contactName ||
+        ORDER.deliveredTo,
+      deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
+      deliveryAddress:
+        selectedPickup?.deliveryAddress ||
+        selectedOrder?.address ||
+        selectedPickup?.Address ||
+        ORDER.deliveryAddress,
+      orderDate: formatDateTime(selectedOrder?.createdAt || selectedPickup?.createdAt),
+    };
+  }, [selectedOrder, selectedPickup]);
+
+  const storeName = selectedPickup?.plantName || "Green Park";
+  const storeSubtitle =
+    selectedPickup?.Address || selectedOrder?.address || ORDER.storeSubtitle;
+
+  const deliveredAt =
+    formatTime(selectedOrder?.statusHistory?.delivered || selectedOrder?.updatedAt) || ORDER.deliveredAt;
+
+  const statusBannerContent = useMemo(() => {
+    if (screenMode === "pickup-scheduled") {
+      return {
+        title: "Pickup has been scheduled",
+        subtitle: `Status: ${toTitleCase(selectedPickup?.PickupStatus) || "Pending"}`,
+        icon: "time-outline" as const,
+      };
+    }
+
+    if (screenMode === "pickup-assigned") {
+      return {
+        title: "Rider has been assigned",
+        subtitle:
+          `${selectedPickup?.riderName || "Our rider"} is on the way to pickup your order`,
+        icon: "bicycle-outline" as const,
+      };
+    }
+
+    return {
+      title: `Order was delivered at ${deliveredAt}`,
+      subtitle: "Successfully picked up & delivered",
+      icon: "checkmark" as const,
+    };
+  }, [screenMode, selectedPickup?.PickupStatus, selectedPickup?.riderName, deliveredAt]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loaderWrap}>
+          <ActivityIndicator size="large" color={DarkTheme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -388,34 +776,40 @@ export default function OrderTrackingScreen() {
       <View style={styles.bgTopGlow} />
       <View style={styles.bgBottomGlow} />
 
-     <Header
-  onBack={() => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      console.log("No screen to go back to");
-    }
-  }}
-/>
+      <Header
+        onBack={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          }
+        }}
+        storeName={storeName}
+        storeSubtitle={storeSubtitle}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <StatusBanner />
+        <StatusBanner
+          title={statusBannerContent.title}
+          subtitle={statusBannerContent.subtitle}
+          icon={statusBannerContent.icon}
+        />
 
         <View style={styles.sectionHeaderWrap}>
-          <Text style={styles.sectionHeader}>Items</Text>
+          <Text style={styles.sectionHeader}>
+            {screenMode === "order-delivered" ? "Items" : "Ordered Items"}
+          </Text>
         </View>
 
-        {ORDER.items.map((item) => (
+        {items.map((item) => (
           <ItemCard key={item.id} item={item} />
         ))}
 
-        <RatingCard />
-        <BillCard />
-        <OrderDetailsCard />
-        <HelpCard />
+        {screenMode === "order-delivered" ? <RatingCard /> : null}
+        <BillCard bill={bill} showExpanded={screenMode === "order-delivered"} />
+        {screenMode === "order-delivered" ? <OrderDetailsCard details={details} /> : null}
+        {screenMode === "order-delivered" ? <HelpCard /> : null}
 
         <View style={styles.secureRow}>
           <Ionicons name="lock-closed-outline" size={11} color="#64766F" />
@@ -431,7 +825,7 @@ export default function OrderTrackingScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <BottomCTA />
+      <BottomCTA mode={screenMode} />
     </SafeAreaView>
   );
 }
@@ -444,6 +838,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 18,
     paddingBottom: 24,
+  },
+  loaderWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: DarkTheme.background,
   },
 
   bgTopGlow: {

@@ -3,6 +3,7 @@ import PaymentStamp from "@/components/PaymentStamp";
 import { getOrdersApi } from "@/features/orders/orders.api";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
+import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useFocusEffect } from "expo-router";
 import React, {
@@ -206,10 +207,8 @@ export default function Orders() {
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   const rawPhone = user?.user?.phone ?? user?.phone ?? "";
-  const phoneWithout91 = rawPhone.startsWith("91")
-    ? rawPhone.slice(2)
-    : rawPhone;
-  const phoneWith91 = rawPhone.startsWith("91") ? rawPhone : `91${rawPhone}`;
+  const customerId = user?.user?.id ?? user?.id ?? "";
+  const phoneCandidates = useMemo(() => buildPhoneCandidates(rawPhone), [rawPhone]);
 
   /* ================= HELPERS ================= */
 
@@ -252,9 +251,15 @@ export default function Orders() {
   const getCustomerOrders = async () => {
     try {
       setLoading(true);
-      let res = await getOrdersApi(phoneWithout91);
-      if (!res?.orders?.length) {
-        res = await getOrdersApi(phoneWith91);
+      let res: any = null;
+
+      for (const candidate of phoneCandidates) {
+        res = await getOrdersApi(candidate);
+        if (res?.orders?.length) break;
+      }
+
+      if (!res?.orders?.length && customerId) {
+        res = await getOrdersApi(customerId);
       }
       setOrders(res?.orders || []);
     } catch (e) {
@@ -266,7 +271,17 @@ export default function Orders() {
 
   const getCustomerPickupList = async () => {
     try {
-      const res = await getCustomerPickups(rawPhone, "pending,assigned");
+      let res: any = null;
+
+      for (const candidate of phoneCandidates) {
+        res = await getCustomerPickups(candidate, "pending,assigned");
+        if (res?.pickups?.length) break;
+      }
+
+      if (!res?.pickups?.length && customerId) {
+        res = await getCustomerPickups(customerId, "pending,assigned");
+      }
+
       setPickups(res?.pickups || []);
     } catch (err) {
       console.log("❌ Pickup fetch error:", err);
