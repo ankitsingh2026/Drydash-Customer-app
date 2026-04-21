@@ -185,6 +185,7 @@ export default function AuthScreen() {
     try {
       setLoading(true);
       setError(null);
+      console.log("sending OTP to ==>>>:", mobile, "with hash:", hashToUse);
       await sendOtpApi(mobile, hashToUse);
       setStep("OTP");
       setResendTimer(30);

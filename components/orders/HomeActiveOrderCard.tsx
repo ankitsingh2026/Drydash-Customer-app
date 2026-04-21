@@ -13,6 +13,7 @@ type HomeOrder = {
   price?: number;
   customerName?: string;
   address?: string;
+  riderName?: string;
   createdAt?: string;
   updatedAt?: string;
   items?: Array<unknown>;
@@ -30,9 +31,21 @@ const SURFACE = "#0D1F1C";
 const MUTED = "#6B7280";
 
 const normalize = (status?: string) => String(status ?? "").trim().toLowerCase();
+const normalizeKey = (status?: string) => normalize(status).replace(/[^a-z]/g, "");
+
+const formatCardTime = (value?: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
 
 const statusMeta = (status?: string) => {
-  const s = normalize(status);
+  const s = normalizeKey(status);
 
   if (s === "delivered") {
     return {
@@ -46,7 +59,7 @@ const statusMeta = (status?: string) => {
     };
   }
 
-  if (s === "cancelled" || s === "canceled") {
+  if (s === "cancelled" || s === "canceled" || s === "deleted") {
     return {
       label: "Order Cancelled",
       accent: "#EF4444",
@@ -58,13 +71,18 @@ const statusMeta = (status?: string) => {
     };
   }
 
-  if (s === "intransit" || s === "ready for delivery" || s === "delivery rider assigned") {
+  if (
+    s === "intransit" ||
+    s === "readyfordelivery" ||
+    s === "deliveryriderassigned" ||
+    s === "outfordelivery"
+  ) {
     return {
       label: "Out For Delivery",
       accent: ACCENT,
       icon: "bicycle-outline" as const,
       title: "Your order is on the way",
-      subtitle: "Track the rider while your order is in transit.",
+      // subtitle: "Track the rider while your order is in transit.",
       actionText: "Track",
       showClose: false,
     };
@@ -85,8 +103,17 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
   const meta = statusMeta(order.status);
   const amount = order.totalAmount ?? order.price ?? 0;
   const itemCount = Array.isArray(order.items) ? order.items.length : 0;
-  const isDelivered = normalize(order.status) === "delivered";
-  const isCancelled = normalize(order.status) === "cancelled" || normalize(order.status) === "canceled";
+  const statusKey = normalizeKey(order.status);
+  const isDelivered = statusKey === "delivered";
+  const isCancelled = statusKey === "cancelled" || statusKey === "canceled" || statusKey === "deleted";
+  const isOutForDelivery =
+    statusKey === "deliveryriderassigned" ||
+    statusKey === "deliverriderassigned" ||
+    statusKey === "outfordelivery" ||
+    statusKey === "readyfordelivery";
+  const riderName = String(order.riderName ?? "").trim() || "Your rider";
+  const cardTime = formatCardTime(order.updatedAt || order.createdAt);
+  const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
 
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
@@ -128,6 +155,19 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
           <Text style={styles.title}>{meta.title}</Text>
           {meta.subtitle ? <Text style={styles.subtitle}>{meta.subtitle}</Text> : null}
 
+          {isOutForDelivery ? (
+            <>
+              <View style={styles.riderRow}>
+                <Ionicons name="person-circle-outline" size={20} color="#7DA79D" />
+                <Text style={styles.riderText}>{`${riderName} is on the way to Deliver.`}</Text>
+              </View>
+              <Text style={styles.deliveryMetaText}>
+                {orderCode}
+                {cardTime ? ` • ${cardTime}` : ""}
+              </Text>
+            </>
+          ) : null}
+
           <View style={styles.midRow}>
             <View style={styles.itemAvatarGroup}>
               <View style={styles.circleIcon}>
@@ -138,7 +178,9 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
               </View>
             </View>
             <View style={styles.countPill}>
-              <Text style={styles.countPillText}>{itemCount} Items {isDelivered ? "Delivered" : normalize(order.status) === "processing" ? "Processing" : "In Your Cart"}</Text>
+              <Text style={styles.countPillText}>
+                {itemCount} Items {isDelivered ? "Delivered" : statusKey === "processing" ? "Processing" : "In Your Cart"}
+              </Text>
             </View>
           </View>
 
@@ -239,6 +281,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: -2,
+  },
+  riderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: -2,
+  },
+  riderText: {
+    color: "#7DA79D",
+    fontSize: 16,
+    lineHeight: 20,
+    flex: 1,
+  },
+  deliveryMetaText: {
+    color: "#95B6AD",
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -4,
   },
   midRow: {
     flexDirection: "row",

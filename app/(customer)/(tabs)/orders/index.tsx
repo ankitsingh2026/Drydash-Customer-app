@@ -31,6 +31,7 @@ const getOrderId = (o: any): string | undefined => o?.order_id;
 
 const STATUS_CONFIG = {
   active: { bg: "#10B981", icon: "time-outline" as const, label: "Active" },
+  transit: { bg: "#0EA5A4", icon: "bicycle-outline" as const, label: "Out For Delivery" },
   delivered: {
     bg: "#3B82F6",
     icon: "checkmark-done-outline" as const,
@@ -43,16 +44,32 @@ const STATUS_CONFIG = {
   },
 };
 
-const getStatusConfig = (status: string) =>
-  STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? {
-    bg: "#0EA5A4",
-    icon: "navigate-outline" as const,
-    label: status === "processing" ? "Active" : "Completed",
-  };
+const normalizeStatusKey = (status: string) =>
+  String(status ?? "").trim().toLowerCase().replace(/[^a-z]/g, "");
+
+const getStatusConfig = (status: string) => {
+  const key = normalizeStatusKey(status);
+
+  if (key === "delivered") return STATUS_CONFIG.delivered;
+  if (key === "cancelled" || key === "canceled" || key === "deleted") {
+    return STATUS_CONFIG.cancelled;
+  }
+  if (
+    key === "intransit" ||
+    key === "readyfordelivery" ||
+    key === "deliveryriderassigned" ||
+    key === "outfordelivery"
+  ) {
+    return STATUS_CONFIG.transit;
+  }
+
+  return STATUS_CONFIG.active;
+};
 
 const mapFilterStatus = (status: string): OrderStatus => {
-  if (status === "delivered") return "Completed";
-  if (status === "cancelled") return "Completed";
+  const key = normalizeStatusKey(status);
+  if (key === "delivered") return "Completed";
+  if (key === "cancelled" || key === "canceled" || key === "deleted") return "Completed";
   return "Active";
 };
 /* ─── Accent palette — matches Home.tsx exactly ─── */

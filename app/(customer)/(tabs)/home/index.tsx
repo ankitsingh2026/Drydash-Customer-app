@@ -34,7 +34,7 @@ import {
 } from "react-native";
 import {
   SafeAreaProvider,
-  useSafeAreaInsets,
+  useSafeAreaInsets
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";

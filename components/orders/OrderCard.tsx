@@ -40,6 +40,7 @@ const STATUS_ALIASES: Record<string, CardVariant> = {
     scheduled: "scheduled",
     assigned: "assigned",
     riderassigned: "assigned",
+    pickupassigned: "assigned",
     processing: "processing",
     active: "processing",
     inprogress: "processing",
@@ -49,6 +50,7 @@ const STATUS_ALIASES: Record<string, CardVariant> = {
     delivered: "completed",
     complete: "completed",
     completed: "completed",
+    deleted: "cancelled",
     outfordelivery: "delivery",
     delivery: "delivery",
     outfordelievry: "delivery",
@@ -100,7 +102,7 @@ const getSlotEndLabel = (slot?: string) => {
 
 const getScheduledTitle = (pickup: PickupRecord) => {
     const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
-    const endLabel = getSlotEndLabel(pickup.slot);
+    const endLabel = getSlotEndLabel(pickup.sloht);
 
     if (isToday(scheduleDate)) {
         return `Pickup today before ${endLabel}`;
@@ -126,7 +128,7 @@ const normalizeStatus = (pickup: PickupRecord): CardVariant => {
     const key = rawStatus.replace(/[^a-z]/g, "");
     const paymentStatus = String(pickup.paymentStatus ?? "").trim().toLowerCase();
 
-    if (pickup.cancelledAt || pickup.cancelNote) return "cancelled";
+    if (pickup.isDeleted || pickup.cancelledAt || pickup.cancelNote || key === "deleted") return "cancelled";
     if (
         pickup.isPaid ||
         rawStatus === "paid" ||
@@ -777,7 +779,7 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     statusPill: {
-        minHeight: 34,
+        minHeight: 30,
         borderRadius: 18,
         borderWidth: 1,
         borderColor: "#1F4E42",
@@ -787,6 +789,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
+        alignSelf: "flex-start", 
     },
     statusPillText: {
         color: "#B2F8DC",
