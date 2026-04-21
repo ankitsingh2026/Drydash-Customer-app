@@ -34,6 +34,7 @@ import {
 } from "react-native";
 import {
   SafeAreaProvider,
+  SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
@@ -890,7 +891,7 @@ export default function Home() {
 
           {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
           {latestPickup ? (
-            <View style={{ marginHorizontal: 16, marginTop: 14 }}>
+            <SafeAreaView style={{ marginHorizontal: 16, marginTop: 14 }}>
               <PickupStatusCard
                 pickup={latestPickup}
                 onPress={() =>
@@ -903,7 +904,7 @@ export default function Home() {
                 }
                 onActionComplete={refreshPickups}
               />
-            </View>
+            </SafeAreaView>
           ) : hideDeliveredCard ? (
             <View
               collapsable={false}
