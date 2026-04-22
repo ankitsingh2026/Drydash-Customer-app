@@ -1,7 +1,6 @@
 import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
 import {
     Linking,
     Platform,
@@ -58,6 +57,8 @@ const SECTIONS: SectionData[] = [
         intro:
             "We employ enterprise-grade encryption (AES-256) and secure socket layers (SSL) to protect your data. Regular security audits ensure your information remains shielded.",
     },
+
+    
     // {
     //     icon: "time-outline",
     //     title: "Data Retention",

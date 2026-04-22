@@ -27,6 +27,14 @@ export const getMeApi = async () => {
   return data;
 };
 
+export const unActivatedUser = async () => {
+  const { data } = await apiClient.patch("/v1/customers/me", {
+    isActive: false,
+  });
+
+  return data;
+};
+
 export const refreshTokenApi = (refreshToken: string) => {
   console.log("i am beign called refresh token api");
   return axios.post("https://live.drydash.in/v1/auth/refresh-tokens", {

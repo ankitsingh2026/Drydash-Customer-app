@@ -1,8 +1,4 @@
-import {
-  sendOtpApi,
-  updateUserApi,
-  verifyOtpApi,
-} from "@/features/auth/auth.api";
+
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
 import { useSmsUserConsent } from "@eabdullazyanov/react-native-sms-user-consent";
@@ -23,6 +19,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import {
+  sendOtpApi,
+  updateUserApi,
+  verifyOtpApi,
+} from "../../features/auth/auth.api";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
@@ -95,9 +96,15 @@ export default function AuthScreen() {
   }, []);
 
   const setHGasing = async () => {
-    const hashes = await OtpVerify.getHash();
-    setHash(hashes);
-    return hashes; // ✅ return so caller can use immediately
+    if (Platform.OS !== "android") return [];
+
+    try {
+      const hashes = await OtpVerify.getHash();
+      setHash(hashes);
+      return hashes; // ✅ return so caller can use immediately
+    } catch {
+      return [];
+    }
   };
 
   const handleGetPhoneNumbers = async (freshHashes?: string[]) => {
@@ -189,7 +196,13 @@ export default function AuthScreen() {
       setStep("OTP");
       setResendTimer(30);
     } catch (e: any) {
-      setError(e.message);
+      const status = e?.response?.status || e?.status;
+
+      if (status === 410) {
+        setError(
+          "This account is currently scheduled for deletion. It will be permanently removed after 10 days. To restore access before then, please contact support at support@drydash.in."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -212,7 +225,14 @@ export default function AuthScreen() {
       setLoading(true);
       setError(null);
 
-      const res = await verifyOtpApi(phone, otpToVerify); // no +91
+      const res = await verifyOtpApi(phone, otpToVerify);
+
+      if (res?.deleted) {
+        setError("Account deleted. Please connect to support.");
+        //  setStep("REGISTER"); // go to register
+        return;
+      }
+
       if (!res.isNewUser) {
         await saveTokens(res.tokens);
       }
@@ -311,10 +331,6 @@ export default function AuthScreen() {
     return () => clearInterval(t);
   }, [resendTimer]);
 
-  const pickImage = () => {
-    setAvatar("picked");
-  };
-
   return (
     <SafeAreaView style={styles.outer}>
       {/* Gradient overlay */}
@@ -386,7 +402,7 @@ export default function AuthScreen() {
                 style={[
                   styles.progressDot,
                   (step === "REGISTER" || step === "SUCCESS") &&
-                    styles.progressDotActive,
+                  styles.progressDotActive,
                 ]}
               />
             </View>
@@ -520,24 +536,6 @@ export default function AuthScreen() {
 
             {step === "REGISTER" && (
               <>
-                {/* <TouchableOpacity style={styles.avatarBox} onPress={pickImage}>
-                  <View
-                    style={[
-                      styles.avatarCircle,
-                      avatar && styles.avatarCircleActive,
-                    ]}
-                  >
-                    <Ionicons
-                      name={avatar ? "checkmark-circle" : "camera"}
-                      size={32}
-                      color={avatar ? "#34D399" : "#6B7280"}
-                    />
-                  </View>
-                  <Text style={styles.avatarText}>
-                    {avatar ? "Photo selected ✓" : "Add profile photo"}
-                  </Text>
-                </TouchableOpacity> */}
-
                 <Input
                   icon="person-outline"
                   placeholder="First name *"
@@ -645,14 +643,14 @@ export default function AuthScreen() {
               By continuing, you agree to our {"\n"}
               <Text
                 style={styles.legalLink}
-                onPress={() => router.push("/(terms)/terms")}
+                onPress={() => router.push("/terms")}
               >
-                Terms of Use
+                Terms & Conditions
               </Text>
               {" & "}
               <Text
                 style={[styles.legalLink, { marginTop: 4 }]}
-                onPress={() => router.push("/(terms)/privacy-policy")}
+                onPress={() => router.push("/privacy-policy")}
               >
                 Privacy Policy
               </Text>
