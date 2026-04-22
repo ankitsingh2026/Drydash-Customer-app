@@ -1,10 +1,12 @@
-import { getMeApi } from "@/features/auth/auth.api";
+import { useAuthContext } from "@/context/AuthContext";
+import { getMeApi, unActivatedUser } from "@/features/auth/auth.api";
 import { useAuth } from "@/hooks/useAuth";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   BackHandler,
   KeyboardAvoidingView,
@@ -32,7 +34,7 @@ function getInitials(name: string): string {
 
 export default function EditProfile() {
   const { theme } = useTheme();
-
+  const { logout } = useAuthContext();
   const fade = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(24)).current;
   const sheetAnim = useRef(new Animated.Value(300)).current;
@@ -42,8 +44,8 @@ export default function EditProfile() {
   const [showSheet, setShowSheet] = useState(false);
 
   const params = useLocalSearchParams();
-  const [phone, setPhone] = useState((params.phone as string) || "");
 
+  const [phone, setPhone] = useState("")
   const [addresses, setAddresses] = useState<any[]>([]);
   const { user } = useAuth();
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
@@ -65,6 +67,8 @@ export default function EditProfile() {
   const [name, setName] = useState((params.name as string) || "");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [deleteModal, setDeleteModal] = useState(false);
   /* entry animation */
   useEffect(() => {
     Animated.parallel([
@@ -119,6 +123,28 @@ export default function EditProfile() {
   };
 
   const initials = getInitials(name);
+
+  const handleDeleteAccount = async () => {
+    try {
+      setDeleteModal(false);
+
+      const res = await unActivatedUser();
+
+      Alert.alert(
+        "Account Scheduled for Deletion",
+        "Your account has been scheduled for deletion and will be permanently removed after 10 days. You can restore access during this period by contacting support at support@drydash.in."
+      );
+
+      await logout();
+      router.replace("/auth");
+    } catch (e) {
+      Alert.alert(
+        "Delete Failed",
+        "We were unable to delete your account. Please try again."
+      );
+      console.log("delete error", e);
+    }
+  };
 
   return (
     <Animated.View
@@ -245,8 +271,54 @@ export default function EditProfile() {
                 </Text>
               </LinearGradient>
             </TouchableOpacity> */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setDeleteModal(true)}
+              style={styles.deleteBtn}
+            >
+              <Text style={styles.deleteText}>
+                Delete Account
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {deleteModal && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalBox}>
+
+              <Text style={styles.modalTitle}>
+                Delete Account
+              </Text>
+
+              <Text style={styles.modalDesc}>
+                This will permanently delete your account and all data.
+              </Text>
+
+              <View style={styles.modalRow}>
+
+                <TouchableOpacity
+                  onPress={() => setDeleteModal(false)}
+                >
+                  <Text style={styles.cancelText}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleDeleteAccount}
+                  style={styles.confirmDelete}
+                >
+                  <Text style={styles.confirmText}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+
+              </View>
+
+            </View>
+          </View>
+        )}
       </SafeAreaView>
     </Animated.View>
   );
@@ -256,7 +328,6 @@ export default function EditProfile() {
 
 function Field({
   label,
-  editable = false,
   theme,
   ...props
 }: {
@@ -273,7 +344,7 @@ function Field({
       </Text>
       <TextInput
         {...props}
-        editable={editable}
+        //   editable={editable}
         style={[
           styles.input,
           {
@@ -400,5 +471,69 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#031612",
     letterSpacing: 0.3,
+  },
+  deleteBtn: {
+    marginTop: 18,
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+
+  deleteText: {
+    color: "#FF3B30",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    padding: 20,
+  },
+
+  modalBox: {
+    backgroundColor: "#111",
+    padding: 20,
+    borderRadius: 16,
+  },
+
+  modalTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 6,
+  },
+
+  modalDesc: {
+    color: "#aaa",
+    marginBottom: 20,
+  },
+
+  modalRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 16,
+  },
+
+  cancelText: {
+    color: "#aaa",
+    fontWeight: "600",
+    marginTop: 12
+  },
+
+  confirmDelete: {
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+
+  confirmText: {
+    color: "#fff",
+    fontWeight: "700",
   },
 });
