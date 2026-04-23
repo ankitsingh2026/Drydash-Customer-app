@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import CancelPickupConfirmModal from "./CancelPickupConfirmModal";
 import ReschedulePickupModal from "./ReschedulePickupModal";
+import { router } from "expo-router";
 type PickupStatusCardProps = {
     pickup: PickupRecord;
     onPress?: () => void;
@@ -221,7 +222,8 @@ function IconPair() {
 
 function ChatFab() {
     return (
-        <TouchableOpacity style={styles.chatFab}>
+        <TouchableOpacity style={styles.chatFab}
+        onPress={() => router.push("/(customer)/(assistant)/chat")}>
             <Ionicons name="chatbubble-ellipses" size={25} color="#003C31" />
         </TouchableOpacity>
     );

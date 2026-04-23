@@ -5,7 +5,7 @@ import {
   fetchAllValidCoupons,
   removeCouponApi,
 } from "@/features/coupons/coupons.api";
-import { getOrdersApi, getSingleOrderDetailssApi } from "@/features/orders/orders.api";
+import { getOrdersApi, getSingleOrderDetailsApi } from "@/features/orders/orders.api";
 import {
   razorpayPaymentInitiate,
   verifyRazorpayPayment,
@@ -168,9 +168,8 @@ function getItemUnitLabel(item: OrderItem) {
 
 export default function OrderReceipt() {
   const params = useLocalSearchParams();
-  const orderId =
-    typeof params.orderId === "string" ? params.orderId : undefined;
-
+  const orderId = String(params.orderId || "");
+  console.log("this is the orderId from params========>>>>>", orderId);
   const { theme } = useTheme();
   const { user } = useAuth();
 
@@ -227,7 +226,7 @@ export default function OrderReceipt() {
 
     try {
       setLoading(true);
-      const data = await getSingleOrderDetailssApi(orderId);
+      const data = await getSingleOrderDetailsApi(orderId);
 
       let rawOrderDetails =
         data?.order_details ||
@@ -384,6 +383,7 @@ export default function OrderReceipt() {
     try {
       setPaymentLoading(true);
       const res = await razorpayPaymentInitiate(orderId);
+      console.log("razorpayPaymentInitiate response======>>>", res);
 
       if (!res?.data?.success) {
         throw new Error("Payment initiation failed");
@@ -623,6 +623,7 @@ export default function OrderReceipt() {
     normalizedStatus,
   );
   const isDelivered = normalizedStatus === "delivered";
+  const showPayNow = !isPaid && !isDelivered;
   const isProcessing = normalizedStatus === "processing";
   const isInProgressOrder = isProcessing || isReadyForDelivery || isOutForDelivery;
   const isActive = ["processing", "active", "intransit", "readyfordelivery"].includes(
@@ -661,7 +662,7 @@ export default function OrderReceipt() {
     year: "numeric",
   });
 
-  console.log("this is the isPaid-->>", isPaid);
+  console.log("this is the isPaid-->>", isPaid, orderId);
 
   const inProgressTitle = isOutForDelivery
     ? "Out for Delivery"
@@ -687,7 +688,7 @@ export default function OrderReceipt() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             s.container,
-            { backgroundColor: theme.background, paddingBottom: 24 },
+            { backgroundColor: theme.background, paddingBottom: showPayNow ? 140 : 40 },
           ]}
           keyboardShouldPersistTaps="handled"
         >
@@ -812,8 +813,54 @@ export default function OrderReceipt() {
             </View>
             <Ionicons name="chevron-forward" size={18} color="#7F948A" />
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+       </ScrollView>
+
+{showPayNow && (
+  <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
+    <TouchableOpacity
+      onPress={handleRazorpayPayNow}
+      disabled={paymentLoading}
+      style={[
+        s.payBtn,
+        {
+          backgroundColor: theme.primary,
+          opacity: paymentLoading ? 0.7 : 1,
+        },
+      ]}
+    >
+      {paymentLoading ? (
+        <ActivityIndicator size="small" color="#001714" />
+      ) : (
+        <>
+          <Text style={s.payBtnText}>
+            Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
+          </Text>
+          <Ionicons name="arrow-forward" size={18} color="#001714" />
+        </>
+      )}
+    </TouchableOpacity>
+  </View>
+)}
+
+  <Modal visible={showPaymentWebView} animationType="slide">
+        {razorpayData && (
+          <RazorpayWebView
+            amount={razorpayData.amount}
+            orderId={razorpayData.razorpayOrderId}
+            razorpayOrderId={razorpayData.razorpayOrderId}
+            razorpayKey={razorpayData.key}
+            email={email}
+            phone={phone}
+            name={name}
+            themeColor={theme.primary}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onCancel={handlePaymentCancel}
+          />
+        )}
+      </Modal>
+
+</KeyboardAvoidingView>
     );
   }
 
@@ -1257,51 +1304,35 @@ export default function OrderReceipt() {
             />
           </View>
 
-          <View style={{ height: 90 }} />
+         <View style={{ height: showPayNow ? 100 : 40 }} />
         </ScrollView>
 
-        <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
-          {isPaid ? (
-            <View
-              style={[
-                s.payBtn,
-                { backgroundColor: theme.primary, opacity: 0.6 },
-              ]}
-            >
-              <MaterialCommunityIcons
-                name="check-circle-outline"
-                size={20}
-                color="#001714"
-              />
-              <Text style={s.payBtnText}>
-                Paid ₹{singleOrderDetails.totalAmount?.toFixed(0)}
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              onPress={handleRazorpayPayNow}
-              disabled={paymentLoading}
-              style={[
-                s.payBtn,
-                {
-                  backgroundColor: theme.primary,
-                  opacity: paymentLoading ? 0.7 : 1,
-                },
-              ]}
-            >
-              {paymentLoading ? (
-                <ActivityIndicator size="small" color="#001714" />
-              ) : (
-                <>
-                  <Text style={s.payBtnText}>
-                    Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
-                  </Text>
-                  <Ionicons name="arrow-forward" size={18} color="#001714" />
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* {showPayNow && (
+  <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
+    <TouchableOpacity
+      onPress={handleRazorpayPayNow}
+      disabled={paymentLoading}
+      style={[
+        s.payBtn,
+        {
+          backgroundColor: theme.primary,
+          opacity: paymentLoading ? 0.7 : 1,
+        },
+      ]}
+    >
+      {paymentLoading ? (
+        <ActivityIndicator size="small" color="#001714" />
+      ) : (
+        <>
+          <Text style={s.payBtnText}>
+            Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
+          </Text>
+          <Ionicons name="arrow-forward" size={18} color="#001714" />
+        </>
+      )}
+    </TouchableOpacity>
+  </View>
+)} */}
       </KeyboardAvoidingView>
 
       <CouponCard
@@ -1313,24 +1344,6 @@ export default function OrderReceipt() {
         coupons={availableCoupons}
         loading={couponLoading}
       />
-
-      <Modal visible={showPaymentWebView} animationType="slide">
-        {razorpayData && (
-          <RazorpayWebView
-            amount={razorpayData.amount}
-            orderId={razorpayData.orderId}
-            razorpayOrderId={razorpayData.razorpayOrderId}
-            razorpayKey={razorpayData.key}
-            email={email}
-            phone={phone}
-            name={name}
-            themeColor={theme.primary}
-            onSuccess={handlePaymentSuccess}
-            onFailure={handlePaymentFailure}
-            onCancel={handlePaymentCancel}
-          />
-        )}
-      </Modal>
     </>
   );
 }
@@ -1902,7 +1915,7 @@ const s = StyleSheet.create({
   },
   deliveredOrderDetailsCard: {
     marginHorizontal: 20,
-    marginTop: 2,
+    marginTop: 10,
     marginBottom: 14,
     borderRadius: 14,
     borderWidth: 1,

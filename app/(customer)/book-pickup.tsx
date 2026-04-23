@@ -11,7 +11,7 @@ import {
   saveAddressApi,
 } from "@/features/orders/orders.api";
 import { CreatePickupRequest } from "@/features/orders/orders.types";
-import { getCustomerPickups } from "@/features/pickups/pickup.api";
+import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons } from "@expo/vector-icons";
@@ -261,117 +261,41 @@ export default function BookPickup() {
     checkServiceForSelectedAddress();
   }, [selectedPickupAddressId, selectedAddress]);
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  let isMounted = true;
 
-    const isActivePickup = (pickup: any) => {
-      const status = String(pickup?.PickupStatus ?? "").toLowerCase();
-      return ![
-        "complete",
-        "completed",
-        "delivered",
-        "cancelled",
-        "canceled",
-      ].includes(status) && !pickup?.cancelledAt;
-    };
+  const checkActiveBooking = async () => {
+    try {
+      setCheckingActiveBooking(true);
 
-    const isActiveOrder = (order: any) => {
-      const status = String(order?.status ?? "").trim().toLowerCase();
-      return ![
-        "delivered",
-        "complete",
-        "completed",
-        "cancelled",
-        "canceled",
-      ].includes(status);
-    };
-
-    const checkActiveBookings = async () => {
-      if (!phoneCandidates.length) {
-        if (isMounted) {
-          setHasActiveBooking(false);
-          setCheckingActiveBooking(false);
-        }
+      if (!phone) {
+        setHasActiveBooking(false);
         return;
       }
 
-      if (isMounted) setCheckingActiveBooking(true);
+      const res = await getActivePickupOrOrder(phone);
 
-      try {
-        const [pickupResult, orderResult] = await Promise.all([
-          (async () => {
-            for (const candidate of phoneCandidates) {
-              try {
-                const res = await getCustomerPickups(candidate);
-                const pickups = Array.isArray(res?.pickups) ? res.pickups : [];
-                if (pickups.some(isActivePickup)) return true;
-              } catch {
-                // Try the next phone format.
-              }
-            }
-            return false;
-          })(),
-          (async () => {
-            for (const candidate of phoneCandidates) {
-              try {
-                const res = await getOrdersApi(candidate);
-                const orders = Array.isArray(res?.orders) ? res.orders : [];
-                if (orders.some(isActiveOrder)) return true;
-              } catch {
-                // Try the next phone format.
-              }
-            }
-            return false;
-          })(),
-        ]);
+      console.log("ACTIVE BOOKING RESPONSE ===>", res?.data);
 
-        const pickupById = pickupResult
-          ? true
-          : auth_id
-            ? await (async () => {
-                try {
-                  const res = await getCustomerPickups(auth_id);
-                  const pickups = Array.isArray(res?.pickups) ? res.pickups : [];
-                  return pickups.some(isActivePickup);
-                } catch {
-                  return false;
-                }
-              })()
-            : false;
-
-        const orderById = orderResult
-          ? true
-          : auth_id
-            ? await (async () => {
-                try {
-                  const res = await getOrdersApi(auth_id);
-                  const orders = Array.isArray(res?.orders) ? res.orders : [];
-                  return orders.some(isActiveOrder);
-                } catch {
-                  return false;
-                }
-              })()
-            : false;
-
-        if (isMounted) {
-          setHasActiveBooking(Boolean(pickupById || orderById));
-        }
-      } catch (error) {
-        if (__DEV__) {
-          console.log("[book-pickup] active booking check failed", error);
-        }
-        if (isMounted) setHasActiveBooking(false);
-      } finally {
-        if (isMounted) setCheckingActiveBooking(false);
+      if (res?.data?.success && res?.data?.data) {
+        setHasActiveBooking(true);
+      } else {
+        setHasActiveBooking(false);
       }
-    };
+    } catch (error) {
+      console.log("Active booking error", error);
+      setHasActiveBooking(false);
+    } finally {
+      if (isMounted) setCheckingActiveBooking(false);
+    }
+  };
 
-    checkActiveBookings();
+  checkActiveBooking();
 
-    return () => {
-      isMounted = false;
-    };
-  }, [phoneCandidates]);
+  return () => {
+    isMounted = false;
+  };
+}, [phone]);
 
   const checkServiceForSelectedAddress = async () => {
     try {

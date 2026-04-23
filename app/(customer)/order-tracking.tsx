@@ -1,12 +1,13 @@
 import CancelPickupConfirmModal from "@/components/orders/CancelPickupConfirmModal";
 import ReschedulePickupModal from "@/components/orders/ReschedulePickupModal";
 import { useAddress } from "@/context/AddressContext";
-import { getOrdersApi } from "@/features/orders/orders.api";
-import { cancelPickupApi, getCustomerPickups, reschedulePickupApi } from "@/features/pickups/pickup.api";
-import { PickupRecord } from "@/features/pickups/pickup.types";
 import { useAuth } from "@/hooks/useAuth";
 import { Address } from "@/types/order.types";
-import { buildPhoneCandidates } from "@/utils/phone";
+import {
+  cancelPickupApi,
+  reschedulePickupApi,
+  getCustomerSinglePickupDetails
+} from "@/features/pickups/pickup.api";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
@@ -46,36 +47,6 @@ type OrderItem = {
   accent: string;
 };
 
-type ApiOrderItem = {
-  heading?: string;
-  label?: string;
-  quantity?: number;
-  price?: number;
-  newQtyPrice?: number;
-  unit?: string;
-  qty?: number;
-  type?: string;
-};
-
-type ApiOrder = {
-  _id?: string;
-  order_id?: string;
-  status?: string;
-  statusHistory?: {
-    delivered?: string | null;
-  };
-  items?: ApiOrderItem[];
-  address?: string;
-  deliveryCharges?: number;
-  taxAmount?: number;
-  discountAmount?: number;
-  totalAmount?: number;
-  price?: number;
-  isPaid?: boolean;
-  customerName?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
 
 type ScreenMode = "pickup-scheduled" | "pickup-assigned" | "order-items" | "order-delivered";
 
@@ -397,15 +368,15 @@ function BillCard({
           <View style={styles.billDivider} />
 
           <BillRow label="Subtotal" value={money(subtotal)} />
-          <BillRow label="Delivery Handling" value={money(deliveryHandling)} />
-          {/* <BillRow label="Service Charge" value={money(serviceCharge)} /> */}
+          {/* <BillRow label="Delivery Handling" value={money(deliveryHandling)} />
+          <BillRow label="Service Charge" value={money(serviceCharge)} />
           <BillRow
             label="Item Discount"
             value={`-${money(itemDiscount)}`}
             highlight
           />
           <BillRow label="Platform fee" value={money(platformFee)} />
-          <BillRow label={`GST (${gstPercent}%)`} value={money(gst)} />
+          <BillRow label={`GST (${gstPercent}%)`} value={money(gst)} /> */}
 
           <View style={styles.billDivider} />
 
@@ -542,8 +513,7 @@ export default function OrderTrackingScreen() {
   }>();
   console.log("received id params====>> ", params);
   const [loading, setLoading] = useState(true);
-  const [pickups, setPickups] = useState<PickupRecord[]>([]);
-  const [orders, setOrders] = useState<ApiOrder[]>([]);
+ const [pickupDetails, setPickupDetails] = useState<any>(null);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [couponCode, setCouponCode] = useState("SAVE50");
   const [sameLocation, setSameLocation] = useState(true);
@@ -553,93 +523,23 @@ export default function OrderTrackingScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const rawPhone = user?.user?.phone ?? user?.phone ?? "";
-  const customerId = user?.user?.id ?? user?.id ?? "";
-  const phoneCandidates = useMemo(
-    () => buildPhoneCandidates(rawPhone),
-    [rawPhone],
-  );
+useEffect(() => {
+  const fetchPickup = async () => {
+    if (!params.pickupId) return;
 
-  useEffect(() => {
-    let mounted = true;
+    try {
+      setLoading(true);
+      const res = await getCustomerSinglePickupDetails(params.pickupId);
+      setPickupDetails(res?.pickup_details);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const load = async () => {
-      if (!phoneCandidates.length) {
-        if (mounted) {
-          setPickups([]);
-          setOrders([]);
-          setLoading(false);
-        }
-        return;
-      }
-
-      try {
-        if (mounted) setLoading(true);
-
-        const fetchPickups = async () => {
-          for (const candidate of phoneCandidates) {
-            try {
-              const res = await getCustomerPickups(candidate);
-              const rows = Array.isArray(res?.pickups) ? res.pickups : [];
-              if (rows.length) return rows;
-            } catch {
-              // keep trying alternate phone formats
-            }
-          }
-
-          if (customerId) {
-            try {
-              const res = await getCustomerPickups(customerId);
-              const rows = Array.isArray(res?.pickups) ? res.pickups : [];
-              if (rows.length) return rows;
-            } catch {
-              // keep falling back
-            }
-          }
-          return [] as PickupRecord[];
-        };
-
-        const fetchOrders = async () => {
-          for (const candidate of phoneCandidates) {
-            try {
-              const res = await getOrdersApi(candidate);
-              const rows = Array.isArray(res?.orders) ? res.orders : [];
-              if (rows.length) return rows as ApiOrder[];
-            } catch {
-              // keep trying alternate phone formats
-            }
-          }
-
-          if (customerId) {
-            try {
-              const res = await getOrdersApi(customerId);
-              const rows = Array.isArray(res?.orders) ? res.orders : [];
-              if (rows.length) return rows as ApiOrder[];
-            } catch {
-              // keep falling back
-            }
-          }
-          return [] as ApiOrder[];
-        };
-
-        const [pickupRows, orderRows] = await Promise.all([
-          fetchPickups(),
-          fetchOrders(),
-        ]);
-
-        if (!mounted) return;
-        setPickups(pickupRows);
-        setOrders(orderRows);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [phoneCandidates, reloadKey]);
+  fetchPickup();
+}, [params.pickupId, reloadKey]);
 
   const handleCancelPickup = async () => {
     if (!selectedPickup?._id) {
@@ -680,56 +580,42 @@ export default function OrderTrackingScreen() {
     }
   };
 
-  const selectedPickup = useMemo(() => {
-    if (!pickups.length) return null;
-    if (params.pickupId) {
-      return pickups.find((row) => row._id === params.pickupId) ?? null;
-    }
+  // const selectedPickup = useMemo(() => {
+  //   if (!pickups.length) return null;
+  //   if (params.pickupId) {
+  //     return pickups.find((row) => row._id === params.pickupId) ?? null;
+  //   }
 
-    const sorted = [...pickups].sort((a, b) => {
-      const at = new Date(a.updatedAt || a.createdAt || a.pickup_date || 0).getTime();
-      const bt = new Date(b.updatedAt || b.createdAt || b.pickup_date || 0).getTime();
-      return bt - at;
-    });
+  //   const sorted = [...pickups].sort((a, b) => {
+  //     const at = new Date(a.updatedAt || a.createdAt || a.pickup_date || 0).getTime();
+  //     const bt = new Date(b.updatedAt || b.createdAt || b.pickup_date || 0).getTime();
+  //     return bt - at;
+  //   });
 
-    return sorted[0] ?? null;
-  }, [pickups, params.pickupId]);
+  //   return sorted[0] ?? null;
+  // }, [pickups, params.pickupId]);
+
+  const selectedPickup = pickupDetails;
 
   useEffect(() => {
     setSpecialInstructions(selectedPickup?.note ?? "");
   }, [selectedPickup?._id, selectedPickup?.note]);
 
-  const selectedOrder = useMemo(() => {
-    if (!orders.length) return null;
-    if (params.orderId) {
-      return (
-        orders.find((row) => row.order_id === params.orderId || row._id === params.orderId) ?? null
-      );
-    }
 
-    const sorted = [...orders].sort((a, b) => {
-      const at = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const bt = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return bt - at;
-    });
-
-    return sorted[0] ?? null;
-  }, [orders, params.orderId]);
 
   const pickupStatus = String(selectedPickup?.PickupStatus ?? "").trim().toLowerCase();
   const normalizedPickupStatus = normalizeStatus(selectedPickup?.PickupStatus);
-  const normalizedOrderStatus = normalizeStatus(selectedOrder?.status);
-  const hasOrderItems = Boolean(selectedOrder?.items?.length || selectedPickup?.items?.length);
+  // const normalizedOrderStatus = normalizeStatus(selectedOrder?.status);
+  const hasOrderItems = Boolean(selectedPickup?.items?.length);
 
-  const locationText = useMemo(() => {
-    return (
-      formatLocationLine(selectedAddress) ||
-      selectedPickup?.Address ||
-      selectedPickup?.deliveryAddress ||
-      selectedOrder?.address ||
-      ORDER.storeSubtitle
-    );
-  }, [selectedAddress, selectedOrder?.address, selectedPickup?.Address, selectedPickup?.deliveryAddress]);
+const locationText = useMemo(() => {
+  return (
+    formatLocationLine(selectedAddress) ||
+    selectedPickup?.Address ||
+    selectedPickup?.deliveryAddress ||
+    ORDER.storeSubtitle
+  );
+}, [selectedAddress, selectedPickup]);
 
   const isAssigned = useMemo(() => {
     return (
@@ -747,107 +633,60 @@ export default function OrderTrackingScreen() {
 
     if (isAssigned) return "pickup-assigned";
     if (isScheduled) return "pickup-scheduled";
-    if (normalizedOrderStatus === "delivered") return "order-delivered";
+    // if (normalizedOrderStatus === "delivered") return "order-delivered";
     return hasOrderItems ? "order-items" : "order-delivered";
-  }, [hasOrderItems, isAssigned, normalizedOrderStatus, normalizedPickupStatus]);
+  }, [hasOrderItems, isAssigned, normalizedPickupStatus]);
 
-  const items: OrderItem[] = useMemo(() => {
-    const fromOrder = (selectedOrder?.items ?? []).map((item, index) => {
-      const qty = Number(item.quantity ?? item.qty ?? 1);
-      const unitPrice = Number(item.newQtyPrice ?? item.price ?? 0);
-      const linePrice = qty * unitPrice;
-      const name = item.heading || item.label || `Item ${index + 1}`;
-      return {
-        id: index + 1,
-        name,
-        qty,
-        price: linePrice,
-        icon: inferItemIcon(name),
-        accent: "#00E1A2",
-      };
-    });
-
-    // Fix: Map pickup items using correct API fields
-    const fromPickup = (selectedPickup?.items ?? []).map((item, index) => {
-      // API: { label, price, unit, quantity }
-      const name = String(item?.label || item?.heading || item?.name || `Item ${index + 1}`);
-      const qty = Number(item?.quantity ?? item?.qty ?? 1);
-      const unitPrice = Number(item?.price ?? 0);
-      const linePrice = qty * unitPrice;
-      return {
-        id: index + 1,
-        name,
-        qty,
-        price: linePrice,
-        icon: inferItemIcon(name),
-        accent: "#00E1A2",
-      };
-    });
-
-    if (fromOrder.length) return fromOrder;
-    if (fromPickup.length) return fromPickup;
-    return [];
-  }, [selectedOrder?.items, selectedPickup?.items]);
-
-  const bill = useMemo(() => {
-    const subtotalFromItems = items.reduce((sum, item) => sum + item.price, 0);
-    const pickupTotal = Number(selectedPickup?.totalAmount ?? selectedPickup?.price ?? 0);
-    const orderTotal = Number(selectedOrder?.totalAmount ?? selectedOrder?.price ?? 0);
-    const total = orderTotal || pickupTotal || subtotalFromItems || ORDER.bill.total;
-
-    const subtotal = subtotalFromItems || total;
-    const deliveryHandling = Number(selectedOrder?.deliveryCharges ?? 0);
-    const serviceCharge =
-      Number(selectedOrder?.taxAmount ?? 0) > 0
-        ? 0
-        : 0;
-    const itemDiscount = Number(selectedOrder?.discountAmount ?? 0);
-    const gst = Number(selectedOrder?.taxAmount ?? 0);
+const items = useMemo(() => {
+  return (selectedPickup?.items ?? []).map((item, index) => {
+    const name = item?.label || `Item ${index + 1}`;
+    const qty = item?.quantity || 1;
+    const price = qty * (item?.price || 0);
 
     return {
-      subtotal,
-      deliveryHandling,
-      serviceCharge,
-      itemDiscount,
-      platformFee: 0,
-      gst,
-      gstPercent: ORDER.bill.gstPercent,
-      total,
+      id: index + 1,
+      name,
+      qty,
+      price,
+      icon: inferItemIcon(name),
+      accent: "#00E1A2",
     };
-  }, [items, selectedOrder, selectedPickup]);
+  });
+}, [selectedPickup]);
 
-  const details = useMemo(() => {
-    const pickupOrderId = selectedPickup?._id
-      ? `DX-${selectedPickup._id.slice(-6).toUpperCase()}`
-      : ORDER.orderId;
+const bill = useMemo(() => {
+  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
 
-    return {
-      orderId: selectedOrder?.order_id || pickupOrderId || ORDER.orderId,
-      payment:
-        selectedOrder?.isPaid || selectedPickup?.isPaid
-          ? "Paid via UPI"
-          : "Payment Pending",
-      deliveredTo:
-        selectedOrder?.customerName ||
-        selectedPickup?.Name ||
-        selectedPickup?.contactName ||
-        ORDER.deliveredTo,
-      deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
-      deliveryAddress:
-        locationText ||
-        selectedPickup?.deliveryAddress ||
-        selectedOrder?.address ||
-        selectedPickup?.Address ||
-        ORDER.deliveryAddress,
-      orderDate: formatDateTime(selectedOrder?.createdAt || selectedPickup?.createdAt),
-    };
-  }, [locationText, selectedOrder, selectedPickup]);
+  return {
+    subtotal,
+    deliveryHandling: 0,
+    serviceCharge: 0,
+    itemDiscount: 0,
+    platformFee: 0,
+    gst: 0,
+    gstPercent: 0,
+    total: selectedPickup?.totalAmount || subtotal,
+  };
+}, [items, selectedPickup]);
+
+const details = useMemo(() => {
+  return {
+    orderId: selectedPickup?._id || ORDER.orderId,
+    payment: "Payment Pending",
+    deliveredTo: selectedPickup?.Name || ORDER.deliveredTo,
+    deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
+    deliveryAddress:
+      selectedPickup?.deliveryAddress ||
+      selectedPickup?.Address ||
+      ORDER.deliveryAddress,
+    orderDate: formatDateTime(selectedPickup?.createdAt),
+  };
+}, [selectedPickup]);
 
   const storeName = selectedPickup?.plantName || "Green Park";
   const storeSubtitle = locationText;
 
-  const deliveredAt =
-    formatTime(selectedOrder?.statusHistory?.delivered || selectedOrder?.updatedAt) || ORDER.deliveredAt;
+const deliveredAt = ORDER.deliveredAt;
 
   const scheduledAt = formatDateTime(
     selectedPickup?.rescheduledDate || selectedPickup?.pickup_date || selectedPickup?.createdAt,
@@ -922,7 +761,7 @@ export default function OrderTrackingScreen() {
             {hasOrderItems ? (
               <>
                 <View style={styles.sectionHeaderWrap}>
-                  <Text style={styles.sectionHeader}>Cart Items</Text>
+                  <Text style={styles.sectionHeader}>Cart Items </Text>
                 </View>
 
                 {items.map((item) => (
@@ -1007,7 +846,7 @@ export default function OrderTrackingScreen() {
               <TagPill label="# Hypoallergenic" />
             </View>
 
-            {!hasOrderItems && screenMode === "pickup-scheduled" ? (
+            {screenMode === "pickup-scheduled" ? (
               <View style={styles.scheduledActionsRow}>
                 <TouchableOpacity
                   style={styles.scheduledCancelBtn}

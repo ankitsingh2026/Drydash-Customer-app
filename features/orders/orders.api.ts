@@ -54,9 +54,10 @@ export const getOrdersApi = async (phoneNumber: any) => {
   return data;
 };
 
-export const getSingleOrderDetailssApi = async (phoneNumber: any) => {
+export const getSingleOrderDetailsApi = async (orderId: any) => {
+  console.log("orderId for single order details orderid=======>", orderId);
   const { data } = await oldApiClient.get(
-    `/app/getCustomerSingleOrderDetails/${phoneNumber}`,
+    `/app/getCustomerSingleOrderDetails/${orderId}`,
   );
   return data;
 };

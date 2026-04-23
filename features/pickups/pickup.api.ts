@@ -96,10 +96,22 @@ export const reschedulePickupApi = async (id: string, newDate: string) => {
 export const getCustomerSinglePickupDetails = async (pickupId: string) => {
   try {
     const res = await oldApiClient.get(
-      `/api/app/getCustomerSinglePickupDetails/${pickupId}`
+      `/app/getCustomerSinglePickupDetails/${pickupId}`
     );
     return res.data;
   } catch (error: any) {
     throw error?.response?.data || error;
+  }
+};
+
+export const getActivePickupOrOrder = async (phone: string) => {
+  try {
+    const res = await oldApiClient.get(
+      `/app/getActivePickupOrOrder/${phone}`
+    );
+    return res;
+  } catch (error) {
+    console.log("Active booking API error", error);
+    return null;
   }
 };

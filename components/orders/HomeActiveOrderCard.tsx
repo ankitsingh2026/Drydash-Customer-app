@@ -1,6 +1,7 @@
 import { DarkTheme } from "@/app/(customer)/order-tracking";
 import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -118,7 +119,7 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
       <View style={styles.card}>
-        <View style={[ { backgroundColor: meta.accent }]} />
+        <View style={[{ backgroundColor: meta.accent }]} />
         {meta.showClose && onClose ? (
           <TouchableOpacity
             onPress={onClose}
@@ -204,9 +205,11 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
             ) : (
               <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
             )}
-            <View style={styles.chatBtn}>
-              <Ionicons name="chatbubble-ellipses" size={25} color={DarkTheme.card} />
-            </View>
+            <TouchableOpacity style={styles.chatBtn} onPress={() => router.push("/(customer)/(assistant)/chat")}>
+              <View style={styles.chatBtn}>
+                <Ionicons name="chatbubble-ellipses" size={25} color={DarkTheme.card} />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
