@@ -92,3 +92,14 @@ export const reschedulePickupApi = async (id: string, newDate: string) => {
   });
   return data;
 };
+
+export const getCustomerSinglePickupDetails = async (pickupId: string) => {
+  try {
+    const res = await oldApiClient.get(
+      `/api/app/getCustomerSinglePickupDetails/${pickupId}`
+    );
+    return res.data;
+  } catch (error: any) {
+    throw error?.response?.data || error;
+  }
+};

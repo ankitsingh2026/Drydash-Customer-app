@@ -10,6 +10,7 @@ import {
   getOrdersApi,
   saveAddressApi,
 } from "@/features/orders/orders.api";
+import { CreatePickupRequest } from "@/features/orders/orders.types";
 import { getCustomerPickups } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
@@ -185,7 +186,7 @@ export default function BookPickup() {
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
 
-  const { items, setQty, removeItem } = useCart();
+  const { items, setQty, removeItem, clear } = useCart();
 
   const cartSubtotal = items.reduce(
     (sum, item) => sum + item.qty * item.price,
@@ -461,18 +462,29 @@ export default function BookPickup() {
       const scheduledDate = pickupType === "today" ? new Date() : date;
       const selectedSlot =
         pickupType === "schedule" && slot !== -1 ? TIME_SLOTS[slot] : undefined;
-      const order_details: any = {
+      const orderItems = items
+        .filter((item) => item.id && item.qty > 0)
+        .map((item) => ({
+          itemId: item.id,
+          quantity: item.qty,
+        }));
+
+      const orderDetails: CreatePickupRequest = {
         firstName,
         lastName,
         contact: phone,
-        appCustomerId: auth_id,
+        appCustomerId: String(auth_id),
         tempPickupAdresssId: selectedPickupAddressId,
         tempDeliveryAddressId: deliveryId,
         date: formatDateForApi(scheduledDate),
       };
-      if (selectedSlot) order_details.slot = selectedSlot;
-      if (note?.trim()) order_details.note = note.trim();
-      await createOrderApi(order_details);
+      if (selectedSlot) orderDetails.slot = selectedSlot;
+      if (note?.trim()) orderDetails.note = note.trim();
+      if (orderItems.length) orderDetails.items = orderItems;
+
+      await createOrderApi(orderDetails);
+      clear();
+
       if (pickupType === "today")
         openSuccessModal(
           "Sit & relax 😌\nYour pickup will be collected shortly!",

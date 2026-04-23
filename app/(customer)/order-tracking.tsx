@@ -1,7 +1,11 @@
+import CancelPickupConfirmModal from "@/components/orders/CancelPickupConfirmModal";
+import ReschedulePickupModal from "@/components/orders/ReschedulePickupModal";
+import { useAddress } from "@/context/AddressContext";
 import { getOrdersApi } from "@/features/orders/orders.api";
-import { getCustomerPickups } from "@/features/pickups/pickup.api";
+import { cancelPickupApi, getCustomerPickups, reschedulePickupApi } from "@/features/pickups/pickup.api";
 import { PickupRecord } from "@/features/pickups/pickup.types";
 import { useAuth } from "@/hooks/useAuth";
+import { Address } from "@/types/order.types";
 import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -9,12 +13,13 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
-
   ScrollView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -43,9 +48,12 @@ type OrderItem = {
 
 type ApiOrderItem = {
   heading?: string;
+  label?: string;
   quantity?: number;
   price?: number;
   newQtyPrice?: number;
+  unit?: string;
+  qty?: number;
   type?: string;
 };
 
@@ -69,7 +77,7 @@ type ApiOrder = {
   updatedAt?: string;
 };
 
-type ScreenMode = "pickup-scheduled" | "pickup-assigned" | "order-delivered";
+type ScreenMode = "pickup-scheduled" | "pickup-assigned" | "order-items" | "order-delivered";
 
 const ORDER: {
   storeName: string;
@@ -178,6 +186,23 @@ function formatDateTime(value?: string | null) {
   });
 }
 
+function normalizeStatus(value?: string | null) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+}
+
+function formatLocationLine(address?: Address | null) {
+  if (!address) return "";
+  const parts = [
+    address.line1 || address.street || address.flat,
+    address.city,
+    address.state,
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
 function inferItemIcon(name: string): OrderItem["icon"] {
   const text = name.toLowerCase();
   if (text.includes("heel") || text.includes("stiletto")) return "shoe-heel";
@@ -188,7 +213,7 @@ function inferItemIcon(name: string): OrderItem["icon"] {
 function ItemIcon({ icon, accent }: { icon: OrderItem["icon"]; accent: string }) {
   return (
     <View style={[styles.itemIconInner, { borderColor: `${accent}55` }]}>
-      <MaterialCommunityIcons name={icon} size={20} color={accent} />
+      <MaterialCommunityIcons name={icon as any} size={20} color={accent} />
     </View>
   );
 }
@@ -275,6 +300,23 @@ function ItemCard({ item }: { item: OrderItem }) {
   );
 }
 
+function LocationCard({ value }: { value: string }) {
+  return (
+    <View style={styles.locationCardWrap}>
+      <Ionicons name="location-outline" size={14} color={DarkTheme.primary} />
+      <Text style={styles.locationCardText} numberOfLines={1}>{value || ORDER.storeSubtitle}</Text>
+    </View>
+  );
+}
+
+function TagPill({ label }: { label: string }) {
+  return (
+    <View style={styles.tagPill}>
+      <Text style={styles.tagPillText}>{label}</Text>
+    </View>
+  );
+}
+
 function RatingCard() {
   return (
     <View style={styles.ratingCard}>
@@ -356,7 +398,7 @@ function BillCard({
 
           <BillRow label="Subtotal" value={money(subtotal)} />
           <BillRow label="Delivery Handling" value={money(deliveryHandling)} />
-          <BillRow label="Service Charge" value={money(serviceCharge)} />
+          {/* <BillRow label="Service Charge" value={money(serviceCharge)} /> */}
           <BillRow
             label="Item Discount"
             value={`-${money(itemDiscount)}`}
@@ -493,13 +535,23 @@ function BottomCTA({ mode }: { mode: ScreenMode }) {
 export default function OrderTrackingScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { selectedAddress } = useAddress();
   const params = useLocalSearchParams<{
     pickupId?: string;
     orderId?: string;
   }>();
+  console.log("received id params====>> ", params);
   const [loading, setLoading] = useState(true);
   const [pickups, setPickups] = useState<PickupRecord[]>([]);
   const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [specialInstructions, setSpecialInstructions] = useState("");
+  const [couponCode, setCouponCode] = useState("SAVE50");
+  const [sameLocation, setSameLocation] = useState(true);
+  const [heavyItems, setHeavyItems] = useState(true);
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   const rawPhone = user?.user?.phone ?? user?.phone ?? "";
   const customerId = user?.user?.id ?? user?.id ?? "";
@@ -587,7 +639,46 @@ export default function OrderTrackingScreen() {
     return () => {
       mounted = false;
     };
-  }, [phoneCandidates]);
+  }, [phoneCandidates, reloadKey]);
+
+  const handleCancelPickup = async () => {
+    if (!selectedPickup?._id) {
+      Alert.alert("Missing pickup", "Unable to cancel this pickup right now.");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await cancelPickupApi(selectedPickup._id);
+      setCancelModalVisible(false);
+      Alert.alert("Pickup cancelled", "Your pickup has been cancelled successfully.");
+      setReloadKey((prev) => prev + 1);
+      if (navigation.canGoBack()) navigation.goBack();
+    } catch (error: any) {
+      Alert.alert("Cancel failed", error?.message || "Unable to cancel pickup.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReschedulePickup = async (newDate: string) => {
+    if (!selectedPickup?._id) {
+      Alert.alert("Missing pickup", "Unable to reschedule this pickup right now.");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await reschedulePickupApi(selectedPickup._id, newDate);
+      setRescheduleModalVisible(false);
+      Alert.alert("Pickup rescheduled", "Your pickup date has been updated.");
+      setReloadKey((prev) => prev + 1);
+    } catch (error: any) {
+      Alert.alert("Reschedule failed", error?.message || "Unable to reschedule pickup.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const selectedPickup = useMemo(() => {
     if (!pickups.length) return null;
@@ -603,6 +694,10 @@ export default function OrderTrackingScreen() {
 
     return sorted[0] ?? null;
   }, [pickups, params.pickupId]);
+
+  useEffect(() => {
+    setSpecialInstructions(selectedPickup?.note ?? "");
+  }, [selectedPickup?._id, selectedPickup?.note]);
 
   const selectedOrder = useMemo(() => {
     if (!orders.length) return null;
@@ -622,29 +717,46 @@ export default function OrderTrackingScreen() {
   }, [orders, params.orderId]);
 
   const pickupStatus = String(selectedPickup?.PickupStatus ?? "").trim().toLowerCase();
-  const normalizedPickupStatus = pickupStatus.replace(/[^a-z]/g, "");
-  const orderStatus = String(selectedOrder?.status ?? "").trim().toLowerCase();
+  const normalizedPickupStatus = normalizeStatus(selectedPickup?.PickupStatus);
+  const normalizedOrderStatus = normalizeStatus(selectedOrder?.status);
+  const hasOrderItems = Boolean(selectedOrder?.items?.length || selectedPickup?.items?.length);
+
+  const locationText = useMemo(() => {
+    return (
+      formatLocationLine(selectedAddress) ||
+      selectedPickup?.Address ||
+      selectedPickup?.deliveryAddress ||
+      selectedOrder?.address ||
+      ORDER.storeSubtitle
+    );
+  }, [selectedAddress, selectedOrder?.address, selectedPickup?.Address, selectedPickup?.deliveryAddress]);
+
+  const isAssigned = useMemo(() => {
+    return (
+      Boolean(selectedPickup?.riderName || selectedPickup?.riderDate) ||
+      ["assigned", "riderassigned", "pickupassigned", "ontheway", "accepted"].includes(
+        normalizedPickupStatus,
+      )
+    );
+  }, [normalizedPickupStatus, selectedPickup?.riderDate, selectedPickup?.riderName]);
 
   const screenMode: ScreenMode = useMemo(() => {
-    const isAssigned = ["assigned", "riderassigned", "pickupassigned"].includes(
-      normalizedPickupStatus,
-    );
     const isScheduled = ["pending", "scheduled", "schedule"].includes(
       normalizedPickupStatus,
     );
 
     if (isAssigned) return "pickup-assigned";
     if (isScheduled) return "pickup-scheduled";
-    if (orderStatus === "delivered") return "order-delivered";
-    return "order-delivered";
-  }, [normalizedPickupStatus, orderStatus]);
+    if (normalizedOrderStatus === "delivered") return "order-delivered";
+    return hasOrderItems ? "order-items" : "order-delivered";
+  }, [hasOrderItems, isAssigned, normalizedOrderStatus, normalizedPickupStatus]);
 
   const items: OrderItem[] = useMemo(() => {
     const fromOrder = (selectedOrder?.items ?? []).map((item, index) => {
-      const qty = Number(item.quantity ?? 1);
+      const qty = Number(item.quantity ?? item.qty ?? 1);
       const unitPrice = Number(item.newQtyPrice ?? item.price ?? 0);
-      const linePrice = qty > 0 && unitPrice > 0 ? unitPrice : Number(item.price ?? 0);
-      const name = item.heading || `Item ${index + 1}`;
+      const linePrice = qty * unitPrice;
+      const name = item.heading || item.label || `Item ${index + 1}`;
       return {
         id: index + 1,
         name,
@@ -655,10 +767,13 @@ export default function OrderTrackingScreen() {
       };
     });
 
+    // Fix: Map pickup items using correct API fields
     const fromPickup = (selectedPickup?.items ?? []).map((item, index) => {
-      const name = String(item?.heading || item?.name || `Item ${index + 1}`);
+      // API: { label, price, unit, quantity }
+      const name = String(item?.label || item?.heading || item?.name || `Item ${index + 1}`);
       const qty = Number(item?.quantity ?? item?.qty ?? 1);
-      const linePrice = Number(item?.newQtyPrice ?? item?.price ?? 0);
+      const unitPrice = Number(item?.price ?? 0);
+      const linePrice = qty * unitPrice;
       return {
         id: index + 1,
         name,
@@ -676,25 +791,25 @@ export default function OrderTrackingScreen() {
 
   const bill = useMemo(() => {
     const subtotalFromItems = items.reduce((sum, item) => sum + item.price, 0);
-    const subtotal = subtotalFromItems || ORDER.bill.subtotal;
-    const deliveryHandling = Number(selectedOrder?.deliveryCharges ?? ORDER.bill.deliveryHandling);
+    const pickupTotal = Number(selectedPickup?.totalAmount ?? selectedPickup?.price ?? 0);
+    const orderTotal = Number(selectedOrder?.totalAmount ?? selectedOrder?.price ?? 0);
+    const total = orderTotal || pickupTotal || subtotalFromItems || ORDER.bill.total;
+
+    const subtotal = subtotalFromItems || total;
+    const deliveryHandling = Number(selectedOrder?.deliveryCharges ?? 0);
     const serviceCharge =
       Number(selectedOrder?.taxAmount ?? 0) > 0
         ? 0
-        : ORDER.bill.serviceCharge;
-    const itemDiscount = Number(selectedOrder?.discountAmount ?? ORDER.bill.itemDiscount);
-    const gst = Number(selectedOrder?.taxAmount ?? ORDER.bill.gst);
-
-    const total =
-      Number(selectedOrder?.totalAmount ?? selectedOrder?.price ?? selectedPickup?.totalAmount ?? selectedPickup?.price ?? 0) ||
-      ORDER.bill.total;
+        : 0;
+    const itemDiscount = Number(selectedOrder?.discountAmount ?? 0);
+    const gst = Number(selectedOrder?.taxAmount ?? 0);
 
     return {
       subtotal,
       deliveryHandling,
       serviceCharge,
       itemDiscount,
-      platformFee: ORDER.bill.platformFee,
+      platformFee: 0,
       gst,
       gstPercent: ORDER.bill.gstPercent,
       total,
@@ -719,26 +834,32 @@ export default function OrderTrackingScreen() {
         ORDER.deliveredTo,
       deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
       deliveryAddress:
+        locationText ||
         selectedPickup?.deliveryAddress ||
         selectedOrder?.address ||
         selectedPickup?.Address ||
         ORDER.deliveryAddress,
       orderDate: formatDateTime(selectedOrder?.createdAt || selectedPickup?.createdAt),
     };
-  }, [selectedOrder, selectedPickup]);
+  }, [locationText, selectedOrder, selectedPickup]);
 
   const storeName = selectedPickup?.plantName || "Green Park";
-  const storeSubtitle =
-    selectedPickup?.Address || selectedOrder?.address || ORDER.storeSubtitle;
+  const storeSubtitle = locationText;
 
   const deliveredAt =
     formatTime(selectedOrder?.statusHistory?.delivered || selectedOrder?.updatedAt) || ORDER.deliveredAt;
+
+  const scheduledAt = formatDateTime(
+    selectedPickup?.rescheduledDate || selectedPickup?.pickup_date || selectedPickup?.createdAt,
+  );
 
   const statusBannerContent = useMemo(() => {
     if (screenMode === "pickup-scheduled") {
       return {
         title: "Pickup has been scheduled",
-        subtitle: `Status: ${toTitleCase(selectedPickup?.PickupStatus) || "Pending"}`,
+        subtitle: selectedPickup?.slot
+          ? `Pickup slot: ${selectedPickup.slot} • ${scheduledAt}`
+          : `Status: ${toTitleCase(selectedPickup?.PickupStatus) || "Pending"}`,
         icon: "time-outline" as const,
       };
     }
@@ -757,7 +878,7 @@ export default function OrderTrackingScreen() {
       subtitle: "Successfully picked up & delivered",
       icon: "checkmark" as const,
     };
-  }, [screenMode, selectedPickup?.PickupStatus, selectedPickup?.riderName, deliveredAt]);
+  }, [deliveredAt, scheduledAt, screenMode, selectedPickup?.PickupStatus, selectedPickup?.riderName, selectedPickup?.slot]);
 
   if (loading) {
     return (
@@ -790,42 +911,282 @@ export default function OrderTrackingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <StatusBanner
-          title={statusBannerContent.title}
-          subtitle={statusBannerContent.subtitle}
-          icon={statusBannerContent.icon}
+        {screenMode === "pickup-scheduled" || screenMode === "pickup-assigned" ? (
+          <>
+            <StatusBanner
+              title={statusBannerContent.title}
+              subtitle={statusBannerContent.subtitle}
+              icon={statusBannerContent.icon}
+            />
+
+            {hasOrderItems ? (
+              <>
+                <View style={styles.sectionHeaderWrap}>
+                  <Text style={styles.sectionHeader}>Cart Items</Text>
+                </View>
+
+                {items.map((item) => (
+                  <ItemCard key={item.id} item={item} />
+                ))}
+
+                <TouchableOpacity activeOpacity={0.85} style={styles.addItemsRow}>
+                  <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
+                  <Text style={styles.addItemsText}>Add More Items</Text>
+                </TouchableOpacity>
+
+                <View style={styles.offerHeaderRow}>
+                  <Text style={styles.offerLabel}>Available Offers</Text>
+                  <Text style={styles.offerViewAll}>View All {'>'}</Text>
+                </View>
+
+                <View style={styles.couponRow}>
+                  <TextInput
+                    value={couponCode}
+                    onChangeText={setCouponCode}
+                    placeholder="Coupon Code"
+                    placeholderTextColor="#4E665F"
+                    style={styles.couponInput}
+                  />
+                  <TouchableOpacity activeOpacity={0.9} style={styles.applyBtn}>
+                    <Text style={styles.applyBtnText}>Apply</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.appliedCard}>
+                  <View>
+                    <Text style={styles.appliedCode}>SAVE50</Text>
+                    <Text style={styles.appliedDesc}>₹50 OFF on this order</Text>
+                  </View>
+                  <View style={styles.appliedPillInline}>
+                    <Ionicons name="checkmark" size={13} color={DarkTheme.primary} />
+                    <Text style={styles.appliedPillInlineText}>Applied</Text>
+                  </View>
+                </View>
+
+                <BillCard bill={bill} showExpanded />
+              </>
+            ) : (
+              <TouchableOpacity activeOpacity={0.85} style={styles.scheduledAddEstimateRow}>
+                <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
+                <Text style={styles.scheduledAddEstimateText}>Add Items for estimate</Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity style={styles.checkRow} onPress={() => setSameLocation((p) => !p)}>
+              <Ionicons
+                name={sameLocation ? "checkbox" : "square-outline"}
+                size={20}
+                color={DarkTheme.primary}
+              />
+              <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.checkRow} onPress={() => setHeavyItems((p) => !p)}>
+              <Ionicons
+                name={heavyItems ? "checkbox" : "square-outline"}
+                size={20}
+                color={DarkTheme.primary}
+              />
+              <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
+            <TextInput
+              value={specialInstructions}
+              onChangeText={setSpecialInstructions}
+              placeholder="Any specific requirements for your wash?"
+              placeholderTextColor="#4E665F"
+              multiline
+              textAlignVertical="top"
+              style={styles.specialInputScheduled}
+            />
+
+            <View style={styles.tagsRow}>
+              <TagPill label="# Fragile" />
+              <TagPill label="# Eco-Wash" />
+              <TagPill label="# Hypoallergenic" />
+            </View>
+
+            {!hasOrderItems && screenMode === "pickup-scheduled" ? (
+              <View style={styles.scheduledActionsRow}>
+                <TouchableOpacity
+                  style={styles.scheduledCancelBtn}
+                  activeOpacity={0.9}
+                  onPress={() => setCancelModalVisible(true)}
+                >
+                  <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
+                  <Text style={styles.scheduledCancelText}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.scheduledRescheduleBtn}
+                  activeOpacity={0.9}
+                  onPress={() => setRescheduleModalVisible(true)}
+                >
+                  <Ionicons name="calendar-outline" size={16} color="#052A22" />
+                  <Text style={styles.scheduledRescheduleText}>Reschedule</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </>
+        ) : screenMode === "order-items" ? (
+          <>
+            <LocationCard value={locationText} />
+
+            <View style={styles.sectionHeaderWrap}>
+              <Text style={styles.sectionHeader}>Cart Items</Text>
+            </View>
+
+            {items.map((item) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+
+            <TouchableOpacity activeOpacity={0.85} style={styles.addItemsRow}>
+              <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
+              <Text style={styles.addItemsText}>Add More Items</Text>
+            </TouchableOpacity>
+
+            <View style={styles.offerHeaderRow}>
+              <Text style={styles.offerLabel}>Available Offers</Text>
+              <Text style={styles.offerViewAll}>View All {'>'}</Text>
+            </View>
+
+            <View style={styles.couponRow}>
+              <TextInput
+                value={couponCode}
+                onChangeText={setCouponCode}
+                placeholder="Coupon Code"
+                placeholderTextColor="#4E665F"
+                style={styles.couponInput}
+              />
+              <TouchableOpacity activeOpacity={0.9} style={styles.applyBtn}>
+                <Text style={styles.applyBtnText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.appliedCard}>
+              <View>
+                <Text style={styles.appliedCode}>SAVE50</Text>
+                <Text style={styles.appliedDesc}>₹50 OFF on this order</Text>
+              </View>
+              <View style={styles.appliedPillInline}>
+                <Ionicons name="checkmark" size={13} color={DarkTheme.primary} />
+                <Text style={styles.appliedPillInlineText}>Applied</Text>
+              </View>
+            </View>
+
+            <BillCard bill={bill} showExpanded />
+
+            <TouchableOpacity style={styles.checkRow} onPress={() => setSameLocation((p) => !p)}>
+              <Ionicons
+                name={sameLocation ? "checkbox" : "square-outline"}
+                size={18}
+                color={DarkTheme.primary}
+              />
+              <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.checkRow} onPress={() => setHeavyItems((p) => !p)}>
+              <Ionicons
+                name={heavyItems ? "checkbox" : "square-outline"}
+                size={18}
+                color={DarkTheme.primary}
+              />
+              <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
+            <TextInput
+              value={specialInstructions}
+              onChangeText={setSpecialInstructions}
+              placeholder="Any specific requirements for your wash?"
+              placeholderTextColor="#4E665F"
+              multiline
+              textAlignVertical="top"
+              style={styles.specialInput}
+            />
+
+            <View style={styles.tagsRow}>
+              <TagPill label="# Fragile" />
+              <TagPill label="# Eco-Wash" />
+              <TagPill label="# Hypoallergenic" />
+            </View>
+          </>
+        ) : (
+          <>
+            <StatusBanner
+              title={statusBannerContent.title}
+              subtitle={statusBannerContent.subtitle}
+              icon={statusBannerContent.icon}
+            />
+
+            <View style={styles.sectionHeaderWrap}>
+              <Text style={styles.sectionHeader}>
+                {screenMode === "order-delivered" ? "Items" : "Ordered Items"}
+              </Text>
+            </View>
+
+            {items.map((item) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+
+            {screenMode === "order-delivered" ? <RatingCard /> : null}
+            <BillCard bill={bill} showExpanded={screenMode === "order-delivered"} />
+            {screenMode === "order-delivered" ? <OrderDetailsCard details={details} /> : null}
+            {screenMode === "order-delivered" ? <HelpCard /> : null}
+
+            <View style={styles.secureRow}>
+              <Ionicons name="lock-closed-outline" size={11} color="#64766F" />
+              <Text style={styles.secureText}> SECURE PAYMENT</Text>
+            </View>
+
+            <View style={styles.paymentIconsRow}>
+              <MaterialCommunityIcons name="credit-card-outline" size={22} color="#64766F" />
+              <MaterialCommunityIcons name="bank-outline" size={22} color="#64766F" />
+              <MaterialCommunityIcons name="cellphone" size={22} color="#64766F" />
+            </View>
+          </>
+        )}
+
+        <View
+          style={{
+            height:
+              (screenMode === "pickup-scheduled" || screenMode === "pickup-assigned") && hasOrderItems
+                ? 90
+                : screenMode === "pickup-scheduled" || screenMode === "pickup-assigned"
+                  ? 30
+                  : 120,
+          }}
         />
-
-        <View style={styles.sectionHeaderWrap}>
-          <Text style={styles.sectionHeader}>
-            {screenMode === "order-delivered" ? "Items" : "Ordered Items"}
-          </Text>
-        </View>
-
-        {items.map((item) => (
-          <ItemCard key={item.id} item={item} />
-        ))}
-
-        {screenMode === "order-delivered" ? <RatingCard /> : null}
-        <BillCard bill={bill} showExpanded={screenMode === "order-delivered"} />
-        {screenMode === "order-delivered" ? <OrderDetailsCard details={details} /> : null}
-        {screenMode === "order-delivered" ? <HelpCard /> : null}
-
-        <View style={styles.secureRow}>
-          <Ionicons name="lock-closed-outline" size={11} color="#64766F" />
-          <Text style={styles.secureText}> SECURE PAYMENT</Text>
-        </View>
-
-        <View style={styles.paymentIconsRow}>
-          <MaterialCommunityIcons name="credit-card-outline" size={22} color="#64766F" />
-          <MaterialCommunityIcons name="bank-outline" size={22} color="#64766F" />
-          <MaterialCommunityIcons name="cellphone" size={22} color="#64766F" />
-        </View>
-
-        <View style={{ height: 120 }} />
       </ScrollView>
 
-      <BottomCTA mode={screenMode} />
+      {screenMode === "order-delivered" ? <BottomCTA mode={screenMode} /> : null}
+      {(screenMode === "pickup-scheduled" || screenMode === "pickup-assigned") && hasOrderItems ? (
+        <View style={styles.totalAmountBarWrap}>
+          <TouchableOpacity activeOpacity={0.9} style={styles.totalAmountBarBtn}>
+            <Text style={styles.totalAmountBarText}>{`Total Amount • ${money(bill.total)}  >`}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      <CancelPickupConfirmModal
+        visible={cancelModalVisible}
+        loading={actionLoading}
+        onClose={() => {
+          if (!actionLoading) setCancelModalVisible(false);
+        }}
+        onConfirm={handleCancelPickup}
+      />
+
+      <ReschedulePickupModal
+        visible={rescheduleModalVisible}
+        loading={actionLoading}
+        initialDate={selectedPickup?.rescheduledDate || selectedPickup?.pickup_date}
+        onClose={() => {
+          if (!actionLoading) setRescheduleModalVisible(false);
+        }}
+        onConfirm={handleReschedulePickup}
+      />
     </SafeAreaView>
   );
 }
@@ -949,6 +1310,263 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.7,
     textTransform: "uppercase",
+  },
+  scheduledAddEstimateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  scheduledAddEstimateText: {
+    color: DarkTheme.text,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  locationCardWrap: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: DarkTheme.border,
+    backgroundColor: DarkTheme.card,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  locationCardText: {
+    flex: 1,
+    color: "#9CCFC0",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  addItemsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginTop: 6,
+    marginBottom: 14,
+  },
+  addItemsText: {
+    color: DarkTheme.text,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  offerHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  offerLabel: {
+    color: "#8AA39B",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  offerViewAll: {
+    color: DarkTheme.primary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  couponRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  couponInput: {
+    flex: 1,
+    height: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#21453D",
+    backgroundColor: "#061612",
+    paddingHorizontal: 12,
+    color: DarkTheme.text,
+    fontSize: 13,
+  },
+  applyBtn: {
+    height: 40,
+    minWidth: 74,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2BDFAF",
+    paddingHorizontal: 12,
+  },
+  applyBtnText: {
+    color: "#063228",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  appliedCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(41, 230, 176, 0.2)",
+    backgroundColor: "#09271F",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  appliedCode: {
+    color: DarkTheme.text,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  appliedDesc: {
+    color: "#9CCFC0",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  appliedPillInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(41,230,176,0.25)",
+  },
+  appliedPillInlineText: {
+    color: DarkTheme.primary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  checkLabel: {
+    flex: 1,
+    color: "#BCD7CE",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  specialLabel: {
+    color: "#8AA39B",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  specialInput: {
+    minHeight: 96,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: DarkTheme.border,
+    backgroundColor: "#061612",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: DarkTheme.text,
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  specialInputScheduled: {
+    minHeight: 126,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: DarkTheme.border,
+    backgroundColor: "#061612",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    color: DarkTheme.text,
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 6,
+  },
+  tagPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#21453D",
+    backgroundColor: "#123329",
+  },
+  tagPillText: {
+    color: "#B4D5C9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  scheduledActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  scheduledCancelBtn: {
+    flex: 1,
+    height: 30,
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 8,
+    borderColor: "rgba(41,230,176,0.4)",
+    backgroundColor: "rgba(26, 76, 62, 0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scheduledCancelText: {
+    color: "#FF6B6B",
+    fontSize: 28 / 2,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  scheduledRescheduleBtn: {
+    flex: 1,
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: DarkTheme.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: DarkTheme.primary,
+    shadowOpacity: 0.32,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 5,
+  },
+  scheduledRescheduleText: {
+    color: "#052A22",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  totalAmountBarWrap: {
+    position: "absolute",
+    left: 8,
+    right: 8,
+    bottom: 12,
+  },
+  totalAmountBarBtn: {
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: DarkTheme.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: DarkTheme.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  totalAmountBarText: {
+    color: "#05352A",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.2,
   },
 
   itemCard: {

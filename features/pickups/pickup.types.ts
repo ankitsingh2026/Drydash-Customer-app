@@ -8,6 +8,18 @@ export type PickupLocation = {
 	longitude?: number;
 };
 
+export type PickupItem = {
+	itemId?: string;
+	label?: string;
+	name?: string;
+	heading?: string;
+	price?: number;
+	newQtyPrice?: number;
+	unit?: string;
+	quantity?: number;
+	qty?: number;
+};
+
 export type PickupRecord = {
 	_id: string;
 	appCustomerId?: string;
@@ -32,6 +44,7 @@ export type PickupRecord = {
 	plantName?: string;
 	contactName?: string;
 	contactPhone?: string;
+	note?: string;
 	createdAt?: string;
 	updatedAt?: string;
 	riderDate?: string;
@@ -42,7 +55,7 @@ export type PickupRecord = {
 	isPaid?: boolean;
 	price?: number;
 	totalAmount?: number;
-	items?: Array<Record<string, unknown>>;
+	items?: PickupItem[];
 };
 
 export type PickupResponse = {

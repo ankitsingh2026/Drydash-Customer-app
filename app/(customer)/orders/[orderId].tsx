@@ -5,7 +5,7 @@ import {
   fetchAllValidCoupons,
   removeCouponApi,
 } from "@/features/coupons/coupons.api";
-import { getSingleOrderDetailssApi } from "@/features/orders/orders.api";
+import { getOrdersApi, getSingleOrderDetailssApi } from "@/features/orders/orders.api";
 import {
   razorpayPaymentInitiate,
   verifyRazorpayPayment,
@@ -33,15 +33,27 @@ interface OrderItem {
   heading: string;
   quantity: number;
   price: number;
+  unit?: string;
   type?: string;
   category?: string;
 }
 
 interface OrderDetails {
   _id: string;
+  order_id?: string;
   orderId?: string;
   createdAt: string;
-  status: string;
+  updatedAt?: string;
+  status?: string;
+  plantName?: string;
+  note?: string;
+  customerName?: string;
+  riderName?: string;
+  totalAmount?: number;
+  deliveryCharges?: number;
+  taxAmount?: number;
+  discountAmount?: number;
+  isPaid?: boolean;
   statusHistory?: { delivered?: string };
   address: string;
   items: OrderItem[];
@@ -88,6 +100,72 @@ function ItemIcon({ heading, color }: { heading: string; color: string }) {
   );
 }
 
+function toSafeNumber(value: any, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function toSafeText(value: any, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function normalizeOrderDetails(raw: any): OrderDetails | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  const normalizedItems: OrderItem[] = Array.isArray(raw.items)
+    ? raw.items.map((item: any, index: number) => {
+        const typeLabel = toSafeText(item?.type);
+        return {
+          heading: toSafeText(
+            item?.heading ?? item?.label ?? item?.name,
+            typeLabel || `Item ${index + 1}`,
+          ),
+          quantity: Math.max(1, toSafeNumber(item?.quantity, 1)),
+          price: toSafeNumber(item?.price, 0),
+          unit: toSafeText(item?.unit),
+          type: typeLabel,
+          category: toSafeText(item?.category),
+        };
+      })
+    : [];
+
+  return {
+    _id: toSafeText(raw._id),
+    order_id: toSafeText(raw.order_id),
+    orderId: toSafeText(raw.orderId),
+    createdAt: toSafeText(raw.createdAt, new Date().toISOString()),
+    updatedAt: toSafeText(raw.updatedAt),
+    status: toSafeText(raw.status, "processing"),
+    plantName: toSafeText(raw.plantName, "Green Park"),
+    note: toSafeText(raw.note),
+    customerName: toSafeText(raw.customerName),
+    riderName: toSafeText(raw.riderName),
+    totalAmount: toSafeNumber(raw.totalAmount, 0),
+    deliveryCharges: toSafeNumber(raw.deliveryCharges, 0),
+    taxAmount: toSafeNumber(raw.taxAmount, 0),
+    discountAmount: toSafeNumber(raw.discountAmount, 0),
+    isPaid: Boolean(raw.isPaid),
+    statusHistory: raw.statusHistory,
+    address: toSafeText(raw.address, "Address not available"),
+    items: normalizedItems,
+    price: toSafeNumber(raw.price, 0),
+    payment: raw.payment,
+  };
+}
+
+function getItemUnitLabel(item: OrderItem) {
+  const explicit = toSafeText(item.unit);
+  if (explicit) return explicit;
+
+  const key = `${item.heading} ${item.type || ""}`.toLowerCase();
+  if (key.includes("shoe") || key.includes("boot") || key.includes("sandal")) {
+    return "Pair";
+  }
+  if (key.includes("kg")) return "Kg";
+  return "Item";
+}
+
 export default function OrderReceipt() {
   const params = useLocalSearchParams();
   const orderId =
@@ -113,6 +191,7 @@ export default function OrderReceipt() {
   const [isPaymentDone, setIsPaymentDone] = useState(false);
 
   if (!user) return null;
+  console.log("Single order details:===>", singleOrderDetails);
 
   const User = user?.user ? user?.user : user;
   const email = User?.email ?? "test@example.com";
@@ -149,9 +228,32 @@ export default function OrderReceipt() {
     try {
       setLoading(true);
       const data = await getSingleOrderDetailssApi(orderId);
-      const orderDetails = data?.order_details || null;
 
-      setSingleOrderDetails({ ...orderDetails }); // 🔥 force re-render
+      let rawOrderDetails =
+        data?.order_details ||
+        data?.order ||
+        (Array.isArray(data?.orders)
+          ? data.orders.find(
+              (row: any) => row?.order_id === orderId || row?._id === orderId,
+            ) || data.orders[0]
+          : null);
+
+      if (!rawOrderDetails) {
+        try {
+          const listRes = await getOrdersApi(phone);
+          const rows = Array.isArray(listRes?.orders) ? listRes.orders : [];
+          rawOrderDetails =
+            rows.find((row: any) => row?.order_id === orderId || row?._id === orderId) ||
+            rows[0] ||
+            null;
+        } catch {
+          // fallback handled by null check below
+        }
+      }
+
+      const orderDetails = normalizeOrderDetails(rawOrderDetails);
+
+      setSingleOrderDetails(orderDetails ? { ...orderDetails } : null);
 
       // ✅ AUTO APPLY COUPON FROM BACKEND
       if (orderDetails?.Coupon?.coupon?.code) {
@@ -511,15 +613,25 @@ export default function OrderReceipt() {
     );
   }
 
-  const isPaid = singleOrderDetails?.payment?.status === "success";
-  const isActive =
-    singleOrderDetails.status === "processing" ||
-    singleOrderDetails.status === "active";
+  const paymentStatus = String(singleOrderDetails?.payment?.status ?? "").toLowerCase();
+  const isPaid = Boolean(singleOrderDetails?.isPaid) || paymentStatus === "success";
+  const normalizedStatus = String(singleOrderDetails?.status ?? "processing")
+    .toLowerCase()
+    .replace(/[^a-z]/g, "");
+  const isReadyForDelivery = ["readyfordelivery", "readytodeliver"].includes(normalizedStatus);
+  const isOutForDelivery = ["outfordelivery", "intransit", "deliveryriderassigned"].includes(
+    normalizedStatus,
+  );
+  const isDelivered = normalizedStatus === "delivered";
+  const isProcessing = normalizedStatus === "processing";
+  const isInProgressOrder = isProcessing || isReadyForDelivery || isOutForDelivery;
+  const isActive = ["processing", "active", "intransit", "readyfordelivery"].includes(
+    normalizedStatus,
+  );
 
   const statusLabel = isActive
     ? "Active"
-    : singleOrderDetails.status.charAt(0).toUpperCase() +
-      singleOrderDetails.status.slice(1);
+    : normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
 
   const subtotal = calculateSubtotal(singleOrderDetails.items);
   const baseDiscount = subtotal - singleOrderDetails.price;
@@ -534,7 +646,12 @@ export default function OrderReceipt() {
 
   const totalDiscount = singleOrderDetails?.discountAmount || 0;
 
-  const displayOrderId = `#${(orderId ?? singleOrderDetails._id.slice(-6)).toUpperCase()}`;
+  const displayOrderId = `#${(
+    singleOrderDetails.order_id ||
+    orderId ||
+    singleOrderDetails._id?.slice(-6) ||
+    "NA"
+  ).toUpperCase()}`;
 
   const scheduledDate = new Date(
     singleOrderDetails.createdAt,
@@ -545,6 +662,306 @@ export default function OrderReceipt() {
   });
 
   console.log("this is the isPaid-->>", isPaid);
+
+  const inProgressTitle = isOutForDelivery
+    ? "Out for Delivery"
+    : isReadyForDelivery
+      ? "Ready for Delivery"
+      : "Processing";
+
+  const deliveredAt = new Date(
+    singleOrderDetails?.statusHistory?.delivered || singleOrderDetails.updatedAt || singleOrderDetails.createdAt,
+  ).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  if (isInProgressOrder) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            s.container,
+            { backgroundColor: theme.background, paddingBottom: 24 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={s.processingHeader}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
+                {singleOrderDetails.plantName || "Green Park"}
+              </Text>
+              <Text style={s.processingSubTitle} numberOfLines={1}>
+                {singleOrderDetails.address}
+              </Text>
+            </View>
+
+            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}> 
+              <Ionicons
+                name="notifications-outline"
+                size={16}
+                color={theme.primary}
+              />
+            </View>
+          </View>
+
+          <View style={s.processingSectionHeader}>
+            <Text style={s.processingSectionLabel}>ORDERED ITEMS</Text>
+            <Text style={s.processingOrderId}>Order {displayOrderId}</Text>
+          </View>
+
+          <View style={s.processingStatusPill}>
+            <Text style={s.processingStatusText}>{inProgressTitle}</Text>
+          </View>
+
+          {(singleOrderDetails.items || []).map((item, index) => (
+            <View
+              key={index}
+              style={[s.processingItemCard, { backgroundColor: theme.card }]}
+            >
+              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}> 
+                <ItemIcon heading={item.heading} color={theme.primary} />
+              </View>
+
+              <View style={s.itemInfo}>
+                <Text style={[s.itemName, { color: theme.text }]}>{item.heading}</Text>
+                <Text style={s.processingItemSub}>Qty {item.quantity} | ₹{item.price}</Text>
+              </View>
+
+              <Text style={[s.itemPrice, { color: theme.text }]}>₹{(item.price * item.quantity).toFixed(0)}</Text>
+            </View>
+          ))}
+
+          <View style={s.processingPaidRow}>
+            <View style={s.processingPaidLeft}>
+              <Ionicons
+                name={isPaid ? "checkmark-circle" : "time-outline"}
+                size={20}
+                color={theme.primary}
+              />
+              <Text style={[s.processingPaidText, { color: theme.text }]}>
+                {isPaid ? "Paid Via UPI" : "Payment Pending"}
+              </Text>
+            </View>
+            <Text style={s.processingReceiptText}>Download Receipt</Text>
+          </View>
+
+          <View style={[s.billCard, { backgroundColor: theme.card, marginTop: 8 }]}> 
+            <View style={s.billRow}>
+              <Text style={[s.totalLabel, { color: theme.text }]}>Bill Details</Text>
+              <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+            </View>
+
+            <View style={[s.billDivider, { backgroundColor: theme.border }]} />
+
+            <View style={s.totalRow}>
+              <Text style={[s.totalLabel, { color: theme.text }]}>Total Bill</Text>
+              <Text style={[s.totalAmount, { color: theme.primary }]}>₹{finalTotal?.toFixed(0)}</Text>
+            </View>
+          </View>
+
+          <View style={s.processingCheckRow}>
+            <Ionicons name="checkbox" size={18} color={theme.primary} />
+            <Text style={s.processingCheckText}>Delivery Location Same As Pickup Location</Text>
+          </View>
+
+          <Text style={[s.offersLabel, { paddingHorizontal: 20, marginTop: 4 }]}>SPECIAL INSTRUCTIONS</Text>
+          <TextInput
+            value={singleOrderDetails.note || ""}
+            placeholder="Any specific requirements for your wash?"
+            placeholderTextColor="#4E665F"
+            multiline
+            editable={false}
+            textAlignVertical="top"
+            style={[s.processingSpecialInput, { color: theme.text }]}
+          />
+
+          <View style={s.processingTagsRow}>
+            <View style={s.processingTag}><Text style={s.processingTagText}># Fragile</Text></View>
+            <View style={s.processingTag}><Text style={s.processingTagText}># Eco-Wash</Text></View>
+            <View style={s.processingTag}><Text style={s.processingTagText}># Hypoallergenic</Text></View>
+          </View>
+
+          <TouchableOpacity style={s.processingActionCard} activeOpacity={0.85}>
+            <View style={s.processingActionLeft}>
+              <Ionicons name="time-outline" size={18} color={theme.primary} />
+              <View>
+                <Text style={s.processingActionTitle}>Choose Delivery Slot</Text>
+                <Text style={s.processingActionSub}>Pick a convenient time for drop-off</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#7F948A" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.processingActionCard} activeOpacity={0.85}>
+            <View style={s.processingActionLeft}>
+              <Ionicons name="pause-circle-outline" size={18} color={theme.primary} />
+              <View>
+                <Text style={s.processingActionTitle}>Hold Delivery for Today</Text>
+                <Text style={s.processingActionSub}>Keep clothes at hub until further notice</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#7F948A" />
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  if (isDelivered) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            s.container,
+            { backgroundColor: theme.background, paddingBottom: 120 },
+          ]}
+        >
+          <View style={s.processingHeader}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
+                {singleOrderDetails.plantName || "Green Park"}
+              </Text>
+              <Text style={s.processingSubTitle} numberOfLines={1}>
+                {singleOrderDetails.address}
+              </Text>
+            </View>
+
+            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}> 
+              <Ionicons
+                name="notifications-outline"
+                size={16}
+                color={theme.primary}
+              />
+            </View>
+          </View>
+
+          <View style={s.deliveredBanner}>
+            <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.deliveredBannerTitle, { color: theme.text }]}>Order was delivered at {deliveredAt}</Text>
+              <Text style={s.deliveredBannerSub}>Successfully picked up & delivered</Text>
+            </View>
+          </View>
+
+          <Text style={[s.sectionHeading, { color: theme.text, marginTop: 6 }]}>Items</Text>
+
+          {(singleOrderDetails.items || []).map((item, index) => (
+            <View
+              key={index}
+              style={[s.processingItemCard, { backgroundColor: theme.card }]}
+            >
+              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}> 
+                <ItemIcon heading={item.heading} color={theme.primary} />
+              </View>
+
+              <View style={s.itemInfo}>
+                <Text style={[s.itemName, { color: theme.text }]}>{item.heading}</Text>
+                <Text style={s.processingItemSub}>Qty {item.quantity} | ₹{item.price}</Text>
+              </View>
+
+              <Text style={[s.itemPrice, { color: theme.text }]}>₹{(item.price * item.quantity).toFixed(0)}</Text>
+            </View>
+          ))}
+
+          <View style={s.deliveredRatingCard}>
+            <Ionicons name="star" size={16} color={theme.primary} />
+            <Text style={[s.deliveredRatingText, { color: theme.text }]}>How Were Your Ordered Items?</Text>
+            <TouchableOpacity style={s.deliveredRateBtn}>
+              <Text style={s.deliveredRateBtnText}>Rate Now</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[s.billCard, { backgroundColor: theme.card, marginTop: 8 }]}> 
+            <Text style={[s.totalLabel, { color: theme.text, marginBottom: 10 }]}>Bill Details</Text>
+            <View style={s.billRow}>
+              <Text style={s.billLabel}>Subtotal</Text>
+              <Text style={[s.billValue, { color: theme.text }]}>₹{subtotal.toFixed(0)}</Text>
+            </View>
+            <View style={s.billRow}>
+              <Text style={s.billLabel}>Delivery Handling</Text>
+              <Text style={[s.billValue, { color: theme.text }]}>₹{Number(singleOrderDetails.deliveryCharges || 0).toFixed(0)}</Text>
+            </View>
+            <View style={s.billRow}>
+              <Text style={s.billLabel}>Service Charge</Text>
+              <Text style={[s.billValue, { color: theme.text }]}>₹{Number(singleOrderDetails.taxAmount || 0).toFixed(0)}</Text>
+            </View>
+            <View style={s.billRow}>
+              <Text style={s.billLabel}>Item Discount</Text>
+              <Text style={[s.billValue, { color: theme.primary }]}>-₹{Number(singleOrderDetails.discountAmount || 0).toFixed(0)}</Text>
+            </View>
+            <View style={[s.billDivider, { backgroundColor: theme.border }]} />
+            <View style={s.totalRow}>
+              <Text style={[s.totalLabel, { color: theme.text }]}>Total Bill</Text>
+              <Text style={[s.totalAmount, { color: theme.primary }]}>₹{finalTotal?.toFixed(0)}</Text>
+            </View>
+          </View>
+
+          <View style={s.deliveredOrderDetailsCard}>
+            <View style={s.deliveredOrderTop}>
+              <Text style={s.processingSectionLabel}>ORDER DETAILS</Text>
+              <Text style={s.processingReceiptText}>Download Receipt</Text>
+            </View>
+
+            <View style={s.deliveredOrderGrid}>
+              <View style={s.deliveredOrderCell}>
+                <Text style={s.deliveredLabel}>ORDER ID</Text>
+                <Text style={s.deliveredValue}>{displayOrderId.replace("#", "")}</Text>
+              </View>
+              <View style={s.deliveredOrderCell}>
+                <Text style={s.deliveredLabel}>PAYMENT</Text>
+                <Text style={s.deliveredValue}>{isPaid ? "Paid via UPI" : "Payment Pending"}</Text>
+              </View>
+              <View style={s.deliveredOrderCell}>
+                <Text style={s.deliveredLabel}>DELIVERED TO</Text>
+                <Text style={s.deliveredValue}>{singleOrderDetails.customerName || name}</Text>
+              </View>
+              <View style={s.deliveredOrderCell}>
+                <Text style={s.deliveredLabel}>DELIVERED BY</Text>
+                <Text style={s.deliveredValue}>{singleOrderDetails.riderName || "Rider"}</Text>
+              </View>
+            </View>
+
+            <View style={{ marginTop: 8 }}>
+              <Text style={s.deliveredLabel}>DELIVERY ADDRESS</Text>
+              <Text style={s.deliveredValue}>{singleOrderDetails.address}</Text>
+            </View>
+
+            <View style={{ marginTop: 10 }}>
+              <Text style={s.deliveredLabel}>ORDER PLACED DATE & TIME</Text>
+              <Text style={s.deliveredValue}>{scheduledDate}</Text>
+            </View>
+          </View>
+
+          <Text style={s.deliveredHelpLabel}>NEED HELP ?</Text>
+        </ScrollView>
+
+        <View style={s.deliveredBottomCtaWrap}>
+          <TouchableOpacity activeOpacity={0.9} style={s.deliveredBottomCtaBtn}>
+            <Text style={s.deliveredBottomCtaTitle}>Repeat Order</Text>
+            <Text style={s.deliveredBottomCtaSub}>View Cart On Next Step</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   return (
     <>
@@ -611,7 +1028,7 @@ export default function OrderReceipt() {
                 <View style={s.infoTextWrap}>
                   <Text style={s.infoLabel}>Scheduled Date</Text>
                   <Text style={[s.infoValue, { color: theme.text }]}>
-                    {scheduledDate} • 10:00 AM
+                    {scheduledDate}
                   </Text>
                 </View>
               </View>
@@ -657,11 +1074,7 @@ export default function OrderReceipt() {
                   {item.heading}
                 </Text>
                 <Text style={s.itemSub}>
-                  {item.quantity}{" "}
-                  {item.heading.toLowerCase().includes("shoe") ||
-                  item.heading.toLowerCase().includes("boot")
-                    ? "Pair"
-                    : "Shirt/Tee"}
+                  Qty {item.quantity} • {getItemUnitLabel(item)}
                 </Text>
               </View>
 
@@ -1269,6 +1682,300 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: 20,
     marginTop: 10,
+  },
+
+  processingHeader: {
+    paddingTop: 54,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  processingTitle: {
+    fontSize: 30 / 1.8,
+    fontWeight: "800",
+  },
+  processingSubTitle: {
+    color: "#7F948A",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  processingSectionHeader: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  processingSectionLabel: {
+    fontSize: 11,
+    color: "#7F948A",
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  processingOrderId: {
+    fontSize: 14,
+    color: "#9BB0A7",
+    fontWeight: "600",
+  },
+  processingStatusPill: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(34, 235, 171, 0.3)",
+    backgroundColor: "#0B3326",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  processingStatusText: {
+    color: "#9FFFD3",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  processingItemCard: {
+    marginHorizontal: 20,
+    marginBottom: 8,
+    borderRadius: 14,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  processingItemSub: {
+    fontSize: 14,
+    color: "#22EBAB",
+    marginTop: 2,
+    fontWeight: "700",
+  },
+  processingPaidRow: {
+    marginTop: 8,
+    marginBottom: 8,
+    marginHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  processingPaidLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  processingPaidText: {
+    fontSize: 28 / 2,
+    fontWeight: "800",
+  },
+  processingReceiptText: {
+    color: "#9BB0A7",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  processingCheckRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 10,
+  },
+  processingCheckText: {
+    color: "#BCD7CE",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  processingSpecialInput: {
+    marginHorizontal: 20,
+    minHeight: 96,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#1E3A34",
+    backgroundColor: "#061612",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 13,
+    marginBottom: 12,
+  },
+  processingTagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
+  },
+  processingTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#21453D",
+    backgroundColor: "#123329",
+  },
+  processingTagText: {
+    color: "#B4D5C9",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  processingActionCard: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#21453D",
+    backgroundColor: "#0A251F",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  processingActionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  processingActionTitle: {
+    color: "#D9F1E9",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  processingActionSub: {
+    color: "#8AA39B",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  deliveredBanner: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(34,235,171,0.15)",
+    backgroundColor: "#0A251F",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  deliveredBannerTitle: {
+    fontSize: 16 / 1.1,
+    fontWeight: "800",
+  },
+  deliveredBannerSub: {
+    color: "#8AA39B",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  deliveredRatingCard: {
+    marginHorizontal: 20,
+    marginTop: 6,
+    marginBottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(34,235,171,0.12)",
+    backgroundColor: "#0A251F",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  deliveredRatingText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  deliveredRateBtn: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(34,235,171,0.35)",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  deliveredRateBtnText: {
+    color: "#9FFFD3",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  deliveredOrderDetailsCard: {
+    marginHorizontal: 20,
+    marginTop: 2,
+    marginBottom: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+    backgroundColor: "#0B3326",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  deliveredOrderTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  deliveredOrderGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  deliveredOrderCell: {
+    width: "50%",
+    marginBottom: 10,
+    paddingRight: 8,
+  },
+  deliveredLabel: {
+    color: "#8AA39B",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.7,
+    marginBottom: 4,
+  },
+  deliveredValue: {
+    color: "#E8F4EF",
+    fontSize: 14,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  deliveredHelpLabel: {
+    paddingHorizontal: 20,
+    color: "#8AA39B",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  deliveredBottomCtaWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 30 : 16,
+    backgroundColor: "rgba(0,23,20,0.96)",
+    borderTopWidth: 1,
+    borderTopColor: "#1E3A34",
+  },
+  deliveredBottomCtaBtn: {
+    backgroundColor: "#22EBAB",
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+  },
+  deliveredBottomCtaTitle: {
+    color: "#001714",
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  deliveredBottomCtaSub: {
+    color: "#0B4D3C",
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
   },
 
   payBtnWrapper: {

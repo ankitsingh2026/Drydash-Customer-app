@@ -222,7 +222,7 @@ function IconPair() {
 function ChatFab() {
     return (
         <TouchableOpacity style={styles.chatFab}>
-            <Ionicons name="chatbubble-ellipses" size={20} color="#003C31" />
+            <Ionicons name="chatbubble-ellipses" size={25} color="#003C31" />
         </TouchableOpacity>
     );
 }
@@ -909,8 +909,8 @@ const styles = StyleSheet.create({
         marginLeft: -8,
     },
     chatFab: {
-        width: 50,
-        height: 50,
+        width: 40,
+        height: 40,
         borderRadius: 25,
         backgroundColor: ACCENT,
         alignItems: "center",

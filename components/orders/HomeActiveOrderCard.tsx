@@ -205,7 +205,7 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
               <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
             )}
             <View style={styles.chatBtn}>
-              <Ionicons name="chatbubble-ellipses" size={26} color={DarkTheme.card} />
+              <Ionicons name="chatbubble-ellipses" size={25} color={DarkTheme.card} />
             </View>
           </View>
         </View>
@@ -380,8 +380,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chatBtn: {
-    width: 50,
-    height: 50,
+    width: 40,
+    height: 40,
     borderRadius: 28,
     backgroundColor: ACCENT,
     alignItems: "center",

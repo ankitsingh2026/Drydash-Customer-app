@@ -1,13 +1,13 @@
 import { apiClient, oldApiClient } from "@/lib/api/client";
 import { buildPhoneCandidates } from "@/utils/phone";
-import { order_details } from "./orders.types";
+import { CreatePickupRequest } from "./orders.types";
 
 const isCustomerId = (value: any) => /[a-z]/i.test(String(value ?? ""));
 
-export const createOrderApi = async (order_details: order_details) => {
+export const createOrderApi = async (orderDetails: CreatePickupRequest) => {
   const { data } = await oldApiClient.post(
     "/v1/addPickupThroughApp",
-    order_details,
+    orderDetails,
   );
   return data;
 };
