@@ -248,6 +248,7 @@ function ScheduledPickupCard({
     onReschedule: () => void;
     onCancel: () => void;
 }) {
+    console.log("Rendering ScheduledPickupCard for pickup=====> >>>:", pickup);
     const itemCount = pickup.items?.length ?? 0;
     const scheduleTitle = getScheduledTitle(pickup);
     const highlightTime = getSlotEndLabel(pickup.slot);
@@ -277,10 +278,19 @@ function ScheduledPickupCard({
                     <Text style={styles.mainLineAccent}>{highlightTime}</Text>
                 </Text>
 
-                <View style={styles.infoLine}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/services/shoe",
+                      params: { pickupId: pickup._id, mode: "edit" },
+                    })
+                  }
+                  style={styles.infoLine}
+                >
                     <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
                     <Text style={styles.infoLineText}>Add More Items</Text>
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.bottomRowCompact}>
                     <View style={styles.bottomLeftCompact}>
@@ -308,10 +318,19 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                     <Text style={styles.softTitle}>{`${riderName} is on the way to pick up.`}</Text>
                 </View>
 
-                <View style={styles.infoLine}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/services/shoe",
+                      params: { pickupId: pickup._id, mode: "edit" },
+                    })
+                  }
+                  style={styles.infoLine}
+                >
                     <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
                     <Text style={styles.infoLineText}>Add Items</Text>
-                </View>
+                </TouchableOpacity>
 
                 <View style={styles.bottomRowCompact}>
                     <View style={styles.bottomLeftCompact}>

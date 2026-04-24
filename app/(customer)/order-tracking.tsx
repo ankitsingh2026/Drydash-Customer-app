@@ -10,7 +10,7 @@ import {
 } from "@/features/pickups/pickup.api";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -768,7 +768,16 @@ const deliveredAt = ORDER.deliveredAt;
                   <ItemCard key={item.id} item={item} />
                 ))}
 
-                <TouchableOpacity activeOpacity={0.85} style={styles.addItemsRow}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/services/shoe",
+                      params: { pickupId: selectedPickup._id, mode: "edit" },
+                    })
+                  }
+                  style={styles.addItemsRow}
+                >
                   <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
                   <Text style={styles.addItemsText}>Add More Items</Text>
                 </TouchableOpacity>
@@ -805,7 +814,16 @@ const deliveredAt = ORDER.deliveredAt;
                 <BillCard bill={bill} showExpanded />
               </>
             ) : (
-              <TouchableOpacity activeOpacity={0.85} style={styles.scheduledAddEstimateRow}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                style={styles.scheduledAddEstimateRow}
+                onPress={() =>
+                  router.push({
+                    pathname: "/services/shoe",
+                    params: { pickupId: selectedPickup._id, mode: "edit" },
+                  })
+                }
+              >
                 <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
                 <Text style={styles.scheduledAddEstimateText}>Add Items for estimate</Text>
               </TouchableOpacity>
@@ -880,7 +898,16 @@ const deliveredAt = ORDER.deliveredAt;
               <ItemCard key={item.id} item={item} />
             ))}
 
-            <TouchableOpacity activeOpacity={0.85} style={styles.addItemsRow}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={styles.addItemsRow}
+              onPress={() =>
+                router.push({
+                  pathname: "/services/shoe",
+                  params: { pickupId: selectedPickup._id, mode: "edit" },
+                })
+              }
+            >
               <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
               <Text style={styles.addItemsText}>Add More Items</Text>
             </TouchableOpacity>

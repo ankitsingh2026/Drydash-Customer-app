@@ -192,6 +192,7 @@ export default function BookPickup() {
     (sum, item) => sum + item.qty * item.price,
     0,
   );
+  console.log("Cart Items in BookPickup =>>>:", items, "Subtotal =>>>:", cartSubtotal);
   const deliveryCharge = cartSubtotal > 0 ? 40 : 0;
   const discount = appliedCoupon ? Math.min(50, cartSubtotal) : 0;
   const tax = Math.round(cartSubtotal * 0.05);

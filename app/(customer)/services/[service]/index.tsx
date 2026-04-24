@@ -1,6 +1,10 @@
 import ProductServicePopup from "@/components/ProductServicePopup";
 import { catalogData } from "@/constants/catalog";
 import { getCatalogApi } from "@/features/catalog/catalog.api";
+import {
+  getCustomerSinglePickupDetails,
+  updatePickupThroughApp,
+} from "@/features/pickups/pickup.api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -15,6 +19,7 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   FlatList,
   Image,
@@ -65,7 +70,11 @@ type APIItem = {
 };
 
 export default function ServiceDetail() {
-  const { service } = useLocalSearchParams<{ service: string }>();
+  const { service, pickupId, mode } = useLocalSearchParams<{
+    service: string;
+    pickupId?: string;
+    mode?: string;
+  }>();
   const { theme } = useTheme();
   const cart = useCart();
   const insets = useSafeAreaInsets();
@@ -102,6 +111,13 @@ export default function ServiceDetail() {
   const [popupVisible, setPopupVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+
+  const isEditMode = mode === "edit" && Boolean(pickupId);
+  const [pickupLoading, setPickupLoading] = useState(false);
+  const [pickupError, setPickupError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const cartRef = useRef(cart);
+  cartRef.current = cart;
 
   const switchTab = (i: number) => {
     Animated.parallel([
@@ -234,6 +250,42 @@ export default function ServiceDetail() {
     }
   }, [service, layoutReady]);
 
+  /* ---------- EDIT MODE: FETCH PICKUP & PRE-POPULATE CART ---------- */
+  useEffect(() => {
+    if (!isEditMode || !pickupId) return;
+
+    const fetchPickup = async () => {
+      try {
+        setPickupLoading(true);
+        setPickupError(null);
+        const res = await getCustomerSinglePickupDetails(pickupId);
+        const details = res?.pickup_details;
+
+        if (details?.items?.length) {
+          cartRef.current.clear();
+          details.items.forEach((item: any) => {
+            cartRef.current.addItem(
+              {
+                id: item.itemId,
+                title: item.label,
+                price: item.price,
+                image: getFallbackImage(service || "shoe"),
+              },
+              item.quantity || 1,
+            );
+          });
+        }
+      } catch (err: any) {
+        setPickupError(err?.message || "Failed to load pickup details");
+      } finally {
+        setPickupLoading(false);
+      }
+    };
+
+    fetchPickup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, pickupId, service]);
+
   /* ---------- STATIC DATA FOR OTHER SERVICES ---------- */
   const S3_BASE =
     "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images";
@@ -279,13 +331,33 @@ export default function ServiceDetail() {
       ? error[activeTab.key]
       : null;
 
+  const handleUpdateItems = async () => {
+    if (!pickupId) return;
+    try {
+      setUpdating(true);
+      const items = cart.items
+        .filter((i) => i.qty > 0)
+        .map((i) => ({
+          itemId: i.id,
+          quantity: i.qty,
+        }));
+      await updatePickupThroughApp(pickupId, items);
+      Alert.alert("Success", "Pickup items updated successfully.");
+      router.back();
+    } catch (err: any) {
+      Alert.alert("Update failed", err?.message || "Unable to update items.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]}>
       <Stack.Screen
         options={{
           headerShown: true,
           headerBackVisible: false,
-          title: "Service Catalog".toUpperCase(),
+          title: isEditMode ? "EDIT ITEMS" : "Service Catalog".toUpperCase(),
           headerStyle: {
             backgroundColor: theme.background,
           },
@@ -417,29 +489,59 @@ export default function ServiceDetail() {
       )}
 
       {/* Loading State */}
-      {isLoading && (
+      {(isLoading || pickupLoading) && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#56BFAB" />
           <Text style={[styles.loadingText, { color: theme.subText }]}>
-            Loading {activeTab?.label} services...
+            {pickupLoading
+              ? "Loading pickup details..."
+              : `Loading ${activeTab?.label} services...`}
           </Text>
         </View>
       )}
 
       {/* Error State */}
-      {hasError && !isLoading && (
+      {(hasError || pickupError) && !(isLoading || pickupLoading) && (
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
           <Text style={[styles.errorText, { color: theme.text }]}>
-            {hasError}
+            {pickupError || hasError}
           </Text>
           <TouchableOpacity
             onPress={() => {
-              const currentTabKey = TABS[tab]?.key;
-              if (currentTabKey) {
-                const slug =
-                  currentTabKey === "shoe" ? "shoespa" : currentTabKey;
-                fetchCatalogData(currentTabKey, slug);
+              if (pickupError) {
+                setPickupError(null);
+                setPickupLoading(true);
+                getCustomerSinglePickupDetails(pickupId!)
+                  .then((res) => {
+                    const details = res?.pickup_details;
+                    if (details?.items?.length) {
+                      cart.clear();
+                      details.items.forEach((item: any) => {
+                        cart.addItem(
+                          {
+                            id: item.itemId,
+                            title: item.label,
+                            price: item.price,
+                            image: getFallbackImage(service || "shoe"),
+                          },
+                          item.quantity || 1,
+                        );
+                      });
+                    }
+                    setPickupLoading(false);
+                  })
+                  .catch((err: any) => {
+                    setPickupError(err?.message || "Failed to load pickup details");
+                    setPickupLoading(false);
+                  });
+              } else {
+                const currentTabKey = TABS[tab]?.key;
+                if (currentTabKey) {
+                  const slug =
+                    currentTabKey === "shoe" ? "shoespa" : currentTabKey;
+                  fetchCatalogData(currentTabKey, slug);
+                }
               }
             }}
             style={styles.retryButton}
@@ -591,8 +693,42 @@ export default function ServiceDetail() {
         />
       )}
 
-      <FloatingCart onOpen={() => setOpen(true)} />
-      <CartSheet visible={open} onClose={() => setOpen(false)} />
+      {isEditMode ? (
+        <View style={[styles.editFooter, { paddingBottom: insets.bottom + 12 }]}>
+          <View style={styles.editFooterInner}>
+            <View style={styles.editFooterInfo}>
+              <Text style={styles.editFooterQty}>
+                {cart.items.reduce((s, i) => s + i.qty, 0)} items
+              </Text>
+              <Text style={styles.editFooterTotal}>
+                ₹{cart.total()}
+              </Text>
+            </View>
+            <TouchableOpacity
+              activeOpacity={0.9}
+              onPress={handleUpdateItems}
+              disabled={updating || cart.items.length === 0}
+              style={[
+                styles.updateBtn,
+                {
+                  opacity: updating || cart.items.length === 0 ? 0.55 : 1,
+                },
+              ]}
+            >
+              {updating ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.updateBtnText}>Update Items</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <>
+          <FloatingCart onOpen={() => setOpen(true)} />
+          <CartSheet visible={open} onClose={() => setOpen(false)} />
+        </>
+      )}
       <ProductServicePopup
         visible={popupVisible}
         onClose={() => setPopupVisible(false)}
@@ -788,6 +924,51 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 14,
+  },
+  editFooter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#0D1F1C",
+    borderTopWidth: 1,
+    borderTopColor: "#1A3330",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  editFooterInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  editFooterInfo: {
+    flex: 1,
+  },
+  editFooterQty: {
+    color: "#8AA39B",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  editFooterTotal: {
+    color: "#00E1A2",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  updateBtn: {
+    backgroundColor: "#56BFAB",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    minWidth: 120,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  updateBtnText: {
+    color: "#fff",
+    fontWeight: "800",
     fontSize: 14,
   },
 });
