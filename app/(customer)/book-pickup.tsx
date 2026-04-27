@@ -278,7 +278,7 @@ useEffect(() => {
 
       console.log("ACTIVE BOOKING RESPONSE ===>", res?.data);
 
-      if (res?.data?.success && res?.data?.data) {
+      if (res?.data?.success && res?.data?.data && res?.data?.data?.length > 0) {
         setHasActiveBooking(true);
       } else {
         setHasActiveBooking(false);
