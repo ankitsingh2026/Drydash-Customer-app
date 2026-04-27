@@ -1,9 +1,23 @@
 import { DarkTheme } from "@/app/(customer)/order-tracking";
+import RazorpayWebView from "@/app/(customer)/orders/RazorpayWebView";
 import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
+import { confirmCouponApi } from "@/features/coupons/coupons.api";
+import {
+  razorpayPaymentInitiate,
+  verifyRazorpayPayment,
+} from "@/features/payment/payment.api";
+import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Modal,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 type HomeOrder = {
   _id?: string;
@@ -31,8 +45,10 @@ const BORDER = "#1A3330";
 const SURFACE = "#0D1F1C";
 const MUTED = "#6B7280";
 
-const normalize = (status?: string) => String(status ?? "").trim().toLowerCase();
-const normalizeKey = (status?: string) => normalize(status).replace(/[^a-z]/g, "");
+const normalize = (status?: string) =>
+  String(status ?? "").trim().toLowerCase();
+const normalizeKey = (status?: string) =>
+  normalize(status).replace(/[^a-z]/g, "");
 
 const formatCardTime = (value?: string) => {
   if (!value) return "";
@@ -83,7 +99,6 @@ const statusMeta = (status?: string) => {
       accent: ACCENT,
       icon: "bicycle-outline" as const,
       title: "Your order is on the way",
-      // subtitle: "Track the rider while your order is in transit.",
       actionText: "Track",
       showClose: false,
     };
@@ -100,13 +115,24 @@ const statusMeta = (status?: string) => {
   };
 };
 
-export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeActiveOrderCardProps) {
+export default function HomeActiveOrderCard({
+  order,
+  onPress,
+  onClose,
+}: HomeActiveOrderCardProps) {
+  const { user } = useAuth();
+
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [showPaymentWebView, setShowPaymentWebView] = useState(false);
+  const [razorpayData, setRazorpayData] = useState<any>(null);
+
   const meta = statusMeta(order.status);
   const amount = order.totalAmount ?? order.price ?? 0;
   const itemCount = Array.isArray(order.items) ? order.items.length : 0;
   const statusKey = normalizeKey(order.status);
   const isDelivered = statusKey === "delivered";
-  const isCancelled = statusKey === "cancelled" || statusKey === "canceled" || statusKey === "deleted";
+  const isCancelled =
+    statusKey === "cancelled" || statusKey === "canceled" || statusKey === "deleted";
   const isOutForDelivery =
     statusKey === "deliveryriderassigned" ||
     statusKey === "deliverriderassigned" ||
@@ -116,104 +142,264 @@ export default function HomeActiveOrderCard({ order, onPress, onClose }: HomeAct
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
 
+  const User: any = user?.user ? user?.user : user;
+  const email = User?.email ?? "test@example.com";
+  const phone = User?.phone ?? User?.mobile ?? "9999999999";
+  const name = User?.name ?? User?.fullName ?? "Test User";
+
+  const orderId = order.order_id || order._id || "";
+
+  const handleRazorpayPayNow = async () => {
+    if (!orderId) return;
+    try {
+      setPaymentLoading(true);
+      const res = await razorpayPaymentInitiate(orderId);
+      console.log("razorpayPaymentInitiate response======>>>", res);
+
+      if (!res?.data?.success) {
+        throw new Error("Payment initiation failed");
+      }
+
+      setRazorpayData(res.data);
+      setShowPaymentWebView(true);
+    } catch (error) {
+      console.log("payment initiate error", error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (data: {
+    paymentId: string;
+    orderId: string;
+    signature: string;
+  }) => {
+    try {
+      setPaymentLoading(true);
+
+      const verifyRes = await verifyRazorpayPayment({
+        razorpay_order_id: data.orderId,
+        razorpay_payment_id: data.paymentId,
+        razorpay_signature: data.signature,
+      });
+
+      if (!verifyRes?.success) {
+        throw new Error("Verification failed");
+      }
+
+      if (orderId) {
+        await confirmCouponApi({ orderId });
+      }
+
+      router.replace({
+        pathname: "/(customer)/orders/payment-success",
+        params: {
+          orderId,
+          amount: String(order?.totalAmount ?? order?.price ?? 0),
+          paymentId: data.paymentId,
+        },
+      });
+    } catch {
+      router.replace({
+        pathname: "/(customer)/orders/payment-failure",
+        params: {
+          orderId,
+          amount: String(order?.price ?? 0),
+          reason: "Payment verification failed",
+        },
+      });
+    } finally {
+      setPaymentLoading(false);
+      setShowPaymentWebView(false);
+    }
+  };
+
+  const handlePaymentFailure = (reason: string) => {
+    setShowPaymentWebView(false);
+    setPaymentLoading(false);
+
+    router.replace({
+      pathname: "/(customer)/orders/payment-failure",
+      params: {
+        orderId,
+        amount: String(order?.price ?? 0),
+        reason,
+      },
+    });
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentWebView(false);
+    setPaymentLoading(false);
+  };
+
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
-      <View style={styles.card}>
-        <View style={[{ backgroundColor: meta.accent }]} />
-        {meta.showClose && onClose ? (
-          <TouchableOpacity
-            onPress={onClose}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.closeFloatingBtn}
-          >
-            <Ionicons name="close" size={22} color="#88A79D" />
-          </TouchableOpacity>
-        ) : null}
-        <View style={styles.inner}>
-          <View style={styles.headerRow}>
-            <OrderStatusBadge label={meta.label} accent={meta.accent} icon={meta.icon} />
-            <View style={styles.rightHeaderRow}>
-              {/* {order.order_id ? <Text style={styles.orderId}>Order #{order.order_id}</Text> : null} */}
-              {!isCancelled ? (
-                <OrderStatusBadge
-                  label={order.isPaid ? "Paid" : "Payment Pending"}
-                  accent={order.isPaid ? ACCENT : "#F59E0B"}
-                  icon={order.isPaid ? "checkmark-circle-outline" : "wallet-outline"}
-                />
-              ) : null}
-              {meta.showClose && onClose ? (
-                <TouchableOpacity
-                  onPress={onClose}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  style={styles.closeBtn}
-                >
-                  <Ionicons name="close" size={18} color="#31423D" />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          </View>
-
-          <Text style={styles.title}>{meta.title}</Text>
-          {meta.subtitle ? <Text style={styles.subtitle}>{meta.subtitle}</Text> : null}
-
-          {isOutForDelivery ? (
-            <>
-              <View style={styles.riderRow}>
-                <Ionicons name="person-circle-outline" size={20} color="#7DA79D" />
-                <Text style={styles.riderText}>{`${riderName} is on the way to Deliver.`}</Text>
-              </View>
-              <Text style={styles.deliveryMetaText}>
-                {orderCode}
-                {cardTime ? ` • ${cardTime}` : ""}
-              </Text>
-            </>
-          ) : null}
-
-          <View style={styles.midRow}>
-            <View style={styles.itemAvatarGroup}>
-              <View style={styles.circleIcon}>
-                <Ionicons name="shirt-outline" size={18} color="#9EE8D1" />
-              </View>
-              <View style={[styles.circleIcon, { marginLeft: -10 }]}>
-                <Ionicons name="pricetag-outline" size={18} color="#9EE8D1" />
-              </View>
-            </View>
-            <View style={styles.countPill}>
-              <Text style={styles.countPillText}>
-                {itemCount} Items {isDelivered ? "Delivered" : statusKey === "processing" ? "Processing" : "In Your Cart"}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.footerRow}>
-            {isDelivered ? (
-              <View style={styles.reviewWrap}>
-                <View style={styles.reviewRow}>
-                  <Ionicons name="star" size={18} color={ACCENT} />
-                  <Ionicons name="star" size={18} color={ACCENT} />
-                  <Ionicons name="star" size={18} color={ACCENT} />
-                  <Ionicons name="star" size={18} color={ACCENT} />
-                  <Ionicons name="star" size={18} color="#31423D" />
-                </View>
-                <Text style={styles.reviewCta}>{meta.actionText}</Text>
-              </View>
-            ) : !order.isPaid ? (
-              <View style={styles.primaryCta}>
-                <Text style={styles.primaryCtaText}>{meta.actionText}</Text>
-                <Ionicons name="arrow-forward" size={16} color="#000" />
-              </View>
-            ) : (
-              <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
-            )}
-            <TouchableOpacity style={styles.chatBtn} onPress={() => router.push("/(customer)/(assistant)/chat")}>
-              <View style={styles.chatBtn}>
-                <Ionicons name="chatbubble-ellipses" size={25} color={DarkTheme.card} />
-              </View>
+    <>
+      <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
+        <View style={styles.card}>
+          <View style={[{ backgroundColor: meta.accent }]} />
+          {meta.showClose && onClose ? (
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.closeFloatingBtn}
+            >
+              <Ionicons name="close" size={22} color="#88A79D" />
             </TouchableOpacity>
+          ) : null}
+          <View style={styles.inner}>
+            <View style={styles.headerRow}>
+              <OrderStatusBadge
+                label={meta.label}
+                accent={meta.accent}
+                icon={meta.icon}
+              />
+              <View style={styles.rightHeaderRow}>
+                {!isCancelled ? (
+                  <OrderStatusBadge
+                    label={order.isPaid ? "Paid" : "Payment Pending"}
+                    accent={order.isPaid ? ACCENT : "#F59E0B"}
+                    icon={
+                      order.isPaid
+                        ? "checkmark-circle-outline"
+                        : "wallet-outline"
+                    }
+                  />
+                ) : null}
+                {meta.showClose && onClose ? (
+                  <TouchableOpacity
+                    onPress={onClose}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    style={styles.closeBtn}
+                  >
+                    <Ionicons name="close" size={18} color="#31423D" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            </View>
+
+            <Text style={styles.title}>{meta.title}</Text>
+            {meta.subtitle ? (
+              <Text style={styles.subtitle}>{meta.subtitle}</Text>
+            ) : null}
+
+            {isOutForDelivery ? (
+              <>
+                <View style={styles.riderRow}>
+                  <Ionicons
+                    name="person-circle-outline"
+                    size={20}
+                    color="#7DA79D"
+                  />
+                  <Text style={styles.riderText}>{`${riderName} is on the way to Deliver.`}</Text>
+                </View>
+                <Text style={styles.deliveryMetaText}>
+                  {orderCode}
+                  {cardTime ? ` • ${cardTime}` : ""}
+                </Text>
+              </>
+            ) : null}
+
+            <View style={styles.midRow}>
+              <View style={styles.itemAvatarGroup}>
+                <View style={styles.circleIcon}>
+                  <Ionicons name="shirt-outline" size={18} color="#9EE8D1" />
+                </View>
+                <View style={[styles.circleIcon, { marginLeft: -10 }]}>
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={18}
+                    color="#9EE8D1"
+                  />
+                </View>
+              </View>
+              <View style={styles.countPill}>
+                <Text style={styles.countPillText}>
+                  {itemCount} Items{" "}
+                  {isDelivered
+                    ? "Delivered"
+                    : statusKey === "processing"
+                      ? "Processing"
+                      : "In Your Cart"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.footerRow}>
+              {isDelivered ? (
+                <View style={styles.reviewWrap}>
+                  <View style={styles.reviewRow}>
+                    <Ionicons name="star" size={18} color={ACCENT} />
+                    <Ionicons name="star" size={18} color={ACCENT} />
+                    <Ionicons name="star" size={18} color={ACCENT} />
+                    <Ionicons name="star" size={18} color={ACCENT} />
+                    <Ionicons name="star" size={18} color="#31423D" />
+                  </View>
+                  <Text style={styles.reviewCta}>{meta.actionText}</Text>
+                </View>
+              ) : !order.isPaid ? (
+                <TouchableOpacity
+                  onPress={handleRazorpayPayNow}
+                  disabled={paymentLoading}
+                  activeOpacity={0.85}
+                  style={[
+                    styles.primaryCta,
+                    { opacity: paymentLoading ? 0.7 : 1 },
+                  ]}
+                >
+                  {paymentLoading ? (
+                    <ActivityIndicator size="small" color="#000" />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryCtaText}>
+                        {meta.actionText}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={16} color="#000" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <Text style={styles.successText}>
+                  Payment successful. Sit back and relax.
+                </Text>
+              )}
+              <TouchableOpacity
+                style={styles.chatBtn}
+                onPress={() =>
+                  router.push("/(customer)/(assistant)/chat")
+                }
+              >
+                <View style={styles.chatBtn}>
+                  <Ionicons
+                    name="chatbubble-ellipses"
+                    size={25}
+                    color={DarkTheme.card}
+                  />
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      <Modal visible={showPaymentWebView} animationType="slide">
+        {razorpayData && (
+          <RazorpayWebView
+            amount={razorpayData.amount}
+            orderId={orderId}
+            razorpayOrderId={razorpayData.razorpayOrderId}
+            razorpayKey={razorpayData.key}
+            email={email}
+            phone={phone}
+            name={name}
+            themeColor={ACCENT}
+            onSuccess={handlePaymentSuccess}
+            onFailure={handlePaymentFailure}
+            onCancel={handlePaymentCancel}
+          />
+        )}
+      </Modal>
+    </>
   );
 }
 
@@ -409,3 +595,4 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 });
+
