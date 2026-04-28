@@ -9,16 +9,13 @@ import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
 import { getMeApi } from "@/features/auth/auth.api";
 import { getAllSearchedActiveItems } from "@/features/catalog/catalog.api";
-import { getOrdersApi } from "@/features/orders/orders.api";
-import { getCustomerPickups } from "@/features/pickups/pickup.api";
-import { PickupRecord } from "@/features/pickups/pickup.types";
+import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
-import { buildPhoneCandidates } from "@/utils/phone";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
@@ -189,12 +186,9 @@ export default function Home() {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [popupVisible, setPopupVisible] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [pickups, setPickups] = useState<PickupRecord[]>([]);
-  const [orders, setOrders] = useState<HomeOrder[]>([]);
-  const [pickupLoading, setPickupLoading] = useState(false);
-  const [dismissedOrderKey, setDismissedOrderKey] = useState<string | null>(
-    null,
-  );
+  const [activeBooking, setActiveBooking] = useState<any>(null);
+  const [activeType, setActiveType] = useState<"none" | "pickup" | "order">("none");
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   // Search states
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
@@ -215,15 +209,6 @@ export default function Home() {
     checkAuth();
   }, []);
 
-  const customerPhone = user?.user?.phone ?? user?.phone ?? "";
-  const customerId = user?.user?.id ?? user?.id ?? "";
-
-  const phoneCandidates = useMemo(
-    () => buildPhoneCandidates(customerPhone),
-    [customerPhone],
-  );
-
-  // Debounced search function
   const performSearch = useCallback(async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -299,140 +284,44 @@ export default function Home() {
     setSearchResults([]);
   };
 
-  const refreshPickups = useCallback(async () => {
-    if (!phoneCandidates.length) {
-      setPickups([]);
-      setOrders([]);
-      setPickupLoading(false);
+  const refreshBooking = useCallback(async () => {
+    const phone = user?.user?.phone ?? user?.phone ?? "";
+    if (!phone) {
+      setActiveType("none");
+      setActiveBooking(null);
+      setBookingLoading(false);
       return;
     }
+    const phoneWithCountryCode =  `91${phone}`;
 
     try {
-      setPickupLoading(true);
-      const fetchPickups = async () => {
-        let fetchedPickups: PickupRecord[] = [];
-        let usedPhone = "";
+      setBookingLoading(true);
+      const res = await getActivePickupOrOrder(phoneWithCountryCode);
+      const type = res?.data?.type;
+      const data = res?.data?.data;
 
-        for (const candidate of phoneCandidates) {
-          usedPhone = candidate;
-          try {
-            const res = await getCustomerPickups(candidate);
-            const candidatePickups = Array.isArray(res?.pickups)
-              ? res.pickups
-              : [];
-            if (candidatePickups.length > 0) {
-              fetchedPickups = candidatePickups;
-              break;
-            }
-          } catch (error) {
-            if (__DEV__) {
-              console.log("[home] pickup candidate failed", {
-                candidate,
-                error,
-              });
-            }
-          }
-        }
-
-        if (!fetchedPickups.length && customerId) {
-          try {
-            const res = await getCustomerPickups(customerId);
-            fetchedPickups = Array.isArray(res?.pickups) ? res.pickups : [];
-            usedPhone = customerId;
-          } catch (error) {
-            if (__DEV__) {
-              console.log("[home] pickup customer-id fallback failed", {
-                customerId,
-                error,
-              });
-            }
-          }
-        }
-
-        return { fetchedPickups, usedPhone };
-      };
-
-      const fetchOrders = async () => {
-        let fetchedOrders: HomeOrder[] = [];
-        let usedPhone = "";
-
-        for (const candidate of phoneCandidates) {
-          usedPhone = candidate;
-          try {
-            const res = await getOrdersApi(candidate);
-            const candidateOrders = Array.isArray(res?.orders)
-              ? res.orders
-              : [];
-            if (candidateOrders.length > 0) {
-              fetchedOrders = candidateOrders;
-              break;
-            }
-          } catch (error) {
-            if (__DEV__) {
-              console.log("[home] order candidate failed", {
-                candidate,
-                error,
-              });
-            }
-          }
-        }
-
-        if (!fetchedOrders.length && customerId) {
-          try {
-            const res = await getOrdersApi(customerId);
-            fetchedOrders = Array.isArray(res?.orders) ? res.orders : [];
-            usedPhone = customerId;
-          } catch (error) {
-            if (__DEV__) {
-              console.log("[home] order customer-id fallback failed", {
-                customerId,
-                error,
-              });
-            }
-          }
-        }
-
-        return { fetchedOrders, usedPhone };
-      };
-
-      const [pickupResult, orderResult] = await Promise.all([
-        fetchPickups(),
-        fetchOrders(),
-      ]);
-
-      const { fetchedPickups, usedPhone: pickupPhone } = pickupResult;
-      const { fetchedOrders, usedPhone: orderPhone } = orderResult;
-
-      setPickups(fetchedPickups);
-      setOrders(fetchedOrders);
-      console.log("Fetched pickups and orders====>", {
-        fetchedPickups,
-        fetchedOrders,
-      });
+      if (type === "pickup" && data) {
+        setActiveType("pickup");
+        setActiveBooking(data);
+      } else if (type === "order" && data) {
+        setActiveType("order");
+        setActiveBooking(data);
+      } else {
+        setActiveType("none");
+        setActiveBooking(null);
+      }
 
       if (__DEV__) {
-        const latest = fetchedPickups[0] ?? null;
-        const latestOrder = fetchedOrders[0] ?? null;
-        console.log("[home] pickup refresh", {
-          requestedPhones: phoneCandidates,
-          usedPickupPhone: pickupPhone,
-          pickupCount: fetchedPickups.length,
-          latestStatus: latest?.PickupStatus,
-          latestId: latest?._id,
-          usedOrderPhone: orderPhone,
-          orderCount: fetchedOrders.length,
-          latestOrderStatus: latestOrder?.status,
-          latestOrderId: latestOrder?.order_id,
-        });
+        console.log("[home] active booking refresh", { type, data });
       }
     } catch (error) {
-      console.log("Home status refresh error:", error);
-      setPickups([]);
-      setOrders([]);
+      console.log("Home active booking refresh error:", error);
+      setActiveType("none");
+      setActiveBooking(null);
     } finally {
-      setPickupLoading(false);
+      setBookingLoading(false);
     }
-  }, [phoneCandidates]);
+  }, [user]);
 
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -459,75 +348,8 @@ export default function Home() {
   }, [placeholderIndex, isFocused, searchQuery, placeholderAnim]);
 
   useEffect(() => {
-    if (!phoneCandidates.length) return;
-    refreshPickups();
-  }, [phoneCandidates, refreshPickups]);
-
-  const latestPickup = useMemo(() => {
-    const sorted = [...pickups]
-      .filter((pickup) => !pickup.isDeleted)
-      .sort((left, right) => {
-        const leftTime = new Date(
-          left.updatedAt || left.createdAt || left.pickup_date || 0,
-        ).getTime();
-        const rightTime = new Date(
-          right.updatedAt || right.createdAt || right.pickup_date || 0,
-        ).getTime();
-        return rightTime - leftTime;
-      });
-
-    const activePickup = sorted.find((pickup) => {
-      const status = String(pickup.PickupStatus ?? "").toLowerCase();
-      return (
-        ![
-          "complete",
-          "completed",
-          "delivered",
-          "cancelled",
-          "canceled",
-        ].includes(status) && !pickup.cancelledAt
-      );
-    });
-
-    return activePickup ?? null;
-  }, [pickups]);
-
-  const latestPickupKey = latestPickup?._id || null;
-
-  const hasDeliveredLatestOrder =
-    String(orders?.[0]?.status ?? "")
-      .trim()
-      .toLowerCase() === "delivered";
-
-  useEffect(() => {
-    if (!dismissedOrderKey) return;
-
-    if (latestPickupKey || !hasDeliveredLatestOrder) {
-      setDismissedOrderKey(null);
-    }
-  }, [dismissedOrderKey, latestPickupKey, hasDeliveredLatestOrder]);
-
-  const latestOrder = useMemo(() => {
-    const sorted = [...orders].sort((left, right) => {
-      const leftTime = new Date(
-        left.updatedAt || left.createdAt || 0,
-      ).getTime();
-      const rightTime = new Date(
-        right.updatedAt || right.createdAt || 0,
-      ).getTime();
-      return rightTime - leftTime;
-    });
-
-    return sorted[0] ?? null;
-  }, [orders]);
-
-  const latestOrderKey = latestOrder?._id || latestOrder?.order_id || null;
-  const latestOrderStatus = String(latestOrder?.status ?? "")
-    .trim()
-    .toLowerCase();
-  const isDeliveredOrder = latestOrderStatus === "delivered";
-  const hideDeliveredCard =
-    isDeliveredOrder && dismissedOrderKey === latestOrderKey;
+    refreshBooking();
+  }, [refreshBooking]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -761,11 +583,11 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       dragXJS.setValue(0);
-      refreshPickups();
+      refreshBooking();
       if (params.orderPlaced === "1") {
         router.setParams({ orderPlaced: undefined });
       }
-    }, [params.orderPlaced, refreshPickups]),
+    }, [params.orderPlaced, refreshBooking]),
   );
 
   if (loading) return <AppLoader />;
@@ -997,134 +819,37 @@ export default function Home() {
           </View>
 
           {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
-          {latestPickup ? (
+          {activeType === "pickup" && activeBooking ? (
             <View style={{ marginHorizontal: 16, marginTop: 14 }}>
               <PickupStatusCard
-                pickup={latestPickup}
+                pickup={activeBooking}
                 onPress={() =>
                   router.push({
                     pathname: "/(customer)/order-tracking",
                     params: {
-                      pickupId: latestPickup?._id,
+                      pickupId: activeBooking?._id,
                     },
                   })
                 }
-                onActionComplete={refreshPickups}
+                onActionComplete={refreshBooking}
               />
             </View>
-          ) : hideDeliveredCard ? (
-            <View
-              collapsable={false}
-              style={{ marginHorizontal: 16, marginTop: 14 }}
-            >
-              <Animated.View
-                style={[
-                  styles.pickupCard,
-                  {
-                    opacity: fadeAnim,
-                    backgroundColor: "#0D1F1C",
-                    borderColor: "#1A3330",
-                    transform: [
-                      {
-                        translateY: fadeAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [12, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.swipeContainer,
-                    { backgroundColor: "#071018" },
-                  ]}
-                >
-                  <Animated.View
-                    style={[
-                      styles.swipeTrackFill,
-                      {
-                        width: trackFillWidth,
-                        opacity: trackFillOpacity,
-                      },
-                    ]}
-                    pointerEvents="none"
-                  />
-
-                  <Animated.View
-                    style={[
-                      styles.swipeDraggable,
-                      {
-                        backgroundColor: PRIMARY,
-                        transform: [
-                          { translateX: dragXNative },
-                          { scale: thumbScale },
-                        ],
-                      },
-                    ]}
-                    {...panResponder.panHandlers}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={onPressBook}
-                      style={styles.swipeDraggableInner}
-                    >
-                      <Ionicons
-                        name="bag-check-outline"
-                        size={20}
-                        color="#000"
-                      />
-                    </TouchableOpacity>
-                  </Animated.View>
-
-                  <Animated.View
-                    style={[
-                      styles.swipeTextWrap,
-                      {
-                        opacity: swipeTextOpacity,
-                        transform: [{ translateX: swipeTextTranslateX }],
-                      },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={styles.swipeHint}>
-                        SWIPE FOR INSTANT PICKUP
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color="#4B5563"
-                      />
-                    </View>
-                  </Animated.View>
-                </View>
-              </Animated.View>
-            </View>
-          ) : !hideDeliveredCard && latestOrder ? (
+          ) : activeType === "order" && activeBooking ? (
             <View style={{ marginHorizontal: 16, marginTop: 14 }}>
               <HomeActiveOrderCard
-                order={latestOrder}
+                order={activeBooking}
                 onPress={() =>
-                  latestOrder.order_id
-                    ? router.push(`/orders/${latestOrder.order_id}`)
+                  activeBooking.order_id
+                    ? router.push(`/orders/${activeBooking.order_id}`)
                     : router.push("/(customer)/(tabs)/orders")
                 }
-                onClose={
-                  isDeliveredOrder && latestOrderKey
-                    ? () => setDismissedOrderKey(latestOrderKey)
-                    : undefined
-                }
+                onClose={() => {
+                  setActiveType("none");
+                  setActiveBooking(null);
+                }}
               />
             </View>
-          ) : pickupLoading ? null : (
+          ) : bookingLoading ? null : (
             <View
               collapsable={false}
               style={{ marginHorizontal: 16, marginTop: 14 }}
@@ -1188,42 +913,6 @@ export default function Home() {
                         color="#000"
                       />
                     </TouchableOpacity>
-                  </Animated.View>
-
-                  <Animated.View
-                    style={[
-                      styles.swipeTrackFill,
-                      { width: trackFillWidth, opacity: trackFillOpacity },
-                    ]}
-                    pointerEvents="none"
-                  />
-
-                  <Animated.View
-                    style={[
-                      styles.swipeTextWrap,
-                      {
-                        opacity: swipeTextOpacity,
-                        transform: [{ translateX: swipeTextTranslateX }],
-                      },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={styles.swipeHint}>
-                        SWIPE FOR INSTANT PICKUP
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color="#4B5563"
-                      />
-                    </View>
                   </Animated.View>
 
                   <Animated.View
