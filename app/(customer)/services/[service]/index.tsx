@@ -3,7 +3,6 @@ import { catalogData } from "@/constants/catalog";
 import { getCatalogApi } from "@/features/catalog/catalog.api";
 import {
   getCustomerSinglePickupDetails,
-  updatePickupThroughApp,
 } from "@/features/pickups/pickup.api";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,7 +18,6 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   FlatList,
   Image,
@@ -331,24 +329,12 @@ export default function ServiceDetail() {
       ? error[activeTab.key]
       : null;
 
-  const handleUpdateItems = async () => {
+  const handleAddToCart = () => {
     if (!pickupId) return;
-    try {
-      setUpdating(true);
-      const items = cart.items
-        .filter((i) => i.qty > 0)
-        .map((i) => ({
-          itemId: i.id,
-          quantity: i.qty,
-        }));
-      await updatePickupThroughApp(pickupId, items);
-      Alert.alert("Success", "Pickup items updated successfully.");
-      router.back();
-    } catch (err: any) {
-      Alert.alert("Update failed", err?.message || "Unable to update items.");
-    } finally {
-      setUpdating(false);
-    }
+    router.replace({
+      pathname: "/(customer)/order-tracking",
+      params: { pickupId },
+    });
   };
 
   return (
@@ -706,20 +692,16 @@ export default function ServiceDetail() {
             </View>
             <TouchableOpacity
               activeOpacity={0.9}
-              onPress={handleUpdateItems}
-              disabled={updating || cart.items.length === 0}
+              onPress={handleAddToCart}
+              disabled={cart.items.length === 0}
               style={[
                 styles.updateBtn,
                 {
-                  opacity: updating || cart.items.length === 0 ? 0.55 : 1,
+                  opacity: cart.items.length === 0 ? 0.55 : 1,
                 },
               ]}
             >
-              {updating ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.updateBtnText}>Update Items</Text>
-              )}
+              <Text style={styles.updateBtnText}>Add to Cart</Text>
             </TouchableOpacity>
           </View>
         </View>
