@@ -1,7 +1,8 @@
 import LocationPickerModal from "@/components/LocationPickerModal";
 import { useAddress } from "@/context/AddressContext";
-import { checkServiceAvailability } from "@/features/location/location.api";
+import { checkServiceAvailability, getFullServiceData } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
+
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import { Bell, MousePointer2 } from "lucide-react-native";
@@ -39,20 +40,22 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     setSelectedAddress,
     refreshAddresses,
     loading,
+    serviceData,
+    serviceLoading,
+    currentActiveSlot,
+    updateServiceData,
   } = useAddress();
+
 
   const [locationText, setLocationText] = useState("Fetching location...");
   const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Service availability states
-  const [isServiceAvailable, setIsServiceAvailable] = useState(false);
-  const [serviceType, setServiceType] = useState("LOADING");
-  const [checkingService, setCheckingService] = useState(true);
   const [currentCoords, setCurrentCoords] = useState<{
     lat: number;
     lng: number;
   } | null>(null);
+
 
   useEffect(() => {
     console.log("Selected address changed:", selectedAddress);
@@ -83,24 +86,21 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   }, [allAddresses]);
 
   useEffect(() => {
-    if (currentCoords) {
-      checkServiceForLocation(currentCoords.lat, currentCoords.lng);
+    if (currentCoords && !serviceLoading) {
+      fetchFullServiceData(currentCoords.lat, currentCoords.lng);
     }
   }, [currentCoords]);
 
-  const checkServiceForLocation = async (lat: number, lng: number) => {
+
+  const fetchFullServiceData = async (lat: number, lng: number) => {
     try {
-      setCheckingService(true);
-      const serviceCheck = await checkServiceAvailability(lat, lng);
-      setIsServiceAvailable(serviceCheck.serviceAvailable);
-      setServiceType(serviceCheck.type);
+      updateServiceData(await getFullServiceData(lat, lng));
     } catch (error) {
-      console.error("Service check error:", error);
-      setServiceType("ERROR");
-    } finally {
-      setCheckingService(false);
+      console.error("Full service data error:", error);
+      updateServiceData({ coords: { lat, lng }, zoneData: null, serviceData: null });
     }
   };
+
 
   const fetchAddressCoordinates = async (address: any) => {
     try {
@@ -175,19 +175,21 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   };
 
   const getServiceColor = () => {
-    if (isServiceAvailable) return "#2FE6A6";
-    if (serviceType === "OUT_OF_AREA") return "#FFA500";
-    if (serviceType === "NOT_AVAILABLE_NOW") return "#FF6B6B";
-    return "#8FB3A8";
+    if (serviceLoading) return "#2FE6A6";
+    if (serviceData?.serviceAvailable) return "#2FE6A6";
+    if (!serviceData?.zoneData?.zoneFound) return "#FFA500";
+    return "#FF6B6B";
   };
 
   const getDisplayText = () => {
-    if (checkingService) return "Checking...";
-    if (isServiceAvailable) return "24 Hours";
-    if (serviceType === "OUT_OF_AREA") return "Not in your area";
-    if (serviceType === "NOT_AVAILABLE_NOW") return "Currently closed";
+    if (serviceLoading) return "Checking...";
+    if (currentActiveSlot) return `Next: ${currentActiveSlot}`;
+    if (serviceData?.serviceAvailable) return "24 Hours";
+    if (!serviceData?.zoneData?.zoneFound) return "Not in your area";
+    if (!serviceData?.serviceAvailable) return "Currently closed";
     return "Service unavailable";
   };
+
 
   if (loading) {
     return (
@@ -202,8 +204,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
         <View style={styles.row}>
           <View style={styles.left}>
-            <View style={styles.serviceRow}>
-              {checkingService ? (
+            <View style={[styles.serviceRow, { shadowColor: getServiceColor(), shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }]}>
+              {serviceLoading ? (
                 <ActivityIndicator size="small" color="#2FE6A6" />
               ) : (
                 <Text
@@ -213,6 +215,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                 </Text>
               )}
             </View>
+
 
             <TouchableOpacity
               style={styles.locationRow}

@@ -18,6 +18,15 @@ type AddressContextType = {
   loading: boolean;
   setSelectedAddress: (address: Address | null) => void;
   refreshAddresses: () => Promise<void>;
+  // SERVICE STATES 👇
+  coords: {lat: number; lng: number} | null;
+  zoneData: {zoneFound: boolean; zoneId: string; city: string; name: string} | null;
+  serviceData: any | null;
+  serviceLoading: boolean;
+  currentActiveSlot: string | null;
+  // 👆 SERVICE STATES
+  updateServiceData: (data: any) => void;
+  clearServiceData: () => void;
 };
 
 const AddressContext = createContext<AddressContextType | undefined>(undefined);
@@ -40,7 +49,15 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
     null,
   );
   const [allAddresses, setAllAddresses] = useState<Address[]>([]);
-  const [loading, setLoading] = useState(true);
+const [loading, setLoading] = useState(true);
+
+// SERVICE STATES 👇
+  const [coords, setCoords] = useState<{lat: number; lng: number} | null>(null);
+  const [zoneData, setZoneData] = useState<any>(null);
+  const [serviceData, setServiceData] = useState<any>(null);
+  const [serviceLoading, setServiceLoading] = useState(false);
+  const [currentActiveSlot, setCurrentActiveSlot] = useState<string | null>(null);
+// 👆 SERVICE STATES
 
   const fetchAddresses = useCallback(async () => {
     if (!authId) {
@@ -131,9 +148,29 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [allAddresses]);
 
-  const refreshAddresses = async () => {
-    await fetchAddresses();
-  };
+const refreshAddresses = async () => {
+  await fetchAddresses();
+};
+
+// SERVICE METHODS 👇
+const updateServiceData = useCallback((data: any) => {
+  setServiceLoading(false);
+  if (data) {
+    setCoords(data.coords);
+    setZoneData(data.zoneData);
+    setServiceData(data.serviceData);
+    setCurrentActiveSlot(data.serviceData?.data?.activeSlot?.time || null);
+  }
+}, []);
+
+const clearServiceData = useCallback(() => {
+  setCoords(null);
+  setZoneData(null);
+  setServiceData(null);
+  setCurrentActiveSlot(null);
+  setServiceLoading(false);
+}, []);
+// 👆 SERVICE METHODS
 
   const handleSetSelectedAddress = (address: Address | null) => {
     console.log("Setting selected address:", address);
@@ -141,18 +178,27 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
     setSelectedAddressId(address?.id || null);
   };
 
-  return (
-    <AddressContext.Provider
-      value={{
-        selectedAddress,
-        selectedAddressId,
-        allAddresses,
-        loading,
-        setSelectedAddress: handleSetSelectedAddress,
-        refreshAddresses,
-      }}
-    >
-      {children}
-    </AddressContext.Provider>
-  );
+return (
+  <AddressContext.Provider
+    value={{
+      selectedAddress,
+      selectedAddressId,
+      allAddresses,
+      loading,
+      setSelectedAddress: handleSetSelectedAddress,
+      refreshAddresses,
+      // SERVICE 👇
+      coords,
+      zoneData,
+      serviceData,
+      serviceLoading,
+      currentActiveSlot,
+      updateServiceData,
+      clearServiceData,
+      // 👆 SERVICE
+    }}
+  >
+    {children}
+  </AddressContext.Provider>
+);
 };
