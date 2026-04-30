@@ -775,6 +775,108 @@ export default function OrderReceipt() {
             <Text style={s.processingCheckText}>Delivery Location Same As Pickup Location</Text>
           </View>
 
+          {/* AVAILABLE OFFERS SECTION (added for processing/in-progress view) */}
+          {!isPaid && (
+            <View style={s.offersHeader}>
+              <Text style={s.offersLabel}>AVAILABLE OFFERS</Text>
+              <TouchableOpacity
+                onPress={async () => {
+                  await fetchAvailableCoupons();
+                  setShowCouponSheet(true);
+                }}
+              >
+                <Text style={[s.viewAllText, { color: theme.primary }]}>VIEW ALL &rsaquo;</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {!isPaid && (
+            <View style={[s.couponInputRow, { backgroundColor: "#00110E" }]}> 
+              <MaterialCommunityIcons
+                name="ticket-percent-outline"
+                size={18}
+                color="#64748b"
+                style={{ marginRight: 8 }}
+              />
+              <TextInput
+                value={couponInput}
+                onChangeText={(t) => {
+                  setCouponInput(t.toUpperCase());
+                  setCouponError("");
+                  if (!t.trim()) {
+                    setAppliedCoupon(null);
+                  }
+                }}
+                placeholder="Coupon Code"
+                placeholderTextColor="#475569"
+                style={[s.couponInput, { color: theme.text }]}
+                autoCapitalize="characters"
+              />
+              {appliedCoupon ? (
+                <View
+                  style={[
+                    s.couponAppliedTag,
+                    { backgroundColor: "#0B3326", borderColor: "#22EBAB" },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="check-circle"
+                    size={14}
+                    color="#22EBAB"
+                  />
+                  <Text style={s.couponAppliedText}>APPLIED</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleManualApply}
+                  style={[s.couponApplyBtn, { backgroundColor: "#22EBAB" }]}
+                >
+                  <Text style={s.couponApplyText}>Apply</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {couponError ? (
+            <Text style={s.couponError}>{couponError}</Text>
+          ) : null}
+
+          {!appliedCoupon && bestCoupon && !isPaid && (
+            <View style={[s.suggestionCard, { backgroundColor: theme.card }]}> 
+              <View style={s.suggestionLeft}>
+                <View style={s.suggestionTagRow}>
+                  <View style={s.codeTag}>
+                    <Text style={s.codeTagText}>{bestCoupon.code}</Text>
+                  </View>
+                  <View style={s.bestValueTag}>
+                    <Text style={s.bestValueText}>BEST VALUE</Text>
+                  </View>
+                </View>
+                <Text style={[s.suggestionDesc, { color: "#94a3b8" }]}>Save ₹{calculateCouponValue(bestCoupon, subtotal)} on this order</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleCouponAction(bestCoupon, "apply")}
+                style={[s.suggestionApplyBtn, { backgroundColor: "#22EBAB" }]}
+              >
+                <Text style={s.suggestionApplyText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {appliedCoupon && !isPaid && (
+            <View style={[s.appliedPill, { backgroundColor: "#0B3326" }]}> 
+              <MaterialCommunityIcons
+                name="check-circle-outline"
+                size={14}
+                color={theme.primary}
+              />
+              <Text style={[s.appliedPillText, { color: theme.primary }]}>"{appliedCoupon.code}" applied!{totalDiscount > 0 ? ` Save ₹${totalDiscount?.toFixed(0)}` : " Offer applied!"}</Text>
+              <TouchableOpacity onPress={() => appliedCoupon && handleCouponAction(appliedCoupon, "remove")}> 
+                <Ionicons name="close-circle" size={16} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <Text style={[s.offersLabel, { paddingHorizontal: 20, marginTop: 4 }]}>SPECIAL INSTRUCTIONS</Text>
           <TextInput
             value={singleOrderDetails.note || ""}

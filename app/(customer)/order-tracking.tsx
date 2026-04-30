@@ -6,12 +6,14 @@ import { Address } from "@/types/order.types";
 import {
   cancelPickupApi,
   reschedulePickupApi,
-  getCustomerSinglePickupDetails
+  getCustomerSinglePickupDetails,
+  updatePickupThroughApp,
 } from "@/features/pickups/pickup.api";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import { useCart } from "@/context/CartContext";
 import {
   ActivityIndicator,
   Alert,
@@ -378,16 +380,16 @@ function BillCard({
           <BillRow label="Platform fee" value={money(platformFee)} />
           <BillRow label={`GST (${gstPercent}%)`} value={money(gst)} /> */}
 
-          <View style={styles.billDivider} />
+          {/* <View style={styles.billDivider} /> */}
 
 
         </>
       )}
 
-      <View style={styles.totalRow}>
+      {/* <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total Bill</Text>
         <Text style={styles.totalValue}>{money(total)}</Text>
-      </View>
+      </View> */}
     </View>
   );
 }
@@ -507,20 +509,22 @@ export default function OrderTrackingScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { selectedAddress } = useAddress();
+  const cart = useCart();
   const params = useLocalSearchParams<{
     pickupId?: string;
     orderId?: string;
   }>();
   console.log("received id params====>> ", params);
   const [loading, setLoading] = useState(true);
- const [pickupDetails, setPickupDetails] = useState<any>(null);
+  const [pickupDetails, setPickupDetails] = useState<any>(null);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [couponCode, setCouponCode] = useState("SAVE50");
   const [sameLocation, setSameLocation] = useState(true);
-  const [heavyItems, setHeavyItems] = useState(true);
+  const [heavyItems, setHeavyItems] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isUpdatingPickup, setIsUpdatingPickup] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
 useEffect(() => {
@@ -577,6 +581,43 @@ useEffect(() => {
       Alert.alert("Reschedule failed", error?.message || "Unable to reschedule pickup.");
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleUpdatePickup = async () => {
+    if (!selectedPickup?._id) {
+      Alert.alert("Missing pickup", "Unable to update this pickup right now.");
+      return;
+    }
+
+    const cartItems = cart.items
+      .filter((i) => i.qty > 0)
+      .map((i) => ({
+        itemId: i.id,
+        quantity: i.qty,
+      }));
+
+    if (cartItems.length === 0) {
+      Alert.alert("Empty cart", "Please add at least one item before updating.");
+      return;
+    }
+
+    try {
+      setIsUpdatingPickup(true);
+      await updatePickupThroughApp(
+        selectedPickup._id,
+        cartItems,
+        specialInstructions,
+        heavyItems,
+        couponCode,
+      );
+      cart.clear();
+      Alert.alert("Pickup updated", "Your pickup has been updated successfully.");
+      setReloadKey((prev) => prev + 1);
+    } catch (error: any) {
+      Alert.alert("Update failed", error?.message || "Unable to update pickup.");
+    } finally {
+      setIsUpdatingPickup(false);
     }
   };
 
@@ -637,7 +678,22 @@ const locationText = useMemo(() => {
     return hasOrderItems ? "order-items" : "order-delivered";
   }, [hasOrderItems, isAssigned, normalizedPickupStatus]);
 
+const isEditableMode = screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
+
 const items = useMemo(() => {
+  const useCartItems = isEditableMode && cart.items.length > 0;
+
+  if (useCartItems) {
+    return cart.items.map((item, index) => ({
+      id: index + 1,
+      name: item.title,
+      qty: item.qty,
+      price: item.qty * item.price,
+      icon: inferItemIcon(item.title),
+      accent: "#00E1A2",
+    }));
+  }
+
   return (selectedPickup?.items ?? []).map((item, index) => {
     const name = item?.label || `Item ${index + 1}`;
     const qty = item?.quantity || 1;
@@ -652,7 +708,7 @@ const items = useMemo(() => {
       accent: "#00E1A2",
     };
   });
-}, [selectedPickup]);
+}, [selectedPickup, cart.items, isEditableMode]);
 
 const bill = useMemo(() => {
   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
@@ -752,13 +808,13 @@ const deliveredAt = ORDER.deliveredAt;
       >
         {screenMode === "pickup-scheduled" || screenMode === "pickup-assigned" ? (
           <>
-            <StatusBanner
+            {/* <StatusBanner
               title={statusBannerContent.title}
               subtitle={statusBannerContent.subtitle}
               icon={statusBannerContent.icon}
-            />
+            /> */}
 
-            {hasOrderItems ? (
+            {hasOrderItems || (isEditableMode && cart.items.length > 0) ? (
               <>
                 <View style={styles.sectionHeaderWrap}>
                   <Text style={styles.sectionHeader}>Cart Items </Text>
@@ -846,6 +902,21 @@ const deliveredAt = ORDER.deliveredAt;
               />
               <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
             </TouchableOpacity>
+            <View style={styles.deliveryRow}>
+  <Ionicons name="flash-outline" size={16} color={DarkTheme.primary} />
+  
+  <View>
+    <Text style={styles.deliveryText}>
+      Delivery before 10 AM (No-contact delivery)
+    </Text>
+
+    <TouchableOpacity onPress={() => console.log("Clicked")}>
+  <Text style={styles.deliveryLink}>
+    Not A Morning Person?
+  </Text>
+</TouchableOpacity>
+  </View>
+</View>
 
             <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
             <TextInput
@@ -1027,10 +1098,19 @@ const deliveredAt = ORDER.deliveredAt;
       </ScrollView>
 
       {screenMode === "order-delivered" ? <BottomCTA mode={screenMode} /> : null}
-      {(screenMode === "pickup-scheduled" || screenMode === "pickup-assigned") && hasOrderItems ? (
+      {isEditableMode && (hasOrderItems || cart.items.length > 0) ? (
         <View style={styles.totalAmountBarWrap}>
-          <TouchableOpacity activeOpacity={0.9} style={styles.totalAmountBarBtn}>
-            <Text style={styles.totalAmountBarText}>{`Total Amount • ${money(bill.total)}  >`}</Text>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={handleUpdatePickup}
+            disabled={isUpdatingPickup}
+            style={[styles.totalAmountBarBtn, { opacity: isUpdatingPickup ? 0.7 : 1 }]}
+          >
+            {isUpdatingPickup ? (
+              <ActivityIndicator size="small" color="#05352A" />
+            ) : (
+              <Text style={styles.totalAmountBarText}>Update Pickup</Text>
+            )}
           </TouchableOpacity>
         </View>
       ) : null}
@@ -1793,4 +1873,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginTop: 2,
   },
+  deliveryRow: {
+  flexDirection: "row",
+  alignItems: "flex-start",
+  gap: 8,
+  marginTop: 8,
+},
+
+deliveryText: {
+  color: "#CDECE2",
+  fontSize: 14,
+  fontWeight: "500",
+},
+deliveryLink: {
+  color: "#7FA39A",
+  fontSize: 12,
+  marginLeft: 150,
+  textDecorationLine: "underline",
+},
 });

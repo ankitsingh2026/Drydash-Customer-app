@@ -119,11 +119,18 @@ export const getActivePickupOrOrder = async (phone: string) => {
 export const updatePickupThroughApp = async (
   pickupId: string,
   items: { itemId: string; quantity: number }[],
+  specialInstructions?: string,
+  isHeavy?: boolean,
+  couponCode?: string,
 ) => {
-  console.log("this is pickupid and cart items ss: >>>>", pickupId, items);
+  console.log("this is pickupid and cart items ss: >>>>", pickupId, items, specialInstructions, isHeavy, couponCode);
+  const body: any = { items };
+  if (specialInstructions !== undefined) body.specialInstructions = specialInstructions;
+  if (isHeavy !== undefined) body.isHeavy = isHeavy;
+  if (couponCode !== undefined) body.couponCode = couponCode;
   const { data } = await oldApiClient.patch(
     `/v1/updatePickupThroughApp/${pickupId}`,
-    { items },
+    body,
   );
   return data;
 };
