@@ -40,6 +40,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
+import SlotPicker from "@/components/SlotPicker";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -159,6 +160,9 @@ export default function BookPickup() {
     isActive: true,
   });
   const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState(-1);
+  const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
+  const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
 
   const scrollRef = useRef<ScrollView>(null);
   const [location, setLocation] = useState({
@@ -262,41 +266,40 @@ export default function BookPickup() {
     checkServiceForSelectedAddress();
   }, [selectedPickupAddressId, selectedAddress]);
 
-useEffect(() => {
-  let isMounted = true;
+  useEffect(() => {
+    let isMounted = true;
 
-  const checkActiveBooking = async () => {
-    try {
-      setCheckingActiveBooking(true);
+    const checkActiveBooking = async () => {
+      try {
+        setCheckingActiveBooking(true);
 
-      if (!phone) {
+        if (!phone) {
+          setHasActiveBooking(false);
+          return;
+        }
+
+        const res = await getActivePickupOrOrder(phone);
+
+
+        if (res?.data?.success && res?.data?.data && res?.data?.data?.status !== "delivered") {
+          setHasActiveBooking(true);
+        } else {
+          setHasActiveBooking(false);
+        }
+      } catch (error) {
+        console.log("Active booking error", error);
         setHasActiveBooking(false);
-        return;
+      } finally {
+        if (isMounted) setCheckingActiveBooking(false);
       }
+    };
 
-      const res = await getActivePickupOrOrder(phone);
+    checkActiveBooking();
 
-      console.log("ACTIVE BOOKING RESPONSE ===>", res?.data);
-
-      if (res?.data?.success && res?.data?.data && res?.data?.data?.status !== "delivered") {
-        setHasActiveBooking(true);
-      } else {
-        setHasActiveBooking(false);
-      }
-    } catch (error) {
-      console.log("Active booking error", error);
-      setHasActiveBooking(false);
-    } finally {
-      if (isMounted) setCheckingActiveBooking(false);
-    }
-  };
-
-  checkActiveBooking();
-
-  return () => {
-    isMounted = false;
-  };
-}, [phone]);
+    return () => {
+      isMounted = false;
+    };
+  }, [phone]);
 
   const checkServiceForSelectedAddress = async () => {
     try {
@@ -327,7 +330,7 @@ useEffect(() => {
 
         // If service is not available, default to Schedule tab
         if (!serviceCheck.serviceAvailable && pickupType === "today") {
-          setPickupType("schedule");
+          // setPickupType("schedule");
         }
       } else {
         setIsServiceAvailable(false);
@@ -761,7 +764,14 @@ useEffect(() => {
     );
   };
 
-  const bookingBlocked = confirmLoading || checkingActiveBooking || hasActiveBooking;
+  const noSlotsToday =
+    pickupType === "today" && !hasAvailableSlots;
+
+  const bookingBlocked =
+    confirmLoading ||
+    checkingActiveBooking ||
+    hasActiveBooking ||
+    noSlotsToday;
   const bookingBlockedMessage =
     "You already have an active pickup or order. You can create new pickup once your current order is delivered.";
 
@@ -1013,17 +1023,18 @@ useEffect(() => {
             <View style={[s.tabRow]}>
               <TouchableOpacity
                 onPress={() => {
-                  if (isServiceAvailable) {
-                    setPickupType("today");
-                  } else {
-                    Alert.alert(
-                      "Service Unavailable",
-                      "Our service is not available at your selected location for today. Please schedule a pickup for another day.",
-                      [{ text: "OK", style: "default" }],
-                    );
-                  }
+                  // if (isServiceAvailable) {
+                  //   setPickupType("today");
+                  // } else {
+                  //   Alert.alert(
+                  //     "Service Unavailable",
+                  //     "Our service is not available at your selected location for today. Please schedule a pickup for another day.",
+                  //     [{ text: "OK", style: "default" }],
+                  //   );
+                  // }
+                  setPickupType("today");
                 }}
-                disabled={!isServiceAvailable || checkingService}
+                // disabled={!isServiceAvailable || checkingService}
                 style={[
                   s.tab,
                   pickupType === "today" && {
@@ -1043,7 +1054,7 @@ useEffect(() => {
                     },
                   ]}
                 >
-                  Today {!isServiceAvailable && "(Unavailable)"}
+                  Today 
                 </Text>
               </TouchableOpacity>
 
@@ -1087,6 +1098,30 @@ useEffect(() => {
           {/* ══════════════════ TODAY VIEW ══════════════════ */}
           {pickupType === "today" && (
             <>
+
+                  <View style={s.section}>
+                <Text style={[s.bigSubtitle, { color: theme.text }]}>
+                  Select Slot
+                </Text>
+
+                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude && (
+                  <SlotPicker
+                    lat={selectedPickupAddr.latitude}
+                    lng={selectedPickupAddr.longitude}
+                    selectedSlot={selectedSlotIndex}
+                    onSelect={(index, slot) => {
+                      setSelectedSlotIndex(index);
+                      setSelectedSlotData(slot);
+                    }}
+                    onSlotsUpdate={(slots) => {
+                      const available = slots.some(
+                        (s) => s.enabled && s.status !== "expired"
+                      );
+                      setHasAvailableSlots(available);
+                    }}
+                  />
+                )}
+              </View>
               <TouchableOpacity
                 onPress={() => router.push("/services/[service]")}
                 activeOpacity={0.8}
@@ -1112,11 +1147,10 @@ useEffect(() => {
                     marginLeft: 4,
                   }}
                 >
-                  Add Items
+                  Add items for estimate
                 </Text>
               </TouchableOpacity>
-
-              <DeliveryAddressSection />
+              {/* <DeliveryAddressSection /> */}
 
               <CartSection />
 
@@ -1345,7 +1379,7 @@ useEffect(() => {
 
         <View
           style={[
-           
+
             {
               backgroundColor: theme.background,
               paddingBottom: insets.bottom + 10,
@@ -1365,7 +1399,7 @@ useEffect(() => {
           )}
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, margin: 10 }}>
-          
+
 
             <TouchableOpacity
               style={[
@@ -1380,13 +1414,15 @@ useEffect(() => {
               disabled={bookingBlocked}
             >
               <Text style={s.confirmText}>
-                {checkingActiveBooking
-                  ? "Checking..."
-                  : confirmLoading
-                  ? "Booking..."
-                  : pickupType === "today"
-                    ? "Confirm Booking"
-                    : "Confirm Pickup"}
+                {noSlotsToday
+                  ? "No Slots Available"
+                  : checkingActiveBooking
+                    ? "Checking..."
+                    : confirmLoading
+                      ? "Booking..."
+                      : pickupType === "today"
+                        ? "Confirm Booking"
+                        : "Confirm Pickup"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2215,7 +2251,7 @@ const s = StyleSheet.create({
   noteTagText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
 
   bigHeading: { fontSize: 18, fontWeight: "900", marginBottom: 4 },
-  bigSubtitle: { fontSize: 13, color: "#d7dbd7" },
+  bigSubtitle: { fontSize: 15, color: "#d7dbd7" },
   monthLabel: {
     fontSize: 10,
     color: "#4E7060",

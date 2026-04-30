@@ -223,7 +223,7 @@ function IconPair() {
 function ChatFab() {
     return (
         <TouchableOpacity style={styles.chatFab}
-        onPress={() => router.push("/(customer)/(assistant)/chat")}>
+            onPress={() => router.push("/(customer)/(assistant)/chat")}>
             <Ionicons name="chatbubble-ellipses" size={25} color="#003C31" />
         </TouchableOpacity>
     );
@@ -252,24 +252,39 @@ function ScheduledPickupCard({
     const itemCount = pickup.items?.length ?? 0;
     const scheduleTitle = getScheduledTitle(pickup);
     const highlightTime = getSlotEndLabel(pickup.slot);
+    const [menuVisible, setMenuVisible] = useState(false);
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
                 <View style={styles.headerRowCompact}>
                     <StatusPill label={pickup.isRescheduled ? "RESCHEDULED" : "PICKUP SCHEDULED"} />
-                    <View style={styles.rightStack}>
-                        <ActionTagButton
-                            label="Reschedule"
-                            icon="calendar-outline"
-                            onPress={onReschedule}
-                        />
-                        <ActionTagButton
-                            label="Cancel"
-                            icon="close-outline"
-                            tone="danger"
-                            onPress={onCancel}
-                        />
+                    <View style={styles.menuContainer}>
+                        <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
+                            <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
+                        </TouchableOpacity>
+
+                        {menuVisible && (
+                            <View style={styles.dropdownMenu}>
+                                <ActionTagButton
+                                    label="Reschedule"
+                                    icon="calendar-outline"
+                                    onPress={() => {
+                                        setMenuVisible(false);
+                                        onReschedule();
+                                    }}
+                                />
+                                <ActionTagButton
+                                    label="Cancel"
+                                    icon="close-outline"
+                                    tone="danger"
+                                    onPress={() => {
+                                        setMenuVisible(false);
+                                        onCancel();
+                                    }}
+                                />
+                            </View>
+                        )}
                     </View>
                 </View>
 
@@ -279,14 +294,14 @@ function ScheduledPickupCard({
                 </Text>
 
                 <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/services/shoe",
-                      params: { pickupId: pickup._id, mode: "edit" },
-                    })
-                  }
-                  style={styles.infoLine}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                        router.push({
+                            pathname: "/services/shoe",
+                            params: { pickupId: pickup._id, mode: "edit" },
+                        })
+                    }
+                    style={styles.infoLine}
                 >
                     <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
                     <Text style={styles.infoLineText}>Add More Items</Text>
@@ -319,14 +334,14 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                 </View>
 
                 <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() =>
-                    router.push({
-                      pathname: "/services/shoe",
-                      params: { pickupId: pickup._id, mode: "edit" },
-                    })
-                  }
-                  style={styles.infoLine}
+                    activeOpacity={0.85}
+                    onPress={() =>
+                        router.push({
+                            pathname: "/services/shoe",
+                            params: { pickupId: pickup._id, mode: "edit" },
+                        })
+                    }
+                    style={styles.infoLine}
                 >
                     <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
                     <Text style={styles.infoLineText}>Add Items</Text>
@@ -768,7 +783,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         borderWidth: 1,
         borderColor: BORDER,
-        overflow: "hidden",
+        overflow: "visible",
         shadowColor: "#000",
         shadowOpacity: 0.2,
         shadowRadius: 10,
@@ -785,6 +800,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         alignItems: "center",
         gap: 8,
+        zIndex: 10,
     },
     headerLeftGroup: {
         flexDirection: "row",
@@ -810,7 +826,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        alignSelf: "flex-start", 
+        alignSelf: "flex-start",
     },
     statusPillText: {
         color: "#B2F8DC",
@@ -1092,6 +1108,27 @@ const styles = StyleSheet.create({
         color: "#00382D",
         fontSize: 13,
         fontWeight: "800",
+    },
+    dropdownMenu: {
+        position: "absolute",
+        top: 24,
+        right: 0,
+        minWidth: 140,
+
+        backgroundColor: "#12372D",
+        borderRadius: 10,
+        padding: 8,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: "#2A715D",
+
+        zIndex: 9999,
+        elevation: 20, // for Android
+    },
+    menuContainer: {
+        position: "relative",
+        alignItems: "flex-end",
+        zIndex: 1000,
     },
 });
 
