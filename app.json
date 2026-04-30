@@ -2,7 +2,7 @@
   "expo": {
     "name": "DryDash",
     "slug": "DryDash",
-    "version": "1.0.0",
+    "version": "1.1.8",
     "orientation": "portrait",
     "backgroundColor": "#0B1F1A",
     "icon": "./assets/images/icon.png",
@@ -19,7 +19,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 1,
+      "versionCode": 17,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
