@@ -50,7 +50,7 @@ const SlotPicker: React.FC<Props> = ({
 
             // ✅ FIX 1: removed space before https
             const zoneRes = await fetch(
-                `https://9c37-103-165-30-182.ngrok-free.app/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
+                `https://test.drydash.in/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
             );
             const zoneData = await zoneRes.json();
 
@@ -62,7 +62,7 @@ const SlotPicker: React.FC<Props> = ({
             }
 
             const serviceRes = await fetch(
-                "https://9c37-103-165-30-182.ngrok-free.app/api/v1/slots/service/check",
+                "https://test.drydash.in/api/v1/slots/service/check",
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

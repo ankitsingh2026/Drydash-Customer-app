@@ -248,7 +248,9 @@ export default function ServiceDetail() {
     }
   }, [service, layoutReady]);
 
-  /* ---------- EDIT MODE: FETCH PICKUP & PRE-POPULATE CART ---------- */
+/* ---------- EDIT MODE: FETCH EXISTING ITEMS AND LOAD INTO CART ---------- */
+  // In edit mode, we fetch existing pickup items and load them into the cart
+  // so users can see what was previously selected and modify quantities
   useEffect(() => {
     if (!isEditMode || !pickupId) return;
 
@@ -259,18 +261,37 @@ export default function ServiceDetail() {
         const res = await getCustomerSinglePickupDetails(pickupId);
         const details = res?.pickup_details;
 
+        if (!details) {
+          setPickupError("Pickup not found");
+          return;
+        }
+
+        // Load existing items into cart so user can see and modify them
         if (details?.items?.length) {
-          cartRef.current.clear();
+          // Clear cart first to avoid duplicates
+          cart.clear();
+          
+          // Deduplicate items by itemId, summing quantities
+          const deduped: Record<string, any> = {};
           details.items.forEach((item: any) => {
-            cartRef.current.addItem(
-              {
-                id: item.itemId,
+            const itemId = item.itemId?._id || item.itemId;
+            if (!deduped[itemId]) {
+              deduped[itemId] = { 
+                id: itemId,
                 title: item.label,
                 price: item.price,
-                image: getFallbackImage(service || "shoe"),
-              },
-              item.quantity || 1,
-            );
+                qty: 0,
+                image: item.itemId?.images?.[0]?.url || getFallbackImage(service || "shoe"),
+              };
+            }
+            deduped[itemId].qty += item.quantity || 1;
+          });
+          
+          // Add each unique item to cart
+          Object.values(deduped).forEach((item: any) => {
+            if (item.id && item.qty > 0) {
+              cart.addItem(item, item.qty);
+            }
           });
         }
       } catch (err: any) {
@@ -329,11 +350,12 @@ export default function ServiceDetail() {
       ? error[activeTab.key]
       : null;
 
-  const handleAddToCart = () => {
+const handleAddToCart = () => {
     if (!pickupId) return;
+    // Navigate back to order-tracking with a timestamp to force reload and fetch updated cart items
     router.replace({
       pathname: "/(customer)/order-tracking",
-      params: { pickupId },
+      params: { pickupId, _t: Date.now().toString() },
     });
   };
 
@@ -486,7 +508,7 @@ export default function ServiceDetail() {
         </View>
       )}
 
-      {/* Error State */}
+{/* Error State */}
       {(hasError || pickupError) && !(isLoading || pickupLoading) && (
         <View style={styles.errorContainer}>
           <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
@@ -501,18 +523,32 @@ export default function ServiceDetail() {
                 getCustomerSinglePickupDetails(pickupId!)
                   .then((res) => {
                     const details = res?.pickup_details;
+                    if (!details) {
+                      setPickupError("Pickup not found");
+                      setPickupLoading(false);
+                      return;
+                    }
+                    // Load existing items into cart
                     if (details?.items?.length) {
                       cart.clear();
+                      const deduped: Record<string, any> = {};
                       details.items.forEach((item: any) => {
-                        cart.addItem(
-                          {
-                            id: item.itemId,
+                        const itemId = item.itemId?._id || item.itemId;
+                        if (!deduped[itemId]) {
+                          deduped[itemId] = { 
+                            id: itemId,
                             title: item.label,
                             price: item.price,
-                            image: getFallbackImage(service || "shoe"),
-                          },
-                          item.quantity || 1,
-                        );
+                            qty: 0,
+                            image: item.itemId?.images?.[0]?.url || getFallbackImage(service || "shoe"),
+                          };
+                        }
+                        deduped[itemId].qty += item.quantity || 1;
+                      });
+                      Object.values(deduped).forEach((item: any) => {
+                        if (item.id && item.qty > 0) {
+                          cart.addItem(item, item.qty);
+                        }
                       });
                     }
                     setPickupLoading(false);

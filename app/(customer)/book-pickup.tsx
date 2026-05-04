@@ -7,10 +7,13 @@ import { useCart } from "@/context/CartContext";
 import { checkServiceAvailability } from "@/features/location/location.api";
 import {
   createOrderApi,
+  createBookingApi,
+  convertSlotTimeFormat,
   getOrdersApi,
   saveAddressApi,
 } from "@/features/orders/orders.api";
 import { CreatePickupRequest } from "@/features/orders/orders.types";
+import { getLocationDetails } from "@/features/location/location.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
@@ -24,6 +27,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Dimensions,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -116,6 +120,7 @@ export default function BookPickup() {
   const [checkingService, setCheckingService] = useState(true);
   const [hasActiveBooking, setHasActiveBooking] = useState(false);
   const [checkingActiveBooking, setCheckingActiveBooking] = useState(true);
+  const [isMorningDelivery, setIsMorningDelivery] = useState(true);
 
   // Use Address Context
   const {
@@ -387,9 +392,17 @@ export default function BookPickup() {
         );
         return;
       }
+      let selectedSlotForPayload: string | undefined;
+
+      if (pickupType === "today" && selectedSlotData?.time) {
+        // Use the time from SlotPicker component (e.g., "8:00 AM - 11:00 AM")
+        selectedSlotForPayload = selectedSlotData.time;
+      } else if (pickupType === "schedule" && slot !== -1) {
+        // Use predefined time slots for scheduled pickup
+        selectedSlotForPayload = TIME_SLOTS[slot];
+      }
+
       const scheduledDate = pickupType === "today" ? new Date() : date;
-      const selectedSlot =
-        pickupType === "schedule" && slot !== -1 ? TIME_SLOTS[slot] : undefined;
       const orderItems = items
         .filter((item) => item.id && item.qty > 0)
         .map((item) => ({
@@ -405,10 +418,64 @@ export default function BookPickup() {
         tempPickupAdresssId: selectedPickupAddressId,
         tempDeliveryAddressId: deliveryId,
         date: formatDateForApi(scheduledDate),
+        isHeavy: hasHeavyItems,
+        morning_delivery: isMorningDelivery,
       };
-      if (selectedSlot) orderDetails.slot = selectedSlot;
+      if (selectedSlotForPayload) {
+        orderDetails.slot = selectedSlotForPayload;
+      }
       if (note?.trim()) orderDetails.note = note.trim();
       if (orderItems.length) orderDetails.items = orderItems;
+
+      // For "today" tab, first create booking to get bookingId
+      let bookingId: string | undefined;
+      if (pickupType === "today" && selectedPickupAddr) {
+        try {
+          // Get zoneId from coordinates
+          const lat = selectedPickupAddr.latitude;
+          const lng = selectedPickupAddr.longitude;
+
+          if (lat && lng) {
+            // Resolve zone from coordinates
+            const locationDetails = await getLocationDetails(lat, lng);
+
+            if (locationDetails?.zoneId && selectedSlotData?.time) {
+              // Convert slot time format from "8:00 AM - 11:00 AM" to "8AM - 11AM"
+              const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
+
+              // Call booking API
+              const bookingPayload = {
+                zoneId: locationDetails.zoneId,
+                slotTime: convertedSlotTime,
+                customerDetails: {
+                  appCustomerId: String(auth_id),
+                  name: `${firstName || ""} ${lastName || ""}`.trim(),
+                  phone: phone,
+                },
+              };
+
+              console.log(" BOOKING PAYLOAD ===>", bookingPayload);
+
+              const bookingResponse = await createBookingApi(bookingPayload);
+
+              if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
+                bookingId = bookingResponse.data.booking.bookingId;
+                console.log(" BOOKING CREATED ===>", bookingId);
+              }
+            }
+          }
+        } catch (bookingError: any) {
+          console.log("Booking API error:", bookingError);
+          // Continue with pickup creation even if booking fails
+        }
+      }
+
+      // Add bookingId to order if available
+      if (bookingId) {
+        orderDetails.bookingId = bookingId;
+      }
+
+      console.log("📤 ORDER PAYLOAD ===>", orderDetails);
 
       await createOrderApi(orderDetails);
       clear();
@@ -641,62 +708,47 @@ export default function BookPickup() {
         <View style={{ marginTop: 1 }}>
           {items.map((item) => {
             const lineTotal = item.qty * item.price;
+            // Handle both string ids and object ids (some items may have id as object with _id property)
+            const itemKey = typeof item.id === 'object' ? item.id?._id || JSON.stringify(item.id) : item.id;
 
             return (
-              <View key={item.id}>
-                <View style={s.cartItem}>
-                  <View style={s.cartItemLeft}>
-                    <Text
-                      style={[s.itemTitle, { color: theme.text }]}
-                      numberOfLines={1}
-                    >
-                      {item.title}
-                    </Text>
+              <View style={s.cartCard} key={itemKey}>
 
-                    <View style={s.stepper}>
-                      <TouchableOpacity
-                        onPress={() => setQty(item.id, item.qty - 1)}
-                        style={s.stepBtn}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Ionicons name="remove" size={13} color="#CFFFF1" />
-                      </TouchableOpacity>
+                {/* LEFT IMAGE */}
+                <Image
+                  source={{ uri: item.image }}
+                  style={s.itemImage}
+                />
 
-                      <Text style={[s.qtyText, { color: theme.text }]}>
-                        {item.qty}
-                      </Text>
+                {/* CENTER CONTENT */}
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={s.itemTitle}>{item.title}</Text>
+                  <Text style={s.itemPrice}>₹{item.price}/Qty</Text>
+                </View>
 
-                      <TouchableOpacity
-                        onPress={() => setQty(item.id, item.qty + 1)}
-                        style={[
-                          s.stepBtn,
-                          s.stepBtnActive,
-                          { backgroundColor: theme.primary },
-                        ]}
-                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      >
-                        <Ionicons name="add" size={13} color="#000" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                {/* RIGHT SIDE */}
+                <View style={s.rightSection}>
 
-                  <View style={s.cartItemRight}>
-                    <Text style={[s.lineTotal, { color: theme.text }]}>
-                      ₹{lineTotal}
-                    </Text>
+                  {/* STEPPER */}
+                  <View style={s.stepperNew}>
+                    <TouchableOpacity onPress={() => setQty(item.id, item.qty - 1)}>
+                      <Ionicons name="remove" size={16} color="#CFFFF1" />
+                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={() => removeItem(item.id)}
-                      style={s.removeBtn}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={15}
-                        color="#6B8F7B"
-                      />
+                    <Text style={s.qtyText}>{item.qty}</Text>
+
+                    <TouchableOpacity onPress={() => setQty(item.id, item.qty + 1)}>
+                      <Ionicons name="add" size={16} color="#00E1A2" />
                     </TouchableOpacity>
                   </View>
+
+                  <TouchableOpacity
+                    onPress={() => removeItem(item.id)}
+                    style={s.deleteBtnNew}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                  </TouchableOpacity>
+
                 </View>
               </View>
             );
@@ -766,12 +818,18 @@ export default function BookPickup() {
 
   const noSlotsToday =
     pickupType === "today" && !hasAvailableSlots;
+  const selectedSlotFull =
+    pickupType === "today" &&
+    selectedSlotData &&
+    selectedSlotData.availableCapacity === 0;
 
   const bookingBlocked =
     confirmLoading ||
     checkingActiveBooking ||
     hasActiveBooking ||
-    noSlotsToday;
+    noSlotsToday ||
+    selectedSlotFull;
+
   const bookingBlockedMessage =
     "You already have an active pickup or order. You can create new pickup once your current order is delivered.";
 
@@ -937,76 +995,96 @@ export default function BookPickup() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 75 + insets.top : 0}
       >
         {/* ── FIXED HEADER ── */}
-        <View
-          style={[
-            s.header,
-            { paddingTop: insets.top + 12, backgroundColor: theme.background },
-          ]}
+      <View
+  style={[
+    s.header,
+    { paddingTop: insets.top , backgroundColor: "#06251C" }, // match design
+  ]}
+>
+  <View
+    style={{
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    }}
+  >
+    {/* BACK BUTTON */}
+    <TouchableOpacity
+      onPress={goBackSafe}
+      hitSlop={10}
+      style={s.headerBack}
+    >
+      <Ionicons name="chevron-back" size={24} color="#A7F3D0" />
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={{ flex: 1 }}
+      activeOpacity={0.8}
+      onPress={() => {
+        setModalMode("pickup");
+        setModalVisible(true);
+      }}
+    >
+      {/* TOP ROW */}
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Ionicons name="location-outline" size={14} color="#A7F3D0" />
+
+        <Text
+          style={{
+            color: "#A7F3D0",
+            fontSize: 12,
+            marginLeft: 4,
+          }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-            }}
-          >
-            <TouchableOpacity
-              onPress={goBackSafe}
-              hitSlop={10}
-              style={s.headerBack}
-            >
-              <Ionicons name="chevron-back" size={24} color={theme.text} />
-            </TouchableOpacity>
+          Delivery by
+        </Text>
+      </View>
 
-            <TouchableOpacity
-              style={{ flex: 1, alignItems: "flex-start" }}
-              activeOpacity={0.8}
-              onPress={() => {
-                setModalMode("pickup");
-                setModalVisible(true);
-              }}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-              >
-                <Ionicons name="navigate" size={14} color={theme.primary} />
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    color: theme.text,
-                    fontSize: 18,
-                    fontWeight: "800",
-                    maxWidth: 180,
-                  }}
-                >
-                  {selectedPickupAddr?.street ||
-                    selectedAddress?.street ||
-                    "Select Address"}
-                </Text>
-                <Ionicons name="chevron-down" size={14} color={theme.primary} />
-              </View>
+      {/* MAIN TIME */}
+      <Text
+        style={{
+          color: "#FFFFFF",
+          fontSize: 15,
+          fontWeight: "800",
+          // marginTop: 2,
+        }}
+      >
+        Tomorrow 10am
+      </Text>
 
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: "#6B8F7B",
-                  fontSize: 12,
-                  marginTop: 2,
-                  maxWidth: 200,
-                }}
-              >
-                {selectedPickupAddr
-                  ? ` ${selectedPickupAddr.city} , ${selectedPickupAddr.state} ${selectedPickupAddr.pincode || ""}`
-                  : selectedAddress
-                    ? ` ${selectedAddress.city} , ${selectedAddress.state}`
-                    : "Tap to choose pickup location"}
-              </Text>
-            </TouchableOpacity>
+      {/* ADDRESS (DYNAMIC SAME AS YOUR CODE) */}
+     <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+  
+  <Text
+    numberOfLines={1}
+    ellipsizeMode="tail"
+    style={{
+      color: "#9CA3AF",
+      fontSize: 12,
+      maxWidth: "90%",   // 🔥 IMPORTANT
+    }}
+  >
+    {selectedPickupAddr
+      ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+      : selectedAddress
+        ? `${selectedAddress.line1 || selectedAddress.street}, ${selectedAddress.city}`
+        : "Tap to choose pickup location"}
+  </Text>
 
-            <View style={{ width: 36 }} />
-          </View>
-        </View>
+  <Ionicons
+    name="chevron-down"
+    size={14}
+    color="#A7F3D0"
+    style={{ marginLeft: 4 }} // 🔥 spacing fix
+  />
+</View>
+    </TouchableOpacity>
+
+    {/* RIGHT SPACER */}
+    <View style={{ width: 36 }} />
+  </View>
+</View>
 
         <ScrollView
           ref={scrollRef}
@@ -1054,7 +1132,7 @@ export default function BookPickup() {
                     },
                   ]}
                 >
-                  Today 
+                  Today
                 </Text>
               </TouchableOpacity>
 
@@ -1099,7 +1177,7 @@ export default function BookPickup() {
           {pickupType === "today" && (
             <>
 
-                  <View style={s.section}>
+              <View style={s.section}>
                 <Text style={[s.bigSubtitle, { color: theme.text }]}>
                   Select Slot
                 </Text>
@@ -1156,39 +1234,76 @@ export default function BookPickup() {
 
               <View style={s.section}>
                 <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
-                <LinearGradient
-                  colors={theme.gradient}
-                  style={{ borderRadius: 14 }}
+
+                <TouchableOpacity
+                  onPress={() => setHasHeavyItems(!hasHeavyItems)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    padding: 14,
+
+                  }}
                 >
-                  <TouchableOpacity
-                    onPress={() => setHasHeavyItems(!hasHeavyItems)}
-                    activeOpacity={0.8}
+                  <Ionicons
+                    name={hasHeavyItems ? "checkbox" : "square-outline"}
+                    size={20}
+                    color={hasHeavyItems ? theme.primary : "#4E7060"}
+                  />
+
+                  <Text
                     style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      padding: 14,
-                      borderRadius: 14,
-                      borderWidth: 1.5,
-                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
+                      marginLeft: 10,
+                      fontWeight: "700",
+                      color: hasHeavyItems ? theme.primary : theme.text,
                     }}
                   >
-                    <Ionicons
-                      name={hasHeavyItems ? "checkbox" : "square-outline"}
-                      size={20}
-                      color={hasHeavyItems ? theme.primary : "#4E7060"}
-                    />
+                    I have heavy items (blankets, curtains, etc.)
+                  </Text>
+                </TouchableOpacity>
+                {/* DELIVERY PREFERENCE TOGGLE */}
+                <View style={{ marginTop: 5, marginLeft: 15 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+
+                    <Ionicons name="flash-outline" size={14} color="#9FFFD9" />
 
                     <Text
                       style={{
-                        marginLeft: 10,
-                        fontWeight: "700",
-                        color: hasHeavyItems ? theme.primary : theme.text,
+                        marginLeft: 6,
+                        color: "#CFFFF1",
+                        fontSize: 14,
+                        fontWeight: "500",
                       }}
                     >
-                      I have heavy items (blankets, curtains, etc.)
+                      {isMorningDelivery
+                        ? "Delivery before 10 AM (No-contact delivery)"
+                        : "Get your item delivered in day time (12 PM to 6 PM)"}
+                    </Text>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setIsMorningDelivery(!isMorningDelivery);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={{
+                        marginLeft: 180,
+                        marginTop: 2,
+                        fontSize: 11,
+                        color: "#7A9B87",
+                        textDecorationLine: "underline",
+                      }}
+                    >
+                      {isMorningDelivery
+                        ? "Not a morning person?"
+                        : "Changed your mind?"}
                     </Text>
                   </TouchableOpacity>
-                </LinearGradient>
+                </View>
+
               </View>
 
               <SpecialInstructionsSection />
@@ -1319,7 +1434,7 @@ export default function BookPickup() {
 
               <CartSection />
 
-              <DeliveryAddressSection />
+              {/* <DeliveryAddressSection /> */}
 
               <View style={s.section}>
                 <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
@@ -1364,12 +1479,20 @@ export default function BookPickup() {
 
           {/* ── CONFIRM BUTTON ── */}
           <View style={[s.footer, { backgroundColor: theme.background }]}>
-            {pickupType === "schedule" && slot !== -1 && (
+            {(pickupType === "schedule" && slot !== -1) && (
               <View style={s.estimatedRow}>
                 <Ionicons name="time-outline" size={14} color="#4E7060" />
                 <Text style={s.estimatedText}>
                   ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
                   {TIME_SLOTS[slot]}
+                </Text>
+              </View>
+            )}
+            {pickupType === "today" && selectedSlotData?.time && (
+              <View style={s.estimatedRow}>
+                <Ionicons name="time-outline" size={14} color="#4E7060" />
+                <Text style={s.estimatedText}>
+                  PICKUP SLOT: {selectedSlotData.time}
                 </Text>
               </View>
             )}
@@ -1416,13 +1539,15 @@ export default function BookPickup() {
               <Text style={s.confirmText}>
                 {noSlotsToday
                   ? "No Slots Available"
-                  : checkingActiveBooking
-                    ? "Checking..."
-                    : confirmLoading
-                      ? "Booking..."
-                      : pickupType === "today"
-                        ? "Confirm Booking"
-                        : "Confirm Pickup"}
+                  : selectedSlotFull
+                    ? "Slot Full"
+                    : checkingActiveBooking
+                      ? "Checking..."
+                      : confirmLoading
+                        ? "Booking..."
+                        : pickupType === "today"
+                          ? "Confirm Booking"
+                          : "Confirm Pickup"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -2135,7 +2260,7 @@ const s = StyleSheet.create({
 
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
 
-  section: { marginBottom: 6, marginTop: 6 },
+  section: { marginBottom: 6, marginTop: 8 },
 
   sectionLabel: {
     fontSize: 11,
@@ -2371,6 +2496,61 @@ const s = StyleSheet.create({
   },
   confirmText: { fontSize: 17, fontWeight: "900", color: "#000" },
 
+  cartCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0D2B24",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#1E3327",
+  },
+
+  itemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 10,
+  },
+
+  itemTitle: {
+    color: "#e0f5ef",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+
+  itemPrice: {
+    color: "#7A9B87",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  rightSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+
+  deleteBtnNew: {
+    padding: 6,
+  },
+
+  deleteBtn: {
+    marginBottom: 8,
+  },
+
+  stepperNew: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12, // spacing between -, qty, +, delete
+    backgroundColor: "#0f4131",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#327060",
+  },
+
   cartItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -2392,17 +2572,12 @@ const s = StyleSheet.create({
     alignItems: "flex-end",
     gap: 8,
   },
-  itemTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
   stepper: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    backgroundColor: "#0D2118",
+    backgroundColor: "#5bc495",
     borderRadius: 10,
     borderWidth: 1,
     borderColor: "#1E3327",
@@ -2426,6 +2601,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
     fontSize: 13,
     minWidth: 20,
+    color: "#e6f8f2",
     textAlign: "center",
   },
   lineTotal: {

@@ -311,9 +311,9 @@ export default function Home() {
         setActiveBooking(null);
       }
 
-      if (__DEV__) {
-        console.log("[home] active booking refresh", { type, data });
-      }
+      // if (__DEV__) {
+      //   console.log("[home] active booking refresh", { type, data });
+      // }
     } catch (error) {
       console.log("Home active booking refresh error:", error);
       setActiveType("none");

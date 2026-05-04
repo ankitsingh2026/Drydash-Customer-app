@@ -103,7 +103,7 @@ const getSlotEndLabel = (slot?: string) => {
 
 const getScheduledTitle = (pickup: PickupRecord) => {
     const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
-    const endLabel = getSlotEndLabel(pickup.sloht);
+    const endLabel = getSlotEndLabel(pickup.slot);
 
     if (isToday(scheduleDate)) {
         return `Pickup today before ${endLabel}`;
@@ -248,7 +248,7 @@ function ScheduledPickupCard({
     onReschedule: () => void;
     onCancel: () => void;
 }) {
-    console.log("Rendering ScheduledPickupCard for pickup=====> >>>:", pickup);
+
     const itemCount = pickup.items?.length ?? 0;
     const scheduleTitle = getScheduledTitle(pickup);
     const highlightTime = getSlotEndLabel(pickup.slot);

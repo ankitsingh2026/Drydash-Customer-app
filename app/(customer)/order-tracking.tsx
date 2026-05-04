@@ -17,6 +17,7 @@ import { useCart } from "@/context/CartContext";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   ScrollView,
   StatusBar,
@@ -191,25 +192,67 @@ function ItemIcon({ icon, accent }: { icon: OrderItem["icon"]; accent: string })
   );
 }
 
+function ActionTagButton({
+  label,
+  icon,
+  onPress,
+  tone = "default",
+}: {
+  label: string;
+  icon?: React.ComponentProps<typeof Ionicons>["name"];
+  onPress: () => void;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
+      <View style={[styles.tagPill, tone === "danger" && { backgroundColor: "#FF6B6B22", borderColor: "#FF6B6B55" }]}>
+        {icon ? (
+          <Ionicons
+            name={icon}
+            size={13}
+            color={tone === "danger" ? "#FF9FA8" : "#A5F5D7"}
+          />
+        ) : null}
+        <Text
+          style={[
+            styles.tagPillText,
+            tone === "danger" && { color: "#FF9FA8" },
+          ]}
+        >
+          {label}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 function Header({
   onBack,
   storeName,
   storeSubtitle,
+  onMenuToggle,
+  menuVisible,
+  onReschedule,
+  onCancel,
+  showMenu = true,
 }: {
   onBack?: () => void;
   storeName: string;
   storeSubtitle: string;
+  onMenuToggle: () => void;
+  menuVisible: boolean;
+  onReschedule?: () => void;
+  onCancel?: () => void;
+  showMenu?: boolean;
 }) {
-  return (
+  if (!showMenu) return (
     <View style={styles.header}>
       <TouchableOpacity
         onPress={onBack}
         disabled={!onBack}
         style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
         activeOpacity={0.75}
-        
       >
-        
         <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
       </TouchableOpacity>
       <View style={styles.headerCenter}>
@@ -220,6 +263,57 @@ function Header({
         <Text style={styles.storeSubtitle} numberOfLines={1}>
           {storeSubtitle}
         </Text>
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={onBack}
+        disabled={!onBack}
+        style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
+        activeOpacity={0.75}
+
+      >
+
+        <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
+      </TouchableOpacity>
+      <View style={styles.headerCenter}>
+        <View style={styles.titleRow}>
+          <Text style={styles.storeName}>{storeName}</Text>
+          <Ionicons name="chevron-down" size={14} color="#7F948A" />
+        </View>
+        <Text style={styles.storeSubtitle} numberOfLines={1}>
+          {storeSubtitle}
+        </Text>
+      </View>
+
+      <View style={styles.menuContainer}>
+        <TouchableOpacity onPress={onMenuToggle}>
+          <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
+        </TouchableOpacity>
+        {menuVisible && (
+          <View style={styles.dropdownMenu}>
+            <ActionTagButton
+              label="Reschedule"
+              icon="calendar-outline"
+              onPress={() => {
+                onMenuToggle();
+                onReschedule?.();
+              }}
+            />
+            <ActionTagButton
+              label="Cancel"
+              icon="close-outline"
+              tone="danger"
+              onPress={() => {
+                onMenuToggle();
+                onCancel?.();
+              }}
+            />
+          </View>
+        )}
       </View>
 
       {/* <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.75}>
@@ -253,11 +347,12 @@ function StatusBanner({
 }
 
 function ItemCard({ item }: { item: OrderItem }) {
+  console.log("Rendering ItemCard for item=====> >>>:", item);
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemLeft}>
         <View style={[styles.itemThumb, { backgroundColor: "#071B18" }]}>
-          <ItemIcon icon={item.icon} accent={item.accent} />
+          <Image source={{ uri: item.image }} style={styles.itemImage} />
         </View>
 
         <View style={styles.itemInfo}>
@@ -517,6 +612,7 @@ export default function OrderTrackingScreen() {
   console.log("received id params====>> ", params);
   const [loading, setLoading] = useState(true);
   const [pickupDetails, setPickupDetails] = useState<any>(null);
+  const [originalPickupItems, setOriginalPickupItems] = useState<any[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [couponCode, setCouponCode] = useState("SAVE50");
   const [sameLocation, setSameLocation] = useState(true);
@@ -524,26 +620,49 @@ export default function OrderTrackingScreen() {
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const toggleMenu = () => setMenuVisible(prev => !prev);
   const [isUpdatingPickup, setIsUpdatingPickup] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
-useEffect(() => {
-  const fetchPickup = async () => {
-    if (!params.pickupId) return;
+  useEffect(() => {
+    const fetchPickup = async () => {
+      if (!params.pickupId) return;
 
-    try {
-      setLoading(true);
-      const res = await getCustomerSinglePickupDetails(params.pickupId);
-      setPickupDetails(res?.pickup_details);
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        setLoading(true);
+        const res = await getCustomerSinglePickupDetails(params.pickupId);
+        const details = res?.pickup_details;
+        setPickupDetails(details);
 
-  fetchPickup();
-}, [params.pickupId, reloadKey]);
+        // Store original pickup items for merging with cart items later
+        if (details?.items?.length) {
+          const originalItems = details.items.map((item: any) => {
+            const itemId = item.itemId?._id || item.itemId;
+            return {
+              itemId: itemId,
+              quantity: item.quantity || 1,
+              label: item.label,
+              price: item.price,
+            };
+          });
+          setOriginalPickupItems(originalItems);
+        } else {
+          setOriginalPickupItems([]);
+        }
+
+        // Determine if pickup is in editable state
+        const pickupStatus = String(details?.PickupStatus ?? "").trim().toLowerCase();
+        const isEditable = ["pending", "scheduled", "schedule", "assigned", "riderassigned", "pickupassigned"].includes(pickupStatus);
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPickup();
+  }, [params.pickupId, reloadKey]);
 
   const handleCancelPickup = async () => {
     if (!selectedPickup?._id) {
@@ -590,14 +709,37 @@ useEffect(() => {
       return;
     }
 
-    const cartItems = cart.items
-      .filter((i) => i.qty > 0)
-      .map((i) => ({
-        itemId: i.id,
-        quantity: i.qty,
-      }));
+    // If cart is empty but we have original items, just update without changing items
+    if (cart.items.length === 0 && originalPickupItems.length === 0) {
+      Alert.alert("Empty cart", "Please add at least one item before updating.");
+      return;
+    }
 
-    if (cartItems.length === 0) {
+    const mergedItemsMap = new Map();
+
+    // First, add all original pickup items
+    originalPickupItems.forEach((item: any) => {
+      if (item.itemId) {
+        mergedItemsMap.set(item.itemId, {
+          itemId: item.itemId,
+          quantity: item.quantity || 1,
+        });
+      }
+    });
+
+    // Then, update/add cart items (this overwrites originals with new quantities)
+    cart.items.forEach((item) => {
+      mergedItemsMap.set(item.id, {
+        itemId: item.id,
+        quantity: item.qty,
+      });
+    });
+
+    // Convert map to array
+    const finalItems: { itemId: string; quantity: number }[] = Array.from(mergedItemsMap.values())
+      .filter((item) => item.quantity > 0);
+
+    if (finalItems.length === 0) {
       Alert.alert("Empty cart", "Please add at least one item before updating.");
       return;
     }
@@ -606,7 +748,7 @@ useEffect(() => {
       setIsUpdatingPickup(true);
       await updatePickupThroughApp(
         selectedPickup._id,
-        cartItems,
+        finalItems,
         specialInstructions,
         heavyItems,
         couponCode,
@@ -614,8 +756,9 @@ useEffect(() => {
       cart.clear();
       Alert.alert("Pickup updated", "Your pickup has been updated successfully.");
       setReloadKey((prev) => prev + 1);
-    } catch (error: any) {
-      Alert.alert("Update failed", error?.message || "Unable to update pickup.");
+    } catch (error) {
+      const message = typeof error === "object" && error && "message" in error ? (error as any).message : "Unable to update pickup.";
+      Alert.alert("Update failed", message);
     } finally {
       setIsUpdatingPickup(false);
     }
@@ -649,14 +792,14 @@ useEffect(() => {
   // const normalizedOrderStatus = normalizeStatus(selectedOrder?.status);
   const hasOrderItems = Boolean(selectedPickup?.items?.length);
 
-const locationText = useMemo(() => {
-  return (
-    formatLocationLine(selectedAddress) ||
-    selectedPickup?.Address ||
-    selectedPickup?.deliveryAddress ||
-    ORDER.storeSubtitle
-  );
-}, [selectedAddress, selectedPickup]);
+  const locationText = useMemo(() => {
+    return (
+      formatLocationLine(selectedAddress) ||
+      selectedPickup?.Address ||
+      selectedPickup?.deliveryAddress ||
+      ORDER.storeSubtitle
+    );
+  }, [selectedAddress, selectedPickup]);
 
   const isAssigned = useMemo(() => {
     return (
@@ -678,71 +821,74 @@ const locationText = useMemo(() => {
     return hasOrderItems ? "order-items" : "order-delivered";
   }, [hasOrderItems, isAssigned, normalizedPickupStatus]);
 
-const isEditableMode = screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
+  const isEditableMode = screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
 
-const items = useMemo(() => {
-  const useCartItems = isEditableMode && cart.items.length > 0;
+  const items = useMemo(() => {
+    const useCartItems = isEditableMode && cart.items.length > 0;
 
-  if (useCartItems) {
-    return cart.items.map((item, index) => ({
-      id: index + 1,
-      name: item.title,
-      qty: item.qty,
-      price: item.qty * item.price,
-      icon: inferItemIcon(item.title),
-      accent: "#00E1A2",
-    }));
-  }
+    if (useCartItems) {
+      return cart.items.map((item, index) => ({
+        id: index + 1,
+        name: item.title,
+        qty: item.qty,
+        price: item.qty * item.price,
+        image: item.image,
+        icon: inferItemIcon(item.title),
+        accent: "#00E1A2",
+      }));
+    }
 
-  return (selectedPickup?.items ?? []).map((item, index) => {
-    const name = item?.label || `Item ${index + 1}`;
-    const qty = item?.quantity || 1;
-    const price = qty * (item?.price || 0);
+    return (selectedPickup?.items ?? []).map((item: any, index: number) => {
+      const name = item?.label || `Item ${index + 1}`;
+      const qty = item?.quantity || 1;
+      const price = qty * (item?.price || 0);
+      const image = item?.itemId?.images?.[0]?.url || "https://via.placeholder.com/50";
+      console.log("mapping pickup item====>> ", item.itemId);
+      return {
+        id: index + 1,
+        name,
+        qty,
+        price,
+        icon: inferItemIcon(name),
+        image: image,
+        accent: "#00E1A2",
+      };
+    });
+  }, [selectedPickup, cart.items, isEditableMode]);
+
+  const bill = useMemo(() => {
+    const subtotal = items.reduce((sum: number, item: any) => sum + item.price, 0);
 
     return {
-      id: index + 1,
-      name,
-      qty,
-      price,
-      icon: inferItemIcon(name),
-      accent: "#00E1A2",
+      subtotal,
+      deliveryHandling: 0,
+      serviceCharge: 0,
+      itemDiscount: 0,
+      platformFee: 0,
+      gst: 0,
+      gstPercent: 0,
+      total: selectedPickup?.totalAmount || subtotal,
     };
-  });
-}, [selectedPickup, cart.items, isEditableMode]);
+  }, [items, selectedPickup]);
 
-const bill = useMemo(() => {
-  const subtotal = items.reduce((sum, item) => sum + item.price, 0);
-
-  return {
-    subtotal,
-    deliveryHandling: 0,
-    serviceCharge: 0,
-    itemDiscount: 0,
-    platformFee: 0,
-    gst: 0,
-    gstPercent: 0,
-    total: selectedPickup?.totalAmount || subtotal,
-  };
-}, [items, selectedPickup]);
-
-const details = useMemo(() => {
-  return {
-    orderId: selectedPickup?._id || ORDER.orderId,
-    payment: "Payment Pending",
-    deliveredTo: selectedPickup?.Name || ORDER.deliveredTo,
-    deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
-    deliveryAddress:
-      selectedPickup?.deliveryAddress ||
-      selectedPickup?.Address ||
-      ORDER.deliveryAddress,
-    orderDate: formatDateTime(selectedPickup?.createdAt),
-  };
-}, [selectedPickup]);
+  const details = useMemo(() => {
+    return {
+      orderId: selectedPickup?._id || ORDER.orderId,
+      payment: "Payment Pending",
+      deliveredTo: selectedPickup?.Name || ORDER.deliveredTo,
+      deliveredBy: selectedPickup?.riderName || ORDER.deliveredBy,
+      deliveryAddress:
+        selectedPickup?.deliveryAddress ||
+        selectedPickup?.Address ||
+        ORDER.deliveryAddress,
+      orderDate: formatDateTime(selectedPickup?.createdAt),
+    };
+  }, [selectedPickup]);
 
   const storeName = selectedPickup?.plantName || "Green Park";
   const storeSubtitle = locationText;
 
-const deliveredAt = ORDER.deliveredAt;
+  const deliveredAt = ORDER.deliveredAt;
 
   const scheduledAt = formatDateTime(
     selectedPickup?.rescheduledDate || selectedPickup?.pickup_date || selectedPickup?.createdAt,
@@ -800,6 +946,11 @@ const deliveredAt = ORDER.deliveredAt;
         }}
         storeName={storeName}
         storeSubtitle={storeSubtitle}
+        onMenuToggle={toggleMenu}
+        menuVisible={menuVisible}
+        onReschedule={() => setRescheduleModalVisible(true)}
+        onCancel={() => setCancelModalVisible(true)}
+        showMenu={screenMode === "pickup-scheduled"}
       />
 
       <ScrollView
@@ -820,7 +971,7 @@ const deliveredAt = ORDER.deliveredAt;
                   <Text style={styles.sectionHeader}>Cart Items </Text>
                 </View>
 
-                {items.map((item) => (
+                {items.map((item: any) => (
                   <ItemCard key={item.id} item={item} />
                 ))}
 
@@ -828,8 +979,8 @@ const deliveredAt = ORDER.deliveredAt;
                   activeOpacity={0.85}
                   onPress={() =>
                     router.push({
-                      pathname: "/services/shoe",
-                      params: { pickupId: selectedPickup._id, mode: "edit" },
+                      pathname: "/(customer)/services/[service]",
+                      params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
                     })
                   }
                   style={styles.addItemsRow}
@@ -875,8 +1026,8 @@ const deliveredAt = ORDER.deliveredAt;
                 style={styles.scheduledAddEstimateRow}
                 onPress={() =>
                   router.push({
-                    pathname: "/services/shoe",
-                    params: { pickupId: selectedPickup._id, mode: "edit" },
+                    pathname: "/(customer)/services/[service]",
+                    params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
                   })
                 }
               >
@@ -885,14 +1036,14 @@ const deliveredAt = ORDER.deliveredAt;
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity style={styles.checkRow} onPress={() => setSameLocation((p) => !p)}>
+            {/* <TouchableOpacity style={styles.checkRow} onPress={() => setSameLocation((p) => !p)}>
               <Ionicons
                 name={sameLocation ? "checkbox" : "square-outline"}
                 size={20}
                 color={DarkTheme.primary}
               />
               <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity style={styles.checkRow} onPress={() => setHeavyItems((p) => !p)}>
               <Ionicons
@@ -903,20 +1054,20 @@ const deliveredAt = ORDER.deliveredAt;
               <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
             </TouchableOpacity>
             <View style={styles.deliveryRow}>
-  <Ionicons name="flash-outline" size={16} color={DarkTheme.primary} />
-  
-  <View>
-    <Text style={styles.deliveryText}>
-      Delivery before 10 AM (No-contact delivery)
-    </Text>
+              <Ionicons name="flash-outline" size={16} color={DarkTheme.primary} />
 
-    <TouchableOpacity onPress={() => console.log("Clicked")}>
-  <Text style={styles.deliveryLink}>
-    Not A Morning Person?
-  </Text>
-</TouchableOpacity>
-  </View>
-</View>
+              <View>
+                <Text style={styles.deliveryText}>
+                  Delivery before 10 AM (No-contact delivery)
+                </Text>
+
+                <TouchableOpacity onPress={() => console.log("Clicked")}>
+                  <Text style={styles.deliveryLink}>
+                    Not A Morning Person?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
             <TextInput
@@ -934,28 +1085,6 @@ const deliveredAt = ORDER.deliveredAt;
               <TagPill label="# Eco-Wash" />
               <TagPill label="# Hypoallergenic" />
             </View>
-
-            {screenMode === "pickup-scheduled" ? (
-              <View style={styles.scheduledActionsRow}>
-                <TouchableOpacity
-                  style={styles.scheduledCancelBtn}
-                  activeOpacity={0.9}
-                  onPress={() => setCancelModalVisible(true)}
-                >
-                  <Ionicons name="close-circle-outline" size={16} color="#FF6B6B" />
-                  <Text style={styles.scheduledCancelText}>Cancel</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.scheduledRescheduleBtn}
-                  activeOpacity={0.9}
-                  onPress={() => setRescheduleModalVisible(true)}
-                >
-                  <Ionicons name="calendar-outline" size={16} color="#052A22" />
-                  <Text style={styles.scheduledRescheduleText}>Reschedule</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
           </>
         ) : screenMode === "order-items" ? (
           <>
@@ -965,7 +1094,7 @@ const deliveredAt = ORDER.deliveredAt;
               <Text style={styles.sectionHeader}>Cart Items</Text>
             </View>
 
-            {items.map((item) => (
+            {items.map((item: any) => (
               <ItemCard key={item.id} item={item} />
             ))}
 
@@ -974,8 +1103,8 @@ const deliveredAt = ORDER.deliveredAt;
               style={styles.addItemsRow}
               onPress={() =>
                 router.push({
-                  pathname: "/services/shoe",
-                  params: { pickupId: selectedPickup._id, mode: "edit" },
+                  pathname: "/(customer)/services/[service]",
+                  params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
                 })
               }
             >
@@ -1063,7 +1192,7 @@ const deliveredAt = ORDER.deliveredAt;
               </Text>
             </View>
 
-            {items.map((item) => (
+            {items.map((item: any) => (
               <ItemCard key={item.id} item={item} />
             ))}
 
@@ -1141,6 +1270,44 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: DarkTheme.background,
+  },
+  menuContainer: {
+    position: "relative",
+    zIndex: 10,
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 30,
+    right: 0,
+    minWidth: 140,
+    backgroundColor: "#12372D",
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#2A715D",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  tagPill: {
+    minHeight: 32,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2A715D",
+    backgroundColor: "#102E27",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  tagPillText: {
+    color: "#A5F5D7",
+    fontSize: 13,
+    fontWeight: "700",
   },
   scrollContent: {
     paddingHorizontal: 18,
@@ -1433,19 +1600,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 6,
   },
-  tagPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#21453D",
-    backgroundColor: "#123329",
-  },
-  tagPillText: {
-    color: "#B4D5C9",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+
   scheduledActionsRow: {
     flexDirection: "row",
     gap: 12,
@@ -1518,7 +1673,7 @@ const styles = StyleSheet.create({
   itemCard: {
     backgroundColor: DarkTheme.card,
     borderRadius: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 10,
     borderWidth: 1,
@@ -1534,12 +1689,17 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   itemThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#071B18",
+  },
+
+  itemImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   itemIconInner: {
     width: 34,
@@ -1874,21 +2034,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deliveryRow: {
-  flexDirection: "row",
-  alignItems: "flex-start",
-  gap: 8,
-  marginTop: 8,
-},
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 8,
+  },
 
-deliveryText: {
-  color: "#CDECE2",
-  fontSize: 14,
-  fontWeight: "500",
-},
-deliveryLink: {
-  color: "#7FA39A",
-  fontSize: 12,
-  marginLeft: 150,
-  textDecorationLine: "underline",
-},
+  deliveryText: {
+    color: "#CDECE2",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  deliveryLink: {
+    color: "#7FA39A",
+    fontSize: 12,
+    marginLeft: 150,
+    textDecorationLine: "underline",
+  },
 });

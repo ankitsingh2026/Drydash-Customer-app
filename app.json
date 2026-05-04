@@ -15,7 +15,7 @@
       "config": {
         "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
       },
-      "bundleIdentifier": "com.drydash.newCustomer"
+      "bundleIdentifier": "com.drydash.customer"
     },
     "android": {
       "googleServicesFile": "./google-services.json",
