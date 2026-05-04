@@ -1117,7 +1117,7 @@ export default function BookPickup() {
         <View
           style={[
             s.header,
-            { paddingTop: insets.top, backgroundColor: "#06251C" }, // match design
+            { paddingTop: insets.top, },
           ]}
         >
           <View
@@ -1147,7 +1147,7 @@ export default function BookPickup() {
             >
               {/* TOP ROW */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons name="location-outline" size={14} color="#A7F3D0" />
+                <Ionicons name="location-outline" size={14} color="#A7F3D0" />
                 <Text
                   style={{
                     color: "#A7F3D0",
@@ -1179,13 +1179,30 @@ export default function BookPickup() {
                   marginTop: 2,
                 }}
               >
+                {/* ✅ Dynamic Icon */}
+                <Ionicons
+                  name={
+                    (selectedPickupAddr?.label || selectedAddress?.label)
+                      ?.toLowerCase() === "home"
+                      ? "home-outline"
+                      : (selectedPickupAddr?.label || selectedAddress?.label)
+                        ?.toLowerCase() === "office"
+                        ? "business-outline"
+                        : "location-outline"
+                  }
+                  size={14}
+                  color="#9CA3AF"
+                  style={{ marginRight: 4 }}
+                />
+
+                {/* ✅ Address */}
                 <Text
                   numberOfLines={1}
                   ellipsizeMode="tail"
                   style={{
                     color: "#9CA3AF",
                     fontSize: 12,
-                    maxWidth: "90%", // 🔥 IMPORTANT
+                    maxWidth: "80%",
                   }}
                 >
                   {selectedPickupAddr
@@ -1195,11 +1212,12 @@ export default function BookPickup() {
                       : "Tap to choose pickup location"}
                 </Text>
 
+                {/* ✅ Dropdown icon */}
                 <Ionicons
                   name="chevron-down"
                   size={14}
                   color="#A7F3D0"
-                  style={{ marginLeft: 4 }} // 🔥 spacing fix
+                  style={{ marginLeft: 4 }}
                 />
               </View>
             </TouchableOpacity>
@@ -1319,7 +1337,7 @@ export default function BookPickup() {
                           (s) =>
                             s.enabled &&
                             s.status !== "expired" &&
-                            s.availableCapacity > 0  
+                            s.availableCapacity > 0
                         );
 
                         setHasAvailableSlots(available);

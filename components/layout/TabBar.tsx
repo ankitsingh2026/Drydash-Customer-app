@@ -287,10 +287,16 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
               onPress={() => setModalVisible(true)}
               activeOpacity={0.75}
             >
-              <MousePointer2
+              <Ionicons
+                name={
+                  selectedAddress?.label?.toLowerCase() === "home"
+                    ? "home-outline"
+                    : selectedAddress?.label?.toLowerCase() === "office"
+                      ? "business-outline"
+                      : "location-outline"
+                }
                 size={16}
                 color={getServiceColor()}
-                strokeWidth={2}
                 style={{ marginRight: 5 }}
               />
               <Text style={styles.locationText} numberOfLines={1}>
