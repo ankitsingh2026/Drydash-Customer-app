@@ -56,6 +56,11 @@ export type PickupRecord = {
 	price?: number;
 	totalAmount?: number;
 	items?: PickupItem[];
+	bookingId?: {
+		slotTime?: string;
+		date?: string;
+		status?: string;
+	};
 };
 
 export type PickupResponse = {

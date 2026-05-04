@@ -124,7 +124,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   const handleAddressSelect = async (
     label: string,
     address: any | null,
-    shouldSelect = true 
+    shouldSelect = true
   ) => {
     setModalVisible(false);
 
@@ -190,6 +190,38 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     return "Service unavailable";
   };
 
+  const getSlotInfo = () => {
+    if (!currentActiveSlot) return null;
+
+    const slotDate = new Date(currentActiveSlot);
+
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    const isToday =
+      slotDate.toDateString() === today.toDateString();
+
+    const isTomorrow =
+      slotDate.toDateString() === tomorrow.toDateString();
+
+    let dayLabel = slotDate.toLocaleDateString("en-IN", {
+      weekday: "short",
+      day: "numeric",
+    });
+
+    if (isToday) dayLabel = "Today";
+    if (isTomorrow) dayLabel = "Tomorrow";
+
+    const time = slotDate.toLocaleTimeString("en-IN", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+    return { dayLabel, time };
+  };
+  const slotInfo = getSlotInfo();
+
 
   if (loading) {
     return (
@@ -208,11 +240,44 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
               {serviceLoading ? (
                 <ActivityIndicator size="small" color="#2FE6A6" />
               ) : (
-                <Text
-                  style={[styles.serviceText, { color: getServiceColor() }]}
+                <View
+                  style={[
+                    styles.serviceRow,
+                    {
+                      shadowColor: getServiceColor(),
+                      shadowOpacity: 0.3,
+                      shadowRadius: 8,
+                      elevation: 4,
+                    },
+                  ]}
                 >
-                  {getDisplayText()}
-                </Text>
+                  {serviceLoading ? (
+                    <ActivityIndicator size="small" color="#2FE6A6" />
+                  ) : slotInfo ? (
+                    <View>
+                      {/* ✅ Row for icon + label */}
+                      <View style={styles.deliveryHeaderRow}>
+                        <Ionicons
+                          name="location-outline"
+                          size={14}
+                          color="#A7F3D0"
+                          style={{ marginRight: 4 }}
+                        />
+                        <Text style={styles.deliveryLabel}>Delivery by</Text>
+                      </View>
+
+                      {/* ✅ Second line */}
+                      <Text style={styles.deliveryTime}>
+                        Tomorrow{" "}
+                        <Text style={styles.deliverySubTime}>10 am</Text>
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.serviceText, { color: getServiceColor() }]}>
+                      {getDisplayText()}
+                    </Text>
+                  )}
+                </View>
               )}
             </View>
 
@@ -235,7 +300,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                 name="chevron-down"
                 size={16}
                 color="#8FB3A8"
-                style={{ marginLeft: 3, marginTop: 2 }}
+                style={{ marginLeft: 3 }}
               />
             </TouchableOpacity>
           </View>
@@ -289,7 +354,7 @@ const styles = StyleSheet.create({
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 4,
+    // marginBottom: 4,
   },
   serviceText: {
     fontSize: 18,
@@ -336,5 +401,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 8,
     fontWeight: "800",
+  },
+  deliveryLabel: {
+    fontSize: 12,
+    color: "#8FB3A8",
+    fontWeight: "500",
+  },
+
+  deliveryTime: {
+    fontSize: 18,
+    color: "#E6FFF7",
+    fontWeight: "600",
+  },
+
+  deliverySubTime: {
+    fontSize: 14,
+    color: "#E6FFF7",
+    fontWeight: "600",
+  },
+  deliveryHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
   },
 });

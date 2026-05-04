@@ -93,26 +93,38 @@ const isToday = (value?: string) => {
         date.getDate() === now.getDate()
     );
 };
+const getSlotFromPickup = (pickup: PickupRecord) => {
+  if (pickup?.bookingId?.slotTime) {
+    return pickup.bookingId.slotTime;
+  }
+  if (pickup?.slot && pickup.slot !== "NA") {
+    return pickup.slot;
+  }
+  return "";
+};
 
-const getSlotEndLabel = (slot?: string) => {
-    if (!slot || slot === "NA") return "6:00 PM";
-    const parts = slot.split("-");
-    if (parts.length < 2) return slot;
-    return parts[1].trim();
+const getSlotEndLabel = (pickup: PickupRecord) => {
+  const slot = getSlotFromPickup(pickup);
+
+  if (!slot) return "6:00 PM";
+
+  const parts = slot.split("-");
+  if (parts.length < 2) return slot;
+  return parts[1].trim();
 };
 
 const getScheduledTitle = (pickup: PickupRecord) => {
-    const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
-    const endLabel = getSlotEndLabel(pickup.slot);
+  const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
+  const endLabel = getSlotEndLabel(pickup);
 
-    if (isToday(scheduleDate)) {
-        return `Pickup today before ${endLabel}`;
-    }
+  if (isToday(scheduleDate)) {
+    return `Pickup today before ${endLabel}`;
+  }
 
-    const dateLabel = formatDate(scheduleDate);
-    return dateLabel
-        ? `Pickup on ${dateLabel} before ${endLabel}`
-        : `Pickup before ${endLabel}`;
+  const dateLabel = formatDate(scheduleDate);
+  return dateLabel
+    ? `Pickup on ${dateLabel} before ${endLabel}`
+    : `Pickup before ${endLabel}`;
 };
 
 const initials = (name?: string) => {
@@ -249,9 +261,16 @@ function ScheduledPickupCard({
     onCancel: () => void;
 }) {
 
-    const itemCount = pickup.items?.length ?? 0;
+    const getItemCount = (pickup: PickupRecord) => {
+        if (!pickup?.items?.length) return 0;
+
+        return pickup.items.reduce((total, item) => {
+            return total + (item.quantity || 0);
+        }, 0);
+    };
+    const itemCount = getItemCount(pickup);
     const scheduleTitle = getScheduledTitle(pickup);
-    const highlightTime = getSlotEndLabel(pickup.slot);
+    const highlightTime = getSlotEndLabel(pickup);
     const [menuVisible, setMenuVisible] = useState(false);
 
     return (
