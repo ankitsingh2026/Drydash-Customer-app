@@ -1,5 +1,5 @@
-// app/screens/BookPickup.tsx — Complete updated file with service availability check
-import CouponCard, { COUPONS } from "@/components/CouponCard";
+import CouponCard from "@/components/CouponCard";
+import { fetchAllValidCoupons } from "@/features/coupons/coupons.api";
 import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
 import { useAddress } from "@/context/AddressContext";
@@ -163,6 +163,8 @@ export default function BookPickup() {
   const [selectedSlotIndex, setSelectedSlotIndex] = useState(-1);
   const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
   const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponLoading, setCouponLoading] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const [location, setLocation] = useState({
@@ -183,9 +185,7 @@ export default function BookPickup() {
   );
 
   const [couponOpen, setCouponOpen] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState<
-    (typeof COUPONS)[number] | null
-  >(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
 
   const [addressPickerOpen, setAddressPickerOpen] = useState(false);
   const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
@@ -196,20 +196,43 @@ export default function BookPickup() {
     (sum, item) => sum + item.qty * item.price,
     0,
   );
-  console.log("Cart Items in BookPickup =>>>:", items, "Subtotal =>>>:", cartSubtotal);
-  const deliveryCharge = cartSubtotal > 0 ? 40 : 0;
-  const discount = appliedCoupon ? Math.min(50, cartSubtotal) : 0;
-  const tax = Math.round(cartSubtotal * 0.05);
-  const total = cartSubtotal + deliveryCharge + tax - discount;
+  console.log(
+    "Cart Items in BookPickup =>>>:",
+    items,
+    "Subtotal =>>>:",
+    cartSubtotal,
+  );
+  const calculateDiscount = (coupon: any, subtotal: number) => {
+    if (!coupon) return 0;
+
+    const minOrder = Number(coupon.minOrder || 0);
+    if (subtotal < minOrder) return 0;
+
+    if (coupon.type === "flat") {
+      return Math.min(Number(coupon.discount || 0), subtotal);
+    }
+
+    if (coupon.type === "discount") {
+      const percentDiscount = (subtotal * Number(coupon.discount || 0)) / 100;
+      const maxCap = coupon.maxCap ? Number(coupon.maxCap) : null;
+      return maxCap ? Math.min(percentDiscount, maxCap) : percentDiscount;
+    }
+
+    return 0;
+  };
+
+  const discount = calculateDiscount(appliedCoupon, cartSubtotal);
+  const total = Math.max(cartSubtotal + -discount, 0);
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  const handleApplyCoupon = (coupon: (typeof COUPONS)[number]) => {
-    if (appliedCoupon?.code === coupon.code) {
+  const handleApplyCoupon = (coupon: any, action: "apply" | "remove") => {
+    if (action === "remove") {
       setAppliedCoupon(null);
-    } else {
-      setAppliedCoupon(coupon);
+      setCouponOpen(false);
+      return;
     }
+    setAppliedCoupon(coupon);
     setCouponOpen(false);
   };
 
@@ -249,6 +272,26 @@ export default function BookPickup() {
   }, []);
 
   useEffect(() => {
+    if (couponOpen) {
+      loadCoupons();
+    }
+  }, [couponOpen, cartSubtotal, serviceType]);
+
+  const loadCoupons = async () => {
+    try {
+      setCouponLoading(true);
+      const res = await fetchAllValidCoupons(cartSubtotal, serviceType);
+      console.log("COUPONS API RES ===>", res);
+      setCoupons(res?.data || res || []);
+    } catch (err) {
+      console.log("coupon fetch error", err);
+      setCoupons([]);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (!mapQuery.trim()) return;
     const timer = setTimeout(() => searchOnMap(), 700);
     return () => clearTimeout(timer);
@@ -280,8 +323,11 @@ export default function BookPickup() {
 
         const res = await getActivePickupOrOrder(phone);
 
-
-        if (res?.data?.success && res?.data?.data && res?.data?.data?.status !== "delivered") {
+        if (
+          res?.data?.success &&
+          res?.data?.data &&
+          res?.data?.data?.status !== "delivered"
+        ) {
           setHasActiveBooking(true);
         } else {
           setHasActiveBooking(false);
@@ -627,12 +673,12 @@ export default function BookPickup() {
   const CartSection = () => {
     if (!items?.length) return null;
 
-    const deliveryHandling = 40;
-    const serviceCharge = Math.round(cartSubtotal * 0.05);
-    const gst = Math.round((cartSubtotal + serviceCharge) * 0.09);
-    const igst = Math.round((cartSubtotal + serviceCharge) * 0.09);
+    // const deliveryHandling = 40;
+    // const serviceCharge = Math.round(cartSubtotal * 0.05);
+    // const gst = Math.round((cartSubtotal + serviceCharge) * 0.09);
+    // const igst = Math.round((cartSubtotal + serviceCharge) * 0.09);
 
-    const grandTotal = cartSubtotal;
+    const grandTotal = total;
 
     return (
       <View style={s.section}>
@@ -714,41 +760,109 @@ export default function BookPickup() {
 
           <TouchableOpacity
             onPress={() => setCouponOpen(true)}
+            activeOpacity={0.85}
             style={{
-              marginTop: 6,
+              marginTop: 8,
               borderRadius: 14,
-              borderWidth: 1,
-              borderColor: "#1E3327",
               padding: 14,
-              backgroundColor: "#081612",
+              backgroundColor: "#0E1A14", // flat base
+              borderWidth: 1,
+              borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
             }}
           >
-            <View style={s.rowBetween}>
-              <View>
-                <Text style={{ color: theme.text, fontWeight: "700" }}>
-                  {appliedCoupon?.code || "Tap to apply coupon"}
-                </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              {/* LEFT */}
+              <View style={{ flex: 1 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
+                  {/* Coupon Code */}
+                  <Text
+                    style={{
+                      color: "#E6FFF6",
+                      fontWeight: "900",
+                      fontSize: 15,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {appliedCoupon?.code || "Apply Coupon"}
+                  </Text>
 
-                <Text style={{ color: "#6B8F7B", fontSize: 12 }}>
+                  {/* Badge */}
+                  {appliedCoupon && (
+                    <View
+                      style={{
+                        backgroundColor: "#123D2E",
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          color: "#00E1A2",
+                          fontWeight: "800",
+                        }}
+                      >
+                        BEST VALUE
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Description */}
+                <Text
+                  style={{
+                    color: "#7A9B87",
+                    fontSize: 12,
+                    marginTop: 4,
+                  }}
+                >
                   {appliedCoupon
                     ? appliedCoupon.description
-                    : "Choose from available coupons"}
+                    : "Tap to view available offers"}
                 </Text>
               </View>
 
-              <Text style={{ color: theme.primary }}>
-                {appliedCoupon ? "Change" : "Open"}
-              </Text>
+              {/* RIGHT BUTTON */}
+              <View
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
+                  backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
+                }}
+              >
+                <Text
+                  style={{
+                    color: appliedCoupon ? "#00E1A2" : "#7A9B87",
+                    fontWeight: "800",
+                    fontSize: 12,
+                  }}
+                >
+                  {appliedCoupon ? "✓ Applied" : "Apply"}
+                </Text>
+              </View>
             </View>
           </TouchableOpacity>
         </View>
 
         <View style={{ marginTop: 18 }}>
           <BreakRow label="Subtotal" value={cartSubtotal} />
-          <BreakRow label="Delivery Handling" value={deliveryHandling} strike />
+          {discount > 0 && <BreakRow label="Discount" value={`${discount}`} />}
+          {/* <BreakRow label="Delivery Handling" value={deliveryHandling} strike />
           <BreakRow label="Service Charge" value={serviceCharge} strike />
           <BreakRow label="GST (9%)" value={gst} strike />
-          <BreakRow label="IGST (9%)" value={igst} strike />
+          <BreakRow label="IGST (9%)" value={igst} strike /> */}
 
           <View
             style={{
@@ -764,14 +878,10 @@ export default function BookPickup() {
     );
   };
 
-  const noSlotsToday =
-    pickupType === "today" && !hasAvailableSlots;
+  const noSlotsToday = pickupType === "today" && !hasAvailableSlots;
 
   const bookingBlocked =
-    confirmLoading ||
-    checkingActiveBooking ||
-    hasActiveBooking ||
-    noSlotsToday;
+    confirmLoading || checkingActiveBooking || hasActiveBooking || noSlotsToday;
   const bookingBlockedMessage =
     "You already have an active pickup or order. You can create new pickup once your current order is delivered.";
 
@@ -1054,7 +1164,7 @@ export default function BookPickup() {
                     },
                   ]}
                 >
-                  Today 
+                  Today
                 </Text>
               </TouchableOpacity>
 
@@ -1098,29 +1208,29 @@ export default function BookPickup() {
           {/* ══════════════════ TODAY VIEW ══════════════════ */}
           {pickupType === "today" && (
             <>
-
-                  <View style={s.section}>
+              <View style={s.section}>
                 <Text style={[s.bigSubtitle, { color: theme.text }]}>
                   Select Slot
                 </Text>
 
-                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude && (
-                  <SlotPicker
-                    lat={selectedPickupAddr.latitude}
-                    lng={selectedPickupAddr.longitude}
-                    selectedSlot={selectedSlotIndex}
-                    onSelect={(index, slot) => {
-                      setSelectedSlotIndex(index);
-                      setSelectedSlotData(slot);
-                    }}
-                    onSlotsUpdate={(slots) => {
-                      const available = slots.some(
-                        (s) => s.enabled && s.status !== "expired"
-                      );
-                      setHasAvailableSlots(available);
-                    }}
-                  />
-                )}
+                {selectedPickupAddr?.latitude &&
+                  selectedPickupAddr?.longitude && (
+                    <SlotPicker
+                      lat={selectedPickupAddr.latitude}
+                      lng={selectedPickupAddr.longitude}
+                      selectedSlot={selectedSlotIndex}
+                      onSelect={(index, slot) => {
+                        setSelectedSlotIndex(index);
+                        setSelectedSlotData(slot);
+                      }}
+                      onSlotsUpdate={(slots) => {
+                        const available = slots.some(
+                          (s) => s.enabled && s.status !== "expired",
+                        );
+                        setHasAvailableSlots(available);
+                      }}
+                    />
+                  )}
               </View>
               <TouchableOpacity
                 onPress={() => router.push("/services/[service]")}
@@ -1376,31 +1486,29 @@ export default function BookPickup() {
           </View>
         </ScrollView>
 
-
         <View
           style={[
-
             {
               backgroundColor: theme.background,
               paddingBottom: insets.bottom + 10,
             },
           ]}
         >
-
           {hasActiveBooking && (
             <View style={s.bookingBlockedNotice}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={16}
-                color="#FFB86B"
-              />
+              <Ionicons name="alert-circle-outline" size={16} color="#FFB86B" />
               <Text style={s.bookingBlockedText}>{bookingBlockedMessage}</Text>
             </View>
           )}
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, margin: 10 }}>
-
-
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+              margin: 10,
+            }}
+          >
             <TouchableOpacity
               style={[
                 s.confirmBtn,
@@ -2102,6 +2210,9 @@ export default function BookPickup() {
         onClose={() => setCouponOpen(false)}
         onApply={handleApplyCoupon}
         appliedCode={appliedCoupon?.code || ""}
+        coupons={coupons}
+        loading={couponLoading}
+        subtotal={cartSubtotal}
       />
     </View>
   );
