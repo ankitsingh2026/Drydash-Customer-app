@@ -10,7 +10,7 @@ export const fetchAllValidCoupons = async (cartAmount: any, category: any) => {
       },
     });
 
-    console.log("this is the dataaaa====>>>>>>>>>", res?.data);
+    // console.log("this is the dataaaa====>>>>>>>>>", res?.data);
     return res?.data;
   } catch (error) {
     console.log("this is the error==>>", error);

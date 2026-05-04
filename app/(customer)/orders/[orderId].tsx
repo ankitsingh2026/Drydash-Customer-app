@@ -16,6 +16,7 @@ import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -36,6 +37,7 @@ interface OrderItem {
   unit?: string;
   type?: string;
   category?: string;
+  imageUrl?: string;
 }
 
 interface OrderDetails {
@@ -126,6 +128,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
           unit: toSafeText(item?.unit),
           type: typeLabel,
           category: toSafeText(item?.category),
+          imageUrl: item?.itemId?.images?.[0]?.url || null,
         };
       })
     : [];
@@ -190,7 +193,7 @@ export default function OrderReceipt() {
   const [isPaymentDone, setIsPaymentDone] = useState(false);
 
   if (!user) return null;
-  console.log("Single order details:===>", singleOrderDetails);
+  // console.log("Single order details:===>", singleOrderDetails);
 
   const User = user?.user ? user?.user : user;
   const email = User?.email ?? "test@example.com";
@@ -294,6 +297,8 @@ export default function OrderReceipt() {
       const couponsFromApi: Coupon[] = Array.isArray(res?.data) ? res.data : [];
 
       const now = new Date();
+
+      console.log("Coupons from API=====>>>>>>", couponsFromApi);
 
       const filteredCoupons = couponsFromApi.filter((coupon) => {
         const activeCheck = coupon?.isActive === true;
@@ -706,13 +711,13 @@ export default function OrderReceipt() {
               </Text>
             </View>
 
-            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}> 
+            {/* <View style={[s.avatarCircle, { backgroundColor: theme.card }]}> 
               <Ionicons
                 name="notifications-outline"
                 size={16}
                 color={theme.primary}
               />
-            </View>
+            </View> */}
           </View>
 
           <View style={s.processingSectionHeader}>
@@ -729,8 +734,16 @@ export default function OrderReceipt() {
               key={index}
               style={[s.processingItemCard, { backgroundColor: theme.card }]}
             >
-              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}> 
-                <ItemIcon heading={item.heading} color={theme.primary} />
+              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}>
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={{ width: 40, height: 40, borderRadius: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ItemIcon heading={item.heading} color={theme.primary} />
+                )}
               </View>
 
               <View style={s.itemInfo}>
@@ -770,10 +783,10 @@ export default function OrderReceipt() {
             </View>
           </View>
 
-          <View style={s.processingCheckRow}>
+          {/* <View style={s.processingCheckRow}>
             <Ionicons name="checkbox" size={18} color={theme.primary} />
             <Text style={s.processingCheckText}>Delivery Location Same As Pickup Location</Text>
-          </View>
+          </View> */}
 
           {/* AVAILABLE OFFERS SECTION (added for processing/in-progress view) */}
           {!isPaid && (
@@ -1017,8 +1030,16 @@ export default function OrderReceipt() {
               key={index}
               style={[s.processingItemCard, { backgroundColor: theme.card }]}
             >
-              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}> 
-                <ItemIcon heading={item.heading} color={theme.primary} />
+              <View style={[s.itemIconBox, { backgroundColor: theme.background }]}>
+                {item.imageUrl ? (
+                  <Image
+                    source={{ uri: item.imageUrl }}
+                    style={{ width: 40, height: 40, borderRadius: 8 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ItemIcon heading={item.heading} color={theme.primary} />
+                )}
               </View>
 
               <View style={s.itemInfo}>

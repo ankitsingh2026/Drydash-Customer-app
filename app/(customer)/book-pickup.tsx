@@ -442,7 +442,7 @@ export default function BookPickup() {
 
       if (pickupType === "today" && selectedSlotData?.time) {
         // Use the time from SlotPicker component (e.g., "8:00 AM - 11:00 AM")
-        selectedSlotForPayload = selectedSlotData.time;
+        // selectedSlotForPayload = selectedSlotData.time; 
       } else if (pickupType === "schedule" && slot !== -1) {
         // Use predefined time slots for scheduled pickup
         selectedSlotForPayload = TIME_SLOTS[slot];
@@ -1147,8 +1147,7 @@ export default function BookPickup() {
             >
               {/* TOP ROW */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="location-outline" size={14} color="#A7F3D0" />
-
+              <Ionicons name="location-outline" size={14} color="#A7F3D0" />
                 <Text
                   style={{
                     color: "#A7F3D0",
@@ -1256,7 +1255,7 @@ export default function BookPickup() {
                     },
                   ]}
                 >
-                  Today Today
+                  Today
                 </Text>
               </TouchableOpacity>
 
@@ -1317,8 +1316,12 @@ export default function BookPickup() {
                       }}
                       onSlotsUpdate={(slots) => {
                         const available = slots.some(
-                          (s) => s.enabled && s.status !== "expired",
+                          (s) =>
+                            s.enabled &&
+                            s.status !== "expired" &&
+                            s.availableCapacity > 0  
                         );
+
                         setHasAvailableSlots(available);
                       }}
                     />

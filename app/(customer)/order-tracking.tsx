@@ -695,6 +695,7 @@ export default function OrderTrackingScreen() {
       await reschedulePickupApi(selectedPickup._id, newDate);
       setRescheduleModalVisible(false);
       Alert.alert("Pickup rescheduled", "Your pickup date has been updated.");
+      router.replace({ pathname: '/order-tracking', params: { pickupId: selectedPickup._id } });
       setReloadKey((prev) => prev + 1);
     } catch (error: any) {
       Alert.alert("Reschedule failed", error?.message || "Unable to reschedule pickup.");
@@ -755,6 +756,7 @@ export default function OrderTrackingScreen() {
       );
       cart.clear();
       Alert.alert("Pickup updated", "Your pickup has been updated successfully.");
+      router.replace({ pathname: '/order-tracking', params: { pickupId: selectedPickup._id } });
       setReloadKey((prev) => prev + 1);
     } catch (error) {
       const message = typeof error === "object" && error && "message" in error ? (error as any).message : "Unable to update pickup.";

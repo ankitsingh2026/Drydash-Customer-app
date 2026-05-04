@@ -115,13 +115,13 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <Image
+      {/* <Image
         source={require("../assets/images/drydashlogo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
 
-      <Text style={styles.slogan}>Smart Laundry. Seamless Life.</Text>
+      <Text style={styles.slogan}>Smart Laundry. Seamless Life.</Text> */}
       <UpdateModal
         visible={!!updateType}
         type={updateType}
