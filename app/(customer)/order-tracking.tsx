@@ -1,5 +1,7 @@
 import CancelPickupConfirmModal from "@/components/orders/CancelPickupConfirmModal";
 import ReschedulePickupModal from "@/components/orders/ReschedulePickupModal";
+import CouponCard from "@/components/CouponCard";
+import { fetchAllValidCoupons } from "@/features/coupons/coupons.api";
 import { useAddress } from "@/context/AddressContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Address } from "@/types/order.types";
@@ -50,8 +52,11 @@ type OrderItem = {
   accent: string;
 };
 
-
-type ScreenMode = "pickup-scheduled" | "pickup-assigned" | "order-items" | "order-delivered";
+type ScreenMode =
+  | "pickup-scheduled"
+  | "pickup-assigned"
+  | "order-items"
+  | "order-delivered";
 
 const ORDER: {
   storeName: string;
@@ -61,6 +66,7 @@ const ORDER: {
   items: OrderItem[];
   bill: {
     subtotal: number;
+    discount: number;
     deliveryHandling: number;
     serviceCharge: number;
     itemDiscount: number;
@@ -108,6 +114,7 @@ const ORDER: {
   ],
   bill: {
     subtotal: 1550,
+    discount: 0,
     deliveryHandling: 40,
     serviceCharge: 78,
     itemDiscount: 500,
@@ -127,6 +134,25 @@ const ORDER: {
 
 function money(value: number) {
   return `₹${Number(value).toLocaleString("en-IN")}`;
+}
+
+function calculateDiscount(coupon: any, subtotal: number) {
+  if (!coupon) return 0;
+
+  const minOrder = Number(coupon.minOrder || 0);
+  if (subtotal < minOrder) return 0;
+
+  if (coupon.type === "flat") {
+    return Math.min(Number(coupon.discount || 0), subtotal);
+  }
+
+  if (coupon.type === "discount") {
+    const percentDiscount = (subtotal * Number(coupon.discount || 0)) / 100;
+    const maxCap = coupon.maxCap ? Number(coupon.maxCap) : null;
+    return maxCap ? Math.min(percentDiscount, maxCap) : percentDiscount;
+  }
+
+  return 0;
 }
 
 function toTitleCase(value?: string) {
@@ -184,7 +210,13 @@ function inferItemIcon(name: string): OrderItem["icon"] {
   return "shoe-sandal";
 }
 
-function ItemIcon({ icon, accent }: { icon: OrderItem["icon"]; accent: string }) {
+function ItemIcon({
+  icon,
+  accent,
+}: {
+  icon: OrderItem["icon"];
+  accent: string;
+}) {
   return (
     <View style={[styles.itemIconInner, { borderColor: `${accent}55` }]}>
       <MaterialCommunityIcons name={icon as any} size={20} color={accent} />
@@ -205,7 +237,15 @@ function ActionTagButton({
 }) {
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
-      <View style={[styles.tagPill, tone === "danger" && { backgroundColor: "#FF6B6B22", borderColor: "#FF6B6B55" }]}>
+      <View
+        style={[
+          styles.tagPill,
+          tone === "danger" && {
+            backgroundColor: "#FF6B6B22",
+            borderColor: "#FF6B6B55",
+          },
+        ]}
+      >
         {icon ? (
           <Ionicons
             name={icon}
@@ -245,27 +285,28 @@ function Header({
   onCancel?: () => void;
   showMenu?: boolean;
 }) {
-  if (!showMenu) return (
-    <View style={styles.header}>
-      <TouchableOpacity
-        onPress={onBack}
-        disabled={!onBack}
-        style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
-        activeOpacity={0.75}
-      >
-        <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
-      </TouchableOpacity>
-      <View style={styles.headerCenter}>
-        <View style={styles.titleRow}>
-          <Text style={styles.storeName}>{storeName}</Text>
-          <Ionicons name="chevron-down" size={14} color="#7F948A" />
+  if (!showMenu)
+    return (
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={onBack}
+          disabled={!onBack}
+          style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <View style={styles.titleRow}>
+            <Text style={styles.storeName}>{storeName}</Text>
+            <Ionicons name="chevron-down" size={14} color="#7F948A" />
+          </View>
+          <Text style={styles.storeSubtitle} numberOfLines={1}>
+            {storeSubtitle}
+          </Text>
         </View>
-        <Text style={styles.storeSubtitle} numberOfLines={1}>
-          {storeSubtitle}
-        </Text>
       </View>
-    </View>
-  );
+    );
 
   return (
     <View style={styles.header}>
@@ -274,9 +315,7 @@ function Header({
         disabled={!onBack}
         style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
         activeOpacity={0.75}
-
       >
-
         <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
       </TouchableOpacity>
       <View style={styles.headerCenter}>
@@ -372,7 +411,9 @@ function LocationCard({ value }: { value: string }) {
   return (
     <View style={styles.locationCardWrap}>
       <Ionicons name="location-outline" size={14} color={DarkTheme.primary} />
-      <Text style={styles.locationCardText} numberOfLines={1}>{value || ORDER.storeSubtitle}</Text>
+      <Text style={styles.locationCardText} numberOfLines={1}>
+        {value || ORDER.storeSubtitle}
+      </Text>
     </View>
   );
 }
@@ -413,7 +454,9 @@ function BillRow({
   return (
     <View style={styles.billRow}>
       <Text style={styles.billLabel}>{label}</Text>
-      <Text style={[styles.billValue, highlight && { color: DarkTheme.primary }]}>
+      <Text
+        style={[styles.billValue, highlight && { color: DarkTheme.primary }]}
+      >
         {value}
       </Text>
     </View>
@@ -476,8 +519,6 @@ function BillCard({
           <BillRow label={`GST (${gstPercent}%)`} value={money(gst)} /> */}
 
           {/* <View style={styles.billDivider} /> */}
-
-
         </>
       )}
 
@@ -485,6 +526,85 @@ function BillCard({
         <Text style={styles.totalLabel}>Total Bill</Text>
         <Text style={styles.totalValue}>{money(total)}</Text>
       </View> */}
+    </View>
+  );
+}
+
+function CouponSection({
+  appliedCoupon,
+  onOpen,
+}: {
+  appliedCoupon: any;
+  onOpen: () => void;
+}) {
+  return (
+    <View style={{ marginBottom: 14 }}>
+      <View style={styles.offerHeaderRow}>
+        <Text style={styles.offerLabel}>Available Offers</Text>
+        <TouchableOpacity onPress={onOpen}>
+          <Text style={styles.offerViewAll}>View All {">"}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        onPress={onOpen}
+        activeOpacity={0.85}
+        style={{
+          borderRadius: 14,
+          padding: 14,
+          backgroundColor: "#0E1A14",
+          borderWidth: 1,
+          borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                color: "#E6FFF6",
+                fontWeight: "900",
+                fontSize: 15,
+                letterSpacing: 0.5,
+              }}
+            >
+              {appliedCoupon?.code || "Apply Coupon"}
+            </Text>
+
+            <Text style={{ color: "#7A9B87", fontSize: 12, marginTop: 4 }}>
+              {appliedCoupon
+                ? appliedCoupon.description || "Coupon applied"
+                : "Tap to view available offers"}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
+              backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
+            }}
+          >
+            <Text
+              style={{
+                color: appliedCoupon ? "#00E1A2" : "#7A9B87",
+                fontWeight: "800",
+                fontSize: 12,
+              }}
+            >
+              {appliedCoupon ? "✓ Applied" : "Apply"}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -544,7 +664,9 @@ function OrderDetailsCard({
           <Text style={styles.detailLabel}>DELIVERED BY</Text>
           <View style={styles.inlineRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{details.deliveredBy.charAt(0)}</Text>
+              <Text style={styles.avatarText}>
+                {details.deliveredBy.charAt(0)}
+              </Text>
             </View>
             <Text style={styles.detailValue}>{details.deliveredBy}</Text>
           </View>
@@ -571,7 +693,11 @@ function HelpCard() {
 
       <TouchableOpacity activeOpacity={0.8} style={styles.chatCard}>
         <View style={styles.chatIconWrap}>
-          <Ionicons name="chatbubble-ellipses-outline" size={19} color={DarkTheme.primary} />
+          <Ionicons
+            name="chatbubble-ellipses-outline"
+            size={19}
+            color={DarkTheme.primary}
+          />
         </View>
 
         <View style={{ flex: 1 }}>
@@ -588,7 +714,9 @@ function HelpCard() {
 function BottomCTA({ mode }: { mode: ScreenMode }) {
   const title = mode === "pickup-scheduled" ? "Reschedule" : "Repeat Order";
   const subtitle =
-    mode === "pickup-scheduled" ? "Update pickup date & slot" : "View Cart On Next Step";
+    mode === "pickup-scheduled"
+      ? "Update pickup date & slot"
+      : "View Cart On Next Step";
 
   return (
     <View style={styles.bottomWrap}>
@@ -614,16 +742,36 @@ export default function OrderTrackingScreen() {
   const [pickupDetails, setPickupDetails] = useState<any>(null);
   const [originalPickupItems, setOriginalPickupItems] = useState<any[]>([]);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [couponCode, setCouponCode] = useState("SAVE50");
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponLoading, setCouponLoading] = useState(false);
   const [sameLocation, setSameLocation] = useState(true);
   const [heavyItems, setHeavyItems] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
-  const toggleMenu = () => setMenuVisible(prev => !prev);
+  const toggleMenu = () => setMenuVisible((prev) => !prev);
   const [isUpdatingPickup, setIsUpdatingPickup] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const handleApplyCoupon = (coupon: any, action: "apply" | "remove") => {
+    if (action === "remove") {
+      setAppliedCoupon(null);
+      setCouponOpen(false);
+      return;
+    }
+
+    const discount = calculateDiscount(coupon, bill.subtotal);
+    if (discount <= 0) {
+      Alert.alert("Invalid Coupon", "This coupon is not applicable.");
+      return;
+    }
+
+    setAppliedCoupon(coupon);
+    setCouponOpen(false);
+  };
 
   useEffect(() => {
     const fetchPickup = async () => {
@@ -652,8 +800,17 @@ export default function OrderTrackingScreen() {
         }
 
         // Determine if pickup is in editable state
-        const pickupStatus = String(details?.PickupStatus ?? "").trim().toLowerCase();
-        const isEditable = ["pending", "scheduled", "schedule", "assigned", "riderassigned", "pickupassigned"].includes(pickupStatus);
+        const pickupStatus = String(details?.PickupStatus ?? "")
+          .trim()
+          .toLowerCase();
+        const isEditable = [
+          "pending",
+          "scheduled",
+          "schedule",
+          "assigned",
+          "riderassigned",
+          "pickupassigned",
+        ].includes(pickupStatus);
       } catch (err) {
         console.log(err);
       } finally {
@@ -674,11 +831,17 @@ export default function OrderTrackingScreen() {
       setActionLoading(true);
       await cancelPickupApi(selectedPickup._id);
       setCancelModalVisible(false);
-      Alert.alert("Pickup cancelled", "Your pickup has been cancelled successfully.");
+      Alert.alert(
+        "Pickup cancelled",
+        "Your pickup has been cancelled successfully.",
+      );
       setReloadKey((prev) => prev + 1);
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      Alert.alert("Cancel failed", error?.message || "Unable to cancel pickup.");
+      Alert.alert(
+        "Cancel failed",
+        error?.message || "Unable to cancel pickup.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -686,7 +849,10 @@ export default function OrderTrackingScreen() {
 
   const handleReschedulePickup = async (newDate: string) => {
     if (!selectedPickup?._id) {
-      Alert.alert("Missing pickup", "Unable to reschedule this pickup right now.");
+      Alert.alert(
+        "Missing pickup",
+        "Unable to reschedule this pickup right now.",
+      );
       return;
     }
 
@@ -695,10 +861,16 @@ export default function OrderTrackingScreen() {
       await reschedulePickupApi(selectedPickup._id, newDate);
       setRescheduleModalVisible(false);
       Alert.alert("Pickup rescheduled", "Your pickup date has been updated.");
-      router.replace({ pathname: '/order-tracking', params: { pickupId: selectedPickup._id } });
+      router.replace({
+        pathname: "/order-tracking",
+        params: { pickupId: selectedPickup._id },
+      });
       setReloadKey((prev) => prev + 1);
     } catch (error: any) {
-      Alert.alert("Reschedule failed", error?.message || "Unable to reschedule pickup.");
+      Alert.alert(
+        "Reschedule failed",
+        error?.message || "Unable to reschedule pickup.",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -712,7 +884,10 @@ export default function OrderTrackingScreen() {
 
     // If cart is empty but we have original items, just update without changing items
     if (cart.items.length === 0 && originalPickupItems.length === 0) {
-      Alert.alert("Empty cart", "Please add at least one item before updating.");
+      Alert.alert(
+        "Empty cart",
+        "Please add at least one item before updating.",
+      );
       return;
     }
 
@@ -737,11 +912,15 @@ export default function OrderTrackingScreen() {
     });
 
     // Convert map to array
-    const finalItems: { itemId: string; quantity: number }[] = Array.from(mergedItemsMap.values())
-      .filter((item) => item.quantity > 0);
+    const finalItems: { itemId: string; quantity: number }[] = Array.from(
+      mergedItemsMap.values(),
+    ).filter((item) => item.quantity > 0);
 
     if (finalItems.length === 0) {
-      Alert.alert("Empty cart", "Please add at least one item before updating.");
+      Alert.alert(
+        "Empty cart",
+        "Please add at least one item before updating.",
+      );
       return;
     }
 
@@ -752,17 +931,48 @@ export default function OrderTrackingScreen() {
         finalItems,
         specialInstructions,
         heavyItems,
-        couponCode,
+        appliedCoupon?.code || "",
       );
       cart.clear();
-      Alert.alert("Pickup updated", "Your pickup has been updated successfully.");
-      router.replace({ pathname: '/order-tracking', params: { pickupId: selectedPickup._id } });
+      Alert.alert(
+        "Pickup updated",
+        "Your pickup has been updated successfully.",
+      );
+      router.replace({
+        pathname: "/order-tracking",
+        params: { pickupId: selectedPickup._id },
+      });
       setReloadKey((prev) => prev + 1);
     } catch (error) {
-      const message = typeof error === "object" && error && "message" in error ? (error as any).message : "Unable to update pickup.";
+      const message =
+        typeof error === "object" && error && "message" in error
+          ? (error as any).message
+          : "Unable to update pickup.";
       Alert.alert("Update failed", message);
     } finally {
       setIsUpdatingPickup(false);
+    }
+  };
+
+  const loadCoupons = async () => {
+    if (!bill.subtotal || bill.subtotal <= 0) {
+      setCoupons([]);
+      return;
+    }
+
+    try {
+      setCouponLoading(true);
+      const couponServiceType =
+        selectedPickup?.serviceType || selectedPickup?.service || "Laundry";
+
+      const res = await fetchAllValidCoupons(bill.subtotal, couponServiceType);
+      console.log("COUPONS API RES ===>", res);
+      setCoupons(res?.data || res || []);
+    } catch (err) {
+      console.log("coupon fetch error", err);
+      setCoupons([]);
+    } finally {
+      setCouponLoading(false);
     }
   };
 
@@ -787,9 +997,9 @@ export default function OrderTrackingScreen() {
     setSpecialInstructions(selectedPickup?.note ?? "");
   }, [selectedPickup?._id, selectedPickup?.note]);
 
-
-
-  const pickupStatus = String(selectedPickup?.PickupStatus ?? "").trim().toLowerCase();
+  const pickupStatus = String(selectedPickup?.PickupStatus ?? "")
+    .trim()
+    .toLowerCase();
   const normalizedPickupStatus = normalizeStatus(selectedPickup?.PickupStatus);
   // const normalizedOrderStatus = normalizeStatus(selectedOrder?.status);
   const hasOrderItems = Boolean(selectedPickup?.items?.length);
@@ -806,11 +1016,19 @@ export default function OrderTrackingScreen() {
   const isAssigned = useMemo(() => {
     return (
       Boolean(selectedPickup?.riderName || selectedPickup?.riderDate) ||
-      ["assigned", "riderassigned", "pickupassigned", "ontheway", "accepted"].includes(
-        normalizedPickupStatus,
-      )
+      [
+        "assigned",
+        "riderassigned",
+        "pickupassigned",
+        "ontheway",
+        "accepted",
+      ].includes(normalizedPickupStatus)
     );
-  }, [normalizedPickupStatus, selectedPickup?.riderDate, selectedPickup?.riderName]);
+  }, [
+    normalizedPickupStatus,
+    selectedPickup?.riderDate,
+    selectedPickup?.riderName,
+  ]);
 
   const screenMode: ScreenMode = useMemo(() => {
     const isScheduled = ["pending", "scheduled", "schedule"].includes(
@@ -823,7 +1041,8 @@ export default function OrderTrackingScreen() {
     return hasOrderItems ? "order-items" : "order-delivered";
   }, [hasOrderItems, isAssigned, normalizedPickupStatus]);
 
-  const isEditableMode = screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
+  const isEditableMode =
+    screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
 
   const items = useMemo(() => {
     const useCartItems = isEditableMode && cart.items.length > 0;
@@ -844,7 +1063,8 @@ export default function OrderTrackingScreen() {
       const name = item?.label || `Item ${index + 1}`;
       const qty = item?.quantity || 1;
       const price = qty * (item?.price || 0);
-      const image = item?.itemId?.images?.[0]?.url || "https://via.placeholder.com/50";
+      const image =
+        item?.itemId?.images?.[0]?.url || "https://via.placeholder.com/50";
       console.log("mapping pickup item====>> ", item.itemId);
       return {
         id: index + 1,
@@ -859,7 +1079,11 @@ export default function OrderTrackingScreen() {
   }, [selectedPickup, cart.items, isEditableMode]);
 
   const bill = useMemo(() => {
-    const subtotal = items.reduce((sum: number, item: any) => sum + item.price, 0);
+    const subtotal = items.reduce(
+      (sum: number, item: any) => sum + item.price,
+      0,
+    );
+    const discount = calculateDiscount(appliedCoupon, subtotal);
 
     return {
       subtotal,
@@ -869,9 +1093,16 @@ export default function OrderTrackingScreen() {
       platformFee: 0,
       gst: 0,
       gstPercent: 0,
-      total: selectedPickup?.totalAmount || subtotal,
+      discount,
+      total: Math.max(subtotal - discount, 0),
     };
-  }, [items, selectedPickup]);
+  }, [items, appliedCoupon]);
+
+  useEffect(() => {
+    if (couponOpen && bill.subtotal > 0) {
+      loadCoupons();
+    }
+  }, [couponOpen, bill.subtotal, selectedPickup?._id]);
 
   const details = useMemo(() => {
     return {
@@ -893,7 +1124,9 @@ export default function OrderTrackingScreen() {
   const deliveredAt = ORDER.deliveredAt;
 
   const scheduledAt = formatDateTime(
-    selectedPickup?.rescheduledDate || selectedPickup?.pickup_date || selectedPickup?.createdAt,
+    selectedPickup?.rescheduledDate ||
+      selectedPickup?.pickup_date ||
+      selectedPickup?.createdAt,
   );
 
   const statusBannerContent = useMemo(() => {
@@ -910,8 +1143,7 @@ export default function OrderTrackingScreen() {
     if (screenMode === "pickup-assigned") {
       return {
         title: "Rider has been assigned",
-        subtitle:
-          `${selectedPickup?.riderName || "Our rider"} is on the way to pickup your order`,
+        subtitle: `${selectedPickup?.riderName || "Our rider"} is on the way to pickup your order`,
         icon: "bicycle-outline" as const,
       };
     }
@@ -921,7 +1153,14 @@ export default function OrderTrackingScreen() {
       subtitle: "Successfully picked up & delivered",
       icon: "checkmark" as const,
     };
-  }, [deliveredAt, scheduledAt, screenMode, selectedPickup?.PickupStatus, selectedPickup?.riderName, selectedPickup?.slot]);
+  }, [
+    deliveredAt,
+    scheduledAt,
+    screenMode,
+    selectedPickup?.PickupStatus,
+    selectedPickup?.riderName,
+    selectedPickup?.slot,
+  ]);
 
   if (loading) {
     return (
@@ -932,10 +1171,43 @@ export default function OrderTrackingScreen() {
       </SafeAreaView>
     );
   }
+  // 🔥 ADD HERE
+  const BreakRow = ({ label, value, total }: any) => (
+    <View
+      style={{
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 8,
+      }}
+    >
+      <Text
+        style={{
+          color: total ? "#CFFFF1" : "#8CAFA0",
+          fontSize: total ? 16 : 13,
+          fontWeight: total ? "800" : "500",
+        }}
+      >
+        {label}
+      </Text>
+
+      <Text
+        style={{
+          color: total ? "#00E1A2" : "#CFFFF1",
+          fontSize: total ? 18 : 13,
+          fontWeight: total ? "900" : "600",
+        }}
+      >
+        ₹{value}
+      </Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={DarkTheme.background} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={DarkTheme.background}
+      />
 
       <View style={styles.bgTopGlow} />
       <View style={styles.bgBottomGlow} />
@@ -959,7 +1231,8 @@ export default function OrderTrackingScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        {screenMode === "pickup-scheduled" || screenMode === "pickup-assigned" ? (
+        {screenMode === "pickup-scheduled" ||
+        screenMode === "pickup-assigned" ? (
           <>
             {/* <StatusBanner
               title={statusBannerContent.title}
@@ -982,45 +1255,55 @@ export default function OrderTrackingScreen() {
                   onPress={() =>
                     router.push({
                       pathname: "/(customer)/services/[service]",
-                      params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
+                      params: {
+                        pickupId: selectedPickup._id,
+                        mode: "edit",
+                        service: "shoe",
+                      },
                     })
                   }
                   style={styles.addItemsRow}
                 >
-                  <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={18}
+                    color={DarkTheme.primary}
+                  />
                   <Text style={styles.addItemsText}>Add More Items</Text>
                 </TouchableOpacity>
 
-                <View style={styles.offerHeaderRow}>
-                  <Text style={styles.offerLabel}>Available Offers</Text>
-                  <Text style={styles.offerViewAll}>View All {'>'}</Text>
-                </View>
+                <CouponSection
+                  appliedCoupon={appliedCoupon}
+                  onOpen={() => setCouponOpen(true)}
+                />
 
-                <View style={styles.couponRow}>
-                  <TextInput
-                    value={couponCode}
-                    onChangeText={setCouponCode}
-                    placeholder="Coupon Code"
-                    placeholderTextColor="#4E665F"
-                    style={styles.couponInput}
+                <View
+                  style={{
+                    marginTop: 12,
+                    marginBottom: 20,
+                    borderRadius: 16,
+                    padding: 14,
+                    backgroundColor: "#0E1A14",
+                    borderWidth: 1,
+                    borderColor: "#1E3327",
+                  }}
+                >
+                  <BreakRow label="Subtotal" value={bill.subtotal} />
+
+                  {bill.discount > 0 && (
+                    <BreakRow label="Discount" value={`${bill.discount}`} />
+                  )}
+
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: "#1E3327",
+                      marginVertical: 10,
+                    }}
                   />
-                  <TouchableOpacity activeOpacity={0.9} style={styles.applyBtn}>
-                    <Text style={styles.applyBtnText}>Apply</Text>
-                  </TouchableOpacity>
-                </View>
 
-                <View style={styles.appliedCard}>
-                  <View>
-                    <Text style={styles.appliedCode}>SAVE50</Text>
-                    <Text style={styles.appliedDesc}>₹50 OFF on this order</Text>
-                  </View>
-                  <View style={styles.appliedPillInline}>
-                    <Ionicons name="checkmark" size={13} color={DarkTheme.primary} />
-                    <Text style={styles.appliedPillInlineText}>Applied</Text>
-                  </View>
+                  <BreakRow label="Total Payable" value={bill.total} total />
                 </View>
-
-                <BillCard bill={bill} showExpanded />
               </>
             ) : (
               <TouchableOpacity
@@ -1029,12 +1312,22 @@ export default function OrderTrackingScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/(customer)/services/[service]",
-                    params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
+                    params: {
+                      pickupId: selectedPickup._id,
+                      mode: "edit",
+                      service: "shoe",
+                    },
                   })
                 }
               >
-                <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
-                <Text style={styles.scheduledAddEstimateText}>Add Items for estimate</Text>
+                <Ionicons
+                  name="add-circle-outline"
+                  size={18}
+                  color={DarkTheme.primary}
+                />
+                <Text style={styles.scheduledAddEstimateText}>
+                  Add Items for estimate
+                </Text>
               </TouchableOpacity>
             )}
 
@@ -1047,16 +1340,25 @@ export default function OrderTrackingScreen() {
               <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
             </TouchableOpacity> */}
 
-            <TouchableOpacity style={styles.checkRow} onPress={() => setHeavyItems((p) => !p)}>
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setHeavyItems((p) => !p)}
+            >
               <Ionicons
                 name={heavyItems ? "checkbox" : "square-outline"}
                 size={20}
                 color={DarkTheme.primary}
               />
-              <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
+              <Text style={styles.checkLabel}>
+                Includes Heavy Items (Rugs, Quilts, etc)
+              </Text>
             </TouchableOpacity>
             <View style={styles.deliveryRow}>
-              <Ionicons name="flash-outline" size={16} color={DarkTheme.primary} />
+              <Ionicons
+                name="flash-outline"
+                size={16}
+                color={DarkTheme.primary}
+              />
 
               <View>
                 <Text style={styles.deliveryText}>
@@ -1064,9 +1366,7 @@ export default function OrderTrackingScreen() {
                 </Text>
 
                 <TouchableOpacity onPress={() => console.log("Clicked")}>
-                  <Text style={styles.deliveryLink}>
-                    Not A Morning Person?
-                  </Text>
+                  <Text style={styles.deliveryLink}>Not A Morning Person?</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1106,61 +1406,92 @@ export default function OrderTrackingScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/(customer)/services/[service]",
-                  params: { pickupId: selectedPickup._id, mode: "edit", service: "shoe" },
+                  params: {
+                    pickupId: selectedPickup._id,
+                    mode: "edit",
+                    service: "shoe",
+                  },
                 })
               }
             >
-              <Ionicons name="add-circle-outline" size={18} color={DarkTheme.primary} />
+              <Ionicons
+                name="add-circle-outline"
+                size={18}
+                color={DarkTheme.primary}
+              />
               <Text style={styles.addItemsText}>Add More Items</Text>
             </TouchableOpacity>
 
-            <View style={styles.offerHeaderRow}>
-              <Text style={styles.offerLabel}>Available Offers</Text>
-              <Text style={styles.offerViewAll}>View All {'>'}</Text>
-            </View>
+            <CouponSection
+              appliedCoupon={appliedCoupon}
+              onOpen={() => setCouponOpen(true)}
+            />
 
-            <View style={styles.couponRow}>
-              <TextInput
-                value={couponCode}
-                onChangeText={setCouponCode}
-                placeholder="Coupon Code"
-                placeholderTextColor="#4E665F"
-                style={styles.couponInput}
+            <View
+              style={{
+                marginTop: 12,
+                borderRadius: 16,
+                padding: 14,
+                backgroundColor: "#0E1A14",
+                borderWidth: 1,
+                borderColor: "#1E3327",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "800",
+                  color: "#4E7060",
+                  letterSpacing: 1,
+                  marginBottom: 6,
+                }}
+              >
+                BILL DETAILS
+              </Text>
+
+              <BreakRow label="Subtotal" value={bill.subtotal} />
+
+              {bill.discount > 0 && (
+                <BreakRow label="Discount" value={`-${bill.discount}`} />
+              )}
+
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: "#1E3327",
+                  marginVertical: 10,
+                }}
               />
-              <TouchableOpacity activeOpacity={0.9} style={styles.applyBtn}>
-                <Text style={styles.applyBtnText}>Apply</Text>
-              </TouchableOpacity>
+
+              <BreakRow label="Total Payable" value={bill.total} total />
             </View>
 
-            <View style={styles.appliedCard}>
-              <View>
-                <Text style={styles.appliedCode}>SAVE50</Text>
-                <Text style={styles.appliedDesc}>₹50 OFF on this order</Text>
-              </View>
-              <View style={styles.appliedPillInline}>
-                <Ionicons name="checkmark" size={13} color={DarkTheme.primary} />
-                <Text style={styles.appliedPillInlineText}>Applied</Text>
-              </View>
-            </View>
-
-            <BillCard bill={bill} showExpanded />
-
-            <TouchableOpacity style={styles.checkRow} onPress={() => setSameLocation((p) => !p)}>
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setSameLocation((p) => !p)}
+            >
               <Ionicons
                 name={sameLocation ? "checkbox" : "square-outline"}
                 size={18}
                 color={DarkTheme.primary}
               />
-              <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
+              <Text style={styles.checkLabel}>
+                Delivery Location Same As Pickup Location
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.checkRow} onPress={() => setHeavyItems((p) => !p)}>
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setHeavyItems((p) => !p)}
+            >
               <Ionicons
                 name={heavyItems ? "checkbox" : "square-outline"}
                 size={18}
                 color={DarkTheme.primary}
               />
-              <Text style={styles.checkLabel}>Includes Heavy Items (Rugs, Quilts, etc)</Text>
+              <Text style={styles.checkLabel}>
+                Includes Heavy Items (Rugs, Quilts, etc)
+              </Text>
             </TouchableOpacity>
 
             <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
@@ -1199,8 +1530,13 @@ export default function OrderTrackingScreen() {
             ))}
 
             {screenMode === "order-delivered" ? <RatingCard /> : null}
-            <BillCard bill={bill} showExpanded={screenMode === "order-delivered"} />
-            {screenMode === "order-delivered" ? <OrderDetailsCard details={details} /> : null}
+            <BillCard
+              bill={bill}
+              showExpanded={screenMode === "order-delivered"}
+            />
+            {screenMode === "order-delivered" ? (
+              <OrderDetailsCard details={details} />
+            ) : null}
             {screenMode === "order-delivered" ? <HelpCard /> : null}
 
             <View style={styles.secureRow}>
@@ -1209,9 +1545,21 @@ export default function OrderTrackingScreen() {
             </View>
 
             <View style={styles.paymentIconsRow}>
-              <MaterialCommunityIcons name="credit-card-outline" size={22} color="#64766F" />
-              <MaterialCommunityIcons name="bank-outline" size={22} color="#64766F" />
-              <MaterialCommunityIcons name="cellphone" size={22} color="#64766F" />
+              <MaterialCommunityIcons
+                name="credit-card-outline"
+                size={22}
+                color="#64766F"
+              />
+              <MaterialCommunityIcons
+                name="bank-outline"
+                size={22}
+                color="#64766F"
+              />
+              <MaterialCommunityIcons
+                name="cellphone"
+                size={22}
+                color="#64766F"
+              />
             </View>
           </>
         )}
@@ -1219,23 +1567,31 @@ export default function OrderTrackingScreen() {
         <View
           style={{
             height:
-              (screenMode === "pickup-scheduled" || screenMode === "pickup-assigned") && hasOrderItems
+              (screenMode === "pickup-scheduled" ||
+                screenMode === "pickup-assigned") &&
+              hasOrderItems
                 ? 90
-                : screenMode === "pickup-scheduled" || screenMode === "pickup-assigned"
+                : screenMode === "pickup-scheduled" ||
+                    screenMode === "pickup-assigned"
                   ? 30
                   : 120,
           }}
         />
       </ScrollView>
 
-      {screenMode === "order-delivered" ? <BottomCTA mode={screenMode} /> : null}
+      {screenMode === "order-delivered" ? (
+        <BottomCTA mode={screenMode} />
+      ) : null}
       {isEditableMode && (hasOrderItems || cart.items.length > 0) ? (
         <View style={styles.totalAmountBarWrap}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={handleUpdatePickup}
             disabled={isUpdatingPickup}
-            style={[styles.totalAmountBarBtn, { opacity: isUpdatingPickup ? 0.7 : 1 }]}
+            style={[
+              styles.totalAmountBarBtn,
+              { opacity: isUpdatingPickup ? 0.7 : 1 },
+            ]}
           >
             {isUpdatingPickup ? (
               <ActivityIndicator size="small" color="#05352A" />
@@ -1258,11 +1614,23 @@ export default function OrderTrackingScreen() {
       <ReschedulePickupModal
         visible={rescheduleModalVisible}
         loading={actionLoading}
-        initialDate={selectedPickup?.rescheduledDate || selectedPickup?.pickup_date}
+        initialDate={
+          selectedPickup?.rescheduledDate || selectedPickup?.pickup_date
+        }
         onClose={() => {
           if (!actionLoading) setRescheduleModalVisible(false);
         }}
         onConfirm={handleReschedulePickup}
+      />
+
+      <CouponCard
+        visible={couponOpen}
+        onClose={() => setCouponOpen(false)}
+        onApply={handleApplyCoupon}
+        appliedCode={appliedCoupon?.code || ""}
+        coupons={coupons}
+        loading={couponLoading}
+        subtotal={bill.subtotal}
       />
     </SafeAreaView>
   );
