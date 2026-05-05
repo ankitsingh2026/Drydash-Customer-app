@@ -1686,7 +1686,7 @@ export default function BookPickup() {
                       : confirmLoading
                         ? "Booking..."
                         : pickupType === "today"
-                          ? "Confirm Booking"
+                          ? "Book Without Pay"
                           : "Confirm Pickup"}
               </Text>
             </TouchableOpacity>

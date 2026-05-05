@@ -748,6 +748,7 @@ export default function OrderTrackingScreen() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [sameLocation, setSameLocation] = useState(true);
   const [heavyItems, setHeavyItems] = useState(false);
+  const [morningDelivery, setMorningDelivery] = useState(false);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -931,6 +932,7 @@ export default function OrderTrackingScreen() {
         finalItems,
         specialInstructions,
         heavyItems,
+        morningDelivery,
         appliedCoupon?.code || "",
       );
       cart.clear();
@@ -996,6 +998,13 @@ export default function OrderTrackingScreen() {
   useEffect(() => {
     setSpecialInstructions(selectedPickup?.note ?? "");
   }, [selectedPickup?._id, selectedPickup?.note]);
+
+  useEffect(() => {
+    if (selectedPickup) {
+      setHeavyItems(selectedPickup.isHeavy ?? false);
+      setMorningDelivery(selectedPickup.morning_delivery ?? false);
+    }
+  }, [selectedPickup?.isHeavy, selectedPickup?.morning_delivery]);
 
   const pickupStatus = String(selectedPickup?.PickupStatus ?? "")
     .trim()
@@ -1359,14 +1368,18 @@ export default function OrderTrackingScreen() {
                 size={16}
                 color={DarkTheme.primary}
               />
-
               <View>
                 <Text style={styles.deliveryText}>
-                  Delivery before 10 AM (No-contact delivery)
+                  {morningDelivery
+                    ? "Delivery before 10 AM (No-contact delivery)"
+                    : "Get your item delivered in day time (12 PM to 6 PM)"}
                 </Text>
-
-                <TouchableOpacity onPress={() => console.log("Clicked")}>
-                  <Text style={styles.deliveryLink}>Not A Morning Person?</Text>
+                <TouchableOpacity onPress={() => setMorningDelivery((p) => !p)}>
+                  <Text style={styles.deliveryLink}>
+                    {morningDelivery
+                      ? "Not a morning person?"
+                      : "Changed your mind?"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1493,6 +1506,28 @@ export default function OrderTrackingScreen() {
                 Includes Heavy Items (Rugs, Quilts, etc)
               </Text>
             </TouchableOpacity>
+
+            <View style={styles.deliveryRow}>
+              <Ionicons
+                name="flash-outline"
+                size={16}
+                color={DarkTheme.primary}
+              />
+              <View>
+                <Text style={styles.deliveryText}>
+                  {morningDelivery
+                    ? "Delivery before 10 AM (No-contact delivery)"
+                    : "Get your item delivered in day time (12 PM to 6 PM)"}
+                </Text>
+                <TouchableOpacity onPress={() => setMorningDelivery((p) => !p)}>
+                  <Text style={styles.deliveryLink}>
+                    {morningDelivery
+                      ? "Not a morning person?"
+                      : "Changed your mind?"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
 
             <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
             <TextInput

@@ -109,7 +109,7 @@ const SlotPicker: React.FC<Props> = ({
     }
 
     if (!visibleSlots.length) {
-         onSlotsUpdate?.([]); 
+        // onSlotsUpdate is called from useEffect below to avoid setState during render.
         return (
             <View style={styles.noSlotContainer}>
                 <View style={styles.noSlotCard}>

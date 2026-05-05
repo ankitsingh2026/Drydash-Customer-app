@@ -94,37 +94,37 @@ const isToday = (value?: string) => {
     );
 };
 const getSlotFromPickup = (pickup: PickupRecord) => {
-  if (pickup?.bookingId?.slotTime) {
-    return pickup.bookingId.slotTime;
-  }
-  if (pickup?.slot && pickup.slot !== "NA") {
-    return pickup.slot;
-  }
-  return "";
+    if (pickup?.bookingId?.slotTime) {
+        return pickup.bookingId.slotTime;
+    }
+    if (pickup?.slot && pickup.slot !== "NA") {
+        return pickup.slot;
+    }
+    return "";
 };
 
 const getSlotEndLabel = (pickup: PickupRecord) => {
-  const slot = getSlotFromPickup(pickup);
+    const slot = getSlotFromPickup(pickup);
 
-  if (!slot) return "6:00 PM";
+    if (!slot) return "6:00 PM";
 
-  const parts = slot.split("-");
-  if (parts.length < 2) return slot;
-  return parts[1].trim();
+    const parts = slot.split("-");
+    if (parts.length < 2) return slot;
+    return parts[1].trim();
 };
 
 const getScheduledTitle = (pickup: PickupRecord) => {
-  const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
-  const endLabel = getSlotEndLabel(pickup);
+    const scheduleDate = pickup.rescheduledDate || pickup.pickup_date;
+    const endLabel = getSlotEndLabel(pickup);
 
-  if (isToday(scheduleDate)) {
-    return `Pickup today before ${endLabel}`;
-  }
+    if (isToday(scheduleDate)) {
+        return `Pickup today before ${endLabel}`;
+    }
 
-  const dateLabel = formatDate(scheduleDate);
-  return dateLabel
-    ? `Pickup on ${dateLabel} before ${endLabel}`
-    : `Pickup before ${endLabel}`;
+    const dateLabel = formatDate(scheduleDate);
+    return dateLabel
+        ? `Pickup on ${dateLabel} before ${endLabel}`
+        : `Pickup before ${endLabel}`;
 };
 
 const initials = (name?: string) => {
@@ -349,7 +349,12 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
 
                 <View style={styles.riderLine}>
                     <RiderAvatar pickup={pickup} />
-                    <Text style={styles.softTitle}>{`${riderName} is on the way to pick up.`}</Text>
+                    <Text style={styles.softTitle}>
+                        <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
+                            {riderName}
+                        </Text>{" "}
+                        is on the way.
+                    </Text>
                 </View>
 
                 <TouchableOpacity
@@ -476,7 +481,12 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
 
                 <View style={styles.riderLine}>
                     <RiderAvatar pickup={pickup} />
-                    <Text style={styles.softTitle}>{`${riderName} is on the way to Deliver.`}</Text>
+                    <Text style={styles.softTitle}>
+                        <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
+                            {riderName}
+                        </Text>{" "}
+                        is on the way to deliver.
+                    </Text>
                 </View>
 
                 <Text style={styles.deliveryMetaText}>

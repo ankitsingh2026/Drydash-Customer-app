@@ -291,7 +291,12 @@ export default function HomeActiveOrderCard({
                     size={20}
                     color="#7DA79D"
                   />
-                  <Text style={styles.riderText}>{`${riderName} is on the way to Deliver.`}</Text>
+                  <Text style={styles.riderText}>
+                    <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
+                      {riderName}
+                    </Text>{" "}
+                    is on the way to deliver.
+                  </Text>
                 </View>
                 <Text style={styles.deliveryMetaText}>
                   {orderCode}
