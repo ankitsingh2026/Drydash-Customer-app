@@ -4,7 +4,7 @@ import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
 import { useAddress } from "@/context/AddressContext";
 import { useCart } from "@/context/CartContext";
-import { checkServiceAvailability } from "@/features/location/location.api";
+import { checkServiceAvailability, getFullServiceData } from "@/features/location/location.api";
 import {
   createOrderApi,
   createBookingApi,
@@ -124,12 +124,18 @@ export default function BookPickup() {
 
   // Use Address Context
   const {
-    selectedAddress,
+    selectedAddress: contextSelectedAddress,
     allAddresses,
     setSelectedAddress,
     refreshAddresses,
-    loading,
+    loading: addressLoading,
+    serviceData,
+    serviceLoading,
+    zoneData,
+    currentActiveSlot,
+    updateServiceData,
   } = useAddress();
+
   const [selectedPickupAddressId, setSelectedPickupAddressId] =
     useState<string>("");
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] =
@@ -207,6 +213,75 @@ export default function BookPickup() {
     "Subtotal =>>>:",
     cartSubtotal,
   );
+
+  const getActiveSlot = () => serviceData?.data?.activeSlot || null;
+
+  const getSlotInfo = () => {
+    const activeSlot = getActiveSlot();
+    if (!activeSlot) return null;
+
+    const startTimeStr = activeSlot.startTime || activeSlot.time?.split(" - ")[0] || "";
+    let hour = 0, minute = 0;
+    const match = startTimeStr.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
+    if (match) {
+      hour = parseInt(match[1]);
+      minute = match[2] ? parseInt(match[2]) : 0;
+      const period = match[3].toUpperCase();
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+    } else {
+      const simple = startTimeStr.match(/(\d+)(AM|PM)/i);
+      if (simple) {
+        hour = parseInt(simple[1]);
+        minute = 0;
+        const period = simple[2].toUpperCase();
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
+      } else return null;
+    }
+
+    const now = new Date();
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+
+    let slotDate = new Date();
+    slotDate.setHours(hour, minute, 0, 0);
+    if (slotDate < now) {
+      slotDate = new Date(tomorrow);
+      slotDate.setHours(hour, minute, 0, 0);
+    }
+
+    const isToday = slotDate.toDateString() === today.toDateString();
+    const isTomorrow = slotDate.toDateString() === tomorrow.toDateString();
+    let dayLabel = "";
+    if (isToday) dayLabel = "Today";
+    else if (isTomorrow) dayLabel = "Tomorrow";
+    else dayLabel = slotDate.toLocaleDateString("en-IN", { weekday: "short" });
+
+    let displayHour = hour % 12;
+    if (displayHour === 0) displayHour = 12;
+    const period = hour >= 12 ? "pm" : "am";
+    const timeString = `${displayHour} ${period}`;
+
+    return { dayLabel, time: timeString };
+  };
+
+  const getServiceColor = () => {
+    if (serviceLoading) return "#2FE6A6";
+    const activeSlot = getActiveSlot();
+    if (activeSlot) return "#2FE6A6";
+    if (serviceData?.serviceAvailable === false && !activeSlot) return "#FFA500";
+    return "#FF6B6B";
+  };
+
+  const getDisplayText = () => {
+    if (serviceLoading) return "Checking...";
+    const activeSlot = getActiveSlot();
+    if (!zoneData?.zoneFound) return "Not in your area";
+    if (!activeSlot) return "Currently unavailable";
+    return "Service unavailable";
+  };
   const calculateDiscount = (coupon: any, subtotal: number) => {
     if (!coupon) return 0;
 
@@ -304,15 +379,15 @@ export default function BookPickup() {
 
   // Set pickup address from selected address
   useEffect(() => {
-    if (selectedAddress && !selectedPickupAddressId) {
-      setSelectedPickupAddressId(selectedAddress.id);
+    if (contextSelectedAddress && !selectedPickupAddressId) {
+      setSelectedPickupAddressId(contextSelectedAddress.id);
     }
-  }, [selectedAddress]);
+  }, [contextSelectedAddress]);
 
   // Check service availability for selected address
   useEffect(() => {
     checkServiceForSelectedAddress();
-  }, [selectedPickupAddressId, selectedAddress]);
+  }, [selectedPickupAddressId, contextSelectedAddress]);
 
   useEffect(() => {
     let isMounted = true;
@@ -359,7 +434,7 @@ export default function BookPickup() {
       let lat: number | null = null;
       let lng: number | null = null;
 
-      const selectedAddr = selectedPickupAddr || selectedAddress;
+      const selectedAddr = selectedPickupAddr || contextSelectedAddress;
 
       if (selectedAddr) {
         if (selectedAddr.latitude && selectedAddr.longitude) {
@@ -376,25 +451,18 @@ export default function BookPickup() {
       }
 
       if (lat && lng) {
-        const serviceCheck = await checkServiceAvailability(lat, lng);
-        setIsServiceAvailable(serviceCheck.serviceAvailable);
-
-        // If service is not available, default to Schedule tab
-        if (!serviceCheck.serviceAvailable && pickupType === "today") {
-          // setPickupType("schedule");
-        }
+        // Use the full service data (same as TabBar)
+        const data = await getFullServiceData(lat, lng, true);
+        updateServiceData(data);   // make sure updateServiceData is destructured from useAddress
+        setIsServiceAvailable(data.serviceData?.serviceAvailable === true);
       } else {
+        updateServiceData({ coords: null, zoneData: { zoneFound: false }, serviceData: null });
         setIsServiceAvailable(false);
-        if (pickupType === "today") {
-          setPickupType("schedule");
-        }
       }
     } catch (error) {
       console.error("Service check error:", error);
+      updateServiceData({ coords: null, zoneData: { zoneFound: false }, serviceData: null });
       setIsServiceAvailable(false);
-      if (pickupType === "today") {
-        setPickupType("schedule");
-      }
     } finally {
       setCheckingService(false);
     }
@@ -942,13 +1010,19 @@ export default function BookPickup() {
     selectedSlotData &&
     selectedSlotData.availableCapacity === 0;
 
+  const hasActiveSlot = !!getActiveSlot();
+  const isAreaServiceable = zoneData?.zoneFound === true;
+  const isServiceAvailableForNow = isAreaServiceable && hasActiveSlot;
+  const isTodaySlotSelected = pickupType === "today" && selectedSlotIndex !== -1 && hasAvailableSlots;
+  const isScheduleSlotSelected = pickupType === "schedule" && slot !== -1;
+
   const bookingBlocked =
     confirmLoading ||
     checkingActiveBooking ||
     hasActiveBooking ||
-    noSlotsToday ||
-    selectedSlotFull;
-
+    !isServiceAvailableForNow ||
+    (pickupType === "today" && !isTodaySlotSelected) ||
+    (pickupType === "schedule" && !isScheduleSlotSelected);
   const bookingBlockedMessage =
     "You already have an active pickup or order. You can create new pickup once your current order is delivered.";
 
@@ -1117,7 +1191,7 @@ export default function BookPickup() {
         <View
           style={[
             s.header,
-            { paddingTop: insets.top, },
+            { paddingTop: insets.top },
           ]}
         >
           <View
@@ -1137,90 +1211,73 @@ export default function BookPickup() {
               <Ionicons name="chevron-back" size={24} color="#A7F3D0" />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={{ flex: 1 }}
-              activeOpacity={0.8}
-              onPress={() => {
-                setModalMode("pickup");
-                setModalVisible(true);
-              }}
-            >
-              {/* TOP ROW */}
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="location-outline" size={14} color="#A7F3D0" />
-                <Text
-                  style={{
-                    color: "#A7F3D0",
-                    fontSize: 12,
-                    marginLeft: 4,
-                  }}
-                >
-                  Delivery by
-                </Text>
-              </View>
+        <TouchableOpacity
+  style={{ flex: 1 }}
+  activeOpacity={0.8}
+  onPress={() => {
+    setModalMode("pickup");
+    setModalVisible(true);
+  }}
+>
+  {(() => {
+    const slotInfo = getSlotInfo();
+    if (slotInfo) {
+      // Case 1: Service available + active slot → show clock + label + time
+      return (
+        <View>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Ionicons name="time-outline" size={14} color="#A7F3D0" />
+            <Text style={{ color: "#A7F3D0", fontSize: 12, marginLeft: 4 }}>
+              Delivery by
+            </Text>
+          </View>
+          <Text style={{ color: "#2FE6A6", fontSize: 16, fontWeight: "800" }}>
+            {/* {slotInfo.dayLabel} at {slotInfo.time} */}
+            Tomorrow 10 AM
+          </Text>
+        </View>
+      );
+    }
+    // Cases 2 & 3: no active slot → show status text only
+    const displayText = getDisplayText(); // "Currently unavailable" or "Not in your area"
+    const color = getServiceColor();      // orange or red
+    return (
+      <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
+        {displayText}
+      </Text>
+    );
+  })()}
 
-              {/* MAIN TIME */}
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  fontSize: 15,
-                  fontWeight: "800",
-                  // marginTop: 2,
-                }}
-              >
-                Tomorrow 10am
-              </Text>
-
-              {/* ADDRESS (DYNAMIC SAME AS YOUR CODE) */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 2,
-                }}
-              >
-                {/* ✅ Dynamic Icon */}
-                <Ionicons
-                  name={
-                    (selectedPickupAddr?.label || selectedAddress?.label)
-                      ?.toLowerCase() === "home"
-                      ? "home-outline"
-                      : (selectedPickupAddr?.label || selectedAddress?.label)
-                        ?.toLowerCase() === "office"
-                        ? "business-outline"
-                        : "location-outline"
-                  }
-                  size={14}
-                  color="#9CA3AF"
-                  style={{ marginRight: 4 }}
-                />
-
-                {/* ✅ Address */}
-                <Text
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={{
-                    color: "#9CA3AF",
-                    fontSize: 12,
-                    maxWidth: "80%",
-                  }}
-                >
-                  {selectedPickupAddr
-                    ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
-                    : selectedAddress
-                      ? `${selectedAddress.line1 || selectedAddress.street}, ${selectedAddress.city}`
-                      : "Tap to choose pickup location"}
-                </Text>
-
-                {/* ✅ Dropdown icon */}
-                <Ionicons
-                  name="chevron-down"
-                  size={14}
-                  color="#A7F3D0"
-                  style={{ marginLeft: 4 }}
-                />
-              </View>
-            </TouchableOpacity>
+  {/* ADDRESS LINE (unchanged) */}
+  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+    <Ionicons
+      name={
+        (selectedPickupAddr?.label || contextSelectedAddress?.label)
+          ?.toLowerCase() === "home"
+          ? "home-outline"
+          : (selectedPickupAddr?.label || contextSelectedAddress?.label)
+            ?.toLowerCase() === "office"
+            ? "business-outline"
+            : "location-outline"
+      }
+      size={14}
+      color="#9CA3AF"
+      style={{ marginRight: 4 }}
+    />
+    <Text
+      numberOfLines={1}
+      ellipsizeMode="tail"
+      style={{ color: "#9CA3AF", fontSize: 12, maxWidth: "80%" }}
+    >
+      {selectedPickupAddr
+        ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+        : contextSelectedAddress
+          ? `${contextSelectedAddress.line1 || contextSelectedAddress.street}, ${contextSelectedAddress.city}`
+          : "Tap to choose pickup location"}
+    </Text>
+    <Ionicons name="chevron-down" size={14} color="#A7F3D0" style={{ marginLeft: 4 }} />
+  </View>
+</TouchableOpacity>
 
             {/* RIGHT SPACER */}
             <View style={{ width: 36 }} />
@@ -2970,24 +3027,4 @@ const ms = StyleSheet.create({
     zIndex: 1000,
   },
 
-  // warningBox: {
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   backgroundColor: "#FFA50015",
-  //   borderRadius: 12,
-  //   padding: 12,
-  //   marginTop: 10,
-  //   gap: 10,
-  //   borderWidth: 1,
-  //   borderColor: "#FFA50030",
-  // },
-  // warningText: {
-  //   flex: 1,
-  //   fontSize: 12,
-  //   color: "#FFA500",
-  //   fontWeight: "600",
-  // },
-  // tabDisabled: {
-  //   opacity: 0.6,
-  // },
 });

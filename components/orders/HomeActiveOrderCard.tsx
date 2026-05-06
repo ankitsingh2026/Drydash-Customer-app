@@ -6,13 +6,14 @@ import {
   razorpayPaymentInitiate,
   verifyRazorpayPayment,
 } from "@/features/payment/payment.api";
+import { removeDeliveredOrderApi } from "@/features/orders/orders.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
-  Modal,
+    Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -38,6 +39,7 @@ type HomeActiveOrderCardProps = {
   order: HomeOrder;
   onPress?: () => void;
   onClose?: () => void;
+  onRefresh?: () => void;
 };
 
 const ACCENT = "#29E6B0";
@@ -119,12 +121,14 @@ export default function HomeActiveOrderCard({
   order,
   onPress,
   onClose,
+  onRefresh,
 }: HomeActiveOrderCardProps) {
   const { user } = useAuth();
 
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [showPaymentWebView, setShowPaymentWebView] = useState(false);
   const [razorpayData, setRazorpayData] = useState<any>(null);
+  const [archiveLoading, setArchiveLoading] = useState(false);
 
   const meta = statusMeta(order.status);
   const amount = order.totalAmount ?? order.price ?? 0;
@@ -141,6 +145,34 @@ export default function HomeActiveOrderCard({
   const riderName = String(order.riderName ?? "").trim() || "Your rider";
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
+
+  const handleArchiveOrder = useCallback(async () => {
+    if (!order._id || !isDelivered) return;
+
+    try {
+      setArchiveLoading(true);
+      const res = await removeDeliveredOrderApi(order._id);
+      if (res.success) {
+        // Silent success - card auto-dismisses via onRefresh/onClose
+        onRefresh?.();
+        onClose?.();
+      } else {
+        console.error("Archive failed:", res.message);
+      }
+    } catch (error) {
+      console.error("Archive error:", error);
+    } finally {
+      setArchiveLoading(false);
+    }
+  }, [order._id, isDelivered, onRefresh, onClose]);
+
+  const handleClosePress = useCallback(async () => {
+    if (isDelivered && order._id) {
+      await handleArchiveOrder();
+    } else {
+      onClose?.();
+    }
+  }, [isDelivered, order._id, handleArchiveOrder, onClose]);
 
   const User: any = user?.user ? user?.user : user;
   const email = User?.email ?? "test@example.com";
@@ -238,13 +270,17 @@ export default function HomeActiveOrderCard({
       <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
         <View style={styles.card}>
           <View style={[{ backgroundColor: meta.accent }]} />
-          {meta.showClose && onClose ? (
+{meta.showClose && !archiveLoading ? (
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleClosePress}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.closeFloatingBtn}
             >
-              <Ionicons name="close" size={22} color="#88A79D" />
+              {archiveLoading ? (
+                <ActivityIndicator size="small" color="#88A79D" />
+              ) : (
+                <Ionicons name="close" size={22} color="#88A79D" />
+              )}
             </TouchableOpacity>
           ) : null}
           <View style={styles.inner}>
@@ -266,13 +302,17 @@ export default function HomeActiveOrderCard({
                     }
                   />
                 ) : null}
-                {meta.showClose && onClose ? (
+{meta.showClose && !archiveLoading ? (
                   <TouchableOpacity
-                    onPress={onClose}
+                    onPress={handleClosePress}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={styles.closeBtn}
                   >
-                    <Ionicons name="close" size={18} color="#31423D" />
+                    {archiveLoading ? (
+                      <ActivityIndicator size="small" color="#31423D" />
+                    ) : (
+                      <Ionicons name="close" size={18} color="#31423D" />
+                    )}
                   </TouchableOpacity>
                 ) : null}
               </View>

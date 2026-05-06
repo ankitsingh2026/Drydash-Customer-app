@@ -74,7 +74,7 @@ export const createOrderApi = async (orderDetails: CreatePickupRequest) => {
 export const getAddressApi = async (id: any) => {
   console.log("i am calleddddd--->>", id);
   const { data } = await apiClient.get(`/v1/addresses?customerid=${id}`);
-  console.log("this is the dataa--->>>>>", data);
+  // console.log("this is the dataa--->>>>>", data);
   return data;
 };
 
@@ -118,5 +118,12 @@ export const getSingleOrderDetailsApi = async (orderId: any) => {
   const { data } = await oldApiClient.get(
     `/app/getCustomerSingleOrderDetails/${orderId}`,
   );
+  return data;
+};
+
+export const removeDeliveredOrderApi = async (id: string) => {
+  console.log("Archiving delivered order id:", id);
+  const { data } = await oldApiClient.patch(`/app/removeDeliveredOrder/${id}`);
+  console.log("Archive response:", data); 
   return data;
 };

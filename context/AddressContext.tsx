@@ -69,7 +69,7 @@ const [loading, setLoading] = useState(true);
     try {
       console.log("Fetching addresses for authId:", authId);
       const data = await getAddressApi(authId);
-      console.log("Address API response:", data);
+      // console.log("Address API response:", data);
 
       const list = Array.isArray(data?.results) ? data.results : [];
       const mapped = list.map((a: any) => ({
@@ -86,7 +86,7 @@ const [loading, setLoading] = useState(true);
         isDefault: a.isDefault || false,
       }));
 
-      console.log("Mapped addresses:", mapped);
+      // console.log("Mapped addresses:", mapped);
       setAllAddresses(mapped);
 
       // Set default address if none selected

@@ -303,7 +303,7 @@ export default function Home() {
       if (type === "pickup" && data) {
         setActiveType("pickup");
         setActiveBooking(data);
-      } else if (type === "order" && data) {
+      } else if (type === "order" && data && !data.isArchived) {
         setActiveType("order");
         setActiveBooking(data);
       } else {
@@ -847,6 +847,7 @@ export default function Home() {
                   setActiveType("none");
                   setActiveBooking(null);
                 }}
+                onRefresh={refreshBooking}
               />
             </View>
           ) : bookingLoading ? null : (

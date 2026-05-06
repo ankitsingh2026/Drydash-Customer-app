@@ -152,53 +152,67 @@ export const getLocationDetails = async (latitude, longitude) => {
   }
 };
 
-// 👇 NEW: Full service data for slots + morningDelivery
-let serviceCache: {data: any, timestamp: number} | null = null;
+// services/location.api.ts (modify getFullServiceData)
+
+type CacheEntry = {
+  data: any;
+  timestamp: number;
+};
+
+const serviceCache = new Map<string, CacheEntry>(); // key: "lat,lng"
 const CACHE_DURATION = 30000; // 30s
 
-export const getFullServiceData = async (latitude: number, longitude: number) => {
-  // Cache check
-  if (serviceCache && Date.now() - serviceCache.timestamp < CACHE_DURATION) {
-    return serviceCache.data;
+export const getFullServiceData = async (
+  latitude: number,
+  longitude: number,
+  forceRefresh = false
+) => {
+  const cacheKey = `${latitude},${longitude}`;
+  const cached = serviceCache.get(cacheKey);
+
+  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log("📦 Returning cached data for", cacheKey);
+    return cached.data;
   }
 
   try {
     console.log("🔄 Fetching full service data for", latitude, longitude);
-    
+
     // 1. Resolve zone
     const zoneRes = await oldApiClient.get(
       `v1/slots/location/resolve?lat=${latitude}&lng=${longitude}`
     );
     const zoneData = zoneRes.data;
-    
+    console.log("Zone data====>:", zoneData);
+
     if (!zoneData.zoneFound) {
-      const result = { coords: {lat: latitude, lng: longitude}, zoneData, serviceData: null };
-      serviceCache = { data: result, timestamp: Date.now() };
+      const result = { coords: { lat: latitude, lng: longitude }, zoneData, serviceData: null };
+      serviceCache.set(cacheKey, { data: result, timestamp: Date.now() });
       return result;
     }
-    
+
     // 2. Check service + slots
     const serviceRes = await oldApiClient.post(`v1/slots/service/check`, {
-      zoneId: zoneData.zoneId
+      zoneId: zoneData.zoneId,
     });
     const serviceData = serviceRes.data;
-    
-    const result = { 
-      coords: {lat: latitude, lng: longitude}, 
-      zoneData, 
-      serviceData 
+    console.log("Service data====>:", serviceData);
+
+    const result = {
+      coords: { lat: latitude, lng: longitude },
+      zoneData,
+      serviceData,
     };
-    
-    serviceCache = { data: result, timestamp: Date.now() };
-    console.log("✅ Full service data cached:", serviceData.serviceAvailable ? "Available" : "Unavailable");
+
+    serviceCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    console.log("✅ Full service data cached for", cacheKey);
     return result;
   } catch (error) {
     console.error("❌ Full service error:", error);
-    return { 
-      coords: {lat: latitude, lng: longitude}, 
-      zoneData: null, 
-      serviceData: null 
+    return {
+      coords: { lat: latitude, lng: longitude },
+      zoneData: null,
+      serviceData: null,
     };
   }
 };
-// 👆 NEW

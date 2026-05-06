@@ -1,11 +1,10 @@
 import LocationPickerModal from "@/components/LocationPickerModal";
 import { useAddress } from "@/context/AddressContext";
-import { checkServiceAvailability, getFullServiceData } from "@/features/location/location.api";
+import { getFullServiceData } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
-
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { Bell, MousePointer2 } from "lucide-react-native";
+import { Bell } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,7 +19,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
 
-
 type TabBarProps = {
   onOpenNotifications?: () => void;
   onWalletPress?: () => void;
@@ -30,7 +28,6 @@ type TabBarProps = {
 export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-
   const { unreadCount, refreshNotifications } = useNotifications();
   const isFetchingRef = useRef(false);
 
@@ -40,41 +37,58 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     setSelectedAddress,
     refreshAddresses,
     loading,
-    serviceData,
+    serviceData,      // API response from /service/check
     serviceLoading,
-    currentActiveSlot,
+    zoneData,         // separate zone info from context
     updateServiceData,
   } = useAddress();
 
-
   const [locationText, setLocationText] = useState("Fetching location...");
-  const [loadingLoc, setLoadingLoc] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const [currentCoords, setCurrentCoords] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-
-
+  // Fetch service data whenever selectedAddress changes
   useEffect(() => {
-    console.log("Selected address changed:", selectedAddress);
+    if (!selectedAddress) return;
 
-    if (selectedAddress) {
+    const fetchData = async () => {
+      console.log("Selected address changed:", selectedAddress);
       setLocationText(`${selectedAddress.line1}, ${selectedAddress.city}`);
 
-      fetchAddressCoordinates(selectedAddress).then((coords) => {
-        if (coords) setCurrentCoords(coords);
-      });
-    }
+      let coords = null;
+      if (selectedAddress.latitude && selectedAddress.longitude) {
+        coords = { lat: selectedAddress.latitude, lng: selectedAddress.longitude };
+      } else {
+        try {
+          const fullAddress = `${selectedAddress.line1}, ${selectedAddress.city}, ${selectedAddress.state}`;
+          const geo = await Location.geocodeAsync(fullAddress);
+          if (geo && geo.length > 0) {
+            coords = { lat: geo[0].latitude, lng: geo[0].longitude };
+          }
+        } catch (err) {
+          console.error("Geocoding error:", err);
+        }
+      }
+
+      if (coords) {
+        await fetchFullServiceData(coords.lat, coords.lng);
+      } else {
+        // No coordinates – treat as not in area
+        updateServiceData({
+          coords: null,
+          zoneData: { zoneFound: false },
+          serviceData: null,
+        });
+      }
+    };
+
+    fetchData();
   }, [selectedAddress]);
 
+  // Handle address deletion
   useEffect(() => {
     if (selectedAddress) {
       const exists = allAddresses.find(a => a.id === selectedAddress.id);
-
       if (!exists) {
-        // deleted address → reset
         if (allAddresses.length > 0) {
           setSelectedAddress(allAddresses[0]);
         } else {
@@ -85,39 +99,17 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     }
   }, [allAddresses]);
 
-  useEffect(() => {
-    if (currentCoords && !serviceLoading) {
-      fetchFullServiceData(currentCoords.lat, currentCoords.lng);
-    }
-  }, [currentCoords]);
-
-
   const fetchFullServiceData = async (lat: number, lng: number) => {
     try {
-      updateServiceData(await getFullServiceData(lat, lng));
+      const data = await getFullServiceData(lat, lng, true); // force refresh
+      updateServiceData(data);
     } catch (error) {
       console.error("Full service data error:", error);
-      updateServiceData({ coords: { lat, lng }, zoneData: null, serviceData: null });
-    }
-  };
-
-
-  const fetchAddressCoordinates = async (address: any) => {
-    try {
-      if (address.latitude && address.longitude) {
-        return { lat: address.latitude, lng: address.longitude };
-      }
-
-      const fullAddress = `${address.line1}, ${address.city}, ${address.state}`;
-      const geo = await Location.geocodeAsync(fullAddress);
-
-      if (geo && geo.length > 0) {
-        return { lat: geo[0].latitude, lng: geo[0].longitude };
-      }
-      return null;
-    } catch (error) {
-      console.error("Geocoding error:", error);
-      return null;
+      updateServiceData({
+        coords: { lat, lng },
+        zoneData: null,
+        serviceData: null,
+      });
     }
   };
 
@@ -127,45 +119,17 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     shouldSelect = true
   ) => {
     setModalVisible(false);
-
-    if (address) {
-      console.log("Address selected in modal:", address);
-      if (shouldSelect) {
-        setSelectedAddress(address);
-      }
-      setLocationText(label);
-
-      const coords = await fetchAddressCoordinates(address);
-      if (coords) {
-        setCurrentCoords(coords);
-
-        const geo = await Location.reverseGeocodeAsync({
-          latitude: coords.lat,
-          longitude: coords.lng,
-        });
-
-        if (geo?.length > 0) {
-          const g = geo[0];
-          const city = g.city || g.subregion || "";
-          const area = g.district || g.name || "";
-          setLocationText(`${area}, ${city}`);
-        }
-      }
-    } else {
-      // Current location path from the location modal.
-      if (label) {
-        setLocationText(label);
-      }
+    if (address && shouldSelect) {
+      setSelectedAddress(address);
     }
+    if (label) setLocationText(label);
   };
 
   const handleBellPress = async () => {
     if (isFetchingRef.current) return;
-
     isFetchingRef.current = true;
-
     try {
-      await refreshNotifications(); // fetch first
+      await refreshNotifications();
       onOpenNotifications?.();
     } catch (e) {
       console.error("Notification refresh failed", e);
@@ -174,55 +138,99 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     }
   };
 
-  const getServiceColor = () => {
-    if (serviceLoading) return "#2FE6A6";
-    if (serviceData?.serviceAvailable) return "#2FE6A6";
-    if (!serviceData?.zoneData?.zoneFound) return "#FFA500";
-    return "#FF6B6B";
+  // Helper to get active slot from serviceData (API response)
+  const getActiveSlot = () => {
+    return serviceData?.data?.activeSlot || null;
   };
 
+  // Determine display color
+  const getServiceColor = () => {
+    if (serviceLoading) return "#2FE6A6";
+    const activeSlot = getActiveSlot();
+    if (activeSlot) return "#2FE6A6";
+    if (serviceData?.serviceAvailable === false && !activeSlot)
+      return "#FFA500";
+    return "#FF6B6B";          
+  };
+
+  // Get text for non‑slot cases
   const getDisplayText = () => {
     if (serviceLoading) return "Checking...";
-    if (currentActiveSlot) return `Next: ${currentActiveSlot}`;
-    if (serviceData?.serviceAvailable) return "24 Hours";
-    if (!serviceData?.zoneData?.zoneFound) return "Not in your area";
-    if (!serviceData?.serviceAvailable) return "Currently closed";
+    const activeSlot = getActiveSlot();
+
+    // Zone not found → not in your area
+    if (!zoneData?.zoneFound) {
+      return "Not in your area";
+    }
+
+    // Zone found but no active slot → currently unavailable
+    if (!activeSlot) {
+      return "Currently unavailable";
+    }
+
     return "Service unavailable";
   };
 
+  // Format slot time and day (Today/Tomorrow)
   const getSlotInfo = () => {
-    if (!currentActiveSlot) return null;
+    const activeSlot = getActiveSlot();
+    if (!activeSlot) return null;
 
-    const slotDate = new Date(currentActiveSlot);
+    const startTimeStr = activeSlot.startTime || activeSlot.time?.split(" - ")[0] || "";
+    let hour = 0,
+      minute = 0;
+    const match = startTimeStr.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
+    if (match) {
+      hour = parseInt(match[1]);
+      minute = match[2] ? parseInt(match[2]) : 0;
+      const period = match[3].toUpperCase();
+      if (period === "PM" && hour !== 12) hour += 12;
+      if (period === "AM" && hour === 12) hour = 0;
+    } else {
+      const simple = startTimeStr.match(/(\d+)(AM|PM)/i);
+      if (simple) {
+        hour = parseInt(simple[1]);
+        minute = 0;
+        const period = simple[2].toUpperCase();
+        if (period === "PM" && hour !== 12) hour += 12;
+        if (period === "AM" && hour === 12) hour = 0;
+      } else {
+        return null;
+      }
+    }
 
+    const now = new Date();
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
 
-    const isToday =
-      slotDate.toDateString() === today.toDateString();
+    let slotDate = new Date();
+    slotDate.setHours(hour, minute, 0, 0);
 
-    const isTomorrow =
-      slotDate.toDateString() === tomorrow.toDateString();
+    // If slot time already passed today, it's for tomorrow
+    if (slotDate < now) {
+      slotDate = new Date(tomorrow);
+      slotDate.setHours(hour, minute, 0, 0);
+    }
 
-    let dayLabel = slotDate.toLocaleDateString("en-IN", {
-      weekday: "short",
-      day: "numeric",
-    });
+    const isToday = slotDate.toDateString() === today.toDateString();
+    const isTomorrow = slotDate.toDateString() === tomorrow.toDateString();
 
+    let dayLabel = "";
     if (isToday) dayLabel = "Today";
-    if (isTomorrow) dayLabel = "Tomorrow";
+    else if (isTomorrow) dayLabel = "Tomorrow";
+    else dayLabel = slotDate.toLocaleDateString("en-IN", { weekday: "short" });
 
-    const time = slotDate.toLocaleTimeString("en-IN", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    let displayHour = hour % 12;
+    if (displayHour === 0) displayHour = 12;
+    const period = hour >= 12 ? "pm" : "am";
+    const timeString = `${displayHour} ${period}`;
 
-    return { dayLabel, time };
+    return { dayLabel, time: timeString };
   };
+
   const slotInfo = getSlotInfo();
-
-
+  console.log("Slot info====>>>:", slotInfo);
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 6 }, style]}>
@@ -236,51 +244,41 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       <View style={[styles.container, { paddingTop: insets.top + 6 }]}>
         <View style={styles.row}>
           <View style={styles.left}>
-            <View style={[styles.serviceRow, { shadowColor: getServiceColor(), shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }]}>
+            <View
+              style={[
+                styles.serviceRow,
+                {
+                  shadowColor: getServiceColor(),
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 4,
+                },
+              ]}
+            >
               {serviceLoading ? (
                 <ActivityIndicator size="small" color="#2FE6A6" />
-              ) : (
-                <View
-                  style={[
-                    styles.serviceRow,
-                    {
-                      shadowColor: getServiceColor(),
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 4,
-                    },
-                  ]}
-                >
-                  {serviceLoading ? (
-                    <ActivityIndicator size="small" color="#2FE6A6" />
-                  ) : slotInfo ? (
-                    <View>
-                      {/* ✅ Row for icon + label */}
-                      <View style={styles.deliveryHeaderRow}>
-                        <Ionicons
-                          name="location-outline"
-                          size={14}
-                          color="#A7F3D0"
-                          style={{ marginRight: 4 }}
-                        />
-                        <Text style={styles.deliveryLabel}>Delivery by</Text>
-                      </View>
-
-                      {/* ✅ Second line */}
-                      <Text style={styles.deliveryTime}>
-                        Tomorrow{" "}
-                        <Text style={styles.deliverySubTime}>10 am</Text>
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={[styles.serviceText, { color: getServiceColor() }]}>
-                      {getDisplayText()}
-                    </Text>
-                  )}
+              ) : slotInfo ? (
+                <View>
+                  <View style={styles.deliveryHeaderRow}>
+                    <Ionicons
+                      name="time-outline"
+                      size={14}
+                      color="#A7F3D0"
+                      style={{ marginRight: 4 }}
+                    />
+                    <Text style={styles.deliveryLabel}>Delivery by</Text>
+                  </View>
+                  <Text style={styles.deliveryTime}>
+                    Tomorrow 
+                    <Text style={styles.deliverySubTime}> 10 AM</Text>
+                  </Text>
                 </View>
+              ) : (
+                <Text style={[styles.serviceText, { color: getServiceColor() }]}>
+                  {getDisplayText()}
+                </Text>
               )}
             </View>
-
 
             <TouchableOpacity
               style={styles.locationRow}
@@ -292,8 +290,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                   selectedAddress?.label?.toLowerCase() === "home"
                     ? "home-outline"
                     : selectedAddress?.label?.toLowerCase() === "office"
-                      ? "business-outline"
-                      : "location-outline"
+                    ? "business-outline"
+                    : "location-outline"
                 }
                 size={16}
                 color={getServiceColor()}
@@ -317,7 +315,6 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             style={styles.iconBtn}
           >
             <Bell size={18} color="#E6FFF7" />
-
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -334,7 +331,10 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         savedAddresses={allAddresses}
         selectedId={selectedAddress?.id || null}
         onSelect={handleAddressSelect}
-        onClose={() => { setModalVisible(false); refreshAddresses(); }}
+        onClose={() => {
+          setModalVisible(false);
+          refreshAddresses();
+        }}
         onAddNewAddress={() => {
           router.push("/select-address-location");
         }}
@@ -360,10 +360,9 @@ const styles = StyleSheet.create({
   serviceRow: {
     flexDirection: "row",
     alignItems: "center",
-    // marginBottom: 4,
   },
   serviceText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
@@ -413,16 +412,14 @@ const styles = StyleSheet.create({
     color: "#8FB3A8",
     fontWeight: "500",
   },
-
   deliveryTime: {
-    fontSize: 18,
-    color: "#E6FFF7",
+    fontSize: 16,
+    color: "#2FE6A6",
     fontWeight: "600",
   },
-
   deliverySubTime: {
     fontSize: 14,
-    color: "#E6FFF7",
+    color: "#2FE6A6",
     fontWeight: "600",
   },
   deliveryHeaderRow: {
