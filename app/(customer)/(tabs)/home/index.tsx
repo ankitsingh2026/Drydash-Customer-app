@@ -35,6 +35,8 @@ import {
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";
+import { useAddress } from "@/context/AddressContext";
+import UnserviceableArea from "@/components/UnserviceableArea";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -194,6 +196,8 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  // inside the component
+  const { zoneData, serviceData, serviceLoading } = useAddress();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -292,7 +296,7 @@ export default function Home() {
       setBookingLoading(false);
       return;
     }
-    const phoneWithCountryCode =  `91${phone}`;
+    const phoneWithCountryCode = `91${phone}`;
 
     try {
       setBookingLoading(true);
@@ -591,6 +595,25 @@ export default function Home() {
   );
 
   if (loading) return <AppLoader />;
+
+  if (!serviceLoading && zoneData?.zoneFound === false) {
+    return (
+      <>
+        <TabBar
+          onOpenNotifications={() => setOpen(true)}
+          onWalletPress={() => router.push("/(customer)/wallet")}
+          style={{
+            backgroundColor: theme.card,
+            borderBottomColor: theme.border,
+          }}
+        />
+        <StatusBar style="dark" backgroundColor={theme.background} translucent={false} />
+        <UnserviceableArea />
+        {/* ✅ Add notifications sheet */}
+        <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+      </>
+    );
+  }
 
   const PRIMARY = theme.primary;
 

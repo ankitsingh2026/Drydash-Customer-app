@@ -863,7 +863,7 @@ export default function OrderTrackingScreen() {
       setRescheduleModalVisible(false);
       Alert.alert("Pickup rescheduled", "Your pickup date has been updated.");
       router.replace({
-        pathname: "/order-tracking",
+        pathname: "/(customer)/order-tracking",
         params: { pickupId: selectedPickup._id },
       });
       setReloadKey((prev) => prev + 1);
@@ -941,7 +941,7 @@ export default function OrderTrackingScreen() {
         "Your pickup has been updated successfully.",
       );
       router.replace({
-        pathname: "/order-tracking",
+        pathname: "/(customer)/(tabs)/home",
         params: { pickupId: selectedPickup._id },
       });
       setReloadKey((prev) => prev + 1);
@@ -1617,7 +1617,7 @@ export default function OrderTrackingScreen() {
       {screenMode === "order-delivered" ? (
         <BottomCTA mode={screenMode} />
       ) : null}
-      {isEditableMode && (hasOrderItems || cart.items.length > 0) ? (
+      {isEditableMode  ? (
         <View style={styles.totalAmountBarWrap}>
           <TouchableOpacity
             activeOpacity={0.9}

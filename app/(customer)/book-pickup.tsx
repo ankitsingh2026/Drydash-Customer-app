@@ -1187,6 +1187,8 @@ export default function BookPickup() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 75 + insets.top : 0}
       >
+        <View style={ms.bgTopGlow} />
+        <View style={ms.bgBottomGlow} />
         {/* ── FIXED HEADER ── */}
         <View
           style={[
@@ -1211,73 +1213,73 @@ export default function BookPickup() {
               <Ionicons name="chevron-back" size={24} color="#A7F3D0" />
             </TouchableOpacity>
 
-        <TouchableOpacity
-  style={{ flex: 1 }}
-  activeOpacity={0.8}
-  onPress={() => {
-    setModalMode("pickup");
-    setModalVisible(true);
-  }}
->
-  {(() => {
-    const slotInfo = getSlotInfo();
-    if (slotInfo) {
-      // Case 1: Service available + active slot → show clock + label + time
-      return (
-        <View>
-          <View style={{ flexDirection: "row", alignItems: "center" }}>
-            <Ionicons name="time-outline" size={14} color="#A7F3D0" />
-            <Text style={{ color: "#A7F3D0", fontSize: 12, marginLeft: 4 }}>
-              Delivery by
-            </Text>
-          </View>
-          <Text style={{ color: "#2FE6A6", fontSize: 16, fontWeight: "800" }}>
-            {/* {slotInfo.dayLabel} at {slotInfo.time} */}
-            Tomorrow 10 AM
-          </Text>
-        </View>
-      );
-    }
-    // Cases 2 & 3: no active slot → show status text only
-    const displayText = getDisplayText(); // "Currently unavailable" or "Not in your area"
-    const color = getServiceColor();      // orange or red
-    return (
-      <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
-        {displayText}
-      </Text>
-    );
-  })()}
+            <TouchableOpacity
+              style={{ flex: 1 }}
+              activeOpacity={0.8}
+              onPress={() => {
+                setModalMode("pickup");
+                setModalVisible(true);
+              }}
+            >
+              {(() => {
+                const slotInfo = getSlotInfo();
+                if (slotInfo) {
+                  // Case 1: Service available + active slot → show clock + label + time
+                  return (
+                    <View>
+                      <View style={{ flexDirection: "row", alignItems: "center" }}>
+                        <Ionicons name="time-outline" size={14} color="#A7F3D0" />
+                        <Text style={{ color: "#A7F3D0", fontSize: 12, marginLeft: 4 }}>
+                          Delivery by
+                        </Text>
+                      </View>
+                      <Text style={{ color: "#2FE6A6", fontSize: 16, fontWeight: "800" }}>
+                        {/* {slotInfo.dayLabel} at {slotInfo.time} */}
+                        Tomorrow 10 AM
+                      </Text>
+                    </View>
+                  );
+                }
+                // Cases 2 & 3: no active slot → show status text only
+                const displayText = getDisplayText(); // "Currently unavailable" or "Not in your area"
+                const color = getServiceColor();      // orange or red
+                return (
+                  <Text style={{ color, fontSize: 16, fontWeight: "800" }}>
+                    {displayText}
+                  </Text>
+                );
+              })()}
 
-  {/* ADDRESS LINE (unchanged) */}
-  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
-    <Ionicons
-      name={
-        (selectedPickupAddr?.label || contextSelectedAddress?.label)
-          ?.toLowerCase() === "home"
-          ? "home-outline"
-          : (selectedPickupAddr?.label || contextSelectedAddress?.label)
-            ?.toLowerCase() === "office"
-            ? "business-outline"
-            : "location-outline"
-      }
-      size={14}
-      color="#9CA3AF"
-      style={{ marginRight: 4 }}
-    />
-    <Text
-      numberOfLines={1}
-      ellipsizeMode="tail"
-      style={{ color: "#9CA3AF", fontSize: 12, maxWidth: "80%" }}
-    >
-      {selectedPickupAddr
-        ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
-        : contextSelectedAddress
-          ? `${contextSelectedAddress.line1 || contextSelectedAddress.street}, ${contextSelectedAddress.city}`
-          : "Tap to choose pickup location"}
-    </Text>
-    <Ionicons name="chevron-down" size={14} color="#A7F3D0" style={{ marginLeft: 4 }} />
-  </View>
-</TouchableOpacity>
+              {/* ADDRESS LINE (unchanged) */}
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+                <Ionicons
+                  name={
+                    (selectedPickupAddr?.label || contextSelectedAddress?.label)
+                      ?.toLowerCase() === "home"
+                      ? "home-outline"
+                      : (selectedPickupAddr?.label || contextSelectedAddress?.label)
+                        ?.toLowerCase() === "office"
+                        ? "business-outline"
+                        : "location-outline"
+                  }
+                  size={14}
+                  color="#9CA3AF"
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{ color: "#9CA3AF", fontSize: 12, maxWidth: "80%" }}
+                >
+                  {selectedPickupAddr
+                    ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+                    : contextSelectedAddress
+                      ? `${contextSelectedAddress.line1 || contextSelectedAddress.street}, ${contextSelectedAddress.city}`
+                      : "Tap to choose pickup location"}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color="#A7F3D0" style={{ marginLeft: 4 }} />
+              </View>
+            </TouchableOpacity>
 
             {/* RIGHT SPACER */}
             <View style={{ width: 36 }} />
@@ -1291,7 +1293,7 @@ export default function BookPickup() {
           style={{ flex: 1 }}
           contentContainerStyle={[
             s.scrollContent,
-            { paddingTop: 60 + insets.top },
+            // { paddingTop: 60 + insets.top },
           ]}
         >
           {/* ── PICKUP SCHEDULE TABS ── */}
@@ -2437,7 +2439,7 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
 
   header: {
-    position: "absolute",
+    // position: "absolute",
     top: 0,
     left: 0,
     right: 0,
@@ -2446,7 +2448,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    // paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#0F2318",
   },
@@ -3025,6 +3027,25 @@ const ms = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#1E3327",
     zIndex: 1000,
+  },
+
+  bgTopGlow: {
+    position: "absolute",
+    top: -140,
+    left: -100,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: "rgba(0, 225, 162, 0.06)",
+  },
+  bgBottomGlow: {
+    position: "absolute",
+    bottom: 50,
+    right: -120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(0, 225, 162, 0.04)",
   },
 
 });

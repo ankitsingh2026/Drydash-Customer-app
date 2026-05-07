@@ -749,8 +749,8 @@ export default function PickupStatusCard({
                 return <DeliveryPickupCard pickup={pickup} onClose={onClose} />;
             case "completed":
                 return <CompletedPickupCard pickup={pickup} onClose={onClose} />;
-            case "cancelled":
-                return <CancelledPickupCard pickup={pickup} onClose={onClose} />;
+            // case "cancelled":
+            //     return <CancelledPickupCard pickup={pickup} onClose={onClose} />;
             case "scheduled":
             default:
                 return (
