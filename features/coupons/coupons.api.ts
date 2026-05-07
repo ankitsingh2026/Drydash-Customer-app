@@ -5,15 +5,14 @@ export const fetchAllValidCoupons = async (cartAmount: any, category: any) => {
     console.log("i am called ---->>>", cartAmount, category);
     const res = await oldApiClient.get("/v1/customercoupons", {
       params: {
-        cartAmount,
-        category,
+        cartAmount
       },
     });
 
-    // console.log("this is the dataaaa====>>>>>>>>>", res?.data);
+    console.log("this is the dataaaa====>>>>>>>>>", res?.data);
     return res?.data;
   } catch (error) {
-    console.log("this is the error==>>", error);
+    console.log("this is the error in the coupons==>>", error);
     throw error;
   }
 };
