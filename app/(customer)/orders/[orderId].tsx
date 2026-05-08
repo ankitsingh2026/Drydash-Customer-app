@@ -127,20 +127,20 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
 
   const normalizedItems: OrderItem[] = Array.isArray(raw.items)
     ? raw.items.map((item: any, index: number) => {
-        const typeLabel = toSafeText(item?.type);
-        return {
-          heading: toSafeText(
-            item?.heading ?? item?.label ?? item?.name,
-            typeLabel || `Item ${index + 1}`,
-          ),
-          quantity: Math.max(1, toSafeNumber(item?.quantity, 1)),
-          price: toSafeNumber(item?.price, 0),
-          unit: toSafeText(item?.unit),
-          type: typeLabel,
-          category: toSafeText(item?.category),
-          imageUrl: item?.itemId?.images?.[0]?.url || null,
-        };
-      })
+      const typeLabel = toSafeText(item?.type);
+      return {
+        heading: toSafeText(
+          item?.heading ?? item?.label ?? item?.name,
+          typeLabel || `Item ${index + 1}`,
+        ),
+        quantity: Math.max(1, toSafeNumber(item?.quantity, 1)),
+        price: toSafeNumber(item?.price, 0),
+        unit: toSafeText(item?.unit),
+        type: typeLabel,
+        category: toSafeText(item?.category),
+        imageUrl: item?.itemId?.images?.[0]?.url || null,
+      };
+    })
     : [];
 
   return {
@@ -204,8 +204,8 @@ export default function OrderReceipt() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [isPaymentDone, setIsPaymentDone] = useState(false);
   const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<
-  "morning" | "daytime" | null
->(null);
+    "morning" | "daytime" | null
+  >(null);
 
   if (!user) return null;
 
@@ -246,15 +246,15 @@ export default function OrderReceipt() {
       const data = await getSingleOrderDetailsApi(orderId);
 
 
-      console.log("this is the data==>>",data)
+      console.log("this is the data==>>", data)
 
       let rawOrderDetails =
         data?.order_details ||
         data?.order ||
         (Array.isArray(data?.orders)
           ? data.orders.find(
-              (row: any) => row?.order_id === orderId || row?._id === orderId,
-            ) || data.orders[0]
+            (row: any) => row?.order_id === orderId || row?._id === orderId,
+          ) || data.orders[0]
           : null);
 
       if (!rawOrderDetails) {
@@ -338,7 +338,7 @@ export default function OrderReceipt() {
         const limitCheck =
           typeof coupon?.totalLimit === "number"
             ? (coupon.usedCount || 0) + (coupon.reservedCount || 0) <
-              coupon.totalLimit
+            coupon.totalLimit
             : true;
 
         return (
@@ -351,7 +351,7 @@ export default function OrderReceipt() {
         );
       });
 
-            console.log("this is the sorted filteredCoupons",filteredCoupons)
+      console.log("this is the sorted filteredCoupons", filteredCoupons)
 
       const sortedCoupons = filteredCoupons.sort((a, b) => {
         return (
@@ -908,56 +908,86 @@ export default function OrderReceipt() {
             </TouchableOpacity> */}
 
             {/* Delivery options - Delivered by times */}
-<Text style={[s.offersLabel, { paddingHorizontal: 25, marginTop: 20, marginBottom: 8 }]}>
-  PREFERRED DELIVERY TIME
-</Text>
+            <Text
+              style={[
+                s.offersLabel,
+                {
+                  paddingHorizontal: 24,
+                  marginTop: 24,
+                  marginBottom: 14,
+                },
+              ]}
+            >
+              PREFERRED DELIVERY TIME
+            </Text>
 
-<TouchableOpacity
-  style={[
-    s.processingActionCard,
-    selectedDeliveryOption === "morning" && s.selectedDeliveryCard,
-  ]}
-  activeOpacity={0.85}
-  onPress={() => {
-    setSelectedDeliveryOption("morning");
-    // TODO: Call API to update delivery slot
-    // e.g., updateDeliverySlot(orderId, "tomorrow_morning")
-  }}
->
-  <View style={s.processingActionLeft}>
-    <Ionicons name="sunny-outline" size={18} color={theme.primary} />
-    <View>
-      <Text style={s.processingActionTitle}>Delivered by 11 A.M Tomorrow Morning</Text>
-      <Text style={s.processingActionSub}>Early morning drop-off</Text>
-    </View>
-  </View>
-  {selectedDeliveryOption === "morning" && (
-    <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
-  )}
-</TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setSelectedDeliveryOption("morning")}
+              style={s.deliveryOptionRow}
+            >
+              <Ionicons
+                name={
+                  selectedDeliveryOption === "morning"
+                    ? "radio-button-on"
+                    : "radio-button-off"
+                }
+                size={24}
+                color={
+                  selectedDeliveryOption === "morning"
+                    ? "#DDFEF2"
+                    : "#6B8B83"
+                }
+              />
 
-<TouchableOpacity
-  style={[
-    s.processingActionCard,
-    selectedDeliveryOption === "daytime" && s.selectedDeliveryCard,
-  ]}
-  activeOpacity={0.85}
-  onPress={() => {
-    setSelectedDeliveryOption("daytime");
-    // TODO: Call API to update delivery slot
-  }}
->
-  <View style={s.processingActionLeft}>
-    <Ionicons name="time-outline" size={18} color={theme.primary} />
-    <View>
-      <Text style={s.processingActionTitle}>Delivered by Tomorrow Day Time</Text>
-      <Text style={s.processingActionSub}>Choose a convenient daytime slot</Text>
-    </View>
-  </View>
-  {selectedDeliveryOption === "daytime" && (
-    <Ionicons name="checkmark-circle" size={18} color={theme.primary} />
-  )}
-</TouchableOpacity>
+              <Text
+                style={[
+                  s.deliveryOptionText,
+                  {
+                    color:
+                      selectedDeliveryOption === "morning"
+                        ? "#EAFBF5"
+                        : "#6B8B83",
+                  },
+                ]}
+              >
+                Delivered by 11 A.M Tomorrow Morning
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setSelectedDeliveryOption("daytime")}
+              style={s.deliveryOptionRow}
+            >
+              <Ionicons
+                name={
+                  selectedDeliveryOption === "daytime"
+                    ? "radio-button-on"
+                    : "radio-button-off"
+                }
+                size={24}
+                color={
+                  selectedDeliveryOption === "daytime"
+                    ? "#DDFEF2"
+                    : "#6B8B83"
+                }
+              />
+
+              <Text
+                style={[
+                  s.deliveryOptionText,
+                  {
+                    color:
+                      selectedDeliveryOption === "daytime"
+                        ? "#EAFBF5"
+                        : "#6B8B83",
+                  },
+                ]}
+              >
+                Delivered by Tomorrow Day Time
+              </Text>
+            </TouchableOpacity>
 
           </ScrollView>
 
@@ -1478,9 +1508,9 @@ const s = StyleSheet.create({
   },
 
   selectedDeliveryCard: {
-  borderWidth: 1.5,
-  backgroundColor: "#0B3326",
-},
+    borderWidth: 1.5,
+    backgroundColor: "#0B3326",
+  },
 
   header: {
     paddingTop: 54,
@@ -2136,5 +2166,19 @@ const s = StyleSheet.create({
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+  deliveryOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 4,
+    gap: 6,
+  },
+
+  deliveryOptionText: {
+    fontSize: 16,
+    fontWeight: "400",
+    lineHeight: 20,
+    flex: 1,
   },
 });
