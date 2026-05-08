@@ -890,7 +890,8 @@ export default function BookPickup() {
             style={{
               marginTop: 8,
               borderRadius: 14,
-              padding: 14,
+              paddingHorizontal: 14,
+              paddingVertical: 6,
               backgroundColor: "#0E1A14", // flat base
               borderWidth: 1,
               borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
@@ -948,7 +949,6 @@ export default function BookPickup() {
                   style={{
                     color: "#7A9B87",
                     fontSize: 12,
-                    marginTop: 4,
                   }}
                 >
                   {appliedCoupon
@@ -958,25 +958,54 @@ export default function BookPickup() {
               </View>
 
               {/* RIGHT BUTTON */}
+              {/* RIGHT ACTION */}
               <View
                 style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 18,
-                  borderWidth: 1,
-                  borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
-                  backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
                 }}
               >
-                <Text
+                {/* Applied Badge */}
+                <View
                   style={{
-                    color: appliedCoupon ? "#00E1A2" : "#7A9B87",
-                    fontWeight: "800",
-                    fontSize: 12,
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 18,
+                    borderWidth: 1,
+                    borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
+                    backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
                   }}
                 >
-                  {appliedCoupon ? "✓ Applied" : "Apply"}
-                </Text>
+                  <Text
+                    style={{
+                      color: appliedCoupon ? "#00E1A2" : "#7A9B87",
+                      fontWeight: "800",
+                      fontSize: 12,
+                    }}
+                  >
+                    {appliedCoupon ? "✓ Applied" : "Apply"}
+                  </Text>
+                </View>
+
+                {/* DELETE ICON */}
+                {appliedCoupon && (
+                  <TouchableOpacity
+                    onPress={() => setAppliedCoupon(null)}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 17,
+                      backgroundColor: "#2A1414",
+                      justifyContent: "center",
+                      alignItems: "center",
+
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </TouchableOpacity>
@@ -1377,8 +1406,13 @@ export default function BookPickup() {
           {pickupType === "today" && (
             <>
               <View style={s.section}>
-                <Text style={[s.bigSubtitle, { color: theme.text }]}>
-                  Select Slot
+                <Text    style={{
+                    color: theme.primary,
+                    fontSize: 13,
+                    fontWeight: "600",
+                    marginLeft: 4,
+                  }}>
+                  SELECT SLOT
                 </Text>
 
                 {selectedPickupAddr?.latitude &&
@@ -2577,8 +2611,8 @@ const s = StyleSheet.create({
   },
   noteTagText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
 
-  bigHeading: { fontSize: 18, fontWeight: "900", marginBottom: 4 },
-  bigSubtitle: { fontSize: 15, color: "#d7dbd7" },
+  bigHeading: { fontSize: 16, fontWeight: "900", marginBottom: 4 },
+  bigSubtitle: { fontSize: 15, color: "#babeba" },
   monthLabel: {
     fontSize: 10,
     color: "#4E7060",

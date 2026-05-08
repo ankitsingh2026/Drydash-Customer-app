@@ -208,7 +208,8 @@ const cs = StyleSheet.create({
   },
   couponCard: {
     borderRadius: 32,
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 14,
@@ -244,8 +245,8 @@ const cs = StyleSheet.create({
   },
   applyBtn: {
     backgroundColor: "#22EBAB",
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 4,
     borderRadius: 10,
   },
   applyBtnActive: {

@@ -230,7 +230,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   };
 
   const slotInfo = getSlotInfo();
-  console.log("Slot info====>>>:", slotInfo);
+  // console.log("Slot info====>>>:", slotInfo);
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + 6 }, style]}>

@@ -884,13 +884,13 @@ export default function OrderTrackingScreen() {
     }
 
     // If cart is empty but we have original items, just update without changing items
-    if (cart.items.length === 0 && originalPickupItems.length === 0) {
-      Alert.alert(
-        "Empty cart",
-        "Please add at least one item before updating.",
-      );
-      return;
-    }
+    // if (cart.items.length === 0 && originalPickupItems.length === 0) {
+    //   Alert.alert(
+    //     "Empty cart",
+    //     "Please add at least one item before updating.",
+    //   );
+    //   return;
+    // }
 
     const mergedItemsMap = new Map();
 
@@ -917,13 +917,13 @@ export default function OrderTrackingScreen() {
       mergedItemsMap.values(),
     ).filter((item) => item.quantity > 0);
 
-    if (finalItems.length === 0) {
-      Alert.alert(
-        "Empty cart",
-        "Please add at least one item before updating.",
-      );
-      return;
-    }
+    // if (finalItems.length === 0) {
+    //   Alert.alert(
+    //     "Empty cart",
+    //     "Please add at least one item before updating.",
+    //   );
+    //   return;
+    // }
 
     try {
       setIsUpdatingPickup(true);

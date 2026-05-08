@@ -30,10 +30,10 @@ type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 const getOrderId = (o: any): string | undefined => o?.order_id;
 
 const STATUS_CONFIG = {
-  active: { bg: "#10B981", icon: "time-outline" as const, label: "Active" },
+  active: { bg: "#3B82F6", icon: "time-outline" as const, label: "Active" },
   transit: { bg: "#0EA5A4", icon: "bicycle-outline" as const, label: "Out For Delivery" },
   delivered: {
-    bg: "#3B82F6",
+    bg: "#10B981",
     icon: "checkmark-done-outline" as const,
     label: "Delivered",
   },
@@ -536,9 +536,9 @@ export default function Orders() {
                 }}
               >
                 <View style={styles.card}>
-                  <View
+                  {/* <View
                     style={[styles.cardAccentLine, { backgroundColor: sc.bg }]}
-                  />
+                  /> */}
 
                   <View style={styles.cardInner}>
                     {/* Status badge + icon/stamp */}
@@ -705,7 +705,7 @@ const styles = StyleSheet.create({
 
   /* Card */
   card: {
-    backgroundColor: SURFACE,
+    backgroundColor: '#132820',
     borderRadius: 14,
     marginBottom: 10,
     borderWidth: 1,
@@ -889,4 +889,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   emptyTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
+  
 });

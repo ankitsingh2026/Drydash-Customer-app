@@ -102,7 +102,7 @@ const SlotPicker: React.FC<Props> = ({
             return getHour(a.startTime) - getHour(b.startTime);
         });
 
-    console.log("✅ Visible slots:", visibleSlots);
+    // console.log("✅ Visible slots:", visibleSlots);
 
     if (loading) {
         return <ActivityIndicator color="#00E1A2" />;
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     noSlotContainer: {
-        marginTop: 12,
+        marginTop: 6,
     },
 
     noSlotCard: {
