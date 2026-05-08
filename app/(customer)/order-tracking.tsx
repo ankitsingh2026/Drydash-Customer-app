@@ -385,8 +385,13 @@ function StatusBanner({
   );
 }
 
-function ItemCard({ item }: { item: OrderItem }) {
-  console.log("Rendering ItemCard for item=====> >>>:", item);
+function ItemCard({
+  item,
+  onDelete,
+}: {
+  item: OrderItem;
+  onDelete?: () => void;
+}) {
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemLeft}>
@@ -402,7 +407,18 @@ function ItemCard({ item }: { item: OrderItem }) {
         </View>
       </View>
 
-      <Text style={styles.itemPrice}>{money(item.price)}</Text>
+      <View style={styles.itemRight}>
+        <Text style={styles.itemPrice}>{money(item.price)}</Text>
+        {/* {onDelete ? (
+          <TouchableOpacity
+            onPress={onDelete}
+            activeOpacity={0.8}
+            style={styles.deleteItemBtn}
+          >
+            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+          </TouchableOpacity>
+        ) : null} */}
+      </View>
     </View>
   );
 }
@@ -757,6 +773,11 @@ export default function OrderTrackingScreen() {
   const [isUpdatingPickup, setIsUpdatingPickup] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
+  const handleRemoveCartItem = (itemId: string) => {
+    cart.removeItem(itemId);
+  };
+
+
   const handleApplyCoupon = (coupon: any, action: "apply" | "remove") => {
     if (action === "remove") {
       setAppliedCoupon(null);
@@ -882,48 +903,62 @@ export default function OrderTrackingScreen() {
       Alert.alert("Missing pickup", "Unable to update this pickup right now.");
       return;
     }
+    const finalItems: { itemId: string; quantity: number }[] = [];
 
-    // If cart is empty but we have original items, just update without changing items
-    // if (cart.items.length === 0 && originalPickupItems.length === 0) {
-    //   Alert.alert(
-    //     "Empty cart",
-    //     "Please add at least one item before updating.",
-    //   );
-    //   return;
-    // }
+    // original pickup items map
+    const originalMap = new Map();
 
-    const mergedItemsMap = new Map();
+    (selectedPickup?.items || []).forEach((item: any) => {
+      const itemId = item?.itemId?._id;
 
-    // First, add all original pickup items
-    originalPickupItems.forEach((item: any) => {
-      if (item.itemId) {
-        mergedItemsMap.set(item.itemId, {
-          itemId: item.itemId,
-          quantity: item.quantity || 1,
-        });
-      }
+      if (!itemId) return;
+
+      originalMap.set(itemId, {
+        itemId,
+        quantity: item.quantity || 1,
+      });
     });
 
-    // Then, update/add cart items (this overwrites originals with new quantities)
+    // cart items map
+    const cartMap = new Map();
+
     cart.items.forEach((item) => {
-      mergedItemsMap.set(item.id, {
-        itemId: item.id,
+      cartMap.set(String(item.id), {
+        itemId: String(item.id),
         quantity: item.qty,
       });
     });
 
-    // Convert map to array
-    const finalItems: { itemId: string; quantity: number }[] = Array.from(
-      mergedItemsMap.values(),
-    ).filter((item) => item.quantity > 0);
+    // 1. Handle existing items
+    originalMap.forEach((originalItem, itemId) => {
+      const cartItem = cartMap.get(itemId);
 
-    // if (finalItems.length === 0) {
-    //   Alert.alert(
-    //     "Empty cart",
-    //     "Please add at least one item before updating.",
-    //   );
-    //   return;
-    // }
+      if (cartItem) {
+        // updated quantity
+        finalItems.push({
+          itemId,
+          quantity: cartItem.quantity,
+        });
+      } else {
+        // removed item
+        finalItems.push({
+          itemId,
+          quantity: 0,
+        });
+      }
+    });
+
+    // 2. Handle newly added items
+    cartMap.forEach((cartItem, itemId) => {
+      if (!originalMap.has(itemId)) {
+        finalItems.push({
+          itemId,
+          quantity: cartItem.quantity,
+        });
+      }
+    });
+
+    console.log("FINAL UPDATE ITEMS ===>", finalItems);
 
     try {
       setIsUpdatingPickup(true);
@@ -1054,11 +1089,13 @@ export default function OrderTrackingScreen() {
     screenMode === "pickup-scheduled" || screenMode === "pickup-assigned";
 
   const items = useMemo(() => {
-    const useCartItems = isEditableMode && cart.items.length > 0;
+    // Use cart items ONLY if user has actually edited cart
+    const hasCartItems = cart.items.length > 0;
 
-    if (useCartItems) {
-      return cart.items.map((item, index) => ({
-        id: index + 1,
+    if (isEditableMode && hasCartItems) {
+      return cart.items.map((item) => ({
+        id: item.id,
+        cartId: item.id,
         name: item.title,
         qty: item.qty,
         price: item.qty * item.price,
@@ -1068,23 +1105,27 @@ export default function OrderTrackingScreen() {
       }));
     }
 
-    return (selectedPickup?.items ?? []).map((item: any, index: number) => {
-      const name = item?.label || `Item ${index + 1}`;
-      const qty = item?.quantity || 1;
-      const price = qty * (item?.price || 0);
-      const image =
-        item?.itemId?.images?.[0]?.url || "https://via.placeholder.com/50";
-      console.log("mapping pickup item====>> ", item.itemId);
-      return {
-        id: index + 1,
-        name,
-        qty,
-        price,
-        icon: inferItemIcon(name),
-        image: image,
-        accent: "#00E1A2",
-      };
-    });
+    // fallback to pickup items from API
+    return (selectedPickup?.items ?? []).map(
+      (item: any, index: number) => {
+        const name = item?.label || `Item ${index + 1}`;
+        const qty = item?.quantity || 1;
+        const price = qty * (item?.price || 0);
+
+        return {
+          id: item?.itemId?._id || index + 1,
+          cartId: item?.itemId?._id,
+          name,
+          qty,
+          price,
+          image:
+            item?.itemId?.images?.[0]?.url ||
+            "https://via.placeholder.com/50",
+          icon: inferItemIcon(name),
+          accent: "#00E1A2",
+        };
+      },
+    );
   }, [selectedPickup, cart.items, isEditableMode]);
 
   const bill = useMemo(() => {
@@ -1134,8 +1175,8 @@ export default function OrderTrackingScreen() {
 
   const scheduledAt = formatDateTime(
     selectedPickup?.rescheduledDate ||
-      selectedPickup?.pickup_date ||
-      selectedPickup?.createdAt,
+    selectedPickup?.pickup_date ||
+    selectedPickup?.createdAt,
   );
 
   const statusBannerContent = useMemo(() => {
@@ -1241,7 +1282,7 @@ export default function OrderTrackingScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {screenMode === "pickup-scheduled" ||
-        screenMode === "pickup-assigned" ? (
+          screenMode === "pickup-assigned" ? (
           <>
             {/* <StatusBanner
               title={statusBannerContent.title}
@@ -1255,9 +1296,19 @@ export default function OrderTrackingScreen() {
                   <Text style={styles.sectionHeader}>Cart Items </Text>
                 </View>
 
-                {items.map((item: any) => (
-                  <ItemCard key={item.id} item={item} />
-                ))}
+                {items.map((item: any) => {
+                  const handleDelete = () => {
+                    cart.removeItem(String(item.cartId || item.id));
+                  };
+
+                  return (
+                    <ItemCard
+                      key={item.id}
+                      item={item}
+                      onDelete={handleDelete}
+                    />
+                  );
+                })}
 
                 <TouchableOpacity
                   activeOpacity={0.85}
@@ -1604,10 +1655,10 @@ export default function OrderTrackingScreen() {
             height:
               (screenMode === "pickup-scheduled" ||
                 screenMode === "pickup-assigned") &&
-              hasOrderItems
+                hasOrderItems
                 ? 90
                 : screenMode === "pickup-scheduled" ||
-                    screenMode === "pickup-assigned"
+                  screenMode === "pickup-assigned"
                   ? 30
                   : 120,
           }}
@@ -1617,7 +1668,7 @@ export default function OrderTrackingScreen() {
       {screenMode === "order-delivered" ? (
         <BottomCTA mode={screenMode} />
       ) : null}
-      {isEditableMode  ? (
+      {isEditableMode ? (
         <View style={styles.totalAmountBarWrap}>
           <TouchableOpacity
             activeOpacity={0.9}

@@ -8,6 +8,7 @@ import {
     ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { oldApiClient } from "@/lib/api/client";
 
 interface Slot {
     time: string;
@@ -49,10 +50,10 @@ const SlotPicker: React.FC<Props> = ({
             console.log("📍 Fetching slots for:", lat, lng);
 
             // ✅ FIX 1: removed space before https
-            const zoneRes = await fetch(
-                `https://test.drydash.in/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
+            const zoneRes = await oldApiClient.get(
+                `/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
             );
-            const zoneData = await zoneRes.json();
+            const zoneData = zoneRes.data;
 
             console.log("🌍 Zone response:", zoneData);
 
@@ -61,16 +62,12 @@ const SlotPicker: React.FC<Props> = ({
                 return;
             }
 
-            const serviceRes = await fetch(
-                "https://test.drydash.in/api/v1/slots/service/check",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ zoneId: zoneData.zoneId }),
-                }
+            const serviceRes = await oldApiClient.post(
+                "/v1/slots/service/check",
+                { zoneId: zoneData.zoneId }
             );
 
-            const serviceData = await serviceRes.json();
+            const serviceData = serviceRes.data;
 
             console.log("📦 Service response:", serviceData);
 
