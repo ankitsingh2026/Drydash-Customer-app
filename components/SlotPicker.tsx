@@ -202,8 +202,8 @@ const styles = StyleSheet.create({
         padding: 12,
         borderRadius: 14,
         backgroundColor: "#0D2B24",
-        borderWidth: 1.5,
-        borderColor: "#1E3327",
+        borderWidth: 1,
+        borderColor: "#2f3c35",
         justifyContent: "space-between",
     },
     bottomRow: {
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
 
     /* ACTIVE (YELLOW) */
     activeCard: {
-        borderColor: "#FFD600",
+        // borderColor: "#FFD600",
     },
 
     disabled: {

@@ -1412,7 +1412,7 @@ export default function BookPickup() {
                     fontWeight: "600",
                     marginLeft: 4,
                   }}>
-                  SELECT SLOT
+                  PICKUP SLOT
                 </Text>
 
                 {selectedPickupAddr?.latitude &&
@@ -1540,6 +1540,14 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 </View>
               </View>
+              {selectedSlotData?.time && (
+                <Text
+                  style={ms.pickSelectTab}
+                >
+                  Pickup by{" "}
+                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery by 11 AM tomorrow
+                </Text>
+              )}
 
               <SpecialInstructionsSection />
             </>
@@ -1723,14 +1731,14 @@ export default function BookPickup() {
                 </Text>
               </View>
             )}
-            {pickupType === "today" && selectedSlotData?.time && (
+            {/* {pickupType === "today" && selectedSlotData?.time && (
               <View style={s.estimatedRow}>
                 <Ionicons name="time-outline" size={14} color="#4E7060" />
                 <Text style={s.estimatedText}>
                   PICKUP SLOT: {selectedSlotData.time}
                 </Text>
               </View>
-            )}
+            )} */}
           </View>
         </ScrollView>
 
@@ -3080,6 +3088,13 @@ const ms = StyleSheet.create({
     height: 280,
     borderRadius: 140,
     backgroundColor: "rgba(0, 225, 162, 0.04)",
+  },
+  pickSelectTab : {
+      marginLeft: 20,
+      marginTop: 4,
+      fontSize: 12,
+      color: "#7A9B87",
+      lineHeight: 18,
   },
 
 });
