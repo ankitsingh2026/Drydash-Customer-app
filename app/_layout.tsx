@@ -8,6 +8,7 @@ import { ThemeProvider } from "../context/ThemeContext";
 
 import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
+import { SlotSocketProvider } from "../context/SlotSocketContext";
 
 setupInterceptors();
 
@@ -19,17 +20,19 @@ export default function RootLayout() {
           <NotificationProvider>
             <AddressProvider>
               <CartProvider>
-                <StatusBar style="auto" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: "#0B1F1A" },
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(customer)" />
-                </Stack>
+                <SlotSocketProvider>
+                  <StatusBar style="auto" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: "#0B1F1A" },
+                    }}
+                  >
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="(customer)" />
+                  </Stack>
+                </SlotSocketProvider>
               </CartProvider>
             </AddressProvider>
           </NotificationProvider>

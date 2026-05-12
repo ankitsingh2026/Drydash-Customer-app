@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useSlotSocket } from "@/context/SlotSocketContext";
 import {
     View,
     Text,
@@ -41,6 +42,15 @@ const SlotPicker: React.FC<Props> = ({
         if (lat && lng) {
             fetchSlots();
         }
+    }, [lat, lng]);
+
+    // Real-time slot update: refetch slots when slot_updated event is received
+    const { onSlotUpdate } = useSlotSocket();
+    useEffect(() => {
+        const unsubscribe = onSlotUpdate(() => {
+            fetchSlots();
+        });
+        return unsubscribe;
     }, [lat, lng]);
 
     const fetchSlots = async () => {

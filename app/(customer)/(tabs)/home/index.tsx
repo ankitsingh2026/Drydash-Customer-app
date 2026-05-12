@@ -36,6 +36,7 @@ import {
 import { SvgUri } from "react-native-svg";
 import { useTheme } from "../../../../context/ThemeContext";
 import { useAddress } from "@/context/AddressContext";
+import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
 
 const { width } = Dimensions.get("window");
@@ -198,6 +199,7 @@ export default function Home() {
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
   const { zoneData, serviceData, serviceLoading } = useAddress();
+  const { notifications } = useNotifications();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -354,6 +356,36 @@ export default function Home() {
   useEffect(() => {
     refreshBooking();
   }, [refreshBooking]);
+
+  const lastNotificationIdRef = useRef<string | null>(null);
+
+  // Refresh booking card in real-time on new notifications
+  useEffect(() => {
+    if (!notifications?.length) return;
+
+    const latestNotification = notifications[0];
+
+    if (lastNotificationIdRef.current === latestNotification?.id) {
+      return;
+    }
+
+    lastNotificationIdRef.current = latestNotification?.id;
+
+    if (
+      [
+        "pickup_Created",
+        "pickup_Assigned",
+        "pickup_Rescheduled",
+        "pickup_Updated",
+        "pickup_Completed",
+        "out_for_Delivery",
+        "order_Delivered",
+        "system",
+      ].includes(latestNotification?.kind)
+    ) {
+      refreshBooking();
+    }
+  }, [notifications]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

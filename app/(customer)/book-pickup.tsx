@@ -44,6 +44,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
+import { useSlotSocket } from "@/context/SlotSocketContext";
 import SlotPicker from "@/components/SlotPicker";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -101,7 +102,7 @@ const MONTH_NAMES = [
 ];
 
 export default function BookPickup() {
-  const { theme } = useTheme();
+    const { theme } = useTheme();
   const [note, setNote] = useState("");
   const [locLoading, setLocLoading] = useState(false);
   const insets = useSafeAreaInsets();
@@ -135,6 +136,15 @@ export default function BookPickup() {
     currentActiveSlot,
     updateServiceData,
   } = useAddress();
+
+   const { onSlotUpdate } = useSlotSocket();
+  useEffect(() => {
+    const unsubscribe = onSlotUpdate(() => {
+      refreshAddresses();
+      updateServiceData(serviceData);
+    });
+    return unsubscribe;
+  }, [refreshAddresses, updateServiceData, serviceData]);
 
   const [selectedPickupAddressId, setSelectedPickupAddressId] =
     useState<string>("");

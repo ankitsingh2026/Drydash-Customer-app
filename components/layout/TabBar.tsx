@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
+import { useSlotSocket } from "@/context/SlotSocketContext";
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
@@ -26,7 +27,7 @@ type TabBarProps = {
 };
 
 export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
-  const { theme } = useTheme();
+    const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { unreadCount, refreshNotifications } = useNotifications();
   const isFetchingRef = useRef(false);
@@ -42,6 +43,16 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     zoneData,         // separate zone info from context
     updateServiceData,
   } = useAddress();
+
+    const { onSlotUpdate } = useSlotSocket();
+  useEffect(() => {
+    const unsubscribe = onSlotUpdate(() => {
+      if (selectedAddress && selectedAddress.latitude && selectedAddress.longitude) {
+        fetchFullServiceData(selectedAddress.latitude, selectedAddress.longitude);
+      }
+    });
+    return unsubscribe;
+  }, [selectedAddress]);
 
   const [locationText, setLocationText] = useState("Fetching location...");
   const [modalVisible, setModalVisible] = useState(false);
