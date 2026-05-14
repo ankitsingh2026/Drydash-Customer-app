@@ -25,7 +25,7 @@ import { router } from "expo-router";
 import { CirclePlus } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
+
   Dimensions,
   Image,
   Keyboard,
@@ -46,6 +46,7 @@ import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
 import { useSlotSocket } from "@/context/SlotSocketContext";
 import SlotPicker from "@/components/SlotPicker";
+import { showAlert } from "@/components/Customalert";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -102,7 +103,7 @@ const MONTH_NAMES = [
 ];
 
 export default function BookPickup() {
-    const { theme } = useTheme();
+  const { theme } = useTheme();
   const [note, setNote] = useState("");
   const [locLoading, setLocLoading] = useState(false);
   const insets = useSafeAreaInsets();
@@ -137,7 +138,7 @@ export default function BookPickup() {
     updateServiceData,
   } = useAddress();
 
-   const { onSlotUpdate } = useSlotSocket();
+  const { onSlotUpdate } = useSlotSocket();
   useEffect(() => {
     const unsubscribe = onSlotUpdate(() => {
       refreshAddresses();
@@ -502,7 +503,8 @@ export default function BookPickup() {
     try {
       setConfirmLoading(true);
       if (!selectedPickupAddressId) {
-        Alert.alert("Missing Pickup Address", "Please select pickup address.");
+        showAlert({ type: 'warning', title: 'Missing Pickup Address', message: 'Please select a pickup address.' });
+
         return;
       }
       const deliveryId =
@@ -510,10 +512,8 @@ export default function BookPickup() {
           ? selectedPickupAddressId
           : selectedDeliveryAddressId;
       if (!deliveryId) {
-        Alert.alert(
-          "Missing Delivery Address",
-          "Please select delivery address.",
-        );
+        showAlert({ type: 'warning', title: 'Missing Delivery Address', message: 'Please select a delivery address.' });
+
         return;
       }
       let selectedSlotForPayload: string | undefined;
@@ -615,7 +615,8 @@ export default function BookPickup() {
         );
       else openSuccessModal("Pickup scheduled successfully ✅");
     } catch (err: any) {
-      Alert.alert("Error", err?.message || "Failed to create order");
+      showAlert({ type: 'error', title: 'Booking failed', message: err?.message || 'Failed to create order.' });
+
     } finally {
       setConfirmLoading(false);
     }
@@ -639,10 +640,8 @@ export default function BookPickup() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         setLocLoading(false);
-        Alert.alert(
-          "Permission denied",
-          "Please allow location access from settings.",
-        );
+        showAlert({ type: 'warning', title: 'Permission denied', message: 'Please allow location access from settings.' });
+
         return;
       }
       const loc = await Location.getCurrentPositionAsync({
@@ -671,10 +670,8 @@ export default function BookPickup() {
         }));
       }
     } catch (e: any) {
-      Alert.alert(
-        "Location error",
-        e?.message || "Unable to fetch current location",
-      );
+      showAlert({ type: 'error', title: 'Location error', message: e?.message || 'Unable to fetch current location.' });
+
     } finally {
       setLocLoading(false);
     }
@@ -713,10 +710,10 @@ export default function BookPickup() {
           }));
         }
       } else {
-        Alert.alert("Not found", "No location found for this search.");
+        showAlert({ type: 'warning', title: 'Not found', message: 'No location found for this search.' });
       }
     } catch (e) {
-      Alert.alert("Search failed", "Unable to search this place.");
+      showAlert({ type: 'error', title: 'Search failed', message: 'Unable to search this place.' });
     } finally {
       setSearchLoading(false);
     }
@@ -772,9 +769,10 @@ export default function BookPickup() {
       await saveAddressApi(payload);
       await refreshAddresses();
       setAddModalOpen(false);
-      Alert.alert("Success", "Address saved successfully!");
+      showAlert({ type: 'success', title: 'Address saved!', duration: 3000 });
     } catch (err: any) {
-      Alert.alert("Error", err?.message || "Failed to save address");
+      showAlert({ type: 'error', title: 'Could not save address', message: err?.message || 'Failed to save address.' });
+
     }
   };
 
@@ -1416,12 +1414,12 @@ export default function BookPickup() {
           {pickupType === "today" && (
             <>
               <View style={s.section}>
-                <Text    style={{
-                    color: theme.primary,
-                    fontSize: 13,
-                    fontWeight: "600",
-                    marginLeft: 4,
-                  }}>
+                <Text style={{
+                  color: theme.primary,
+                  fontSize: 13,
+                  fontWeight: "600",
+                  marginLeft: 4,
+                }}>
                   PICKUP SLOT
                 </Text>
 
@@ -3099,12 +3097,12 @@ const ms = StyleSheet.create({
     borderRadius: 140,
     backgroundColor: "rgba(0, 225, 162, 0.04)",
   },
-  pickSelectTab : {
-      marginLeft: 20,
-      marginTop: 4,
-      fontSize: 12,
-      color: "#7A9B87",
-      lineHeight: 18,
+  pickSelectTab: {
+    marginLeft: 20,
+    marginTop: 4,
+    fontSize: 12,
+    color: "#7A9B87",
+    lineHeight: 18,
   },
 
 });

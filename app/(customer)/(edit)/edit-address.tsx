@@ -4,21 +4,21 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Briefcase, Home, MapPin } from "lucide-react-native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAddress } from "@/context/AddressContext";
 import { saveAddressApi, updateAddressApi } from "@/features/orders/orders.api";
+import { showAlert } from "@/components/Customalert";
 
 const C = {
   bg: "#031612",
@@ -114,12 +114,13 @@ export default function EditAddress() {
 
   const handleSave = async () => {
     if (!addressForm.houseFloor.trim()) {
-      Alert.alert("Missing details", "Please enter House No. & Floor.");
+      showAlert({ type: 'warning', title: 'Missing details', message: 'Please enter House No. & Floor.' });
+
       return;
     }
 
     if (!addressForm.latitude || !addressForm.longitude) {
-      Alert.alert("Location missing", "Please select a location first.");
+      showAlert({ type: 'warning', title: 'Location missing', message: 'Please select a location first.' });
       return;
     }
 
@@ -157,19 +158,16 @@ export default function EditAddress() {
       }
 
       await refreshAddresses();
-      Alert.alert(
-        "Success",
-        isEditing ? "Address updated successfully" : "Address saved successfully",
-        [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(customer)/(tabs)/home"),
-          },
-        ],
-      );
+      showAlert({
+        type: 'success',
+        title: isEditing ? 'Address updated!' : 'Address saved!',
+        primaryLabel: 'Go Home',
+        onPrimary: () => router.replace("/(customer)/(tabs)/home"),
+        duration: 4000,
+      });
     } catch (error: any) {
       const message = error?.response?.data?.message || error?.message || "Failed to save address";
-      Alert.alert("Error", message);
+      showAlert({ type: 'error', title: 'Could not save address', message });
     } finally {
       setLoading(false);
     }

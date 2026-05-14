@@ -7,7 +7,7 @@ import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-h
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
+ 
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -24,6 +24,7 @@ import {
   updateUserApi,
   verifyOtpApi,
 } from "../../features/auth/auth.api";
+import { showAlert } from "@/components/Customalert";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
@@ -46,7 +47,7 @@ export default function AuthScreen() {
   const [avatar, setAvatar] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+//  const [error, setError] = useState<string | null>(null);
 
   const [resendTimer, setResendTimer] = useState(0);
 
@@ -57,7 +58,7 @@ export default function AuthScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-  const errorShake = useRef(new Animated.Value(0)).current;
+//  const errorShake = useRef(new Animated.Value(0)).current;
   const userIsTyping = useRef(false);
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
@@ -141,42 +142,39 @@ export default function AuthScreen() {
         }
         // If userIsTyping, do NOTHING — let them type
       } else {
-        Alert.alert(
-          "Could not read number",
-          `Got: "${number}". Please type manually.`,
-        );
+       showAlert({ type: 'warning', title: 'Could not read number', message: `Got: "${number}". Please type manually.` });
       }
     } catch (error) {
       // silently fail, user can type manually
     }
   };
 
-  useEffect(() => {
-    if (error) {
-      Animated.sequence([
-        Animated.timing(errorShake, {
-          toValue: 10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(errorShake, {
-          toValue: -10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(errorShake, {
-          toValue: 10,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(errorShake, {
-          toValue: 0,
-          duration: 50,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [error]);
+  // useEffect(() => {
+  //   if (error) {
+  //     Animated.sequence([
+  //       Animated.timing(errorShake, {
+  //         toValue: 10,
+  //         duration: 50,
+  //         useNativeDriver: true,
+  //       }),
+  //       Animated.timing(errorShake, {
+  //         toValue: -10,
+  //         duration: 50,
+  //         useNativeDriver: true,
+  //       }),
+  //       Animated.timing(errorShake, {
+  //         toValue: 10,
+  //         duration: 50,
+  //         useNativeDriver: true,
+  //       }),
+  //       Animated.timing(errorShake, {
+  //         toValue: 0,
+  //         duration: 50,
+  //         useNativeDriver: true,
+  //       }),
+  //     ]).start();
+  //   }
+  // }, [error]);
 
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
     const mobile = phoneValue || phone;
@@ -186,12 +184,13 @@ export default function AuthScreen() {
     const hashToUse = hashValue || hash[0];
 
     if (!validatePhone(mobile)) {
-      return setError("Enter valid 10-digit mobile number");
+     return showAlert({ type: 'warning', title: 'Invalid number', message: 'Enter a valid 10-digit mobile number' });
+
     }
 
     try {
       setLoading(true);
-      setError(null);
+   
       console.log("sending OTP to ==>>>:", mobile, "with hash:", hashToUse);
       await sendOtpApi(mobile, hashToUse);
       setStep("OTP");
@@ -200,9 +199,7 @@ export default function AuthScreen() {
       const status = e?.response?.status || e?.status;
 
       if (status === 410) {
-        setError(
-          "This account is currently scheduled for deletion. It will be permanently removed after 10 days. To restore access before then, please contact support at support@drydash.in."
-        );
+       showAlert({ type: 'error', title: 'Account scheduled for deletion', message: 'Contact support@drydash.in to restore access before 10 days.' });
       }
     } finally {
       setLoading(false);
@@ -220,16 +217,17 @@ export default function AuthScreen() {
 
   const verifyOtp = async (otpValue?: string) => {
     const otpToVerify = otpValue || otp;
-    if (otpToVerify.length !== 6) return setError("Enter valid 6-digit OTP");
+    if (otpToVerify.length !== 6) return showAlert({ type: 'warning', title: 'Invalid OTP', message: 'Please enter the 6-digit OTP sent to your number.' });
 
     try {
       setLoading(true);
-      setError(null);
+    //  setError(null);
 
       const res = await verifyOtpApi(phone, otpToVerify);
 
       if (res?.deleted) {
-        setError("Account deleted. Please connect to support.");
+      showAlert({ type: 'error', title: 'Account deleted', message: 'Please contact support to recover your account.' });
+
         //  setStep("REGISTER"); // go to register
         return;
       }
@@ -252,9 +250,11 @@ export default function AuthScreen() {
       }
     } catch (e: any) {
       if (e.message?.toLowerCase().includes("otp")) {
-        setError("Wrong OTP. Please try again.");
+      showAlert({ type: 'error', title: 'Wrong OTP', primaryLabel: 'Try again', onPrimary: () => setOtp('') });
+
       } else {
-        setError("OTP verification failed.");
+       showAlert({ type: 'error', title: 'OTP verification failed', message: 'Something went wrong. Please try again.' });
+
       }
     } finally {
       setLoading(false);
@@ -272,11 +272,11 @@ export default function AuthScreen() {
   }, [otp]);
 
   const createAccount = async () => {
-    if (!firstName.trim()) return setError("First name is required");
+    if (!firstName.trim()) return showAlert({ type: 'warning', title: 'First name is required' });
 
     try {
       setLoading(true);
-      setError(null);
+   //   setError(null);
 
       let details_obj: any = { firstName };
 
@@ -292,7 +292,10 @@ export default function AuthScreen() {
 
       if (!tempToken) {
         console.log("there is an error");
-        setError("Token missing!");
+      //  setError("Token missing!");
+
+      showAlert({ type: 'error', title: 'Session expired', message: 'Please go back and verify your number again.' });
+
         return;
       }
 
@@ -306,7 +309,9 @@ export default function AuthScreen() {
 
       router.replace("/(customer)/(tabs)/home");
     } catch (e: any) {
-      setError(e.message);
+    //  setError(e.message);
+    showAlert({ type: 'error', title: 'Could not create account', message: e.message });
+
     } finally {
       setFirstName("");
       setLastName("");
@@ -483,7 +488,7 @@ export default function AuthScreen() {
                   onChangeText={(text) => {
                     const digits = text.replace(/\D/g, "").slice(0, 6); // force digits only
                     setOtp(digits);
-                    setError(null);
+                  //  setError(null);
                   }}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -579,7 +584,7 @@ export default function AuthScreen() {
               </View>
             )}
 
-            {error && (
+            {/* {error && (
               <Animated.View
                 style={[
                   styles.errorContainer,
@@ -594,7 +599,7 @@ export default function AuthScreen() {
                 />
                 <Text style={styles.error}>{error}</Text>
               </Animated.View>
-            )}
+            )} */}
 
             {step !== "SUCCESS" && (
               <TouchableOpacity
@@ -928,25 +933,25 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  errorContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "rgba(239, 68, 68, 0.3)",
-  },
+  // errorContainer: {
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  //   backgroundColor: "rgba(239, 68, 68, 0.1)",
+  //   borderRadius: 12,
+  //   paddingVertical: 12,
+  //   paddingHorizontal: 16,
+  //   marginBottom: 12,
+  //   borderWidth: 1,
+  //   borderColor: "rgba(239, 68, 68, 0.3)",
+  // },
 
-  error: {
-    color: "#EF4444",
-    fontSize: 14,
-    fontWeight: "600",
-    flex: 1,
-  },
+  // error: {
+  //   color: "#EF4444",
+  //   fontSize: 14,
+  //   fontWeight: "600",
+  //   flex: 1,
+  // },
 
   button: {
     backgroundColor: "#34D399",

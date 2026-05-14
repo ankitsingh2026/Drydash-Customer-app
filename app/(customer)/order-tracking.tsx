@@ -18,7 +18,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/context/CartContext";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -30,6 +29,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { showAlert } from "@/components/Customalert";
+
 export const DarkTheme = {
   background: "#001714",
   gradient: ["#052420", "#003826"],
@@ -787,7 +788,7 @@ export default function OrderTrackingScreen() {
 
     const discount = calculateDiscount(coupon, bill.subtotal);
     if (discount <= 0) {
-      Alert.alert("Invalid Coupon", "This coupon is not applicable.");
+      showAlert({ type: 'warning', title: 'Invalid Coupon', message: 'This coupon is not applicable to your order.' });
       return;
     }
 
@@ -845,7 +846,8 @@ export default function OrderTrackingScreen() {
 
   const handleCancelPickup = async () => {
     if (!selectedPickup?._id) {
-      Alert.alert("Missing pickup", "Unable to cancel this pickup right now.");
+      showAlert({ type: 'error', title: 'Missing pickup', message: 'Unable to cancel this pickup right now.' });
+
       return;
     }
 
@@ -853,17 +855,13 @@ export default function OrderTrackingScreen() {
       setActionLoading(true);
       await cancelPickupApi(selectedPickup._id);
       setCancelModalVisible(false);
-      Alert.alert(
-        "Pickup cancelled",
-        "Your pickup has been cancelled successfully.",
-      );
+      showAlert({ type: 'success', title: 'Pickup cancelled', message: 'Your pickup has been cancelled successfully.', duration: 4000 });
+
       setReloadKey((prev) => prev + 1);
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error: any) {
-      Alert.alert(
-        "Cancel failed",
-        error?.message || "Unable to cancel pickup.",
-      );
+      showAlert({ type: 'error', title: 'Cancel failed', message: error?.message || 'Unable to cancel pickup.' });
+
     } finally {
       setActionLoading(false);
     }
@@ -871,10 +869,8 @@ export default function OrderTrackingScreen() {
 
   const handleReschedulePickup = async (newDate: string) => {
     if (!selectedPickup?._id) {
-      Alert.alert(
-        "Missing pickup",
-        "Unable to reschedule this pickup right now.",
-      );
+      showAlert({ type: 'error', title: 'Missing pickup', message: 'Unable to reschedule this pickup right now.' });
+
       return;
     }
 
@@ -882,17 +878,15 @@ export default function OrderTrackingScreen() {
       setActionLoading(true);
       await reschedulePickupApi(selectedPickup._id, newDate);
       setRescheduleModalVisible(false);
-      Alert.alert("Pickup rescheduled", "Your pickup date has been updated.");
+      showAlert({ type: 'success', title: 'Pickup rescheduled', message: 'Your pickup date has been updated.', duration: 4000 });
       router.replace({
         pathname: "/(customer)/order-tracking",
         params: { pickupId: selectedPickup._id },
       });
       setReloadKey((prev) => prev + 1);
     } catch (error: any) {
-      Alert.alert(
-        "Reschedule failed",
-        error?.message || "Unable to reschedule pickup.",
-      );
+      showAlert({ type: 'error', title: 'Reschedule failed', message: error?.message || 'Unable to reschedule pickup.' });
+
     } finally {
       setActionLoading(false);
     }
@@ -900,7 +894,7 @@ export default function OrderTrackingScreen() {
 
   const handleUpdatePickup = async () => {
     if (!selectedPickup?._id) {
-      Alert.alert("Missing pickup", "Unable to update this pickup right now.");
+      showAlert({ type: 'error', title: 'Missing pickup', message: 'Unable to update this pickup right now.' });
       return;
     }
     const finalItems: { itemId: string; quantity: number }[] = [];
@@ -971,10 +965,8 @@ export default function OrderTrackingScreen() {
         appliedCoupon?.code || "",
       );
       cart.clear();
-      Alert.alert(
-        "Pickup updated",
-        "Your pickup has been updated successfully.",
-      );
+      showAlert({ type: 'success', title: 'Pickup updated!', message: 'Your pickup has been updated successfully.', duration: 4000 });
+
       router.replace({
         pathname: "/(customer)/(tabs)/home",
         params: { pickupId: selectedPickup._id },
@@ -985,7 +977,8 @@ export default function OrderTrackingScreen() {
         typeof error === "object" && error && "message" in error
           ? (error as any).message
           : "Unable to update pickup.";
-      Alert.alert("Update failed", message);
+      showAlert({ type: 'error', title: 'Update failed', message });
+
     } finally {
       setIsUpdatingPickup(false);
     }

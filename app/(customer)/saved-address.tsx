@@ -15,7 +15,6 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   BackHandler,
   Dimensions,
@@ -26,6 +25,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { showAlert } from "@/components/Customalert";
 
 const { width } = Dimensions.get("window");
 
@@ -274,28 +274,21 @@ export default function SavedAddresses() {
   };
 
   const handleDelete = async (id: string) => {
-    Alert.alert(
-      "Delete Address",
-      "Are you sure you want to delete this address?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAddressApi(id);
-              setAddresses((prev) => prev.filter((a) => a.id !== id));
-              if (selectedAddressId === id) {
-                setSelectedAddressId(null);
-              }
-            } catch {
-              setAddresses((prev) => prev.filter((a) => a.id !== id));
-            }
-          },
-        },
-      ],
-    );
+    showAlert({
+      type: 'error',
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this address?',
+      primaryLabel: 'Delete',
+      onPrimary: async () => {
+        try {
+          await deleteAddressApi(id);
+          setAddresses((prev) => prev.filter((a) => a.id !== id));
+          if (selectedAddressId === id) setSelectedAddressId(null);
+        } catch {
+          setAddresses((prev) => prev.filter((a) => a.id !== id));
+        }
+      },
+    });
   };
 
   const handleAddNewAddress = () => {
@@ -315,7 +308,7 @@ export default function SavedAddresses() {
         handleSelectAddress(selectedAddress);
       }
     } else {
-      Alert.alert("No Selection", "Please select an address first");
+      showAlert({ type: 'warning', title: 'No address selected', message: 'Please select an address first.' });
     }
   };
 

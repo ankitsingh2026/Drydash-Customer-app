@@ -2,7 +2,6 @@ import { Stack, useRouter } from "expo-router";
 import { ArrowLeft, Plus, Wallet } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Alert,
   Animated,
   FlatList,
   Linking,
@@ -13,6 +12,7 @@ import {
   View
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
+import { showAlert } from "@/components/Customalert";
 
 
 import type {
@@ -78,7 +78,8 @@ export default function WalletPage() {
 
     const amt = Number(amount);
     if (!amt || amt <= 0) {
-      Alert.alert("Invalid amount", "Enter a valid top-up amount");
+      showAlert({ type: 'warning', title: 'Invalid amount', message: 'Enter a valid top-up amount.' });
+
       return;
     }
     setLoading(true);
@@ -101,10 +102,8 @@ export default function WalletPage() {
       if (payload.upiUri) {
         const opened = await openUrlSafe(payload.upiUri);
         if (!opened) {
-          Alert.alert(
-            "No UPI app found",
-            "Please install a UPI app (PhonePe / Google Pay) to proceed, or use card payment."
-          );
+          showAlert({ type: 'warning', title: 'No UPI app found', message: 'Please install PhonePe or Google Pay, or use card payment.' });
+
         }
       } else if (payload.intentUri) {
         await openUrlSafe(payload.intentUri);
@@ -117,7 +116,7 @@ export default function WalletPage() {
 
 
     } catch (err: any) {
-      Alert.alert("Top up failed", err.message || "Unknown error");
+      showAlert({ type: 'error', title: 'Top up failed', message: err.message || 'Unknown error' });
     } finally {
       setLoading(false);
     }
@@ -128,7 +127,7 @@ export default function WalletPage() {
     const amt = Number(amount);
 
     if (!amt || amt <= 0) {
-      Alert.alert("Invalid amount");
+      showAlert({ type: 'warning', title: 'Invalid amount', message: 'Enter a valid top-up amount.' });
       return;
     }
 
@@ -152,7 +151,8 @@ export default function WalletPage() {
 
     } catch (err: any) {
 
-      Alert.alert("Payment failed", err.message);
+      showAlert({ type: 'error', title: 'Payment failed', message: err.message });
+
 
     } finally {
       setLoading(false);
@@ -174,12 +174,14 @@ export default function WalletPage() {
   async function handleTopUpWithUpiIntent() {
     const amt = Number(amount);
     if (!amt || amt <= 0) {
-      Alert.alert("Invalid amount", "Enter a valid top-up amount");
+      showAlert({ type: 'warning', title: 'Invalid amount', message: 'Enter a valid top-up amount.' });
+
       return;
     }
     // require upiId to be present for client-side intent flow
     if (!upiId) {
-      Alert.alert("Enter UPI ID", "Please enter a valid UPI ID (example: mobile@upi)");
+      showAlert({ type: 'warning', title: 'Enter UPI ID', message: 'Please enter a valid UPI ID (example: mobile@upi).' });
+
       return;
     }
 
@@ -200,10 +202,8 @@ export default function WalletPage() {
       )}&am=${amt}&tn=Wallet+top-up`;
       const openedPhonePe = await openUrlSafe(phonepeIntent);
       if (!openedPhonePe) {
-        Alert.alert(
-          "No UPI app found",
-          "Please install PhonePe/Google Pay or use card checkout."
-        );
+        showAlert({ type: 'warning', title: 'No UPI app found', message: 'Please install PhonePe/Google Pay or use card checkout.' });
+
       }
     }
 
@@ -221,7 +221,7 @@ export default function WalletPage() {
         </View>
 
         <TouchableOpacity
-          onPress={() => Alert.alert("Pay with saved card", "This will call your tokenized card flow")}
+          onPress={() => showAlert({ type: 'info', title: 'Pay with saved card', message: 'This will call your tokenized card flow.' })}
           style={styles.smallBtn}
         >
           <Text style={{ fontWeight: "800" }}>Pay</Text>
@@ -330,7 +330,7 @@ export default function WalletPage() {
               <View style={[styles.transactionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <Text style={{ color: theme.subText }}>No saved cards</Text>
                 <TouchableOpacity
-                  onPress={() => Alert.alert("Add card", "Open add card flow (tokenize using backend/PG)")}
+                  onPress={() =>showAlert({ type: 'info', title: 'Add card', message: 'Open add card flow (tokenize using backend/PG).' })}
                   style={[styles.addCardBtn, { backgroundColor: theme.primary }]}
                 >
                   <Text style={{ fontWeight: "900" }}>Add Card</Text>

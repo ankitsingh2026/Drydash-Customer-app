@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
-  Alert,
+
   Animated,
   BackHandler,
   KeyboardAvoidingView,
@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
+import { showAlert } from "@/components/Customalert";
 
 /* ─────────── helpers ─────────── */
 
@@ -130,18 +131,21 @@ export default function EditProfile() {
 
       const res = await unActivatedUser();
 
-      Alert.alert(
-        "Account Scheduled for Deletion",
-        "Your account has been scheduled for deletion and will be permanently removed after 10 days. You can restore access during this period by contacting support at support@drydash.in."
-      );
+      showAlert({
+        type: 'success',
+        title: 'Account Scheduled for Deletion',
+        message: 'Will be permanently removed after 10 days. Contact support@drydash.in to restore access.',
+        duration: 6000,
+      });
 
       await logout();
       router.replace("/auth");
     } catch (e) {
-      Alert.alert(
-        "Delete Failed",
-        "We were unable to delete your account. Please try again."
-      );
+      showAlert({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'We were unable to delete your account. Please try again.',
+      });
       console.log("delete error", e);
     }
   };
