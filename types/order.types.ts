@@ -9,4 +9,8 @@ export type Address = {
   pincode: string;
   latitude?: number;
   longitude?: number;
+  contactName?: string;
+  contactPhone?: string;
+  landmark?: string;
+  addressLine2?: string;
 };

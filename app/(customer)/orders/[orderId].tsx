@@ -593,6 +593,7 @@ export default function OrderReceipt() {
   const bestCoupon = useMemo(() => {
     return availableCoupons.length ? availableCoupons[0] : null;
   }, [availableCoupons]);
+  const [showBillBreakup, setShowBillBreakup] = useState(false);
 
   if (loading) {
     return (
@@ -635,6 +636,44 @@ export default function OrderReceipt() {
   const finalTotal =
     singleOrderDetails?.totalAmount || singleOrderDetails?.price || 0;
   const totalDiscount = singleOrderDetails?.discountAmount || 0;
+
+  // const computeGstBreakup = () => {
+  //   const taxAmountTotal = Number(singleOrderDetails?.taxAmount || 0); // backend total GST (often IGST or CGST+SGST)
+  //   const final = Number(finalTotal || 0);
+
+  //   // 1) Prefer backend taxAmount if it's non-zero
+  //   if (taxAmountTotal > 0) {
+  //     return {
+  //       cgst: taxAmountTotal / 2,
+  //       sgst: taxAmountTotal / 2,
+  //       gstTotal: taxAmountTotal,
+  //       source: "backend-taxAmount" as const,
+  //     };
+  //   }
+
+  //   // 2) Fallback: assume GST is included in total with 18% rate (9% + 9%)
+  //   // total = base + base*18% = base*1.18
+  //   const base = final / 1.18;
+  //   const gstTotal = final - base;
+
+  //   return {
+  //     cgst: gstTotal / 2,
+  //     sgst: gstTotal / 2,
+  //     gstTotal,
+  //     source: "assumed-9pct+9pct" as const,
+  //   };
+  // };
+
+  const computeGstBreakup = () => {
+  const final = Number(finalTotal || 0);
+
+  return {
+    cgst: final * 0.09,
+    sgst: final * 0.09,
+  };
+};
+  const { cgst, sgst } = computeGstBreakup();
+
 
   const displayOrderId = `#${(
     singleOrderDetails.order_id ||
@@ -681,31 +720,31 @@ export default function OrderReceipt() {
     <>
       {isInProgressOrder ? (
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: theme.background }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+          <View style={[s.processingHeader, { backgroundColor: theme.background, paddingTop: 40, paddingBottom: 10, zIndex: 10, marginBottom: 0 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
+                {singleOrderDetails.plantName || "Green Park"}
+              </Text>
+              <Text style={s.processingSubTitle} numberOfLines={1}>
+                {singleOrderDetails.address}
+              </Text>
+            </View>
+          </View>
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               s.container,
-              { backgroundColor: theme.background, paddingBottom: showPayNow ? 140 : 40 },
+              { backgroundColor: theme.background, paddingBottom: showPayNow ? 140 : 40, paddingTop: 14 },
             ]}
             keyboardShouldPersistTaps="handled"
           >
-            <View style={s.processingHeader}>
-              <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-                <Ionicons name="arrow-back" size={20} color={theme.text} />
-              </TouchableOpacity>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
-                  {singleOrderDetails.plantName || "Green Park"}
-                </Text>
-                <Text style={s.processingSubTitle} numberOfLines={1}>
-                  {singleOrderDetails.address}
-                </Text>
-              </View>
-            </View>
 
             <View style={s.processingSectionHeader}>
               <Text style={s.processingSectionLabel}>ORDERED ITEMS</Text>
@@ -753,14 +792,25 @@ export default function OrderReceipt() {
                   {isPaid ? "Paid Via UPI" : "Payment Pending"}
                 </Text>
               </View>
-              <Text style={s.processingReceiptText}>Download Receipt</Text>
+              {isPaid && (
+                <Text style={s.processingReceiptText}>Download Receipt</Text>
+              )}
             </View>
 
             <View style={[s.billCard, { backgroundColor: theme.card, marginTop: 8 }]}>
-              <View style={s.billRow}>
-                <Text style={[s.totalLabel, { color: theme.text }]}>Bill Details</Text>
-                <Ionicons name="chevron-forward" size={18} color={theme.primary} />
-              </View>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setShowBillBreakup((p) => !p)}
+              >
+                <View style={s.billRow}>
+                  <Text style={[s.totalLabel, { color: theme.text }]}>Bill Details</Text>
+                  <Ionicons
+                    name={showBillBreakup ? "chevron-down" : "chevron-forward"}
+                    size={18}
+                    color={theme.primary}
+                  />
+                </View>
+              </TouchableOpacity>
 
               <View style={[s.billDivider, { backgroundColor: theme.border }]} />
 
@@ -768,7 +818,27 @@ export default function OrderReceipt() {
                 <Text style={[s.totalLabel, { color: theme.text }]}>Total Bill</Text>
                 <Text style={[s.totalAmount, { color: theme.primary }]}>₹{finalTotal?.toFixed(0)}</Text>
               </View>
+
+              {showBillBreakup && (
+                <>
+                  <View style={[s.billDivider, { backgroundColor: theme.border, marginVertical: 10 }]} />
+
+                  <View style={s.billRow}>
+                    <Text style={s.billLabel}>CGST (9%)</Text>
+                    <Text style={[s.billValue, { color: theme.text }]}>₹{cgst.toFixed(0)}</Text>
+                  </View>
+                  <View style={s.billRow}>
+                    <Text style={s.billLabel}>SGST (9%)</Text>
+                    <Text style={[s.billValue, { color: theme.text }]}>₹{sgst.toFixed(0)}</Text>
+                  </View>
+
+                  <Text style={{ marginTop: 2, marginBottom: 2, color: "#94a3b8", fontSize: 11, fontWeight: "600" }}>
+                    Taxes are already included in the Total Bill.
+                  </Text>
+                </>
+              )}
             </View>
+
 
             {/* AVAILABLE OFFERS SECTION */}
             {!isPaid && (
@@ -819,7 +889,7 @@ export default function OrderReceipt() {
                 ) : (
                   <TouchableOpacity
                     onPress={handleManualApply}
-                    style={[s.couponApplyBtn, { backgroundColor: "#22EBAB" }]}
+                    style={[s.couponApplyBtn]}
                   >
                     <Text style={s.couponApplyText}>Apply</Text>
                   </TouchableOpacity>
@@ -846,7 +916,7 @@ export default function OrderReceipt() {
                 </View>
                 <TouchableOpacity
                   onPress={() => handleCouponAction(bestCoupon, "apply")}
-                  style={[s.suggestionApplyBtn, { backgroundColor: "#22EBAB" }]}
+                  style={[s.suggestionApplyBtn]}
                 >
                   <Text style={s.suggestionApplyText}>Apply</Text>
                 </TouchableOpacity>
@@ -1038,38 +1108,38 @@ export default function OrderReceipt() {
         </KeyboardAvoidingView>
       ) : isDelivered ? (
         <KeyboardAvoidingView
-          style={{ flex: 1 }}
+          style={{ flex: 1, backgroundColor: theme.background }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
+          <View style={[s.processingHeader, { backgroundColor: theme.background, paddingTop: 40, paddingBottom: 10, zIndex: 10, marginBottom: 0 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={20} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }}>
+              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
+                {singleOrderDetails.plantName || "Green Park"}
+              </Text>
+              <Text style={s.processingSubTitle} numberOfLines={1}>
+                {singleOrderDetails.address}
+              </Text>
+            </View>
+
+            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
+              <Ionicons
+                name="notifications-outline"
+                size={16}
+                color={theme.primary}
+              />
+            </View>
+          </View>
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               s.container,
-              { backgroundColor: theme.background, paddingBottom: 120 },
+              { backgroundColor: theme.background, paddingBottom: 120, paddingTop: 14 },
             ]}
           >
-            <View style={s.processingHeader}>
-              <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-                <Ionicons name="arrow-back" size={20} color={theme.text} />
-              </TouchableOpacity>
-
-              <View style={{ flex: 1 }}>
-                <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
-                  {singleOrderDetails.plantName || "Green Park"}
-                </Text>
-                <Text style={s.processingSubTitle} numberOfLines={1}>
-                  {singleOrderDetails.address}
-                </Text>
-              </View>
-
-              <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={16}
-                  color={theme.primary}
-                />
-              </View>
-            </View>
 
             <View style={s.deliveredBanner}>
               <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
@@ -1143,7 +1213,9 @@ export default function OrderReceipt() {
             <View style={s.deliveredOrderDetailsCard}>
               <View style={s.deliveredOrderTop}>
                 <Text style={s.processingSectionLabel}>ORDER DETAILS</Text>
-                <Text style={s.processingReceiptText}>Download Receipt</Text>
+                {isPaid && (
+                  <Text style={s.processingReceiptText}>Download Receipt</Text>
+                )}
               </View>
 
               <View style={s.deliveredOrderGrid}>
@@ -1189,39 +1261,39 @@ export default function OrderReceipt() {
       ) : (
         <>
           <KeyboardAvoidingView
-            style={{ flex: 1 }}
+            style={{ flex: 1, backgroundColor: theme.background }}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
+            <View style={[s.header, { backgroundColor: theme.background, zIndex: 10, paddingBottom: 10, marginBottom: 0 }]}>
+              <TouchableOpacity
+                onPress={async () => {
+                  try {
+                    if (appliedCoupon && orderId && !isPaid) {
+                      await removeCouponApi({ orderId });
+                    }
+                  } catch (err) {
+                    console.log("Back remove error", err);
+                  } finally {
+                    router.back();
+                  }
+                }}
+                style={s.backBtn}
+              >
+                <Ionicons name="arrow-back" size={20} color="#fff" />
+              </TouchableOpacity>
+              <Text style={[s.headerTitle, { color: theme.text }]}>Receipt</Text>
+              <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
+                <Ionicons name="person-outline" size={16} color={theme.primary} />
+              </View>
+            </View>
             <ScrollView
               showsVerticalScrollIndicator={false}
               contentContainerStyle={[
                 s.container,
-                { backgroundColor: theme.background },
+                { backgroundColor: theme.background, paddingTop: 20 },
               ]}
               keyboardShouldPersistTaps="handled"
             >
-              <View style={s.header}>
-                <TouchableOpacity
-                  onPress={async () => {
-                    try {
-                      if (appliedCoupon && orderId && !isPaid) {
-                        await removeCouponApi({ orderId });
-                      }
-                    } catch (err) {
-                      console.log("Back remove error", err);
-                    } finally {
-                      router.back();
-                    }
-                  }}
-                  style={s.backBtn}
-                >
-                  <Ionicons name="arrow-back" size={20} color={theme.text} />
-                </TouchableOpacity>
-                <Text style={[s.headerTitle, { color: theme.text }]}>Receipt</Text>
-                <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
-                  <Ionicons name="person-outline" size={16} color={theme.primary} />
-                </View>
-              </View>
 
               <View style={s.orderCard}>
                 <View style={s.orderTopRow}>
@@ -1389,7 +1461,7 @@ export default function OrderReceipt() {
 
                   <TouchableOpacity
                     onPress={() => handleCouponAction(bestCoupon, "apply")}
-                    style={[s.suggestionApplyBtn, { backgroundColor: "#22EBAB" }]}
+                    style={[s.suggestionApplyBtn]}
                   >
                     <Text style={s.suggestionApplyText}>Apply</Text>
                   </TouchableOpacity>
@@ -1571,8 +1643,8 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 6,
   },
@@ -1710,12 +1782,13 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   couponApplyBtn: {
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: "#1D3A35",
+    paddingHorizontal: 25,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   couponApplyText: {
-    color: "#001714",
+    color: "#9FFFD3",
     fontWeight: "700",
     fontSize: 13,
   },
@@ -1768,13 +1841,16 @@ const s = StyleSheet.create({
   },
   suggestionDesc: { fontSize: 12, fontWeight: "500" },
   suggestionApplyBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: "#1D3A35",
+    paddingHorizontal: 25,
+    paddingVertical: 5,
+    borderColor: "#4e8573",
+    borderWidth: 1,
+    borderRadius: 20,
     marginLeft: 12,
   },
   suggestionApplyText: {
-    color: "#001714",
+    color: "#9FFFD3",
     fontWeight: "700",
     fontSize: 13,
   },
@@ -1804,7 +1880,7 @@ const s = StyleSheet.create({
   billRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    // marginBottom: 10,
   },
   billLabel: { fontSize: 13, color: "#64748b" },
   billValue: { fontSize: 13, fontWeight: "600" },

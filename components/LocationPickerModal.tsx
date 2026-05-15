@@ -157,7 +157,17 @@ export default function LocationPickerModal({
         .filter(Boolean)
         .join(", ");
 
-      onSelect(label || "Current Location", null, false);
+      const currentLocAddress = {
+        id: "current_location",
+        label: "Current Location",
+        line1: label || "Current Location",
+        city: g?.city || g?.region || "",
+        state: g?.region || "",
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      } as any;
+
+      onSelect(label || "Current Location", currentLocAddress, true);
       onClose();
     } catch (error) {
       console.error("GPS error:", error);
@@ -191,8 +201,13 @@ export default function LocationPickerModal({
         _id: addr.id,
         label: addr.label,
         addressLine1: addr.line1,
+        addressLine2: addr.addressLine2 || "",
+        landmark: addr.landmark || "",
         city: addr.city,
         state: addr.state,
+        pincode: addr.pincode,
+        contactName: addr.contactName || "",
+        contactPhone: addr.contactPhone || "",
         latitude: String(addr.latitude || ""),
         longitude: String(addr.longitude || ""),
       },

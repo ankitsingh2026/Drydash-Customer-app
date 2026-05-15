@@ -13,7 +13,7 @@ import { router } from "expo-router";
 import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
-    Modal,
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -101,7 +101,8 @@ const statusMeta = (status?: string) => {
       accent: ACCENT,
       icon: "bicycle-outline" as const,
       title: "Your order is on the way",
-      actionText: "Track",
+      subtitle: "Complete payment to continue delivery.",
+      actionText: "Pay Now",
       showClose: false,
     };
   }
@@ -270,7 +271,7 @@ export default function HomeActiveOrderCard({
       <TouchableOpacity activeOpacity={0.9} onPress={onPress}>
         <View style={styles.card}>
           <View style={[{ backgroundColor: meta.accent }]} />
-{meta.showClose && !archiveLoading ? (
+          {meta.showClose && !archiveLoading ? (
             <TouchableOpacity
               onPress={handleClosePress}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -302,7 +303,7 @@ export default function HomeActiveOrderCard({
                     }
                   />
                 ) : null}
-{meta.showClose && !archiveLoading ? (
+                {meta.showClose && !archiveLoading ? (
                   <TouchableOpacity
                     onPress={handleClosePress}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -382,7 +383,7 @@ export default function HomeActiveOrderCard({
                   </View>
                   <Text style={styles.reviewCta}>{meta.actionText}</Text>
                 </View>
-              ) : !order.isPaid ? (
+              ) : !order.isPaid || isOutForDelivery ? (
                 <TouchableOpacity
                   onPress={handleRazorpayPayNow}
                   disabled={paymentLoading}

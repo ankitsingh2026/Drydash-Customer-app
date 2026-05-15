@@ -501,19 +501,34 @@ export default function BookPickup() {
     if (confirmLoading) return;
     try {
       setConfirmLoading(true);
-      if (!selectedPickupAddressId) {
-        Alert.alert("Missing Pickup Address", "Please select pickup address.");
+      if (!selectedPickupAddressId || selectedPickupAddressId === "current_location") {
+        Alert.alert("Complete Your Address", "Please add a complete address for pickup.", [
+          { text: "Cancel", style: "cancel" },
+          { text: "Add Address", onPress: () => {
+             setAddressType("pickup");
+             setAddModalOpen(true);
+          }}
+        ]);
+        setConfirmLoading(false);
         return;
       }
       const deliveryId =
         deliveryMode === "same"
           ? selectedPickupAddressId
           : selectedDeliveryAddressId;
-      if (!deliveryId) {
+      if (!deliveryId || deliveryId === "current_location") {
         Alert.alert(
-          "Missing Delivery Address",
-          "Please select delivery address.",
+          "Complete Your Address",
+          "Please add a complete address for delivery.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Add Address", onPress: () => {
+               setAddressType("delivery");
+               setAddModalOpen(true);
+            }}
+          ]
         );
+        setConfirmLoading(false);
         return;
       }
       let selectedSlotForPayload: string | undefined;
@@ -1059,7 +1074,7 @@ export default function BookPickup() {
     confirmLoading ||
     checkingActiveBooking ||
     hasActiveBooking ||
-    !isServiceAvailableForNow ||
+    // !isServiceAvailableForNow ||
     (pickupType === "today" && !isTodaySlotSelected) ||
     (pickupType === "schedule" && !isScheduleSlotSelected);
   const bookingBlockedMessage =

@@ -56,6 +56,50 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
   const [locationText, setLocationText] = useState("Fetching location...");
   const [modalVisible, setModalVisible] = useState(false);
+  const autoLocationFetched = useRef(false);
+
+  const fetchAndSetCurrentLocation = async () => {
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== "granted") {
+        const req = await Location.requestForegroundPermissionsAsync();
+        if (req.status !== "granted") return;
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      const geo = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      const g = geo?.[0];
+      const labelStr = [g?.district || g?.subregion, g?.city || g?.region]
+        .filter(Boolean)
+        .join(", ");
+
+      const currentLocAddress = {
+        id: "current_location",
+        label: "Current Location",
+        line1: labelStr || "Current Location",
+        city: g?.city || g?.region || "",
+        state: g?.region || "",
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      };
+
+      setSelectedAddress(currentLocAddress);
+      setLocationText(labelStr || "Current Location");
+    } catch (err) {
+      console.log("Auto location fetch error", err);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedAddress && allAddresses && allAddresses.length === 0 && !autoLocationFetched.current) {
+      autoLocationFetched.current = true;
+      fetchAndSetCurrentLocation();
+    }
+  }, [selectedAddress, allAddresses]);
 
   // Fetch service data whenever selectedAddress changes
   useEffect(() => {
@@ -63,7 +107,10 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
     const fetchData = async () => {
       console.log("Selected address changed:", selectedAddress);
-      setLocationText(`${selectedAddress.line1}, ${selectedAddress.city}`);
+      const label = selectedAddress.id === "current_location" 
+        ? selectedAddress.line1 
+        : `${selectedAddress.line1}, ${selectedAddress.city}`;
+      setLocationText(label);
 
       let coords = null;
       if (selectedAddress.latitude && selectedAddress.longitude) {
@@ -98,6 +145,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   // Handle address deletion
   useEffect(() => {
     if (selectedAddress) {
+      if (selectedAddress.id === "current_location") return;
       const exists = allAddresses.find(a => a.id === selectedAddress.id);
       if (!exists) {
         if (allAddresses.length > 0) {
