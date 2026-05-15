@@ -8,23 +8,23 @@ import { router } from "expo-router";
 import { Pencil, Trash2 } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Alert,
-    Animated,
-    AppState,
-    AppStateStatus,
-    Dimensions,
-    Linking,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Animated,
+  AppState,
+  AppStateStatus,
+  Dimensions,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 const { height: SCREEN_H } = Dimensions.get("window");
+import { showAlert, AlertOverlay } from "@/components/Customalert";
 
 const C = {
   pink: "#00E1A2",
@@ -177,21 +177,20 @@ export default function LocationPickerModal({
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert("Delete Address", "Are you sure you want to delete this address?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteAddressApi(id);
-            await refreshAddresses();
-          } catch (error) {
-            console.error("Delete address error:", error);
-          }
-        },
+    showAlert({
+      type: 'error',
+      title: 'Delete Address',
+      message: 'Are you sure you want to delete this address?',
+      primaryLabel: 'Delete',
+      onPrimary: async () => {
+        try {
+          await deleteAddressApi(id);
+          await refreshAddresses();
+        } catch (error) {
+          console.error("Delete address error:", error);
+        }
       },
-    ]);
+    });
   };
 
   const handleEdit = (addr: Address) => {
@@ -225,7 +224,11 @@ export default function LocationPickerModal({
     try {
       await Linking.openURL("whatsapp://");
     } catch {
-      Alert.alert("WhatsApp not found", "Please install WhatsApp to continue.");
+      showAlert({
+        type: 'warning',
+        title: 'WhatsApp not found',
+        message: 'Please install WhatsApp to continue.',
+      });
     }
   };
 
@@ -433,6 +436,7 @@ export default function LocationPickerModal({
             </View>
           </ScrollView>
         </Animated.View>
+        <AlertOverlay /> 
       </View>
     </Modal>
   );

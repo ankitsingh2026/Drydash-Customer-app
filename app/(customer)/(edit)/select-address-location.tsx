@@ -3,17 +3,17 @@ import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { showAlert } from "@/components/Customalert";
 
 const C = {
   bg: "#031612",
@@ -106,7 +106,7 @@ export default function SelectAddressLocationScreen() {
       setSearching(true);
       const geo = await Location.geocodeAsync(query.trim());
       if (!geo?.length) {
-        Alert.alert("Location not found", "Try another search term.");
+        showAlert({ type: 'warning', title: 'Location not found', message: 'Try another search term.' });
         return;
       }
 
@@ -121,7 +121,8 @@ export default function SelectAddressLocationScreen() {
       setQuery("");
     } catch (error) {
       console.error("geocode error", error);
-      Alert.alert("Search failed", "Please try again.");
+      showAlert({ type: 'error', title: 'Search failed', message: 'Please try again.' });
+
     } finally {
       setSearching(false);
     }
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     color: C.text,
   },
   searchWrap: {
-      backgroundColor: "#0D1F1C",
+    backgroundColor: "#0D1F1C",
     marginTop: 14,
     marginHorizontal: 16,
     borderWidth: 1,

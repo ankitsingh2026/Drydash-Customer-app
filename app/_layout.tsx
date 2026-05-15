@@ -9,12 +9,14 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
 import { SlotSocketProvider } from "../context/SlotSocketContext";
+import { AlertProvider } from "@/components/Customalert";
 
 setupInterceptors();
 
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
+    <AlertProvider>
       <AuthProvider>
         <ThemeProvider>
           <NotificationProvider>
@@ -38,6 +40,7 @@ export default function RootLayout() {
           </NotificationProvider>
         </ThemeProvider>
       </AuthProvider>
+      </AlertProvider>
     </SafeAreaProvider>
   );
 }
