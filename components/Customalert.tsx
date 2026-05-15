@@ -153,9 +153,9 @@ function AlertCard({
           </Pressable>
         ) : null}
 
-        {/* <Pressable onPress={handleDismiss} style={({ pressed }) => [styles.dismissBtn, { opacity: pressed ? 0.6 : 1 }]}>
+        <Pressable onPress={handleDismiss} style={({ pressed }) => [styles.dismissBtn, { opacity: pressed ? 0.6 : 1 }]}>
           <Text style={styles.dismissBtnText}>Dismiss</Text>
-        </Pressable> */}
+        </Pressable>
       </View>
     </Animated.View>
   );
