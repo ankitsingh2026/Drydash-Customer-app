@@ -74,7 +74,7 @@ export const createOrderApi = async (orderDetails: CreatePickupRequest) => {
 export const getAddressApi = async (id: any) => {
   console.log("i am calleddddd--->>", id);
   const { data } = await apiClient.get(`/v1/addresses?customerid=${id}`);
-  // console.log("this is the dataa--->>>>>", data);
+  console.log("this is the dataa--->>>>>", data);
   return data;
 };
 

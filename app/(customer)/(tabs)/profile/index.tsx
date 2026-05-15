@@ -1,5 +1,6 @@
 import { useAuthContext } from "@/context/AuthContext";
 import { getMeApi } from "@/features/auth/auth.api";
+import { getOrdersApi } from "@/features/orders/orders.api";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import {
@@ -57,12 +58,26 @@ export default function Profile() {
     const loadProfile = async () => {
       try {
         const me = await getMeApi();
+        let orderCount = me.orders ?? me.totalOrders ?? 0;
+
+        if (!orderCount) {
+          try {
+            const phone = me.user?.phone ?? me.phone;
+            if (phone) {
+              const res = await getOrdersApi(phone);
+              orderCount = res?.orders?.length || 0;
+            }
+          } catch (err) {
+            console.log("Error fetching order count:", err);
+          }
+        }
+
         const formatted = {
           firstName: me.firstName ?? me.name?.split(" ")[0] ?? "",
           lastName: me.lastName ?? me.name?.split(" ").slice(1).join(" ") ?? "",
           walletBalance: me.walletBalance ?? 0,
-          orders: me.orders ?? 0,
-          saved: me.saved ?? me.walletBalance ?? 0,
+          orders: orderCount,
+           saved: me.saved ?? me.walletBalance ?? 0,
           services: me.services ?? 0,
           user: {
             phone: me.user?.phone ?? me.phone ?? "",

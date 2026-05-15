@@ -62,6 +62,8 @@ export default function EditAddress() {
     longitude: String(Number(params.longitude) || 77.209),
   });
 
+  console.log("Initial address form state:", addressForm);
+
   const [areaName, setAreaName] = useState((params.areaName as string) || "Selected Location");
   const [areaSubName, setAreaSubName] = useState((params.areaSubName as string) || "");
 
@@ -141,11 +143,11 @@ export default function EditAddress() {
         landmark: addressForm.landmarkArea.trim(),
         city: addressForm.city.trim(),
         state: addressForm.state.trim(),
-        country: "India",
+        // country: "India",
         pincode: addressForm.pincode.trim(),
         latitude: Number(addressForm.latitude),
         longitude: Number(addressForm.longitude),
-        addressType: "DELIVERY",
+        // addressType: "DELIVERY",
       };
 
       if (addressForm.contactName.trim()) payload.contactName = addressForm.contactName.trim();

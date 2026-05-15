@@ -84,6 +84,10 @@ const [loading, setLoading] = useState(true);
         latitude: a.latitude ? Number(a.latitude) : null,
         longitude: a.longitude ? Number(a.longitude) : null,
         isDefault: a.isDefault || false,
+        contactName: a.contactName || "",
+        contactPhone: a.contactPhone || "",
+        landmark: a.landmark || "",
+        addressLine2: a.addressLine2 || "",
       }));
 
       // console.log("Mapped addresses:", mapped);
@@ -136,6 +140,10 @@ const [loading, setLoading] = useState(true);
           pincode: address.pincode,
           latitude: address.latitude,
           longitude: address.longitude,
+          contactName: address.contactName,
+          contactPhone: address.contactPhone,
+          landmark: address.landmark,
+          addressLine2: address.addressLine2,
         };
         setSelectedAddress(newAddress);
         setSelectedAddressId(address.id);

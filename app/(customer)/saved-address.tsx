@@ -55,6 +55,11 @@ type Address = {
   isDefault?: boolean;
   latitude?: number;
   longitude?: number;
+  contactName?: string;
+  contactPhone?: string;
+  landmark?: string;
+  addressLine2?: string;
+  pincode?: string;
 };
 
 function MapDecoration() {
@@ -241,6 +246,11 @@ export default function SavedAddresses() {
             isDefault: a.isDefault ?? false,
             latitude: a.latitude,
             longitude: a.longitude,
+            contactName: a.contactName || "",
+            contactPhone: a.contactPhone || "",
+            landmark: a.landmark || "",
+            addressLine2: a.addressLine2 || "",
+            pincode: a.pincode || "",
           })),
         );
       } catch (e) {
@@ -376,6 +386,17 @@ export default function SavedAddresses() {
                       pathname: "/edit-address",
                       params: {
                         id: a.id,
+                        label: a.label,
+                        addressLine1: a.addressLine1,
+                        addressLine2: a.addressLine2 || "",
+                        landmark: a.landmark || "",
+                        city: a.city,
+                        state: a.state,
+                        pincode: a.pincode,
+                        contactName: a.contactName || "",
+                        contactPhone: a.contactPhone || "",
+                        latitude: String(a.latitude || ""),
+                        longitude: String(a.longitude || ""),
                         returnTo: "saved-addresses",
                         selectMode: selectMode ? "true" : "false",
                       },
