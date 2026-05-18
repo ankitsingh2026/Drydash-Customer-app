@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSlotSocket } from "@/context/SlotSocketContext";
 import {
     View,
@@ -7,6 +7,7 @@ import {
     ActivityIndicator,
     StyleSheet,
     ScrollView,
+    Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { oldApiClient } from "@/lib/api/client";
@@ -21,8 +22,9 @@ interface Slot {
 }
 
 interface Props {
-    lat: number;
-    lng: number;
+    lat?: number;
+    lng?: number;
+    zoneId?: string;
     selectedSlot: number;
     onSelect: (index: number, slot: Slot) => void;
      onSlotsUpdate?: (slots: Slot[]) => void;  
@@ -31,6 +33,7 @@ interface Props {
 const SlotPicker: React.FC<Props> = ({
     lat,
     lng,
+    zoneId,
     selectedSlot,
     onSelect,
     onSlotsUpdate,
@@ -39,10 +42,10 @@ const SlotPicker: React.FC<Props> = ({
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        if (lat && lng) {
+        if (zoneId || (lat && lng)) {
             fetchSlots();
         }
-    }, [lat, lng]);
+    }, [lat, lng, zoneId]);
 
     // Real-time slot update: refetch slots when slot_updated event is received
     const { onSlotUpdate } = useSlotSocket();
@@ -51,30 +54,40 @@ const SlotPicker: React.FC<Props> = ({
             fetchSlots();
         });
         return unsubscribe;
-    }, [lat, lng]);
+    }, [lat, lng, zoneId]);
 
     const fetchSlots = async () => {
         try {
             setLoading(true);
 
-            console.log("📍 Fetching slots for:", lat, lng);
+            console.log("📍 Fetching slots...");
+            
+            let currentZoneId = zoneId;
 
-            // ✅ FIX 1: removed space before https
-            const zoneRes = await oldApiClient.get(
-                `/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
-            );
-            const zoneData = zoneRes.data;
+            if (!currentZoneId && lat && lng) {
+                // ✅ FIX 1: removed space before https
+                const zoneRes = await oldApiClient.get(
+                    `/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
+                );
+                const zoneData = zoneRes.data;
 
-            console.log("🌍 Zone response:", zoneData);
+                console.log("🌍 Zone response:", zoneData);
 
-            if (!zoneData?.zoneFound) {
+                if (!zoneData?.zoneFound) {
+                    setSlots([]);
+                    return;
+                }
+                currentZoneId = zoneData.zoneId;
+            }
+
+            if (!currentZoneId) {
                 setSlots([]);
                 return;
             }
 
             const serviceRes = await oldApiClient.post(
                 "/v1/slots/service/check",
-                { zoneId: zoneData.zoneId }
+                { zoneId: currentZoneId }
             );
 
             const serviceData = serviceRes.data;
@@ -112,7 +125,7 @@ const SlotPicker: React.FC<Props> = ({
     // console.log("✅ Visible slots:", visibleSlots);
 
     if (loading) {
-        return <ActivityIndicator color="#00E1A2" />;
+        return <SlotSkeleton />;
     }
 
     if (!visibleSlots.length) {
@@ -199,6 +212,40 @@ const SlotPicker: React.FC<Props> = ({
                     </TouchableOpacity>
                 );
             })}
+        </ScrollView>
+    );
+};
+
+const SlotSkeleton = () => {
+    const anim = useRef(new Animated.Value(0.3)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(anim, {
+                    toValue: 0.7,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(anim, {
+                    toValue: 0.3,
+                    duration: 800,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, [anim]);
+
+    return (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
+            {[1, 2, 3].map((_, i) => (
+                <View key={i} style={[styles.slotChip, { marginRight: 10, borderColor: "#1A2E26", backgroundColor: "#0A1F18" }]}>
+                    <View style={{ flex: 1, justifyContent: "space-between" }}>
+                        <Animated.View style={{ opacity: anim, width: 80, height: 16, backgroundColor: "#1A332B", borderRadius: 6 }} />
+                        <Animated.View style={{ opacity: anim, width: 60, height: 12, backgroundColor: "#1A332B", borderRadius: 6 }} />
+                    </View>
+                </View>
+            ))}
         </ScrollView>
     );
 };

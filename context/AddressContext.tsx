@@ -8,6 +8,7 @@ import React, {
     useCallback,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -48,6 +49,7 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     null,
   );
+  const selectedAddressIdRef = useRef<string | null>(null);
   const [allAddresses, setAllAddresses] = useState<Address[]>([]);
 const [loading, setLoading] = useState(true);
 
@@ -94,11 +96,12 @@ const [loading, setLoading] = useState(true);
       setAllAddresses(mapped);
 
       // Set default address if none selected
-      if (!selectedAddressId && mapped.length > 0) {
+      if (!selectedAddressIdRef.current && mapped.length > 0) {
         const defaultAddr = mapped.find((a: any) => a.isDefault) || mapped[0];
         console.log("Setting default address:", defaultAddr);
         setSelectedAddress(defaultAddr);
         setSelectedAddressId(defaultAddr.id);
+        selectedAddressIdRef.current = defaultAddr.id;
       }
     } catch (e) {
       console.error("Error fetching addresses:", e);
@@ -184,6 +187,7 @@ const clearServiceData = useCallback(() => {
     console.log("Setting selected address:", address);
     setSelectedAddress(address);
     setSelectedAddressId(address?.id || null);
+    selectedAddressIdRef.current = address?.id || null;
   };
 
 return (
