@@ -30,12 +30,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { showAlert } from "@/components/Customalert";
+import { ChevronRight } from 'lucide-react-native';
 
 export const DarkTheme = {
   background: "#001714",
   gradient: ["#052420", "#003826"],
   card: "#102B25",
-  text: "#DEE5FF",
+  text: "#C9E9E2",
   subText: "#22EBAB",
   primary: "#00E1A2",
   border: "#1E3A34",
@@ -546,31 +547,35 @@ function BillCard({
     </View>
   );
 }
-
+import { CheckCircle2, Trash2 } from "lucide-react-native"
 function CouponSection({
   appliedCoupon,
   onOpen,
+  onApply,
 }: {
   appliedCoupon: any;
   onOpen: () => void;
+  onApply: (coupon: any, action: "apply" | "remove") => void;
 }) {
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.offerHeaderRow}>
-        <Text style={styles.offerLabel}>Available Offers</Text>
-        <TouchableOpacity onPress={onOpen}>
-          <Text style={styles.offerViewAll}>View All {">"}</Text>
+        <Text style={styles.offerLabel}>available coupons</Text>
+        <TouchableOpacity onPress={onOpen} style={styles.offerViewAllContainer}>
+          <Text style={styles.offerViewAllText}>View</Text>
+          <ChevronRight color={DarkTheme.text} size={16} />
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity
         onPress={onOpen}
         activeOpacity={0.85}
+        disabled={!!appliedCoupon}
         style={{
           borderRadius: 14,
           padding: 14,
-          backgroundColor: "#0E1A14",
-          borderWidth: 1,
+          backgroundColor: "#00110E",
+          //   borderWidth: 1,
           borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
         }}
       >
@@ -600,26 +605,65 @@ function CouponSection({
             </Text>
           </View>
 
-          <View
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 18,
-              borderWidth: 1,
-              borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
-              backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
-            }}
-          >
-            <Text
+          {appliedCoupon ? (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              {/* Check and Status String Component */}
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <CheckCircle2 color="#00E1A2" size={16} fill="#00110E" />
+                <Text
+                  style={{
+                    color: "#00E1A2",
+                    fontWeight: "700",
+                    fontSize: 14,
+                    marginLeft: 6,
+                  }}
+                >
+                  Applied
+                </Text>
+              </View>
+
+              {/* Vertical Boundary Border Line */}
+              <View
+                style={{
+                  width: 1,
+                  height: 16,
+                  backgroundColor: "#2A4A34",
+                  marginHorizontal: 10,
+                }}
+              />
+
+              {/* Action Button Element for Coupon Discarding */}
+              <TouchableOpacity
+                onPress={() => onApply(appliedCoupon, "remove")}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Trash2 color="#7A9B87" size={16} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            /* Unapplied Fallback Layout State */
+            <TouchableOpacity
+              onPress={onOpen}
               style={{
-                color: appliedCoupon ? "#00E1A2" : "#7A9B87",
-                fontWeight: "800",
-                fontSize: 12,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 18,
+                borderWidth: 1,
+                borderColor: "#2A4A34",
+                backgroundColor: "transparent",
               }}
             >
-              {appliedCoupon ? "✓ Applied" : "Apply"}
-            </Text>
-          </View>
+              <Text
+                style={{
+                  color: "#7A9B87",
+                  fontWeight: "800",
+                  fontSize: 12,
+                }}
+              >
+                Apply
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </TouchableOpacity>
     </View>
@@ -1235,7 +1279,7 @@ export default function OrderTrackingScreen() {
 
       <Text
         style={{
-          color: total ? "#00E1A2" : "#CFFFF1",
+          color: total ? "#C9E9E2" : "#CFFFF1",
           fontSize: total ? 18 : 13,
           fontWeight: total ? "900" : "600",
         }}
@@ -1286,7 +1330,7 @@ export default function OrderTrackingScreen() {
             {hasOrderItems || (isEditableMode && cart.items.length > 0) ? (
               <>
                 <View style={styles.sectionHeaderWrap}>
-                  <Text style={styles.sectionHeader}>Cart Items </Text>
+                  <Text style={styles.sectionHeader}>Cart Items ({(ItemCard.length + 1)}) </Text>
                 </View>
 
                 {items.map((item: any) => {
@@ -1328,12 +1372,28 @@ export default function OrderTrackingScreen() {
                 <CouponSection
                   appliedCoupon={appliedCoupon}
                   onOpen={() => setCouponOpen(true)}
+                  onApply={(coupon, action) => {
+                    if (action === "remove") {
+                      // 1. Clears your applied coupon state object
+                      setAppliedCoupon(null);
+
+                      // 2. Add any other state setters you actually use below:
+                      // (e.g., if you have setCouponCode, clear it here, otherwise leave it empty)
+                    }
+                  }}
                 />
 
+                <View style={styles.offerHeaderRow}>
+                  <Text style={styles.offerLabel}>Cost Summary</Text>
+                  {/* <TouchableOpacity style={styles.offerViewAllContainer}>
+                    <Text style={styles.offerViewAllText}>View</Text>
+                    <ChevronRight color={DarkTheme.text} size={16} />
+                  </TouchableOpacity> */}
+                </View>
                 <View
                   style={{
-                    marginTop: 12,
-                    marginBottom: 20,
+                    marginTop: 0,
+                    marginBottom: 10,
                     borderRadius: 16,
                     padding: 14,
                     backgroundColor: "#0E1A14",
@@ -1341,6 +1401,7 @@ export default function OrderTrackingScreen() {
                     borderColor: "#1E3327",
                   }}
                 >
+
                   <BreakRow label="Subtotal" value={bill.subtotal} />
 
                   {bill.discount > 0 && (
@@ -1355,7 +1416,7 @@ export default function OrderTrackingScreen() {
                     }}
                   />
 
-                  <BreakRow label="Total Payable" value={bill.total} total />
+                  <BreakRow label="Total Bill" value={bill.total} total />
                 </View>
               </>
             ) : (
@@ -1925,11 +1986,19 @@ const styles = StyleSheet.create({
     color: "#8AA39B",
     fontSize: 13,
     fontWeight: "600",
+    textTransform: "uppercase",
   },
-  offerViewAll: {
-    color: DarkTheme.primary,
+  offerViewAllContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  // Style the text itself
+  offerViewAllText: {
+    color: DarkTheme.text,
     fontSize: 13,
     fontWeight: "700",
+    textTransform: "uppercase",
+    marginRight: 4, // Adds a small space before the icon
   },
   couponRow: {
     flexDirection: "row",
@@ -2020,7 +2089,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   specialInput: {
-    minHeight: 96,
+    minHeight: 60,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: DarkTheme.border,
@@ -2138,8 +2207,8 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   itemThumb: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 45,
     borderRadius: 12,
     overflow: "hidden",
     backgroundColor: "#071B18",
