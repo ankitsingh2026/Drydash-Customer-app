@@ -26,6 +26,8 @@ type TabBarProps = {
   style?: StyleProp<ViewStyle>;
 };
 
+let hasAutoLocationFetched = false;
+
 export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -56,7 +58,6 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
   const [locationText, setLocationText] = useState("Fetching location...");
   const [modalVisible, setModalVisible] = useState(false);
-  const autoLocationFetched = useRef(false);
 
   const fetchAndSetCurrentLocation = async () => {
     try {
@@ -95,11 +96,11 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   };
 
   useEffect(() => {
-    if (!selectedAddress && allAddresses && allAddresses.length === 0 && !autoLocationFetched.current) {
-      autoLocationFetched.current = true;
+    if (!hasAutoLocationFetched) {
+      hasAutoLocationFetched = true;
       fetchAndSetCurrentLocation();
     }
-  }, [selectedAddress, allAddresses]);
+  }, []);
 
   // Fetch service data whenever selectedAddress changes
   useEffect(() => {

@@ -1446,11 +1446,11 @@ export default function BookPickup() {
                   PICKUP SLOT
                 </Text>
 
-                {selectedPickupAddr?.latitude &&
-                  selectedPickupAddr?.longitude && (
+                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
                     <SlotPicker
                       lat={selectedPickupAddr.latitude}
                       lng={selectedPickupAddr.longitude}
+                      zoneId={zoneData?.zoneId}
                       selectedSlot={selectedSlotIndex}
                       onSelect={(index, slot) => {
                         setSelectedSlotIndex(index);
@@ -1467,6 +1467,52 @@ export default function BookPickup() {
                         setHasAvailableSlots(available);
                       }}
                     />
+                  ) : (
+                    <TouchableOpacity 
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setModalMode("pickup");
+                        setModalVisible(true);
+                      }}
+                      style={s.noSlotBox}
+                    >
+                      <View style={{
+                        borderRadius: 16,
+                        padding: 16,
+                        backgroundColor: "#0B1F19",
+                        borderWidth: 1,
+                        borderColor: "#1E3327",
+                      }}>
+                        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                          <View style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: 18,
+                            backgroundColor: "#2A2F1C",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: 10,
+                          }}>
+                            <Ionicons name="location" size={18} color="#00E1A2" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{
+                              color: "#CFFFF1",
+                              fontSize: 14,
+                              fontWeight: "700",
+                            }}>Location Required</Text>
+                            <Text style={{
+                              color: "#7A9B87",
+                              fontSize: 12,
+                              marginTop: 4,
+                              lineHeight: 18,
+                            }}>
+                              Please select a pickup address to view available slots for today.
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
                   )}
               </View>
               <TouchableOpacity
@@ -2887,6 +2933,9 @@ const s = StyleSheet.create({
   removeBtn: {
     padding: 2,
   },
+  noSlotBox : {
+    marginTop: 8,
+  }
 });
 
 // ─── Modal Styles ─────────────────────────────────────────────────────────────

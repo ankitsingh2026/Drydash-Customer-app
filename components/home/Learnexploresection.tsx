@@ -183,6 +183,7 @@ useEffect(() => {
             key={article.key}
             style={styles.articleCard}
             activeOpacity={0.85}
+            onPress={() => router.push(`/(customer)/blog/${article.key}` as any)}
           >
             <View style={styles.imageContainer}>
               <Image

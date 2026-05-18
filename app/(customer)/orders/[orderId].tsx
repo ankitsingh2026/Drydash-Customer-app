@@ -1124,14 +1124,6 @@ export default function OrderReceipt() {
                 {singleOrderDetails.address}
               </Text>
             </View>
-
-            <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
-              <Ionicons
-                name="notifications-outline"
-                size={16}
-                color={theme.primary}
-              />
-            </View>
           </View>
           <ScrollView
             showsVerticalScrollIndicator={false}
@@ -1250,13 +1242,6 @@ export default function OrderReceipt() {
 
             <Text style={s.deliveredHelpLabel}>NEED HELP ?</Text>
           </ScrollView>
-
-          <View style={s.deliveredBottomCtaWrap}>
-            <TouchableOpacity activeOpacity={0.9} style={s.deliveredBottomCtaBtn}>
-              <Text style={s.deliveredBottomCtaTitle}>Repeat Order</Text>
-              <Text style={s.deliveredBottomCtaSub}>View Cart On Next Step</Text>
-            </TouchableOpacity>
-          </View>
         </KeyboardAvoidingView>
       ) : (
         <>
@@ -2188,36 +2173,6 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.8,
     marginBottom: 4,
-  },
-  deliveredBottomCtaWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: Platform.OS === "ios" ? 30 : 16,
-    backgroundColor: "rgba(0,23,20,0.96)",
-    borderTopWidth: 1,
-    borderTopColor: "#1E3A34",
-  },
-  deliveredBottomCtaBtn: {
-    backgroundColor: "#22EBAB",
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-  },
-  deliveredBottomCtaTitle: {
-    color: "#001714",
-    fontSize: 16,
-    fontWeight: "900",
-  },
-  deliveredBottomCtaSub: {
-    color: "#0B4D3C",
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 2,
   },
 
   payBtnWrapper: {
