@@ -296,6 +296,24 @@ export default function OrderReceipt() {
     }
   };
 
+useEffect(() => {
+  // Only create Razorpay order if:
+  // 1. Order is loaded
+  // 2. Not already paid
+  // 3. Not already COD confirmed
+  // 4. Not an COD order (or you can check `!singleOrderDetails.isCODConfirmed`)
+  if (
+    singleOrderDetails &&
+    !singleOrderDetails.isPaid &&
+    !razorpayData &&
+    !singleOrderDetails?.isCODConfirmed
+  ) {
+    razorpayPaymentInitiate(orderId).then((res) => {
+      if (res?.data?.success) setRazorpayData(res.data);
+    });
+  }
+}, [singleOrderDetails]);
+
   const fetchAvailableCoupons = async (orderData?: OrderDetails | null) => {
     try {
       const order = orderData || singleOrderDetails;
@@ -406,8 +424,9 @@ export default function OrderReceipt() {
     }, [orderId]),
   );
 
-  useEffect(() => {
-  if (singleOrderDetails && !singleOrderDetails.isPaid && !razorpayData) {
+useEffect(() => {
+  // Only initiate Razorpay order if order is not paid AND not COD
+  if (singleOrderDetails && !singleOrderDetails.isPaid && !razorpayData && !singleOrderDetails?.isCODConfirmed) {
     razorpayPaymentInitiate(orderId).then((res) => {
       if (res?.data?.success) setRazorpayData(res.data);
     });
@@ -477,27 +496,87 @@ export default function OrderReceipt() {
   //   }
   // };
   
-  const handlePaymentSuccess = async (data: any) => {
+//   const handlePaymentSuccess = async (data: any) => {
+//   try {
+//     setPaymentLoading(true);
+//     const verifyRes = await verifyRazorpayPayment({
+//       razorpay_order_id: data.razorpay_order_id,
+//       razorpay_payment_id: data.razorpay_payment_id,
+//       razorpay_signature: data.razorpay_signature,
+//     });
+//     if (!verifyRes?.success) throw new Error('Verification failed');
+//     if (orderId) await confirmCouponApi({ orderId });
+//     router.replace({
+//       pathname: '/(customer)/orders/payment-success',
+//       params: { orderId, amount: String(singleOrderDetails?.totalAmount), paymentId: data.razorpay_payment_id },
+//     });
+//   } catch {
+//     router.replace({
+//       pathname: '/(customer)/orders/payment-failure',
+//       params: { orderId, amount: String(singleOrderDetails?.totalAmount), reason: 'Verification failed' },
+//     });
+//   } finally {
+//     setPaymentLoading(false);
+//   }
+// };
+
+const handlePaymentSuccess = async (data: any) => {
   try {
     setPaymentLoading(true);
+
+    // Check if it's a COD payment (no real payment ID)
+    if (data.razorpay_payment_id === 'COD') {
+      // COD already confirmed via separate API, just redirect to success
+      setIsPaymentDone(true);
+      router.replace({
+        pathname: '/(customer)/orders/payment-success',
+        params: {
+          orderId,
+          amount: String(singleOrderDetails?.totalAmount),
+          paymentId: 'COD',
+        },
+      });
+      return;
+    }
+
+    // Normal payment flow (UPI or Card)
     const verifyRes = await verifyRazorpayPayment({
       razorpay_order_id: data.razorpay_order_id,
       razorpay_payment_id: data.razorpay_payment_id,
       razorpay_signature: data.razorpay_signature,
     });
-    if (!verifyRes?.success) throw new Error('Verification failed');
-    if (orderId) await confirmCouponApi({ orderId });
+
+    if (!verifyRes?.success) {
+      throw new Error('Verification failed');
+    }
+
+    if (orderId) {
+      await confirmCouponApi({ orderId });
+    }
+
+    setIsPaymentDone(true);
+
     router.replace({
       pathname: '/(customer)/orders/payment-success',
-      params: { orderId, amount: String(singleOrderDetails?.totalAmount), paymentId: data.razorpay_payment_id },
+      params: {
+        orderId,
+        amount: String(singleOrderDetails?.totalAmount),
+        paymentId: data.razorpay_payment_id,
+      },
     });
-  } catch {
+  } catch (error) {
+    console.error('Payment success error:', error);
     router.replace({
       pathname: '/(customer)/orders/payment-failure',
-      params: { orderId, amount: String(singleOrderDetails?.totalAmount), reason: 'Verification failed' },
+      params: {
+        orderId,
+        amount: String(singleOrderDetails?.totalAmount),
+        reason: 'Payment verification failed',
+      },
     });
   } finally {
     setPaymentLoading(false);
+    // setShowPaymentWebView(false);
   }
 };
 
@@ -538,6 +617,9 @@ export default function OrderReceipt() {
       // ✅ REFRESH ORDER
       const updatedOrder = await getSingleOrderDetails();
       setSingleOrderDetails({ ...updatedOrder });
+
+
+       await refreshRazorpayOrder();
 
       setShowCouponSheet(false);
       setCouponError("");
