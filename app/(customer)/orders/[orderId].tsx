@@ -301,6 +301,19 @@ export default function OrderReceipt() {
     }
   };
 
+  const refreshRazorpayOrder = async () => {
+  // Only refresh if order exists, not paid, and not COD
+  if (!singleOrderDetails || singleOrderDetails.isPaid || singleOrderDetails.isCODConfirmed) return;
+  try {
+    const res = await razorpayPaymentInitiate(orderId);
+    if (res?.data?.success) {
+      setRazorpayData(res.data);
+    }
+  } catch (error) {
+    console.error('Failed to refresh Razorpay order:', error);
+  }
+};
+
 useEffect(() => {
   // Only create Razorpay order if:
   // 1. Order is loaded
@@ -429,14 +442,6 @@ useEffect(() => {
     }, [orderId]),
   );
 
-useEffect(() => {
-  // Only initiate Razorpay order if order is not paid AND not COD
-  if (singleOrderDetails && !singleOrderDetails.isPaid && !razorpayData && !singleOrderDetails?.isCODConfirmed) {
-    razorpayPaymentInitiate(orderId).then((res) => {
-      if (res?.data?.success) setRazorpayData(res.data);
-    });
-  }
-}, [singleOrderDetails]);
 
   // const handleRazorpayPayNow = async () => {
   //   try {
