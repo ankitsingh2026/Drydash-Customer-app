@@ -13,7 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -28,7 +28,8 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
-import RazorpayWebView from "./RazorpayWebView";
+// import RazorpayWebView from "./RazorpayWebView";
+import { UPIPaymentSelector } from '@/components/payments/UPIPaymentSelector';
 
 interface OrderItem {
   heading: string;
@@ -197,7 +198,7 @@ export default function OrderReceipt() {
     useState<OrderDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const [showPaymentWebView, setShowPaymentWebView] = useState(false);
+  // const [showPaymentWebView, setShowPaymentWebView] = useState(false);
   const [razorpayData, setRazorpayData] = useState<any>(null);
 
   const [showCouponSheet, setShowCouponSheet] = useState(false);
@@ -299,6 +300,37 @@ export default function OrderReceipt() {
       setLoading(false);
     }
   };
+
+  const refreshRazorpayOrder = async () => {
+  // Only refresh if order exists, not paid, and not COD
+  if (!singleOrderDetails || singleOrderDetails.isPaid || singleOrderDetails.isCODConfirmed) return;
+  try {
+    const res = await razorpayPaymentInitiate(orderId);
+    if (res?.data?.success) {
+      setRazorpayData(res.data);
+    }
+  } catch (error) {
+    console.error('Failed to refresh Razorpay order:', error);
+  }
+};
+
+useEffect(() => {
+  // Only create Razorpay order if:
+  // 1. Order is loaded
+  // 2. Not already paid
+  // 3. Not already COD confirmed
+  // 4. Not an COD order (or you can check `!singleOrderDetails.isCODConfirmed`)
+  if (
+    singleOrderDetails &&
+    !singleOrderDetails.isPaid &&
+    !razorpayData &&
+    !singleOrderDetails?.isCODConfirmed
+  ) {
+    razorpayPaymentInitiate(orderId).then((res) => {
+      if (res?.data?.success) setRazorpayData(res.data);
+    });
+  }
+}, [singleOrderDetails]);
 
   const fetchAvailableCoupons = async (orderData?: OrderDetails | null) => {
     try {
@@ -410,71 +442,156 @@ export default function OrderReceipt() {
     }, [orderId]),
   );
 
-  const handleRazorpayPayNow = async () => {
-    try {
-      setPaymentLoading(true);
-      const res = await razorpayPaymentInitiate(orderId);
-      console.log("razorpayPaymentInitiate response======>>>", res);
 
-      if (!res?.data?.success) {
-        throw new Error("Payment initiation failed");
-      }
+  // const handleRazorpayPayNow = async () => {
+  //   try {
+  //     setPaymentLoading(true);
+  //     const res = await razorpayPaymentInitiate(orderId);
+  //     console.log("razorpayPaymentInitiate response======>>>", res);
 
-      setRazorpayData(res.data);
-      setShowPaymentWebView(true);
-    } catch (error) {
-      console.log("payment initiate error", error);
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
+  //     if (!res?.data?.success) {
+  //       throw new Error("Payment initiation failed");
+  //     }
 
-  const handlePaymentSuccess = async (data: any) => {
-    try {
-      setPaymentLoading(true);
+  //     setRazorpayData(res.data);
+  //     // setShowPaymentWebView(true);
+  //   } catch (error) {
+  //     console.log("payment initiate error", error);
+  //   } finally {
+  //     setPaymentLoading(false);
+  //   }
+  // };
 
-      const verifyRes = await verifyRazorpayPayment({
-        razorpay_order_id: data.orderId,
-        razorpay_payment_id: data.paymentId,
-        razorpay_signature: data.signature,
-      });
+  // const handlePaymentSuccess = async (data: any) => {
+  //   try {
+  //     setPaymentLoading(true);
 
-      if (!verifyRes?.success) {
-        throw new Error("Verification failed");
-      }
+  //     const verifyRes = await verifyRazorpayPayment({
+  //       razorpay_order_id: data.orderId,
+  //       razorpay_payment_id: data.paymentId,
+  //       razorpay_signature: data.signature,
+  //     });
 
-      // ✅ CONFIRM COUPON
-      if (orderId) {
-        await confirmCouponApi({ orderId });
-      }
+  //     if (!verifyRes?.success) {
+  //       throw new Error("Verification failed");
+  //     }
 
+  //     // ✅ CONFIRM COUPON
+  //     if (orderId) {
+  //       await confirmCouponApi({ orderId });
+  //     }
+
+  //     setIsPaymentDone(true);
+
+  //     router.replace({
+  //       pathname: "/(customer)/orders/payment-success",
+  //       params: {
+  //         orderId,
+  //         amount: String(singleOrderDetails?.totalAmount),
+  //         paymentId: data.paymentId,
+  //       },
+  //     });
+  //   } catch {
+  //     router.replace({
+  //       pathname: "/(customer)/orders/payment-failure",
+  //       params: {
+  //         orderId,
+  //         amount: String(singleOrderDetails?.totalAmount),
+  //         reason: "Payment verification failed",
+  //       },
+  //     });
+  //   } finally {
+  //     setPaymentLoading(false);
+  //     setShowPaymentWebView(false);
+  //   }
+  // };
+  
+//   const handlePaymentSuccess = async (data: any) => {
+//   try {
+//     setPaymentLoading(true);
+//     const verifyRes = await verifyRazorpayPayment({
+//       razorpay_order_id: data.razorpay_order_id,
+//       razorpay_payment_id: data.razorpay_payment_id,
+//       razorpay_signature: data.razorpay_signature,
+//     });
+//     if (!verifyRes?.success) throw new Error('Verification failed');
+//     if (orderId) await confirmCouponApi({ orderId });
+//     router.replace({
+//       pathname: '/(customer)/orders/payment-success',
+//       params: { orderId, amount: String(singleOrderDetails?.totalAmount), paymentId: data.razorpay_payment_id },
+//     });
+//   } catch {
+//     router.replace({
+//       pathname: '/(customer)/orders/payment-failure',
+//       params: { orderId, amount: String(singleOrderDetails?.totalAmount), reason: 'Verification failed' },
+//     });
+//   } finally {
+//     setPaymentLoading(false);
+//   }
+// };
+
+const handlePaymentSuccess = async (data: any) => {
+  try {
+    setPaymentLoading(true);
+
+    // Check if it's a COD payment (no real payment ID)
+    if (data.razorpay_payment_id === 'COD') {
+      // COD already confirmed via separate API, just redirect to success
       setIsPaymentDone(true);
-
       router.replace({
-        pathname: "/(customer)/orders/payment-success",
+        pathname: '/(customer)/orders/payment-success',
         params: {
           orderId,
           amount: String(singleOrderDetails?.totalAmount),
-          paymentId: data.paymentId,
+          paymentId: 'COD',
         },
       });
-    } catch {
-      router.replace({
-        pathname: "/(customer)/orders/payment-failure",
-        params: {
-          orderId,
-          amount: String(singleOrderDetails?.totalAmount),
-          reason: "Payment verification failed",
-        },
-      });
-    } finally {
-      setPaymentLoading(false);
-      setShowPaymentWebView(false);
+      return;
     }
-  };
+
+    // Normal payment flow (UPI or Card)
+    const verifyRes = await verifyRazorpayPayment({
+      razorpay_order_id: data.razorpay_order_id,
+      razorpay_payment_id: data.razorpay_payment_id,
+      razorpay_signature: data.razorpay_signature,
+    });
+
+    if (!verifyRes?.success) {
+      throw new Error('Verification failed');
+    }
+
+    if (orderId) {
+      await confirmCouponApi({ orderId });
+    }
+
+    setIsPaymentDone(true);
+
+    router.replace({
+      pathname: '/(customer)/orders/payment-success',
+      params: {
+        orderId,
+        amount: String(singleOrderDetails?.totalAmount),
+        paymentId: data.razorpay_payment_id,
+      },
+    });
+  } catch (error) {
+    console.error('Payment success error:', error);
+    router.replace({
+      pathname: '/(customer)/orders/payment-failure',
+      params: {
+        orderId,
+        amount: String(singleOrderDetails?.totalAmount),
+        reason: 'Payment verification failed',
+      },
+    });
+  } finally {
+    setPaymentLoading(false);
+    // setShowPaymentWebView(false);
+  }
+};
 
   const handlePaymentFailure = (reason: string) => {
-    setShowPaymentWebView(false);
+    // setShowPaymentWebView(false);
     setPaymentLoading(false);
 
     router.replace({
@@ -483,10 +600,10 @@ export default function OrderReceipt() {
     });
   };
 
-  const handlePaymentCancel = () => {
-    setShowPaymentWebView(false);
-    setPaymentLoading(false);
-  };
+  // const handlePaymentCancel = () => {
+  //   // setShowPaymentWebView(false);
+  //   setPaymentLoading(false);
+  // };
 
   const handleCouponAction = async (
     coupon: Coupon,
@@ -510,6 +627,9 @@ export default function OrderReceipt() {
       // ✅ REFRESH ORDER
       const updatedOrder = await getSingleOrderDetails();
       setSingleOrderDetails({ ...updatedOrder });
+
+
+       await refreshRazorpayOrder();
 
       setShowCouponSheet(false);
       setCouponError("");
@@ -983,51 +1103,49 @@ export default function OrderReceipt() {
 
           </ScrollView>
 
-          {showPayNow && (
-            <View style={{ backgroundColor: theme.background }}>
-              {appliedCoupon && totalDiscount > 0 && (
-                <View style={{ backgroundColor: '#B48820', paddingVertical: 8, alignItems: 'center' }}>
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>"{appliedCoupon.code}" Applied, you just saved ₹{totalDiscount.toFixed(0)}</Text>
-                </View>
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{ width: 32, height: 32, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <Image source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }} style={{ width: 16, height: 16 }} />
-                  </View>
-                  <View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', marginRight: 4 }}>Pay Using</Text>
-                      <Ionicons name="chevron-up" size={12} color="#94a3b8" />
-                    </View>
-                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Google Pay UPI</Text>
-                  </View>
-                </View>
-                
-                <TouchableOpacity
-                  onPress={handleRazorpayPayNow}
-                  disabled={paymentLoading}
-                  style={{ backgroundColor: theme.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' }}
-                >
-                  {paymentLoading ? (
-                    <ActivityIndicator size="small" color="#001714" style={{ marginHorizontal: 20 }} />
-                  ) : (
-                    <>
-                      <View style={{ marginRight: 12 }}>
-                        <Text style={{ color: '#001714', fontSize: 14, fontWeight: '800' }}>₹{singleOrderDetails?.totalAmount?.toFixed(0)}</Text>
-                        <Text style={{ color: '#001714', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>Total</Text>
-                      </View>
-                      <View style={{ width: 1, height: 20, backgroundColor: 'rgba(0,23,20,0.2)', marginRight: 12 }} />
-                      <Text style={{ color: '#001714', fontSize: 16, fontWeight: '700', marginRight: 8 }}>Place Order</Text>
-                      <Ionicons name="caret-forward" size={14} color="#001714" />
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
+          {/* {showPayNow && (
+            <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
+              <TouchableOpacity
+                onPress={handleRazorpayPayNow}
+                disabled={paymentLoading}
+                style={[
+                  s.payBtn,
+                  {
+                    backgroundColor: theme.primary,
+                    opacity: paymentLoading ? 0.7 : 1,
+                  },
+                ]}
+              >
+                {paymentLoading ? (
+                  <ActivityIndicator size="small" color="#001714" />
+                ) : (
+                  <>
+                    <Text style={s.payBtnText}>
+                      Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
+                    </Text>
+                    <Ionicons name="arrow-forward" size={18} color="#001714" />
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
-          )}
+          )} */}
 
-          <Modal visible={showPaymentWebView} animationType="slide">
+          {showPayNow && razorpayData && (
+  <UPIPaymentSelector
+    razorpayOrderId={razorpayData.razorpayOrderId}
+    amount={razorpayData.amount}        // already in paise
+    customerEmail={email}
+    customerPhone={phone}
+    customerName={name}
+    razorpayKeyId={razorpayData.key}
+    themeColor={theme.primary}
+    orderId={orderId} 
+    onSuccess={handlePaymentSuccess}
+    onFailure={handlePaymentFailure}
+  />
+)}
+
+          {/* <Modal visible={showPaymentWebView} animationType="slide">
             {razorpayData && (
               <RazorpayWebView
                 amount={razorpayData.amount}
@@ -1043,7 +1161,7 @@ export default function OrderReceipt() {
                 onCancel={handlePaymentCancel}
               />
             )}
-          </Modal>
+          </Modal> */}
         </KeyboardAvoidingView>
       ) : isDelivered ? (
         <KeyboardAvoidingView
