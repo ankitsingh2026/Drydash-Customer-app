@@ -414,7 +414,7 @@ export default function LocationPickerModal({
                               handleEdit(addr);
                             }}
                           >
-                            <Pencil size={15} color="#6B7280" />
+                            <Pencil size={20} color="#6B7280" />
                           </TouchableOpacity>
 
                           <TouchableOpacity
@@ -423,7 +423,7 @@ export default function LocationPickerModal({
                               handleDelete(addr.id);
                             }}
                           >
-                            <Trash2 size={15} color={C.danger} />
+                            <Trash2 size={20} color={C.danger} />
                           </TouchableOpacity>
                         </View>
                       </TouchableOpacity>

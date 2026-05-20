@@ -75,6 +75,10 @@ interface OrderDetails {
     };
     reservationId: string;
   } | null;
+  assignedRider?: {
+    pickup?: { riderId?: string; riderName?: string; assignedAt?: string };
+    delivery?: { riderId?: string; riderName?: string; assignedAt?: string };
+  };
 }
 
 function ItemIcon({ heading, color }: { heading: string; color: string }) {
@@ -166,6 +170,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
     payment: raw.payment,
     // ✅ FIX: Transfer the Coupon field so it survives normalization
     Coupon: raw.Coupon ?? raw.coupon ?? null,
+    assignedRider: raw.assignedRider,
   };
 }
 
@@ -715,6 +720,84 @@ export default function OrderReceipt() {
     }
   };
 
+  const renderPickupDetails = () => (
+    <>
+      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>PICKUP DETAILS</Text>
+      <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP FROM</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.customerName || name}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP BY</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }} />
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP ADDRESS</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 20 }}>{singleOrderDetails.address}</Text>
+        </View>
+
+        <View>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP COMPLETED DATE & TIME</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{new Date(singleOrderDetails?.statusHistory?.processing).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</Text>
+        </View>
+      </View>
+    </>
+  );
+
+  const renderOrderDetails = () => (
+    <>
+      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>ORDER DETAILS</Text>
+      <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>ORDER ID</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{displayOrderId.replace("#", "")}</Text>
+              <TouchableOpacity style={{ marginLeft: 6 }}>
+                <Ionicons name="copy-outline" size={14} color={theme.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PAYMENT</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{isPaid ? (singleOrderDetails.payment?.paymentMode ? `Paid via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid via UPI") : "Payment Pending"}</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERED TO</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.customerName || name}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERED BY</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }} />
+              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERY ADDRESS</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 20 }}>{singleOrderDetails.address}</Text>
+        </View>
+
+        <View>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>ORDER PLACED DATE & TIME</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{new Date(singleOrderDetails.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</Text>
+        </View>
+      </View>
+    </>
+  );
+
   // ✅ FIX: Single return with conditionals inside – CouponCard always mounted
   return (
     <>
@@ -723,16 +806,20 @@ export default function OrderReceipt() {
           style={{ flex: 1, backgroundColor: theme.background }}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
         >
-          <View style={[s.processingHeader, { backgroundColor: theme.background, paddingTop: 40, paddingBottom: 10, zIndex: 10, marginBottom: 0 }]}>
-            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
+          <View style={[s.processingHeader, { backgroundColor: theme.background, paddingTop: 40, paddingBottom: 10, zIndex: 10, marginBottom: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={{ width: 36, height: 36, justifyContent: "center" }}>
+              <Ionicons name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
 
             <View style={{ flex: 1 }}>
-              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
-                {singleOrderDetails.plantName || "Green Park"}
-              </Text>
-              <Text style={s.processingSubTitle} numberOfLines={1}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="send-outline" size={16} color="#fff" style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: 'bold' }} numberOfLines={1}>
+                  {singleOrderDetails.plantName || "Green Park"}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+              </View>
+              <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 2, marginLeft: 24 }} numberOfLines={1}>
                 {singleOrderDetails.address}
               </Text>
             </View>
@@ -741,30 +828,26 @@ export default function OrderReceipt() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               s.container,
-              { backgroundColor: theme.background, paddingBottom: showPayNow ? 140 : 40, paddingTop: 14 },
+              { backgroundColor: theme.background, paddingBottom: showPayNow ? 40 : 40, paddingTop: 14, paddingHorizontal: 20 },
             ]}
             keyboardShouldPersistTaps="handled"
           >
 
-            <View style={s.processingSectionHeader}>
-              <Text style={s.processingSectionLabel}>ORDERED ITEMS</Text>
-              <Text style={s.processingOrderId}>Order {displayOrderId}</Text>
-            </View>
-
-            <View style={s.processingStatusPill}>
-              <Text style={s.processingStatusText}>{inProgressTitle}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>ORDERED ITEMS ({singleOrderDetails.items?.length || 0})</Text>
+              <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '500' }}>Order Id :{displayOrderId}</Text>
             </View>
 
             {(singleOrderDetails.items || []).map((item, index) => (
               <View
                 key={index}
-                style={[s.processingItemCard, { backgroundColor: theme.card }]}
+                style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: '#0f2922', marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
               >
-                <View style={[s.itemIconBox, { backgroundColor: theme.background }]}>
+                <View style={{ backgroundColor: theme.card, width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
                   {item.imageUrl ? (
                     <Image
                       source={{ uri: item.imageUrl }}
-                      style={{ width: 40, height: 40, borderRadius: 8 }}
+                      style={{ width: 36, height: 36, borderRadius: 8 }}
                       resizeMode="cover"
                     />
                   ) : (
@@ -772,319 +855,175 @@ export default function OrderReceipt() {
                   )}
                 </View>
 
-                <View style={s.itemInfo}>
-                  <Text style={[s.itemName, { color: theme.text }]}>{item.heading}</Text>
-                  <Text style={s.processingItemSub}>Qty {item.quantity} | ₹{item.price}</Text>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginBottom: 4 }}>{item.heading}</Text>
+                  <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '500' }}>Qty {item.quantity} · ₹{item.price}</Text>
                 </View>
 
-                <Text style={[s.itemPrice, { color: theme.text }]}>₹{(item.price * item.quantity).toFixed(0)}</Text>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(0)}</Text>
               </View>
             ))}
 
-            <View style={s.processingPaidRow}>
-              <View style={s.processingPaidLeft}>
-                <Ionicons
-                  name={isPaid ? "checkmark-circle" : "time-outline"}
-                  size={20}
-                  color={theme.primary}
-                />
-                <Text style={[s.processingPaidText, { color: theme.text }]}>
-                  {isPaid ? "Paid Via UPI" : "Payment Pending"}
-                </Text>
+            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 16, marginBottom: 12 }}>COST SUMMARY</Text>
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
               </View>
-              {isPaid && (
-                <Text style={s.processingReceiptText}>Download Receipt</Text>
-              )}
-            </View>
-
-            <View style={[s.billCard, { backgroundColor: theme.card, marginTop: 8 }]}>
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => setShowBillBreakup((p) => !p)}
-              >
-                <View style={s.billRow}>
-                  <Text style={[s.totalLabel, { color: theme.text }]}>Bill Details</Text>
-                  <Ionicons
-                    name={showBillBreakup ? "chevron-down" : "chevron-forward"}
-                    size={18}
-                    color={theme.primary}
-                  />
+              {totalDiscount > 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <Text style={{ color: theme.primary, fontSize: 14 }}>Discount</Text>
+                  <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{totalDiscount.toFixed(0)}</Text>
                 </View>
-              </TouchableOpacity>
-
-              <View style={[s.billDivider, { backgroundColor: theme.border }]} />
-
-              <View style={s.totalRow}>
-                <Text style={[s.totalLabel, { color: theme.text }]}>Total Bill</Text>
-                <Text style={[s.totalAmount, { color: theme.primary }]}>₹{finalTotal?.toFixed(0)}</Text>
-              </View>
-
-              {showBillBreakup && (
-                <>
-                  <View style={[s.billDivider, { backgroundColor: theme.border, marginVertical: 10 }]} />
-
-                  <View style={s.billRow}>
-                    <Text style={s.billLabel}>CGST (9%)</Text>
-                    <Text style={[s.billValue, { color: theme.text }]}>₹{cgst.toFixed(0)}</Text>
-                  </View>
-                  <View style={s.billRow}>
-                    <Text style={s.billLabel}>SGST (9%)</Text>
-                    <Text style={[s.billValue, { color: theme.text }]}>₹{sgst.toFixed(0)}</Text>
-                  </View>
-
-                  <Text style={{ marginTop: 2, marginBottom: 2, color: "#94a3b8", fontSize: 11, fontWeight: "600" }}>
-                    Taxes are already included in the Total Bill.
-                  </Text>
-                </>
               )}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Text style={{ color: '#94a3b8', fontSize: 14 }}>GST (18%)</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
+              </View>
+              
+              <View style={{ height: 1, backgroundColor: '#0f2922', marginBottom: 16 }} />
+              
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>Total Bill</Text>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
+              </View>
             </View>
 
-
-            {/* AVAILABLE OFFERS SECTION */}
             {!isPaid && (
-              <View style={s.offersHeader}>
-                <Text style={s.offersLabel}>AVAILABLE OFFERS</Text>
-                <TouchableOpacity onPress={openCouponModal}>
-                  <Text style={[s.viewAllText, { color: theme.primary }]}>VIEW ALL ›</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {!isPaid && (
-              <View style={[s.couponInputRow, { backgroundColor: "#00110E" }]}>
-                <MaterialCommunityIcons
-                  name="ticket-percent-outline"
-                  size={18}
-                  color="#64748b"
-                  style={{ marginRight: 8 }}
-                />
-                <TextInput
-                  value={couponInput}
-                  onChangeText={(t) => {
-                    setCouponInput(t.toUpperCase());
-                    setCouponError("");
-                    if (!t.trim()) {
-                      setAppliedCoupon(null);
-                    }
-                  }}
-                  placeholder="Coupon Code"
-                  placeholderTextColor="#475569"
-                  style={[s.couponInput, { color: theme.text }]}
-                  autoCapitalize="characters"
-                />
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 12 }}>
+                  <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>AVAILABLE COUPONS</Text>
+                  <TouchableOpacity onPress={openCouponModal}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW 〉</Text>
+                  </TouchableOpacity>
+                </View>
+                
                 {appliedCoupon ? (
-                  <View
-                    style={[
-                      s.couponAppliedTag,
-                      { backgroundColor: "#0B3326", borderColor: "#22EBAB" },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={14}
-                      color="#22EBAB"
-                    />
-                    <Text style={s.couponAppliedText}>APPLIED</Text>
+                  <View style={{ backgroundColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                     <View>
+                        <View style={{ backgroundColor: '#06402b', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 4 }}>
+                          <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>'{appliedCoupon.code}'</Text>
+                        </View>
+                        <Text style={{ color: '#64748b', fontSize: 12 }}>Saved ₹{totalDiscount?.toFixed(0)} on this order</Text>
+                     </View>
+                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="checkmark-circle" size={16} color={theme.primary} style={{ marginRight: 4 }} />
+                        <Text style={{ color: theme.primary, fontSize: 14, fontWeight: '600', marginRight: 16 }}>Applied</Text>
+                        <TouchableOpacity onPress={() => appliedCoupon && handleCouponAction(appliedCoupon, "remove")}>
+                          <Ionicons name="trash-outline" size={20} color="#64748b" />
+                        </TouchableOpacity>
+                     </View>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    onPress={handleManualApply}
-                    style={[s.couponApplyBtn]}
-                  >
-                    <Text style={s.couponApplyText}>Apply</Text>
-                  </TouchableOpacity>
+                   <View style={{ marginBottom: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: '#071b16', borderRadius: 12, paddingHorizontal: 16, height: 48 }}>
+                     <MaterialCommunityIcons name="ticket-percent-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
+                     <TextInput
+                       value={couponInput}
+                       onChangeText={(t) => {
+                         setCouponInput(t.toUpperCase());
+                         setCouponError("");
+                       }}
+                       placeholder="Add coupon"
+                       placeholderTextColor="#475569"
+                       style={{ flex: 1, color: theme.text, fontSize: 14 }}
+                       autoCapitalize="characters"
+                     />
+                     <TouchableOpacity onPress={handleManualApply}>
+                       <Text style={{ color: theme.primary, fontWeight: '600', fontSize: 14 }}>Apply</Text>
+                     </TouchableOpacity>
+                   </View>
                 )}
-              </View>
+              </>
             )}
 
-            {couponError ? (
-              <Text style={s.couponError}>{couponError}</Text>
-            ) : null}
-
-            {!appliedCoupon && bestCoupon && !isPaid && (
-              <View style={[s.suggestionCard, { backgroundColor: theme.card }]}>
-                <View style={s.suggestionLeft}>
-                  <View style={s.suggestionTagRow}>
-                    <View style={s.codeTag}>
-                      <Text style={s.codeTagText}>{bestCoupon.code}</Text>
-                    </View>
-                    <View style={s.bestValueTag}>
-                      <Text style={s.bestValueText}>BEST VALUE</Text>
-                    </View>
-                  </View>
-                  <Text style={[s.suggestionDesc, { color: "#94a3b8" }]}>Save ₹{calculateCouponValue(bestCoupon, subtotal)} on this order</Text>
+            {!isPaid && (
+              <>
+                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>DELIVERY OPTIONS</Text>
+                <View style={{ borderWidth: 1, borderColor: '#0f2922', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedDeliveryOption("morning")}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === "morning" ? '#062017' : 'transparent' }}
+                  >
+                    <Ionicons name={selectedDeliveryOption === "morning" ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === "morning" ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === "morning" ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedDeliveryOption("daytime")}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === "daytime" ? '#062017' : 'transparent' }}
+                  >
+                    <Ionicons name={selectedDeliveryOption === "daytime" ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === "daytime" ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === "daytime" ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  onPress={() => handleCouponAction(bestCoupon, "apply")}
-                  style={[s.suggestionApplyBtn]}
-                >
-                  <Text style={s.suggestionApplyText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
+              </>
             )}
 
-            {appliedCoupon && !isPaid && (
-              <View style={[s.appliedPill, { backgroundColor: "#0B3326" }]}>
-                <MaterialCommunityIcons
-                  name="check-circle-outline"
-                  size={14}
-                  color={theme.primary}
-                />
-                <Text style={[s.appliedPillText, { color: theme.primary }]}>"{appliedCoupon.code}" applied!{totalDiscount > 0 ? ` Save ₹${totalDiscount?.toFixed(0)}` : " Offer applied!"}</Text>
-                <TouchableOpacity onPress={() => appliedCoupon && handleCouponAction(appliedCoupon, "remove")}>
-                  <Ionicons name="close-circle" size={16} color={theme.primary} />
-                </TouchableOpacity>
+            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>SPECIAL INSTRUCTIONS</Text>
+            <View style={{ backgroundColor: '#071b16', borderRadius: 16, padding: 16, marginBottom: 24 }}>
+              <TextInput
+                value={singleOrderDetails.note || ""}
+                placeholder="Any specific requirements for your wash?"
+                placeholderTextColor="#475569"
+                multiline
+                editable={false}
+                textAlignVertical="top"
+                style={{ color: theme.text, fontSize: 14, minHeight: 60 }}
+              />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 8 }}>
+                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Fragile</Text></View>
+                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Eco-Wash</Text></View>
+                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Hypoallergenic</Text></View>
               </View>
-            )}
-
-            {/* Rest of processing view ... */}
-            <Text style={[s.offersLabel, { paddingHorizontal: 25, marginTop: 20, marginBottom: 20, }]}>SPECIAL INSTRUCTIONS</Text>
-            <TextInput
-              value={singleOrderDetails.note || ""}
-              placeholder="Any specific requirements for your wash?"
-              placeholderTextColor="#4E665F"
-              multiline
-              editable={false}
-              textAlignVertical="top"
-              style={[s.processingSpecialInput, { color: theme.text }]}
-            />
-
-            <View style={s.processingTagsRow}>
-              <View style={s.processingTag}><Text style={s.processingTagText}># Fragile</Text></View>
-              <View style={s.processingTag}><Text style={s.processingTagText}># Eco-Wash</Text></View>
-              <View style={s.processingTag}><Text style={s.processingTagText}># Hypoallergenic</Text></View>
             </View>
 
-            {/* <TouchableOpacity style={s.processingActionCard} activeOpacity={0.85}>
-              <View style={s.processingActionLeft}>
-                <Ionicons name="time-outline" size={18} color={theme.primary} />
-                <View>
-                  <Text style={s.processingActionTitle}>Choose Delivery Slot</Text>
-                  <Text style={s.processingActionSub}>Pick a convenient time for drop-off</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#7F948A" />
-            </TouchableOpacity> */}
-
-            {/* <TouchableOpacity style={s.processingActionCard} activeOpacity={0.85}>
-              <View style={s.processingActionLeft}>
-                <Ionicons name="pause-circle-outline" size={18} color={theme.primary} />
-                <View>
-                  <Text style={s.processingActionTitle}>Hold Delivery for Today</Text>
-                  <Text style={s.processingActionSub}>Keep clothes at hub until further notice</Text>
-                </View>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color="#7F948A" />
-            </TouchableOpacity> */}
-
-            {/* Delivery options - Delivered by times */}
-            <Text
-              style={[
-                s.offersLabel,
-                {
-                  paddingHorizontal: 24,
-                  marginTop: 24,
-                  marginBottom: 14,
-                },
-              ]}
-            >
-              PREFERRED DELIVERY TIME
-            </Text>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setSelectedDeliveryOption("morning")}
-              style={s.deliveryOptionRow}
-            >
-              <Ionicons
-                name={
-                  selectedDeliveryOption === "morning"
-                    ? "radio-button-on"
-                    : "radio-button-off"
-                }
-                size={24}
-                color={
-                  selectedDeliveryOption === "morning"
-                    ? "#DDFEF2"
-                    : "#6B8B83"
-                }
-              />
-
-              <Text
-                style={[
-                  s.deliveryOptionText,
-                  {
-                    color:
-                      selectedDeliveryOption === "morning"
-                        ? "#EAFBF5"
-                        : "#6B8B83",
-                  },
-                ]}
-              >
-                Delivered by 11 A.M Tomorrow Morning
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => setSelectedDeliveryOption("daytime")}
-              style={s.deliveryOptionRow}
-            >
-              <Ionicons
-                name={
-                  selectedDeliveryOption === "daytime"
-                    ? "radio-button-on"
-                    : "radio-button-off"
-                }
-                size={24}
-                color={
-                  selectedDeliveryOption === "daytime"
-                    ? "#DDFEF2"
-                    : "#6B8B83"
-                }
-              />
-
-              <Text
-                style={[
-                  s.deliveryOptionText,
-                  {
-                    color:
-                      selectedDeliveryOption === "daytime"
-                        ? "#EAFBF5"
-                        : "#6B8B83",
-                  },
-                ]}
-              >
-                Delivered by Tomorrow Day Time
-              </Text>
-            </TouchableOpacity>
+            {renderPickupDetails()}
+            {(isDelivered || !!singleOrderDetails.assignedRider?.delivery?.riderName) && renderOrderDetails()}
 
           </ScrollView>
 
           {showPayNow && (
-            <View style={[s.payBtnWrapper, { backgroundColor: theme.background }]}>
-              <TouchableOpacity
-                onPress={handleRazorpayPayNow}
-                disabled={paymentLoading}
-                style={[
-                  s.payBtn,
-                  {
-                    backgroundColor: theme.primary,
-                    opacity: paymentLoading ? 0.7 : 1,
-                  },
-                ]}
-              >
-                {paymentLoading ? (
-                  <ActivityIndicator size="small" color="#001714" />
-                ) : (
-                  <>
-                    <Text style={s.payBtnText}>
-                      Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
-                    </Text>
-                    <Ionicons name="arrow-forward" size={18} color="#001714" />
-                  </>
-                )}
-              </TouchableOpacity>
+            <View style={{ backgroundColor: theme.background }}>
+              {appliedCoupon && totalDiscount > 0 && (
+                <View style={{ backgroundColor: '#B48820', paddingVertical: 8, alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>"{appliedCoupon.code}" Applied, you just saved ₹{totalDiscount.toFixed(0)}</Text>
+                </View>
+              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 32, height: 32, backgroundColor: '#fff', borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                    <Image source={{ uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png" }} style={{ width: 16, height: 16 }} />
+                  </View>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                      <Text style={{ color: '#94a3b8', fontSize: 10, fontWeight: '600', textTransform: 'uppercase', marginRight: 4 }}>Pay Using</Text>
+                      <Ionicons name="chevron-up" size={12} color="#94a3b8" />
+                    </View>
+                    <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Google Pay UPI</Text>
+                  </View>
+                </View>
+                
+                <TouchableOpacity
+                  onPress={handleRazorpayPayNow}
+                  disabled={paymentLoading}
+                  style={{ backgroundColor: theme.primary, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center' }}
+                >
+                  {paymentLoading ? (
+                    <ActivityIndicator size="small" color="#001714" style={{ marginHorizontal: 20 }} />
+                  ) : (
+                    <>
+                      <View style={{ marginRight: 12 }}>
+                        <Text style={{ color: '#001714', fontSize: 14, fontWeight: '800' }}>₹{singleOrderDetails?.totalAmount?.toFixed(0)}</Text>
+                        <Text style={{ color: '#001714', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>Total</Text>
+                      </View>
+                      <View style={{ width: 1, height: 20, backgroundColor: 'rgba(0,23,20,0.2)', marginRight: 12 }} />
+                      <Text style={{ color: '#001714', fontSize: 16, fontWeight: '700', marginRight: 8 }}>Place Order</Text>
+                      <Ionicons name="caret-forward" size={14} color="#001714" />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -1116,11 +1055,14 @@ export default function OrderReceipt() {
               <Ionicons name="arrow-back" size={20} color="#fff" />
             </TouchableOpacity>
 
-            <View style={{ flex: 1 }}>
-              <Text style={[s.processingTitle, { color: theme.text }]} numberOfLines={1}>
-                {singleOrderDetails.plantName || "Green Park"}
-              </Text>
-              <Text style={s.processingSubTitle} numberOfLines={1}>
+            <View style={{ flex: 1,}}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="send-outline" size={16} color="#fff" style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: 'bold' }} numberOfLines={1}>
+                  {singleOrderDetails.plantName || "Green Park"}
+                </Text>
+              </View>
+              <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 2,}} numberOfLines={1}>
                 {singleOrderDetails.address}
               </Text>
             </View>
@@ -1129,30 +1071,29 @@ export default function OrderReceipt() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               s.container,
-              { backgroundColor: theme.background, paddingBottom: 120, paddingTop: 14 },
+              { backgroundColor: theme.background, paddingBottom: 120, paddingTop: 14, paddingHorizontal: 20 },
             ]}
           >
-
-            <View style={s.deliveredBanner}>
-              <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[s.deliveredBannerTitle, { color: theme.text }]}>Order was delivered at {deliveredAt}</Text>
-                <Text style={s.deliveredBannerSub}>Successfully picked up & delivered</Text>
-              </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: '700' }}>Items</Text>
+              {isPaid && (
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="download-outline" size={14} color={theme.primary} style={{ marginRight: 4 }} />
+                  <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>Download Receipt</Text>
+                </TouchableOpacity>
+              )}
             </View>
-
-            <Text style={[s.sectionHeading, { color: theme.text, marginTop: 6 }]}>Items</Text>
 
             {(singleOrderDetails.items || []).map((item, index) => (
               <View
                 key={index}
-                style={[s.processingItemCard, { backgroundColor: theme.card }]}
+                style={{ backgroundColor: theme.card, marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
               >
-                <View style={[s.itemIconBox, { backgroundColor: theme.background }]}>
+                <View style={{ backgroundColor: theme.background, width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
                   {item.imageUrl ? (
                     <Image
                       source={{ uri: item.imageUrl }}
-                      style={{ width: 40, height: 40, borderRadius: 8 }}
+                      style={{ width: 36, height: 36, borderRadius: 8 }}
                       resizeMode="cover"
                     />
                   ) : (
@@ -1160,87 +1101,69 @@ export default function OrderReceipt() {
                   )}
                 </View>
 
-                <View style={s.itemInfo}>
-                  <Text style={[s.itemName, { color: theme.text }]}>{item.heading}</Text>
-                  <Text style={s.processingItemSub}>Qty {item.quantity} | ₹{item.price}</Text>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginBottom: 4 }}>{item.heading}</Text>
+                  <Text style={{ color: theme.primary, fontSize: 13, fontWeight: '500' }}>Qty {item.quantity} · ₹{item.price}</Text>
                 </View>
 
-                <Text style={[s.itemPrice, { color: theme.text }]}>₹{(item.price * item.quantity).toFixed(0)}</Text>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(0)}</Text>
               </View>
             ))}
 
-            <View style={s.deliveredRatingCard}>
-              <Ionicons name="star" size={16} color={theme.primary} />
-              <Text style={[s.deliveredRatingText, { color: theme.text }]}>How Were Your Ordered Items?</Text>
-              <TouchableOpacity style={s.deliveredRateBtn}>
-                <Text style={s.deliveredRateBtnText}>Rate Now</Text>
+            <View style={{ backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 4, marginBottom: 24 }}>
+              <Ionicons name="star" size={20} color="#FBBF24" style={{ marginRight: 12 }} />
+              <Text style={{ color: theme.text, flex: 1, fontSize: 14, fontWeight: '600' }}>How Were Your Ordered Items?</Text>
+              <TouchableOpacity style={{ borderWidth: 1, borderColor: theme.primary, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
+                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>Rate Now</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={[s.billCard, { backgroundColor: theme.card, marginTop: 8 }]}>
-              <Text style={[s.totalLabel, { color: theme.text, marginBottom: 10 }]}>Bill Details</Text>
-              <View style={s.billRow}>
-                <Text style={s.billLabel}>Subtotal</Text>
-                <Text style={[s.billValue, { color: theme.text }]}>₹{subtotal.toFixed(0)}</Text>
-              </View>
-              <View style={s.billRow}>
-                <Text style={s.billLabel}>Delivery Handling</Text>
-                <Text style={[s.billValue, { color: theme.text }]}>₹{Number(singleOrderDetails.deliveryCharges || 0).toFixed(0)}</Text>
-              </View>
-              <View style={s.billRow}>
-                <Text style={s.billLabel}>Service Charge</Text>
-                <Text style={[s.billValue, { color: theme.text }]}>₹{Number(singleOrderDetails.taxAmount || 0).toFixed(0)}</Text>
-              </View>
-              <View style={s.billRow}>
-                <Text style={s.billLabel}>Item Discount</Text>
-                <Text style={[s.billValue, { color: theme.primary }]}>-₹{Number(singleOrderDetails.discountAmount || 0).toFixed(0)}</Text>
-              </View>
-              <View style={[s.billDivider, { backgroundColor: theme.border }]} />
-              <View style={s.totalRow}>
-                <Text style={[s.totalLabel, { color: theme.text }]}>Total Bill</Text>
-                <Text style={[s.totalAmount, { color: theme.primary }]}>₹{finalTotal?.toFixed(0)}</Text>
-              </View>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
+              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color="#fff" />
+            </TouchableOpacity>
+            
+            {showBillBreakup && (
+               <View style={{ backgroundColor: theme.card, marginBottom: 16, padding: 16, borderRadius: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
+                    <Text style={{ color: theme.text, fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Delivery Handling</Text>
+                    <Text style={{ color: theme.text, fontSize: 14 }}>₹{Number(singleOrderDetails.deliveryCharges || 0).toFixed(0)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Service Charge</Text>
+                    <Text style={{ color: theme.text, fontSize: 14 }}>₹{Number(singleOrderDetails.taxAmount || 0).toFixed(0)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Item Discount</Text>
+                    <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{Number(singleOrderDetails.discountAmount || 0).toFixed(0)}</Text>
+                  </View>
+               </View>
+            )}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+              <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>₹{finalTotal?.toFixed(0)}</Text>
             </View>
 
-            <View style={s.deliveredOrderDetailsCard}>
-              <View style={s.deliveredOrderTop}>
-                <Text style={s.processingSectionLabel}>ORDER DETAILS</Text>
-                {isPaid && (
-                  <Text style={s.processingReceiptText}>Download Receipt</Text>
-                )}
-              </View>
+            {renderPickupDetails()}
+            {(isDelivered || !!singleOrderDetails.assignedRider?.delivery?.riderName) && renderOrderDetails()}
 
-              <View style={s.deliveredOrderGrid}>
-                <View style={s.deliveredOrderCell}>
-                  <Text style={s.deliveredLabel}>ORDER ID</Text>
-                  <Text style={s.deliveredValue}>{displayOrderId.replace("#", "")}</Text>
-                </View>
-                <View style={s.deliveredOrderCell}>
-                  <Text style={s.deliveredLabel}>PAYMENT</Text>
-                  <Text style={s.deliveredValue}>{isPaid ? "Paid via UPI" : "Payment Pending"}</Text>
-                </View>
-                <View style={s.deliveredOrderCell}>
-                  <Text style={s.deliveredLabel}>DELIVERED TO</Text>
-                  <Text style={s.deliveredValue}>{singleOrderDetails.customerName || name}</Text>
-                </View>
-                <View style={s.deliveredOrderCell}>
-                  <Text style={s.deliveredLabel}>DELIVERED BY</Text>
-                  <Text style={s.deliveredValue}>{singleOrderDetails.riderName || "Rider"}</Text>
-                </View>
+            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>NEED HELP?</Text>
+            <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B3326', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <Ionicons name="chatbubble-ellipses" size={20} color={theme.primary} />
               </View>
-
-              <View style={{ marginTop: 8 }}>
-                <Text style={s.deliveredLabel}>DELIVERY ADDRESS</Text>
-                <Text style={s.deliveredValue}>{singleOrderDetails.address}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>Chat with us</Text>
+                <Text style={{ color: '#94a3b8', fontSize: 12 }}>We're here to help you 24/7</Text>
               </View>
+              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+            </TouchableOpacity>
 
-              <View style={{ marginTop: 10 }}>
-                <Text style={s.deliveredLabel}>ORDER PLACED DATE & TIME</Text>
-                <Text style={s.deliveredValue}>{scheduledDate}</Text>
-              </View>
-            </View>
-
-            <Text style={s.deliveredHelpLabel}>NEED HELP ?</Text>
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (
