@@ -18,6 +18,25 @@ export default function PaymentFailure() {
     reason: string;
   }>();
 
+  const parsedReason = React.useMemo(() => {
+    if (!reason) return "Something went wrong. Please try again.";
+    try {
+      const parsed = JSON.parse(reason);
+      if (parsed?.error?.description) {
+        return parsed.error.description;
+      }
+      if (parsed?.error?.reason) {
+        return parsed.error.reason;
+      }
+      if (parsed?.message) {
+        return parsed.message;
+      }
+      return reason;
+    } catch (e) {
+      return reason;
+    }
+  }, [reason]);
+
   const scale = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -51,8 +70,8 @@ export default function PaymentFailure() {
         <Text style={[styles.title, { color: theme.text }]}>
           Payment Failed
         </Text>
-        <Text style={[styles.sub, { color: theme.subText }]}>
-          {reason || "Something went wrong. Please try again."}
+        <Text style={[styles.sub, { color: "#94a3b8" }]}>
+          {parsedReason}
         </Text>
 
         {/* DETAILS CARD */}
@@ -130,13 +149,15 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   title: { fontSize: 26, fontWeight: "900", marginBottom: 6 },
-  sub: { fontSize: 14, marginBottom: 4, textAlign: "center" },
+  sub: { fontSize: 14, marginBottom: 4, textAlign: "center", marginHorizontal: 20, lineHeight: 22 },
   card: {
-    marginTop: 16,
+    marginTop: 24,
     width: "100%",
     borderRadius: 16,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.2)',
   },
   row: {
     flexDirection: "row",

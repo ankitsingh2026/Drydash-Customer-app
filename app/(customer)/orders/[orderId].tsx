@@ -80,6 +80,7 @@ interface OrderDetails {
     pickup?: { riderId?: string; riderName?: string; assignedAt?: string };
     delivery?: { riderId?: string; riderName?: string; assignedAt?: string };
   };
+  morningDelivery?: boolean;
 }
 
 function ItemIcon({ heading, color }: { heading: string; color: string }) {
@@ -172,6 +173,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
     // ✅ FIX: Transfer the Coupon field so it survives normalization
     Coupon: raw.Coupon ?? raw.coupon ?? null,
     assignedRider: raw.assignedRider,
+    morningDelivery: Boolean(raw.morningDelivery),
   };
 }
 
@@ -209,10 +211,16 @@ export default function OrderReceipt() {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isPaymentDone, setIsPaymentDone] = useState(false);
-  const [selectedDeliveryOption, setSelectedDeliveryOption] = useState<
-    "morning" | "daytime" | null
-  >(null);
+const [selectedDeliveryOption, setSelectedDeliveryOption] =
+  useState<boolean>(false);
 
+useEffect(() => {
+  if (singleOrderDetails) {
+    setSelectedDeliveryOption(
+      singleOrderDetails.morningDelivery
+    );
+  }
+}, [singleOrderDetails]);
   if (!user) return null;
 
   const User = user?.user ? user?.user : user;
@@ -331,6 +339,8 @@ useEffect(() => {
     });
   }
 }, [singleOrderDetails]);
+
+console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
 
   const fetchAvailableCoupons = async (orderData?: OrderDetails | null) => {
     try {
@@ -1062,19 +1072,19 @@ const handlePaymentSuccess = async (data: any) => {
                 <View style={{ borderWidth: 1, borderColor: '#0f2922', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => setSelectedDeliveryOption("morning")}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === "morning" ? '#062017' : 'transparent' }}
+                    onPress={() => setSelectedDeliveryOption(true)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === true ? '#062017' : 'transparent' }}
                   >
-                    <Ionicons name={selectedDeliveryOption === "morning" ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === "morning" ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === "morning" ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
+                    <Ionicons name={selectedDeliveryOption === true ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === true ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === true ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => setSelectedDeliveryOption("daytime")}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === "daytime" ? '#062017' : 'transparent' }}
+                    onPress={() => setSelectedDeliveryOption(false)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === false ? '#062017' : 'transparent' }}
                   >
-                    <Ionicons name={selectedDeliveryOption === "daytime" ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === "daytime" ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === "daytime" ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
+                    <Ionicons name={selectedDeliveryOption === false ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === false ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === false ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
                   </TouchableOpacity>
                 </View>
               </>
