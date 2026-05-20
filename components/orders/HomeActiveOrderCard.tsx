@@ -385,7 +385,8 @@ export default function HomeActiveOrderCard({
                 </View>
               ) : !order.isPaid || isOutForDelivery ? (
                 <TouchableOpacity
-                  onPress={handleRazorpayPayNow}
+                  // onPress={handleRazorpayPayNow}
+                  onPress={onPress}
                   disabled={paymentLoading}
                   activeOpacity={0.85}
                   style={[
