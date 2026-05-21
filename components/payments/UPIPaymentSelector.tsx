@@ -140,7 +140,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   }, []);
 
   const toggleExpand = () => {
-    if (otherOptions().length === 0) return;
+    if (getAllOptions().length <= 1) return;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpanded(!expanded);
   };
@@ -214,16 +214,17 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
       .finally(() => setLoading(false));
   };
 
-  const otherOptions = () => {
-    const options = installedApps.filter(app => app.id !== selectedApp?.id);
-    if (!selectedApp?.isCod && !options.some(opt => opt.isCod)) {
+  const getAllOptions = () => {
+    const options = [...installedApps];
+    if (!options.some(opt => opt.isCod)) {
       options.push(COD_OPTION);
     }
     return options;
   };
 
-  const hasOtherOptions = otherOptions().length > 0;
-  const showExpandable = expanded && hasOtherOptions;
+  const optionsList = getAllOptions();
+  const canExpand = optionsList.length > 1;
+  const showExpandable = expanded && canExpand;
 
   const renderPaymentIcon = (item: any, size: number = 40) => {
     const iconStyle = size === 40 ? styles.paymentIcon : styles.otherIcon;
@@ -247,7 +248,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
 
   return (
     <>
-      {expanded && hasOtherOptions && (
+      {expanded && canExpand && (
         <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={closeExpand} />
         </BlurView>
@@ -257,19 +258,26 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
         {showExpandable && (
           <View style={styles.expandableListContainer}>
             <View style={styles.expandableList}>
-              {otherOptions().map((opt, idx) => (
-                <TouchableOpacity
-                  key={opt.id || opt.package_name}
-                  style={[
-                    styles.otherOption,
-                    idx !== otherOptions().length - 1 && styles.otherOptionBorder,
-                  ]}
-                  onPress={() => selectApp(opt)}
-                >
-                  {renderPaymentIcon(opt, 32)}
-                  <Text style={styles.otherName}>{opt.name}</Text>
-                </TouchableOpacity>
-              ))}
+              {optionsList.map((opt, idx) => {
+                const isSelected = opt.id === selectedApp?.id;
+                return (
+                  <TouchableOpacity
+                    key={opt.id || opt.package_name}
+                    style={[
+                      styles.otherOption,
+                      idx !== optionsList.length - 1 && styles.otherOptionBorder,
+                      isSelected && styles.selectedOption
+                    ]}
+                    onPress={() => selectApp(opt)}
+                  >
+                    {renderPaymentIcon(opt, 32)}
+                    <Text style={[styles.otherName, isSelected && styles.selectedName]}>{opt.name}</Text>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={24} color={themeColor} style={styles.checkIcon} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         )}
@@ -286,7 +294,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
                 <View style={styles.paymentTextContainer}>
                   <View style={styles.paymentLabelRow}>
                     <Text style={styles.payLabel}>PAY USING</Text>
-                    {hasOtherOptions && (
+                    {canExpand && (
                       <Ionicons
                         name={expanded ? 'chevron-up' : 'chevron-down'}
                         size={14}
@@ -368,7 +376,10 @@ const styles = StyleSheet.create({
   otherOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
   otherOptionBorder: { borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
   otherIcon: { width: 32, height: 32, marginRight: 12, resizeMode: 'contain' },
-  otherName: { fontSize: 15, fontWeight: '600', color: '#333' },
+  otherName: { fontSize: 15, fontWeight: '600', color: '#333', flex: 1 },
+  selectedOption: { backgroundColor: '#f4f4f5' },
+  selectedName: { color: '#000', fontWeight: '700' },
+  checkIcon: { marginLeft: 8 },
   fallback: { padding: 40, alignItems: 'center' },
   fallbackText: { marginTop: 12, color: '#64748b' },
 });
