@@ -33,6 +33,7 @@ interface UPIPaymentSelectorProps {
   razorpayKeyId: string;
   themeColor: string;
   orderId: string;
+  defaultCod?: boolean;
   onSuccess: (data: any) => void;
   onFailure: (error: string) => void;
 }
@@ -59,6 +60,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   razorpayKeyId,
   themeColor,
   orderId,
+  defaultCod,
   onSuccess,
   onFailure,
 }) => {
@@ -83,7 +85,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
                 isCod: false,
               }));
               setInstalledApps(fallback);
-              setSelectedApp(fallback[0]);
+              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
               return;
             }
             const filtered = appsArray
@@ -106,10 +108,10 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
                 isCod: false,
               }));
               setInstalledApps(fallback);
-              setSelectedApp(fallback[0]);
+              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
             } else {
               setInstalledApps(filtered);
-              setSelectedApp(filtered[0]);
+              setSelectedApp(defaultCod ? COD_OPTION : filtered[0]);
             }
           });
         } else {
@@ -121,7 +123,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
             isCod: false,
           }));
           setInstalledApps(fallback);
-          setSelectedApp(fallback[0]);
+          setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
         }
       } catch (error) {
         console.error('UPI detection error:', error);
@@ -133,11 +135,11 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
           isCod: false,
         }));
         setInstalledApps(fallback);
-        setSelectedApp(fallback[0]);
+        setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
       }
     };
     detectApps();
-  }, []);
+  }, [defaultCod]);
 
   const toggleExpand = () => {
     if (getAllOptions().length <= 1) return;
@@ -308,27 +310,29 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.placeOrderBtn,
-                { backgroundColor: themeColor, opacity: loading ? 0.7 : 1 },
-              ]}
-              onPress={handlePlaceOrder}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <View style={styles.buttonContent}>
-                  <Text style={styles.placeOrderText}>
-                    {selectedApp.isCod ? 'Confirm' : 'Pay Now'}
-                  </Text>
-                  {!selectedApp.isCod && (
-                    <Text style={styles.buttonAmount}>₹{(amount / 100).toFixed(2)}</Text>
-                  )}
-                </View>
-              )}
-            </TouchableOpacity>
+            {!(selectedApp.isCod && defaultCod) && (
+              <TouchableOpacity
+                style={[
+                  styles.placeOrderBtn,
+                  { backgroundColor: themeColor, opacity: loading ? 0.7 : 1 },
+                ]}
+                onPress={handlePlaceOrder}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <View style={styles.buttonContent}>
+                    <Text style={styles.placeOrderText}>
+                      {selectedApp.isCod ? 'Confirm' : 'Pay Now'}
+                    </Text>
+                    {!selectedApp.isCod && (
+                      <Text style={styles.buttonAmount}>₹{(amount / 100).toFixed(2)}</Text>
+                    )}
+                  </View>
+                )}
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>

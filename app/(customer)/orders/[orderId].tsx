@@ -81,6 +81,7 @@ interface OrderDetails {
     delivery?: { riderId?: string; riderName?: string; assignedAt?: string };
   };
   morningDelivery?: boolean;
+  isCODConfirmed?: boolean;
 }
 
 function ItemIcon({ heading, color }: { heading: string; color: string }) {
@@ -174,6 +175,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
     Coupon: raw.Coupon ?? raw.coupon ?? null,
     assignedRider: raw.assignedRider,
     morningDelivery: Boolean(raw.morningDelivery),
+    isCODConfirmed: Boolean(raw.isCODConfirmed),
   };
 }
 
@@ -310,8 +312,8 @@ useEffect(() => {
   };
 
   const refreshRazorpayOrder = async () => {
-  // Only refresh if order exists, not paid, and not COD
-  if (!singleOrderDetails || singleOrderDetails.isPaid || singleOrderDetails.isCODConfirmed) return;
+  // Only refresh if order exists and not paid
+  if (!singleOrderDetails || singleOrderDetails.isPaid) return;
   try {
     const res = await razorpayPaymentInitiate(orderId);
     if (res?.data?.success) {
@@ -323,16 +325,10 @@ useEffect(() => {
 };
 
 useEffect(() => {
-  // Only create Razorpay order if:
-  // 1. Order is loaded
-  // 2. Not already paid
-  // 3. Not already COD confirmed
-  // 4. Not an COD order (or you can check `!singleOrderDetails.isCODConfirmed`)
   if (
     singleOrderDetails &&
     !singleOrderDetails.isPaid &&
-    !razorpayData &&
-    !singleOrderDetails?.isCODConfirmed
+    !razorpayData
   ) {
     razorpayPaymentInitiate(orderId).then((res) => {
       if (res?.data?.success) setRazorpayData(res.data);
@@ -546,13 +542,15 @@ const handlePaymentSuccess = async (data: any) => {
 
     // Check if it's a COD payment (no real payment ID)
     if (data.razorpay_payment_id === 'COD') {
-      // COD already confirmed via separate API, just redirect to success
+      // For COD, coupons don't apply. The amount is the total amount without discount.
+      const fullAmount = (singleOrderDetails?.totalAmount || 0) + (singleOrderDetails?.discountAmount || 0);
       setIsPaymentDone(true);
       router.replace({
-        pathname: '/(customer)/orders/payment-success',
+        pathname: '/(customer)/orders/cod-success',
         params: {
           orderId,
-          amount: String(singleOrderDetails?.totalAmount),
+          amount: String(fullAmount),
+          discount: "0",
           paymentId: 'COD',
         },
       });
@@ -1072,8 +1070,11 @@ const handlePaymentSuccess = async (data: any) => {
                 <View style={{ borderWidth: 1, borderColor: '#0f2922', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
                   <TouchableOpacity
                     activeOpacity={0.85}
-                    onPress={() => setSelectedDeliveryOption(true)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === true ? '#062017' : 'transparent' }}
+                    onPress={() => {
+                      if (singleOrderDetails.isCODConfirmed) return;
+                      setSelectedDeliveryOption(true);
+                    }}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === true ? '#062017' : 'transparent', opacity: singleOrderDetails.isCODConfirmed ? 0.5 : 1 }}
                   >
                     <Ionicons name={selectedDeliveryOption === true ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === true ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
                     <Text style={{ color: selectedDeliveryOption === true ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
@@ -1152,6 +1153,7 @@ const handlePaymentSuccess = async (data: any) => {
     orderId={orderId} 
     onSuccess={handlePaymentSuccess}
     onFailure={handlePaymentFailure}
+    defaultCod={singleOrderDetails?.isCODConfirmed}
   />
 )}
 
