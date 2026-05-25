@@ -7,7 +7,7 @@ module.exports = function (api) {
       "nativewind/babel",
     ],
     plugins: [
-      "expo-router/babel", // 🔥 REQUIRED (you were missing this)
+  //    "expo-router/babel", // 🔥 REQUIRED (you were missing this)
 
       [
         "module-resolver",

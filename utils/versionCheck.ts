@@ -17,8 +17,8 @@ const cleanVersion = (v: string) => {
 export const checkUpdate = async (): Promise<UpdateResult> => {
   try {
     await remoteConfig().setDefaults({
-      android_latest_version: "1.0.0",
-      android_min_version: "1.0.0",
+      android_latest_version: "1.1.10",
+      android_min_version: "1.1.9",
       ios_latest_version: "1.0.0",
       ios_min_version: "1.0.0",
       force_update: false,

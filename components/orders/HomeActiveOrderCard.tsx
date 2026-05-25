@@ -291,116 +291,115 @@ export default function HomeActiveOrderCard({
                 accent={meta.accent}
                 icon={meta.icon}
               />
+              {/* 1. HEADER ROW — replace rightHeaderRow content */}
               <View style={styles.rightHeaderRow}>
                 {!isCancelled ? (
                   <OrderStatusBadge
                     label={order.isPaid ? "Paid" : "Payment Pending"}
                     accent={order.isPaid ? ACCENT : "#F59E0B"}
-                    icon={
-                      order.isPaid
-                        ? "checkmark-circle-outline"
-                        : "wallet-outline"
-                    }
+                    icon={order.isPaid ? "checkmark-circle-outline" : "wallet-outline"}
                   />
                 ) : null}
-                {meta.showClose && !archiveLoading ? (
+
+                {isDelivered ? (
                   <TouchableOpacity
                     onPress={handleClosePress}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    style={styles.closeBtn}
                   >
-                    {archiveLoading ? (
-                      <ActivityIndicator size="small" color="#31423D" />
+                    {/* {archiveLoading ? (
+                      <ActivityIndicator size="small" color={ACCENT} />
                     ) : (
-                      <Ionicons name="close" size={18} color="#31423D" />
-                    )}
+                      <Text style={styles.dismissText}>DISMISS</Text>
+                    )} */}
                   </TouchableOpacity>
-                ) : null}
+                ) : (
+                  <TouchableOpacity
+                    style={styles.chatBtnHeader}
+                    onPress={() => router.push("/(customer)/(assistant)/chat")}
+                  >
+                    <Ionicons name="chatbubble-ellipses" size={15} color={SURFACE} />
+                  </TouchableOpacity>
+                )}
               </View>
+
             </View>
 
+
+            {meta.subtitle && !isOutForDelivery && !isDelivered ? (
+              <View style={styles.subtitleAboveRow}>
+                <Ionicons name="flash" size={12} color={ACCENT} />
+                <Text style={styles.subtitleAbove}>
+                  {meta.subtitle.toUpperCase()}
+                </Text>
+              </View>
+            ) : null}
+
+
             <Text style={styles.title}>{meta.title}</Text>
-            {meta.subtitle ? (
+
+            {meta.subtitle && isDelivered ? (
               <Text style={styles.subtitle}>{meta.subtitle}</Text>
             ) : null}
 
+            {/* 3. RIDER ROW — replace existing riderRow block */}
             {isOutForDelivery ? (
               <>
                 <View style={styles.riderRow}>
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={20}
-                    color="#7DA79D"
-                  />
+                  <Ionicons name="bicycle-outline" size={28} color={ACCENT} />
                   <Text style={styles.riderText}>
-                    <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
-                      {riderName}
-                    </Text>{" "}
-                    is on the way to deliver.
+                    <Text style={styles.riderName}>{riderName} </Text>
+                    {" on  the way with\nyour delivery"}
                   </Text>
                 </View>
-                <Text style={styles.deliveryMetaText}>
-                  {orderCode}
-                  {cardTime ? ` • ${cardTime}` : ""}
-                </Text>
               </>
             ) : null}
 
             <View style={styles.midRow}>
-              <View style={styles.itemAvatarGroup}>
-                <View style={styles.circleIcon}>
-                  <Ionicons name="shirt-outline" size={18} color="#9EE8D1" />
-                </View>
-                <View style={[styles.circleIcon, { marginLeft: -10 }]}>
-                  <Ionicons
-                    name="pricetag-outline"
-                    size={18}
-                    color="#9EE8D1"
-                  />
-                </View>
-              </View>
               <View style={styles.countPill}>
                 <Text style={styles.countPillText}>
-                  {itemCount} Items{" "}
-                  {isDelivered
-                    ? "Delivered"
-                    : statusKey === "processing"
-                      ? "Processing"
-                      : "In Your Cart"}
+                  {isDelivered ? `Total items delivered: ${itemCount}` : `Total Items: ${itemCount}`}
                 </Text>
               </View>
+              {(isOutForDelivery || isDelivered) && cardTime ? (
+                <Text style={styles.deliveryMetaText}>
+                  {orderCode} • {cardTime}
+                </Text>
+              ) : null}
             </View>
 
-            <View style={styles.footerRow}>
+            {/* 5. FOOTER ROW — replace entire footerRow block */}
+           <View style={styles.footerRow}>
               {isDelivered ? (
-                <View style={styles.reviewWrap}>
-                  <View style={styles.reviewRow}>
-                    <Ionicons name="star" size={18} color={ACCENT} />
-                    <Ionicons name="star" size={18} color={ACCENT} />
-                    <Ionicons name="star" size={18} color={ACCENT} />
-                    <Ionicons name="star" size={18} color={ACCENT} />
-                    <Ionicons name="star" size={18} color="#31423D" />
+                <>
+                  <View style={styles.reviewWrap}>
+                    <View style={styles.reviewRow}>
+                      <Ionicons name="star" size={22} color={ACCENT} />
+                      <Ionicons name="star" size={22} color={ACCENT} />
+                      <Ionicons name="star" size={22} color={ACCENT} />
+                      <Ionicons name="star" size={22} color={ACCENT} />
+                      <Ionicons name="star-outline" size={22} color={ACCENT} />
+                    </View>
+                    <Text style={styles.reviewCta}>{meta.actionText}</Text>
                   </View>
-                  <Text style={styles.reviewCta}>{meta.actionText}</Text>
-                </View>
+                  <TouchableOpacity
+                    style={styles.chatBtn}
+                    onPress={() => router.push("/(customer)/(assistant)/chat")}
+                  >
+                    <Ionicons name="chatbubble-ellipses" size={20} color={SURFACE} />
+                  </TouchableOpacity>
+                </>
               ) : !order.isPaid || isOutForDelivery ? (
                 <TouchableOpacity
-                  // onPress={handleRazorpayPayNow}
                   onPress={onPress}
                   disabled={paymentLoading}
                   activeOpacity={0.85}
-                  style={[
-                    styles.primaryCta,
-                    { opacity: paymentLoading ? 0.7 : 1 },
-                  ]}
+                  style={[styles.primaryCta, { opacity: paymentLoading ? 0.7 : 1 }]}
                 >
                   {paymentLoading ? (
                     <ActivityIndicator size="small" color="#000" />
                   ) : (
                     <>
-                      <Text style={styles.primaryCtaText}>
-                        {meta.actionText}
-                      </Text>
+                      <Text style={styles.primaryCtaText}>{meta.actionText}</Text>
                       <Ionicons name="arrow-forward" size={16} color="#000" />
                     </>
                   )}
@@ -410,20 +409,6 @@ export default function HomeActiveOrderCard({
                   Payment successful. Sit back and relax.
                 </Text>
               )}
-              <TouchableOpacity
-                style={styles.chatBtn}
-                onPress={() =>
-                  router.push("/(customer)/(assistant)/chat")
-                }
-              >
-                <View style={styles.chatBtn}>
-                  <Ionicons
-                    name="chatbubble-ellipses"
-                    size={25}
-                    color={DarkTheme.card}
-                  />
-                </View>
-              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -452,7 +437,7 @@ export default function HomeActiveOrderCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: SURFACE,
+    backgroundColor: "#052420",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: BORDER,
@@ -461,16 +446,16 @@ const styles = StyleSheet.create({
   },
   closeFloatingBtn: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: 0,
+    right: 1,
     width: 34,
     height: 34,
-    borderRadius: 17,
+   // borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 35, 30, 0.9)",
-    borderWidth: 1,
-    borderColor: "#24463F",
+  //  backgroundColor: "rgba(10, 35, 30, 0.9)",
+  //  borderWidth: 1,
+  //  borderColor: "#24463F",
     zIndex: 5,
     elevation: 6,
   },
@@ -485,18 +470,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 10,
+    gap: 2,
   },
   rightHeaderRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
+    gap: 20,
     flexShrink: 1,
   },
   closeBtn: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+  //  borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -505,15 +490,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    lineHeight: 36,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
+
   subtitle: {
-    color: "#7DA79D",
+    color: "#6D8F80",
     fontSize: 14,
     lineHeight: 20,
     marginTop: -2,
@@ -524,24 +503,14 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: -2,
   },
-  riderText: {
-    color: "#7DA79D",
-    fontSize: 16,
-    lineHeight: 20,
-    flex: 1,
-  },
+
   deliveryMetaText: {
     color: "#95B6AD",
     fontSize: 13,
     lineHeight: 18,
     marginTop: -4,
   },
-  midRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 1,
-  },
+
   itemAvatarGroup: {
     flexDirection: "row",
     alignItems: "center",
@@ -557,7 +526,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   countPill: {
-    minHeight: 28,
+    minHeight: 22,
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: "#37655B",
@@ -568,7 +537,7 @@ const styles = StyleSheet.create({
   },
   countPillText: {
     color: "#9EE8D1",
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "400",
     letterSpacing: 0.3,
   },
@@ -588,22 +557,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  footerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 2,
-  },
-  primaryCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 22,
-    backgroundColor: ACCENT,
-  },
+
+
   primaryCtaText: {
     color: "#000",
     fontWeight: "900",
@@ -640,6 +595,81 @@ const styles = StyleSheet.create({
     color: "#9EE8D1",
     fontSize: 16,
     fontWeight: "800",
+  },
+
+  // ADD these new styles:
+  dismissText: {
+    color: ACCENT,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  chatBtnHeader: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: ACCENT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  subtitleAboveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  subtitleAbove: {
+    color: ACCENT,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+  riderName: {
+    fontWeight: "700",
+    color: "#FFFFFF",
+    fontSize: 16,
+    textTransform: "uppercase"
+  },
+
+  // CHANGE these existing styles:
+  riderText: {
+    color: "#7DA79D",
+    fontSize: 14,        // was 16
+    lineHeight: 16,      // was 20
+    flex: 1,
+  },
+  title: {
+    color: "#FFFFFF",
+    fontSize: 22,        // was 20
+    lineHeight: 32,      // was 36
+    fontWeight: "600",
+    letterSpacing: -0.5,
+    textTransform: "uppercase"
+  },
+  primaryCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 22,
+    backgroundColor: ACCENT,
+    alignSelf: "flex-start",
+  },
+  midRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",  // was gap: 8
+    gap: 8,
+    marginTop: 1,
+  },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 2,
+
   },
 });
 
