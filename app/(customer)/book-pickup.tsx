@@ -541,12 +541,9 @@ export default function BookPickup() {
       }
       let selectedSlotForPayload: string | undefined;
 
-      if (pickupType === "today" && selectedSlotData?.time) {
-        // Use the time from SlotPicker component (e.g., "8:00 AM - 11:00 AM")
-        // selectedSlotForPayload = selectedSlotData.time; 
-      } else if (pickupType === "schedule" && slot !== -1) {
-        // Use predefined time slots for scheduled pickup
-        selectedSlotForPayload = TIME_SLOTS[slot];
+      if (selectedSlotData?.time) {
+        // Use the time from SlotPicker component (e.g., "8AM - 11AM")
+        selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
       }
 
       const scheduledDate = pickupType === "today" ? new Date() : date;
@@ -649,11 +646,15 @@ export default function BookPickup() {
     if (pickupType === "today") {
       setDate(new Date());
       setSlot(-1);
+      setSelectedSlotIndex(-1);
+      setSelectedSlotData(null);
     } else {
       const t = new Date();
       t.setDate(t.getDate() + 1);
       setDate(t);
       setSlot(-1);
+      setSelectedSlotIndex(-1);
+      setSelectedSlotData(null);
     }
   }, [pickupType]);
 
@@ -1074,7 +1075,7 @@ export default function BookPickup() {
   const isAreaServiceable = zoneData?.zoneFound === true;
   const isServiceAvailableForNow = isAreaServiceable && hasActiveSlot;
   const isTodaySlotSelected = pickupType === "today" && selectedSlotIndex !== -1 && hasAvailableSlots;
-  const isScheduleSlotSelected = pickupType === "schedule" && slot !== -1;
+  const isScheduleSlotSelected = pickupType === "schedule" && selectedSlotIndex !== -1 && hasAvailableSlots;
 
   const bookingBlocked =
     confirmLoading ||
@@ -1665,6 +1666,8 @@ export default function BookPickup() {
                         onPress={() => {
                           setDate(d);
                           setSlot(-1);
+                          setSelectedSlotIndex(-1);
+                          setSelectedSlotData(null);
                         }}
                         activeOpacity={0.85}
                         style={{ marginRight: 10 }}
@@ -1710,46 +1713,74 @@ export default function BookPickup() {
                   Pick Time
                 </Text>
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={{ marginTop: 20 }}
-                >
-                  {TIME_SLOTS.map((timeLabel, idx) => {
-                    const isActive = slot === idx;
-
-                    return (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => setSlot(idx)}
-                        activeOpacity={0.85}
-                        style={{ marginRight: 10 }}
-                      >
-                        <LinearGradient
-                          colors={theme.gradient}
-                          style={[
-                            s.slotChip,
-                            {
-                              minWidth: 140,
-                              opacity: isActive ? 1 : 0.8,
-                              borderColor: isActive ? theme.primary : "#1E3327",
-                              borderWidth: 1.5,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              s.slotText,
-                              { color: isActive ? "#fff" : "#fff" },
-                            ]}
-                          >
-                            {timeLabel}
+                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
+                  <SlotPicker
+                    lat={selectedPickupAddr.latitude}
+                    lng={selectedPickupAddr.longitude}
+                    zoneId={zoneData?.zoneId}
+                    date={formatDateForApi(date)}
+                    selectedSlot={selectedSlotIndex}
+                    onSelect={(index, slot) => {
+                      setSelectedSlotIndex(index);
+                      setSelectedSlotData(slot);
+                    }}
+                    onSlotsUpdate={(slots) => {
+                      const available = slots.some(
+                        (s) =>
+                          s.enabled &&
+                          s.status !== "expired" &&
+                          s.availableCapacity > 0
+                      );
+                      setHasAvailableSlots(available);
+                    }}
+                  />
+                ) : (
+                  <TouchableOpacity 
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setModalMode("pickup");
+                      setModalVisible(true);
+                    }}
+                    style={s.noSlotBox}
+                  >
+                    <View style={{
+                      borderRadius: 16,
+                      padding: 16,
+                      backgroundColor: "#0B1F19",
+                      borderWidth: 1,
+                      borderColor: "#1E3327",
+                    }}>
+                      <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: "#2A2F1C",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginRight: 10,
+                        }}>
+                          <Ionicons name="location" size={18} color="#00E1A2" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{
+                            color: "#CFFFF1",
+                            fontSize: 14,
+                            fontWeight: "700",
+                          }}>Location Required</Text>
+                          <Text style={{
+                            color: "#7A9B87",
+                            fontSize: 12,
+                            marginTop: 4,
+                            lineHeight: 18,
+                          }}>
+                            Please select a pickup address to view available slots.
                           </Text>
-                        </LinearGradient>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+                        </View>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
 
               <CartSection />
@@ -1799,12 +1830,12 @@ export default function BookPickup() {
 
           {/* ── CONFIRM BUTTON ── */}
           <View style={[s.footer, { backgroundColor: theme.background }]}>
-            {pickupType === "schedule" && slot !== -1 && (
+            {pickupType === "schedule" && selectedSlotIndex !== -1 && selectedSlotData?.time && (
               <View style={s.estimatedRow}>
                 <Ionicons name="time-outline" size={14} color="#4E7060" />
                 <Text style={s.estimatedText}>
                   ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
-                  {TIME_SLOTS[slot]}
+                  {selectedSlotData.time}
                 </Text>
               </View>
             )}

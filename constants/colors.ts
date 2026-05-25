@@ -9,4 +9,5 @@ export const DarkTheme = {
   ordergradient: ["#001A17", "#00332B", "#004D3F"],
   gray: "#fff",
   newcard: ["#052420", "#003826"],
+  lightborder: "#2b8773",
 };

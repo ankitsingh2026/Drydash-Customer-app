@@ -25,6 +25,7 @@ interface Props {
     lat?: number;
     lng?: number;
     zoneId?: string;
+    date?: string;
     selectedSlot: number;
     onSelect: (index: number, slot: Slot) => void;
      onSlotsUpdate?: (slots: Slot[]) => void;  
@@ -34,6 +35,7 @@ const SlotPicker: React.FC<Props> = ({
     lat,
     lng,
     zoneId,
+    date,
     selectedSlot,
     onSelect,
     onSlotsUpdate,
@@ -45,7 +47,7 @@ const SlotPicker: React.FC<Props> = ({
         if (zoneId || (lat && lng)) {
             fetchSlots();
         }
-    }, [lat, lng, zoneId]);
+    }, [lat, lng, zoneId, date]);
 
     // Real-time slot update: refetch slots when slot_updated event is received
     const { onSlotUpdate } = useSlotSocket();
@@ -54,7 +56,7 @@ const SlotPicker: React.FC<Props> = ({
             fetchSlots();
         });
         return unsubscribe;
-    }, [lat, lng, zoneId]);
+    }, [lat, lng, zoneId, date]);
 
     const fetchSlots = async () => {
         try {
@@ -85,9 +87,14 @@ const SlotPicker: React.FC<Props> = ({
                 return;
             }
 
+            const payload: any = { zoneId: currentZoneId };
+            if (date) {
+                payload.date = date;
+            }
+
             const serviceRes = await oldApiClient.post(
                 "/v1/slots/service/check",
-                { zoneId: currentZoneId }
+                payload
             );
 
             const serviceData = serviceRes.data;

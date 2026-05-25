@@ -848,82 +848,98 @@ const handlePaymentSuccess = async (data: any) => {
     }
   };
 
-  const renderPickupDetails = () => (
-    <>
-      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>PICKUP DETAILS</Text>
-      <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, marginBottom: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP FROM</Text>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.customerName || name}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP BY</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }} />
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
-            </View>
-          </View>
-        </View>
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return "N/A";
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return "N/A";
+    const day = date.getDate();
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const year = date.getFullYear();
+    const time = date.toLocaleString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase();
+    return `${day} ${month} ${year} at ${time}`;
+  };
 
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP ADDRESS</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 20 }}>{singleOrderDetails.address}</Text>
+  const renderCombinedOrderDetails = () => (
+    <View style={{ backgroundColor: theme.card, borderRadius: 16, marginBottom: 24, borderWidth: 0.5, borderColor: theme.lightborder, overflow: 'hidden' }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ marginRight: 10 }}>
+            <View style={{ height: 2, width: 16, backgroundColor: '#fff', marginBottom: 4 }} />
+            <View style={{ height: 2, width: 16, backgroundColor: '#fff' }} />
+          </View>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Order Details</Text>
         </View>
-
-        <View>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PICKUP COMPLETED DATE & TIME</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{new Date(singleOrderDetails?.statusHistory?.processing).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginRight: 6 }}>ORDER ID</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginRight: 6 }}>{displayOrderId.replace("#", "")}</Text>
+          <TouchableOpacity>
+            <Ionicons name="copy-outline" size={16} color="#fff" />
+          </TouchableOpacity>
         </View>
       </View>
-    </>
-  );
 
-  const renderOrderDetails = () => (
-    <>
-      <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>ORDER DETAILS</Text>
-      <View style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, marginBottom: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>ORDER ID</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{displayOrderId.replace("#", "")}</Text>
-              <TouchableOpacity style={{ marginLeft: 6 }}>
-                <Ionicons name="copy-outline" size={14} color={theme.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>PAYMENT</Text>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{isPaid ? (singleOrderDetails.payment?.paymentMode ? `Paid via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid via UPI") : "Payment Pending"}</Text>
-          </View>
-        </View>
-
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERED TO</Text>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.customerName || name}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERED BY</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 6 }} />
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>DELIVERY ADDRESS</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 20 }}>{singleOrderDetails.address}</Text>
-        </View>
-
-        <View>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase' }}>ORDER PLACED DATE & TIME</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '500' }}>{new Date(singleOrderDetails.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}</Text>
+      {/* Payment Status */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>PAYMENT STATUS</Text>
+        <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+          <Text style={{ color: isPaid ? '#22c55e' : '#eab308', fontSize: 12, fontWeight: '700' }}>
+            {isPaid ? (singleOrderDetails.payment?.paymentMode ? `Paid via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid via UPI") : "Payment Pending"}
+          </Text>
         </View>
       </View>
-    </>
+
+      {/* Pickup Info */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP FROM</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKED BY</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Delivery Info */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED TO</Text>
+          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED BY</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Address */}
+      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ADDRESS</Text>
+        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 22 }}>{singleOrderDetails.address}</Text>
+      </View>
+
+      {/* Pickup Completed Date & Time */}
+      <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
+        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP COMPLETED DATE & TIME</Text>
+        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails.createdAt)}</Text>
+      </View>
+
+        {/* Pickup Completed Date & Time */}
+        {isDelivered && (
+          <View style={{ padding: 16 }}>
+            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ORDER DELIVERED DATE & TIME</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails?.statusHistory?.delivered || singleOrderDetails.createdAt)}</Text>
+          </View>
+        )}
+
+    </View>
   );
 
   // ✅ FIX: Single return with conditionals inside – CouponCard always mounted
@@ -992,29 +1008,50 @@ const handlePaymentSuccess = async (data: any) => {
               </View>
             ))}
 
-            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginTop: 16, marginBottom: 12 }}>COST SUMMARY</Text>
-            <View style={{ marginBottom: 16 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
-              </View>
-              {totalDiscount > 0 && (
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <Text style={{ color: theme.primary, fontSize: 14 }}>Discount</Text>
-                  <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{totalDiscount.toFixed(0)}</Text>
+            {isPaid && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                    <Ionicons name="checkmark-circle" size={22} color={theme.primary} />
+                  </View>
+                  <Text style={{ color: theme.primary, fontSize: 14, fontWeight: '600' }}>
+                    {singleOrderDetails.payment?.paymentMode ? `Paid Via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid Via UPI"}
+                  </Text>
                 </View>
-              )}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                <Text style={{ color: '#94a3b8', fontSize: 14 }}>GST (18%)</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="download-outline" size={14} color="#94a3b8" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600' }}>Download Reciept</Text>
+                </TouchableOpacity>
               </View>
-              
-              <View style={{ height: 1, backgroundColor: '#0f2922', marginBottom: 16 }} />
-              
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>Total Bill</Text>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
-              </View>
+            )}
+
+            <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: isPaid ? 0 : 16 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
+              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color="#fff" />
+            </TouchableOpacity>
+            
+            {showBillBreakup && (
+               <View style={{ marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
+                  </View>
+                  {totalDiscount > 0 && (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <Text style={{ color: theme.primary, fontSize: 14 }}>Discount</Text>
+                      <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{totalDiscount.toFixed(0)}</Text>
+                    </View>
+                  )}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>GST (18%)</Text>
+                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
+                  </View>
+               </View>
+            )}
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+              <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
             </View>
 
             {!isPaid && (
@@ -1109,8 +1146,7 @@ const handlePaymentSuccess = async (data: any) => {
               </View>
             </View>
 
-            {renderPickupDetails()}
-            {(isDelivered || !!singleOrderDetails.assignedRider?.delivery?.riderName) && renderOrderDetails()}
+            {renderCombinedOrderDetails()}
 
           </ScrollView>
 
@@ -1279,11 +1315,10 @@ const handlePaymentSuccess = async (data: any) => {
               <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>₹{finalTotal?.toFixed(0)}</Text>
             </View>
 
-            {renderPickupDetails()}
-            {(isDelivered || !!singleOrderDetails.assignedRider?.delivery?.riderName) && renderOrderDetails()}
+            {renderCombinedOrderDetails()}
 
             <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>NEED HELP?</Text>
-            <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: theme.lightborder, shadowColor : theme.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B3326', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                 <Ionicons name="chatbubble-ellipses" size={20} color={theme.primary} />
               </View>
@@ -1296,7 +1331,7 @@ const handlePaymentSuccess = async (data: any) => {
 
           </ScrollView>
         </KeyboardAvoidingView>
-      ) : (
+      ) : (     
         <>
           <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: theme.background }}
