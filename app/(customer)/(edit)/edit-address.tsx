@@ -157,6 +157,7 @@ export default function EditAddress() {
         await updateAddressApi(editId, payload);
       } else {
         await saveAddressApi(payload);
+        router.push("/(customer)/(tabs)/home")
       }
 
       await refreshAddresses();
@@ -182,7 +183,7 @@ export default function EditAddress() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+   <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={C.text} />
@@ -320,10 +321,10 @@ export default function EditAddress() {
           </View>
         )}
 
-        <View style={{ height: 120 + insets.bottom }} />
+        <View style={{ height: 90 + insets.bottom }} />
       </ScrollView>
 
-      <View style={[styles.footer, { paddingBottom: Math.max(14, insets.bottom) }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(0, insets.bottom) }]}>
         <TouchableOpacity
           style={[styles.saveBtn, !saveEnabled && styles.saveBtnDisabled]}
           onPress={handleSave}
@@ -498,7 +499,6 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   footer: {
-    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
@@ -509,12 +509,14 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   saveBtn: {
-    height: 56,
-    borderRadius: 14,
+    height:45,
+    borderRadius: 10,
     backgroundColor: C.pink,
     alignItems: "center",
     justifyContent: "center",
-  },
+        alignSelf: "center",
+    paddingHorizontal: 16,
+  }, 
   saveBtnDisabled: {
     backgroundColor: C.disabled,
   },

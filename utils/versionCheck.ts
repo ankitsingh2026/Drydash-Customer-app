@@ -1,4 +1,13 @@
-import remoteConfig from "@react-native-firebase/remote-config";
+import {
+  getRemoteConfig,
+  fetchAndActivate,
+  getValue,
+  setDefaults,
+  setConfigSettings,
+} from "@react-native-firebase/remote-config";
+
+import { getApp } from "@react-native-firebase/app";
+
 import DeviceInfo from "react-native-device-info";
 import semver from "semver";
 import { Platform } from "react-native";
@@ -16,9 +25,14 @@ const cleanVersion = (v: string) => {
 
 export const checkUpdate = async (): Promise<UpdateResult> => {
   try {
-    await remoteConfig().setDefaults({
-      android_latest_version: "1.0.0",
-      android_min_version: "1.0.0",
+    const app = getApp();
+
+    const rc = getRemoteConfig(app);
+
+    // ✅ Default values
+    await setDefaults(rc, {
+      android_latest_version: "1.1.10",
+      android_min_version: "1.1.9",
       ios_latest_version: "1.0.0",
       ios_min_version: "1.0.0",
       force_update: false,
@@ -29,13 +43,15 @@ export const checkUpdate = async (): Promise<UpdateResult> => {
         "itms-apps://apps.apple.com/in/app/drydash/id6761757578",
     });
 
-    await remoteConfig().setConfigSettings({
+    // ✅ Dev mode
+    await setConfigSettings(rc, {
       minimumFetchIntervalMillis: 0,
     });
 
-    await remoteConfig().fetchAndActivate();
+    // ✅ Fetch latest config
+    await fetchAndActivate(rc);
 
-    // 🔥 Platform-based keys
+    // Platform keys
     const latestKey =
       Platform.OS === "ios"
         ? "ios_latest_version"
@@ -51,18 +67,20 @@ export const checkUpdate = async (): Promise<UpdateResult> => {
         ? "ios_store_url"
         : "android_store_url";
 
+    // ✅ Read values
     const latest = cleanVersion(
-      remoteConfig().getValue(latestKey).asString()
+      getValue(rc, latestKey).asString()
     );
 
     const min = cleanVersion(
-      remoteConfig().getValue(minKey).asString()
+      getValue(rc, minKey).asString()
     );
 
-    const storeUrl = remoteConfig().getValue(storeKey).asString();
+    const storeUrl = getValue(rc, storeKey).asString();
 
-    const force = remoteConfig().getValue("force_update").asBoolean();
-    const message = remoteConfig().getValue("update_message").asString();
+    const force = getValue(rc, "force_update").asBoolean();
+
+    const message = getValue(rc, "update_message").asString();
 
     const current = cleanVersion(DeviceInfo.getVersion());
 
@@ -76,12 +94,20 @@ export const checkUpdate = async (): Promise<UpdateResult> => {
 
     // 🔴 FORCE UPDATE
     if (force || semver.lt(current, min)) {
-      return { type: "force", message, storeUrl };
+      return {
+        type: "force",
+        message,
+        storeUrl,
+      };
     }
 
     // 🟡 OPTIONAL UPDATE
     if (semver.lt(current, latest)) {
-      return { type: "optional", message, storeUrl };
+      return {
+        type: "optional",
+        message,
+        storeUrl,
+      };
     }
 
     return { type: "none" };

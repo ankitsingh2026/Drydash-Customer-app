@@ -260,77 +260,81 @@ function ScheduledPickupCard({
     onReschedule: () => void;
     onCancel: () => void;
 }) {
-
     const getItemCount = (pickup: PickupRecord) => {
         if (!pickup?.items?.length) return 0;
-
-        return pickup.items.reduce((total, item) => {
-            return total + (item.quantity || 0);
-        }, 0);
+        return pickup.items.reduce((total, item) => total + (item.quantity || 0), 0);
     };
     const itemCount = getItemCount(pickup);
-    const scheduleTitle = getScheduledTitle(pickup);
     const highlightTime = getSlotEndLabel(pickup);
+    const scheduleTitle = getScheduledTitle(pickup);
+    // Split "Pickup today before 3PM" → prefix = "TODAY\nBEFORE ", accent = "3PM"
+    const isItToday = isToday(pickup.rescheduledDate || pickup.pickup_date);
+    const dateLabel = isItToday ? "TODAY" : formatDate(pickup.rescheduledDate || pickup.pickup_date).toUpperCase();
     const [menuVisible, setMenuVisible] = useState(false);
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
+                {/* Header */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label={pickup.isRescheduled ? "RESCHEDULED" : "PICKUP SCHEDULED"} />
-                    <View style={styles.menuContainer}>
-                        <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
-                            <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
-                        </TouchableOpacity>
-
-                        {menuVisible && (
-                            <View style={styles.dropdownMenu}>
-                                <ActionTagButton
-                                    label="Reschedule"
-                                    icon="calendar-outline"
-                                    onPress={() => {
-                                        setMenuVisible(false);
-                                        onReschedule();
-                                    }}
-                                />
-                                <ActionTagButton
-                                    label="Cancel"
-                                    icon="close-outline"
-                                    tone="danger"
-                                    onPress={() => {
-                                        setMenuVisible(false);
-                                        onCancel();
-                                    }}
-                                />
-                            </View>
-                        )}
+                    <View style={styles.headerRightActions}>
+                        {/* Cart icon with badge */}
+                        <View style={styles.cartBadgeWrap}>
+                            <Ionicons name="cart-outline" size={20} color="#A5F5D7" />
+                            {itemCount > 0 && (
+                                <View style={styles.cartBadge}>
+                                    <Text style={styles.cartBadgeText}>{itemCount}</Text>
+                                </View>
+                            )}
+                        </View>
+                        {/* Three-dot menu */}
+                        <View style={styles.menuContainer}>
+                            <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
+                                <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
+                            </TouchableOpacity>
+                            {menuVisible && (
+                                <View style={styles.dropdownMenu}>
+                                    <ActionTagButton
+                                        label="Reschedule"
+                                        icon="calendar-outline"
+                                        onPress={() => { setMenuVisible(false); onReschedule(); }}
+                                    />
+                                    <ActionTagButton
+                                        label="Cancel"
+                                        icon="close-outline"
+                                        tone="danger"
+                                        onPress={() => { setMenuVisible(false); onCancel(); }}
+                                    />
+                                </View>
+                            )}
+                        </View>
                     </View>
                 </View>
 
-                <Text style={styles.mainLine}>
-                    {scheduleTitle.replace(highlightTime, "")}
-                    <Text style={styles.mainLineAccent}>{highlightTime}</Text>
-                </Text>
+                {/* Sublabel + big heading */}
+                <View style={styles.pickupHeadingBlock}>
+                    <Text style={styles.pickupSubLabel}>PICKUP</Text>
+                    <Text style={styles.pickupBigLine}>{dateLabel}</Text>
+                    <Text style={styles.pickupBigLine}>
+                        BEFORE{" "}
+                        <Text style={styles.pickupBigAccent}>{highlightTime.toUpperCase()}</Text>
+                    </Text>
+                </View>
 
-                <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() =>
-                        router.push({
-                            pathname: "/services/shoe",
-                            params: { pickupId: pickup._id, mode: "edit" },
-                        })
-                    }
-                    style={styles.infoLine}
-                >
-                    <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
-                    <Text style={styles.infoLineText}>Add More Items</Text>
-                </TouchableOpacity>
-
+                {/* Bottom row */}
                 <View style={styles.bottomRowCompact}>
-                    <View style={styles.bottomLeftCompact}>
-                        <IconPair />
-                        <TagPill label={`${itemCount} ITEMS IN YOUR CART`} />
-                    </View>
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() =>
+                            router.push({
+                                pathname: "/services/shoe",
+                                params: { pickupId: pickup._id, mode: "edit" },
+                            })
+                        }
+                    >
+                        <TagPill label="+ ADD ITEMS" />
+                    </TouchableOpacity>
                     <ChatFab />
                 </View>
             </View>
@@ -341,41 +345,56 @@ function ScheduledPickupCard({
 function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
     const itemCount = pickup.items?.length ?? 0;
     const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Your rider";
+    const highlightTime = getSlotEndLabel(pickup);
+    const isItToday = isToday(pickup.rescheduledDate || pickup.pickup_date);
+    const dateLabel = isItToday ? "TODAY" : formatDate(pickup.rescheduledDate || pickup.pickup_date).toUpperCase();
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-                <StatusPill label="RIDER ASSIGNED" />
-
-                <View style={styles.riderLine}>
-                    <RiderAvatar pickup={pickup} />
-                    <Text style={styles.softTitle}>
-                        <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
-                            {riderName}
-                        </Text>{" "}
-                        is on the way.
-                    </Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <StatusPill label="RIDER ASSIGNED" />
+                    <View style={styles.cartBadgeWrap}>
+                        <Ionicons name="cart-outline" size={20} color="#A5F5D7" />
+                        {itemCount > 0 && (
+                            <View style={styles.cartBadge}>
+                                <Text style={styles.cartBadgeText}>{itemCount}</Text>
+                            </View>
+                        )}
+                    </View>
+                </View>
+                {/* Heading + rider side by side */}
+                <View style={styles.assignedContentRow}>
+                    <View style={styles.pickupHeadingBlock}>
+                        <Text style={styles.pickupSubLabel}>PICKUP</Text>
+                        <Text style={styles.pickupBigLine}>{dateLabel}</Text>
+                        <Text style={styles.pickupBigLine}>
+                            BEFORE{" "}
+                            <Text style={styles.pickupBigAccent}>{highlightTime.toUpperCase()}</Text>
+                        </Text>
+                    </View>
+                    <View style={styles.assignedRiderRight}>
+                        <Ionicons name="bicycle-outline" size={18} color="#86DCC0" />
+                        <Text style={styles.assignedRiderText}>
+                            <Text style={styles.assignedRiderName}>{riderName}</Text>
+                            {" is on the way"}
+                        </Text>
+                    </View>
                 </View>
 
-                <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() =>
-                        router.push({
-                            pathname: "/services/shoe",
-                            params: { pickupId: pickup._id, mode: "edit" },
-                        })
-                    }
-                    style={styles.infoLine}
-                >
-                    <Ionicons name="add-circle-outline" size={23} color="#86DCC0" />
-                    <Text style={styles.infoLineText}>Add Items</Text>
-                </TouchableOpacity>
-
+                {/* Bottom row */}
                 <View style={styles.bottomRowCompact}>
-                    <View style={styles.bottomLeftCompact}>
-                        <IconPair />
-                        <TagPill label={`${itemCount} ITEMS IN YOUR CART`} />
-                    </View>
+                    <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() =>
+                            router.push({
+                                pathname: "/services/shoe",
+                                params: { pickupId: pickup._id, mode: "edit" },
+                            })
+                        }
+                    >
+                        <TagPill label="+ ADD ITEMS" />
+                    </TouchableOpacity>
                     <ChatFab />
                 </View>
             </View>
@@ -385,34 +404,38 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
 
 function ProcessingPickupCard({ pickup }: PickupStatusCardProps) {
     const itemCount = pickup.items?.length ?? 0;
-    const orderCode = getOrderCode(pickup);
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
+                {/* Header: status + payment pending pill + chat */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="ACTIVE ORDER" />
-                    {orderCode ? <Text style={styles.orderCodeText}>{orderCode}</Text> : null}
+                    <View style={styles.processingHeaderRight}>
+                        <View style={styles.paymentPendingPill}>
+                            <Ionicons name="flash" size={12} color="#F5C842" />
+                            <Text style={styles.paymentPendingText}>Payment pending</Text>
+                        </View>
+                        <ChatFab />
+                    </View>
                 </View>
 
-                <Text style={styles.strongTitle}>Processing Your Order</Text>
-
-                <View style={styles.bottomLeftCompact}>
-                    <IconPair />
-                    <TagPill label={`${itemCount} Items Processing`} />
+                {/* Hint line */}
+                <View style={styles.hintRow}>
+                    <Ionicons name="flash" size={13} color="#86DCC0" />
+                    <Text style={styles.payHintText}>PAY NOW TO CHOOSE DELIVERY SLOT</Text>
                 </View>
 
-                <View style={styles.payRow}>
-                    <TouchableOpacity style={styles.payNowBtn}>
-                        <Text style={styles.payNowText}>Pay Now</Text>
-                        <Ionicons name="arrow-forward" size={20} color="#00382D" />
-                    </TouchableOpacity>
-                    <Text style={styles.payHintText}>Pay now to choose delivery slot</Text>
-                </View>
+                {/* Big title */}
+                <Text style={styles.processingBigTitle}>PROCESSING YOUR{"\n"}ORDER</Text>
 
-                <View style={styles.chatOnlyRow}>
-                    <ChatFab />
-                </View>
+                {/* Items tag */}
+                <TagPill label={`Total items: ${itemCount}`} />
+
+                {/* Full-width Pay Now */}
+                <TouchableOpacity style={styles.payNowBtnFull}>
+                    <Text style={styles.payNowText}>Pay now</Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -426,41 +449,30 @@ function PaidPickupCard({
     onReschedule: () => void;
 }) {
     const itemCount = pickup.items?.length ?? 0;
-    const orderCode = getOrderCode(pickup);
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
+                {/* Header: status + paid pill + chat */}
                 <View style={styles.headerRowCompact}>
-                    <View style={styles.headerLeftGroup}>
-                        <StatusPill label="ACTIVE ORDER" />
-                        {orderCode ? <Text style={styles.orderCodeText}>{orderCode}</Text> : null}
+                    <StatusPill label="ACTIVE ORDER" />
+                    <View style={styles.processingHeaderRight}>
+                        <TagPill label="Paid" icon="checkmark-circle-outline" />
+                        <ChatFab />
                     </View>
-                    <TagPill label="Paid" icon="checkmark-circle-outline" />
                 </View>
 
-                <View style={styles.headerRightSingle}>
-                    <ActionTagButton
-                        label="Reschedule Delivery"
-                        icon="calendar-outline"
-                        onPress={onReschedule}
-                    />
+                {/* Hint line */}
+                <View style={styles.hintRow}>
+                    <Ionicons name="flash" size={13} color="#86DCC0" />
+                    <Text style={styles.payHintText}>PAY NOW TO CHOOSE DELIVERY SLOT</Text>
                 </View>
 
-                <Text style={styles.strongTitle}>Processing Your Order</Text>
+                {/* Big title */}
+                <Text style={styles.processingBigTitle}>PROCESSING YOUR{"\n"}ORDER</Text>
 
-                <View style={styles.bottomRowCompact}>
-                    <View style={styles.bottomLeftCompact}>
-                        <IconPair />
-                        <TagPill label={`${itemCount} Items Processing`} />
-                    </View>
-                    <ChatFab />
-                </View>
-
-                <View style={styles.successRow}>
-                    <Ionicons name="bag-check-outline" size={24} color="#95F7D5" />
-                    <Text style={styles.successText}>Payment successful. Sit back and relax.</Text>
-                </View>
+                {/* Items tag */}
+                <TagPill label={`Total items: ${itemCount}`} />
             </View>
         </View>
     );
@@ -468,92 +480,116 @@ function PaidPickupCard({
 
 function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
     const orderCode = getOrderCode(pickup);
-    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Your rider";
+    const riderName = (
+        pickup.riderName || pickup.contactName || pickup.Name || "Rider"
+    ).toUpperCase();
     const deliveryTime = formatTime(pickup.updatedAt || pickup.pickup_date);
+    const itemCount = pickup.items?.length ?? 0;
+    const isPaid = pickup.isPaid;
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
+                {/* Header */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="OUT FOR DELIVERY" />
-                    <TagPill label="Paid" icon="checkmark-circle-outline" />
+                    <View style={styles.processingHeaderRight}>
+                        {isPaid ? (
+                            <TagPill label="Paid" icon="checkmark-circle-outline" />
+                        ) : (
+                            <View style={styles.paymentPendingPill}>
+                                <Ionicons name="flash" size={12} color="#F5C842" />
+                                <Text style={styles.paymentPendingText}>Payment pending</Text>
+                            </View>
+                        )}
+                        <ChatFab />
+                    </View>
                 </View>
 
-                <View style={styles.riderLine}>
-                    <RiderAvatar pickup={pickup} />
-                    <Text style={styles.softTitle}>
-                        <Text style={{ fontWeight: "600", color: "#E9F8F3" }}>
-                            {riderName}
-                        </Text>{" "}
-                        is on the way to deliver.
+                {/* Big rider name + subtitle */}
+                <View style={styles.deliveryRiderBlock}>
+                    <Ionicons name="bicycle-outline" size={32} color="#86DCC0" />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.deliveryRiderName}>{riderName}</Text>
+                        <Text style={styles.deliveryRiderSub}>
+                            {"on  the way with\nyour delivery"}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Meta: items pill + order code */}
+                <View style={styles.deliveryBottomMeta}>
+                    <TagPill label={`Total items: ${itemCount}`} />
+                    <Text style={styles.deliveryMetaText}>
+                        {orderCode}
+                        {deliveryTime ? ` • ${deliveryTime}` : ""}
                     </Text>
                 </View>
 
-                <Text style={styles.deliveryMetaText}>
-                    {orderCode || "Order"}
-                    {` • ${isToday(pickup.pickup_date || pickup.updatedAt) ? "Today" : formatDate(pickup.pickup_date || pickup.updatedAt)}`}
-                    {deliveryTime ? `, ${deliveryTime}` : ""}
-                </Text>
-
-                <View style={styles.bottomRowCompact}>
-                    <View style={styles.bottomLeftCompact}>
-                        <IconPair />
-                        <TagPill label="Your Item Is On The Way" />
-                    </View>
-                    <ChatFab />
-                </View>
+                {/* Pay now — only if not paid */}
+                {!isPaid && (
+                    <TouchableOpacity style={styles.payNowBtnFull}>
+                        <Text style={styles.payNowText}>Pay now</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
 }
 
+
 function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
-    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Rider";
+    const orderCode = getOrderCode(pickup);
+    const deliveryTime = formatTime(pickup.updatedAt || pickup.pickup_date);
+    const itemCount = pickup.items?.length ?? 0;
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
+
+                {/* Header: pill + DISMISS */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="ORDER COMPLETED" />
-                    <View style={styles.completedRightTop}>
-                        <TagPill label="Paid" icon="checkmark-circle-outline" />
-                        {onClose ? (
-                            <TouchableOpacity onPress={onClose} style={styles.closeButtonCompact}>
-                                <Ionicons name="close" size={18} color="#2F5148" />
-                            </TouchableOpacity>
-                        ) : null}
-                    </View>
+                    {onClose ? (
+                        <TouchableOpacity onPress={onClose}>
+                            <Text style={styles.dismissText}>DISMISS</Text>
+                        </TouchableOpacity>
+                    ) : null}
                 </View>
 
-                <View style={styles.bottomRowCompact}>
-                    <View style={styles.deliveryContentWrap}>
-                        <View style={styles.riderLine}>
-                            <RiderAvatar pickup={pickup} />
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.strongTitle}>{`Delivered By ${riderName}`}</Text>
-                                <Text style={styles.softTitleSmall}>
-                                    Your order has been successfully delivered to your doorstep.
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
+                {/* Big title */}
+                <Text style={styles.completedBigTitle}>DELIVERED{"\n"}SUCCESSFULLY</Text>
+
+                {/* Subtitle */}
+                <Text style={styles.completedSubtitle}>
+                    Your order has been successfully delivered.
+                </Text>
+
+                {/* Meta: items pill + order code + time */}
+                <View style={styles.deliveryBottomMeta}>
+                    <TagPill label={`Total items delivered: ${itemCount}`} />
+                    <Text style={styles.deliveryMetaText}>
+                        {orderCode}{deliveryTime ? ` • ${deliveryTime}` : ""}
+                    </Text>
+                </View>
+
+                {/* Stars */}
+                <View style={styles.reviewRowCompact}>
+                    <Ionicons name="star" size={26} color="#95F7D5" />
+                    <Ionicons name="star" size={26} color="#95F7D5" />
+                    <Ionicons name="star" size={26} color="#95F7D5" />
+                    <Ionicons name="star" size={26} color="#95F7D5" />
+                    <Ionicons name="star-outline" size={26} color="#325348" />
+                </View>
+
+                {/* Footer: Give a feedback + chat */}
+                <View style={styles.completedFooterRow}>
+                    <TouchableOpacity>
+                        <Text style={styles.reviewLinkText}>Give a feedback</Text>
+                    </TouchableOpacity>
                     <ChatFab />
                 </View>
 
-                <View style={styles.compDivider} />
-
-                <Text style={styles.rateTitle}>Rate Your Experience</Text>
-                <View style={styles.reviewRowCompact}>
-                    <Ionicons name="star" size={34} color="#95F7D5" />
-                    <Ionicons name="star" size={34} color="#95F7D5" />
-                    <Ionicons name="star" size={34} color="#95F7D5" />
-                    <Ionicons name="star" size={34} color="#95F7D5" />
-                    <Ionicons name="star-outline" size={34} color="#325348" />
-                </View>
-                <TouchableOpacity style={styles.reviewLinkRow}>
-                    <Text style={styles.reviewLinkText}>Write a Review</Text>
-                    <Ionicons name="arrow-forward" size={28} color="#95F7D5" />
-                </TouchableOpacity>
             </View>
         </View>
     );
@@ -864,21 +900,22 @@ const styles = StyleSheet.create({
         fontWeight: "800",
     },
     tagPill: {
-        minHeight: 25,
-        borderRadius: 16,
+        minHeight: 28,
+        borderRadius: 8,     // was 16 — squarer pill like image
         borderWidth: 1,
         borderColor: "#2A715D",
         backgroundColor: "#12372D",
         paddingHorizontal: 12,
+        paddingVertical: 5,
         flexDirection: "row",
         alignItems: "center",
         gap: 5,
     },
     tagPillText: {
         color: "#9BF0CF",
-        fontSize: 11,
-        fontWeight: "800",
-        letterSpacing: 0.5,
+        fontSize: 12,        // was 11
+        fontWeight: "700",
+        letterSpacing: 0.3,
     },
     tagPillTextDanger: {
         color: "#FF9FA8",
@@ -999,12 +1036,14 @@ const styles = StyleSheet.create({
     },
     payNowText: {
         color: "#00382D",
-        fontSize: 15,
-        fontWeight: "800",
+        fontSize: 16,
+        fontWeight: "900",
     },
     payHintText: {
-        color: "#5B786F",
-        fontSize: 10.5,
+        color: "#5B9A88",
+        fontSize: 10,
+        fontWeight: "700",
+        letterSpacing: 0.8,
         flex: 1,
     },
     chatOnlyRow: {
@@ -1158,6 +1197,183 @@ const styles = StyleSheet.create({
         position: "relative",
         alignItems: "flex-end",
         zIndex: 1000,
+    },
+    // Scheduled & Assigned heading block
+    pickupHeadingBlock: {
+        gap: 0,
+    },
+    pickupSubLabel: {
+        color: MUTED,
+        fontSize: 11,
+        fontWeight: "600",
+        letterSpacing: 1.2,
+        marginBottom: 2,
+    },
+    pickupBigLine: {
+        color: "#E9F8F3",
+        fontSize: 26,
+        fontWeight: "800",
+        lineHeight: 30,
+        letterSpacing: 0.5,
+    },
+    pickupBigAccent: {
+        color: ACCENT,
+        fontWeight: "800",
+    },
+
+    // Scheduled header right side (cart + menu)
+    headerRightActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+    },
+    cartBadgeWrap: {
+        position: "relative",
+        width: 28,
+        height: 28,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    cartBadge: {
+        position: "absolute",
+        top: -4,
+        right: -6,
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: ACCENT,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 3,
+    },
+    cartBadgeText: {
+        color: "#003C31",
+        fontSize: 9,
+        fontWeight: "800",
+    },
+
+    // Assigned card
+    assignedContentRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 8,
+
+    },
+    assignedRiderRight: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingTop: 18, // vertically center with heading
+    },
+    assignedRiderText: {
+        color: "#82BDAE",
+        fontSize: 13,
+        lineHeight: 18,
+        flexShrink: 1,
+
+    },
+    assignedRiderName: {
+        color: "#E9F8F3",
+        fontWeight: "700",
+        textTransform: "uppercase"
+    },
+
+    // Processing / Paid shared
+    processingHeaderRight: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    paymentPendingPill: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: "#6B4E10",
+        backgroundColor: "#2A1D06",
+    },
+    paymentPendingText: {
+        color: "#F5C842",
+        fontSize: 11,
+        fontWeight: "700",
+    },
+    hintRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+    },
+    processingBigTitle: {
+        color: "#FFFFFF",
+        fontSize: 28,        // was 22
+        fontWeight: "900",   // was 800
+        lineHeight: 34,
+        letterSpacing: 0.2,
+    },
+    payNowBtnFull: {
+        height: 48,
+        borderRadius: 10,    // less round, flatter
+        backgroundColor: ACCENT,
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 6,
+    },
+
+    deliveryRiderBlock: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        paddingVertical: 4,
+    },
+    deliveryRiderName: {
+        color: "#FFFFFF",
+        fontSize: 26,
+        fontWeight: "900",
+        letterSpacing: 0.5,
+        lineHeight: 30,
+    },
+    deliveryRiderSub: {
+        color: "#6B9E90",
+        fontSize: 14,
+        fontWeight: "400",
+        lineHeight: 20,
+        marginTop: 2,
+    },
+    deliveryBottomMeta: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    dismissText: {
+        color: ACCENT,
+        fontSize: 12,
+        fontWeight: "800",
+        letterSpacing: 0.8,
+    },
+    completedBigTitle: {
+        color: "#FFFFFF",
+        fontSize: 28,
+        fontWeight: "900",
+        lineHeight: 34,
+        letterSpacing: 0.2,
+    },
+    completedSubtitle: {
+        color: "#6B9E90",
+        fontSize: 13,
+        fontWeight: "400",
+        lineHeight: 18,
+        marginTop: -4,
+    },
+    completedFooterRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 2,
     },
 });
 

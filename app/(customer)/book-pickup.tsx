@@ -47,12 +47,14 @@ import { useTheme } from "../../context/ThemeContext";
 import { useSlotSocket } from "@/context/SlotSocketContext";
 import SlotPicker from "@/components/SlotPicker";
 import { showAlert } from "@/components/Customalert";
+import { useLocalSearchParams } from "expo-router";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 // ─── Constants ────────────────────────────────────────────────────
 
 const SERVICE_TYPES = ["Shoe Spa", "Laundry", "Dry Clean"];
+
 
 // ─── Time slot grouping for UI display ───────────────────────────────────────
 const SLOT_START_HOUR = 8;
@@ -235,6 +237,26 @@ export default function BookPickup() {
     }
     return null;
   };
+
+  const { preSelectedSlotIndex, preSelectedSlotTime } = useLocalSearchParams<{
+  preSelectedSlotIndex?: string;
+  preSelectedSlotTime?: string;
+}>();
+
+
+useEffect(() => {
+  if (preSelectedSlotIndex !== undefined && preSelectedSlotIndex !== "") {
+    const idx = parseInt(preSelectedSlotIndex, 10);
+    if (!isNaN(idx)) {
+      setSelectedSlotIndex(idx);
+      if (preSelectedSlotTime) {
+        setSelectedSlotData({ time: preSelectedSlotTime });
+      }
+    }
+  }
+}, []);
+
+  const getActiveSlot = () => serviceData?.data?.activeSlot || null;
 
   // Determine display color
   const getServiceColor = () => {

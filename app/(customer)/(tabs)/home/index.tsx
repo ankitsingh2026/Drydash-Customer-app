@@ -38,6 +38,8 @@ import { useTheme } from "../../../../context/ThemeContext";
 import { useAddress } from "@/context/AddressContext";
 import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
+import SlotPicker from "@/components/SlotPicker";
+
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -81,24 +83,24 @@ const QUICK_SERVICES = [
   {
     key: "Shoe Spa",
     slug: "shoe",
-    label: "Shoe-Spa",
-    subtitle: "Sneakers & Shoe care",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/shoes.svg",
+    label: "SHOE SPA",
+    subtitle: "Deep Clean and restore",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Shoes.svg",
     featured: true,
   },
   {
     key: "Dry Clean",
     slug: "dryclean",
-    label: "Dry-Clean",
-    subtitle: "Silk & Suits",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/dryclean.svg",
+    label: "DRY CLEAN",
+    subtitle: "Gentle and premium care",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/DryClean-logo.svg",
   },
   {
     key: "Laundry",
     slug: "laundry",
-    label: "Laundry",
-    subtitle: "Everyday clothes",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/laundry.svg",
+    label: "LAUNDRY",
+    subtitle: "Fresh & hygienic",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Laundry-logo.svg",
   },
   {
     key: "Onsite",
@@ -171,6 +173,8 @@ const HERO_SLIDES = [
   },
 ];
 
+
+
 export default function Home() {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(true);
@@ -198,8 +202,12 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
-  const { zoneData, serviceData, serviceLoading } = useAddress();
+  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress } = useAddress();
+
+
   const { notifications } = useNotifications();
+
+
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -483,7 +491,9 @@ export default function Home() {
   const dragXNative = useRef(new Animated.Value(0)).current;
   const dragXJS = useRef(new Animated.Value(0)).current;
   const dragXValue = useRef(0);
-
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(-1);
+  const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
+  const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
   const trackFillWidth = dragXJS.interpolate({
     inputRange: [0, MAX_DRAG],
     outputRange: [THUMB_SIZE + PADDING * 2, swipeContainerWidth - 8],
@@ -664,7 +674,7 @@ export default function Home() {
         backgroundColor={theme.background}
         translucent={false}
       />
-      <ScrollView style={[styles.root, { backgroundColor: theme.background }]}>
+      <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}>
         <View>
           {/* ── SEARCH BAR ── */}
           <View style={{ position: "relative", zIndex: 1000 }}>
@@ -674,7 +684,7 @@ export default function Home() {
               <View
                 style={[
                   styles.searchBar,
-                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                  { backgroundColor: "#052420", borderColor: "#1A2F2C" },
                 ]}
               >
                 <Ionicons
@@ -729,7 +739,7 @@ export default function Home() {
               <View
                 style={[
                   styles.searchResultsContainer,
-                  { backgroundColor: "#0D1F1C", borderColor: "#1A3330" },
+                  { backgroundColor: "#052420", borderColor: "#1A2F2C" },
                 ]}
               >
                 {searchLoading ? (
@@ -808,74 +818,235 @@ export default function Home() {
             )}
           </View>
 
-          {/* ── HERO CAROUSEL ── */}
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled={false}
-            snapToInterval={CARD_WIDTH + 12}
-            decelerationRate="fast"
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-            onMomentumScrollEnd={(event) => {
-              const index = Math.round(
-                event.nativeEvent.contentOffset.x / (CARD_WIDTH + 12),
-              );
-              setCurrentIndex(index);
+
+          <TouchableOpacity
+            activeOpacity={0.92}
+            style={{
+              marginHorizontal: 16,
+              height: 160,
             }}
           >
-            {HERO_SLIDES.map((slide, i) => {
-              const heroStyle = {
-                opacity: heroAnims[i],
-                transform: [
-                  {
-                    scale: heroAnims[i].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.97, 1],
-                    }),
-                  },
-                ],
-              };
-              return (
-                <Animated.View key={i} style={[styles.heroCard, heroStyle]}>
-                  {slide.image.uri.endsWith(".svg") ? (
-                    <SvgUri uri={slide.image.uri} width="100%" height="100%" />
-                  ) : (
-                    <Animated.Image
-                      source={slide.image}
-                      style={styles.heroImage}
-                      resizeMode="cover"
-                    />
-                  )}
-                  <View style={styles.heroTextWrap}>
-                    <Text style={styles.heroTitle}>{slide.title}</Text>
-                    {slide.subtitle && (
-                      <Text style={styles.heroSubtitle}>{slide.subtitle}</Text>
-                    )}
+            <SvgUri
+              uri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Banner.svg"
+              width="100%"
+              height="100%"
+            />
+          </TouchableOpacity>
+
+          {/* ── AVAILABLE SLOTS ── */}
+          {activeType === 'none' && !bookingLoading && (
+            <View style={{ marginHorizontal: 16, marginTop: 8 }}>
+              <Text
+                style={{
+                  color: "#4E7060",
+                  fontSize: 11,
+                  fontWeight: "800",
+                  letterSpacing: 1.2,
+                  marginBottom: 10,
+                }}
+              >
+                AVAILABLE SLOTS
+              </Text>
+
+              {contextSelectedAddress?.latitude && contextSelectedAddress?.longitude ? (
+                <SlotPicker
+                  lat={contextSelectedAddress.latitude}
+                  lng={contextSelectedAddress.longitude}
+                  zoneId={zoneData?.zoneId}
+                  selectedSlot={selectedSlotIndex}
+                  onSelect={(index: number, slot: any) => {
+                    setSelectedSlotIndex(index);
+                    setSelectedSlotData(slot);
+                    // Navigate to book-pickup with pre-selected slot
+                    router.push({
+                      pathname: "/(customer)/book-pickup",
+                      params: {
+                        preSelectedSlotIndex: String(index),
+                        preSelectedSlotTime: slot?.time ?? "",
+                      },
+                    });
+                  }}
+                  onSlotsUpdate={(slots: any[]) => {
+                    const available = slots.some(
+                      (s: any) =>
+                        s.enabled && s.status !== "expired" && s.availableCapacity > 0
+                    );
+                    setHasAvailableSlots(available);
+                    console.log("ALL SLOTS", slots.length);
+
+                  }}
+                  renderSlots={(slots: any[]) => {
+                    const visible = slots.filter((s) => s.enabled && s.status !== "expired");
+                    const shown = visible.slice(0, 2);
+                    const remaining = visible.length - 2;
+                    console.log(
+                      "VISIBLE",
+                      visible.map((s) => ({
+                        time: s.time,
+                        enabled: s.enabled,
+                        status: s.status,
+                      }))
+                    );
+                    return (
+                      <View style={{ flexDirection: "row", alignItems: "stretch", gap: 10 }}>
+                        {shown.map((slot, i) => {
+                          const isFull = slot.availableCapacity === 0;
+                          const isFilling =
+                            slot.availableCapacity > 0 && slot.availableCapacity <= 3;
+                          console.log("REMAINING", remaining);
+                          return (
+                            <TouchableOpacity
+                              key={i}
+                              activeOpacity={0.88}
+                              disabled={isFull}
+                              onPress={() => {
+                                router.push({
+                                  pathname: "/(customer)/book-pickup",
+                                  params: {
+                                    preSelectedSlotIndex: String(slots.indexOf(slot)),
+                                    preSelectedSlotTime: slot?.time ?? "",
+                                  },
+                                });
+                              }}
+                              style={{
+                                flex: 1,
+                                minHeight: 86,
+                                backgroundColor: "#071C14",
+                                borderRadius: 18,
+                                borderWidth: 1.2,
+                                borderColor: isFull ? "#1A2F2C" : "#214434",
+                                paddingHorizontal: 14,
+                                paddingVertical: 12,
+                                opacity: isFull ? 0.45 : 1,
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  color: isFull ? "#4E7060" : "#F7F8F5",
+                                  fontSize: 15,
+                                  fontWeight: "800",
+                                  letterSpacing: 0.2,
+                                }}
+                              >
+                                {slot.time}
+                              </Text>
+
+                              {isFull ? (
+                                <Text
+                                  style={{
+                                    color: "#FF6B6B",
+                                    fontSize: 11,
+                                    fontWeight: "700",
+                                    marginTop: 8,
+                                  }}
+                                >
+                                  Slot Full
+                                </Text>
+                              ) : (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    marginTop: 8,
+                                    gap: 5,
+                                  }}
+                                >
+                                  <Text style={{ fontSize: 12, color: "#C8F135" }}>⚡</Text>
+                                  <Text
+                                    style={{
+                                      color: "#C8F135",
+                                      fontSize: 11,
+                                      fontWeight: "700",
+                                    }}
+                                  >
+                                    {isFilling ? "Filling fast" : "Available"}
+                                  </Text>
+                                </View>
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+
+                        {remaining > 0 && (
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            onPress={() => router.push("/(customer)/book-pickup")}
+                            style={{
+                              width: 64,
+                              minHeight: 86,
+                              backgroundColor: "#071C14",
+                              borderRadius: 18,
+                              borderWidth: 1.2,
+                              borderColor: "#214434",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              paddingHorizontal: 8,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                color: "#F7F8F5",
+                                fontSize: 20,
+                                fontWeight: "900",
+                                lineHeight: 24,
+                              }}
+                            >
+                              +{remaining}
+                            </Text>
+                            <Text
+                              style={{
+                                color: "#B2BDB6",
+                                fontSize: 11,
+                                fontWeight: "700",
+                                marginTop: 2,
+                              }}
+                            >
+                              More
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  }}
+                />
+              ) : (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => router.push("/(customer)/book-pickup")}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: "#071C14",
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: "#1A2F2C",
+                    padding: 14,
+                    gap: 10,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 17,
+                      backgroundColor: "#0F2D1F",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="location-outline" size={16} color="#00E1A2" />
                   </View>
-                </Animated.View>
-              );
-            })}
-          </ScrollView>
-
-          {/* Carousel dots */}
-          <View style={styles.dotsRow}>
-            {HERO_SLIDES.map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.dot,
-                  i === currentIndex
-                    ? { backgroundColor: PRIMARY, width: 16 }
-                    : { backgroundColor: "#1A3330", width: 6 },
-                ]}
-              />
-            ))}
-          </View>
-
+                  <Text style={{ color: "#4E7060", fontSize: 12, fontWeight: "600" }}>
+                    Select a pickup address to view today's slots
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
           {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
           {activeType === "pickup" && activeBooking ? (
-            <View style={{ marginHorizontal: 16, marginTop: 14 }}>
+            <View style={{ marginHorizontal: 16 }}>
               <PickupStatusCard
                 pickup={activeBooking}
                 onPress={() =>
@@ -890,7 +1061,7 @@ export default function Home() {
               />
             </View>
           ) : activeType === "order" && activeBooking ? (
-            <View style={{ marginHorizontal: 16, marginTop: 14 }}>
+            <View style={{ marginHorizontal: 16 }}>
               <HomeActiveOrderCard
                 order={activeBooking}
                 onPress={() =>
@@ -905,157 +1076,79 @@ export default function Home() {
                 onRefresh={refreshBooking}
               />
             </View>
-          ) : bookingLoading ? null : (
-            <View
-              collapsable={false}
-              style={{ marginHorizontal: 16, marginTop: 14 }}
-            >
-              <Animated.View
-                style={[
-                  styles.pickupCard,
-                  {
-                    opacity: fadeAnim,
-                    backgroundColor: "#0D1F1C",
-                    borderColor: "#1A3330",
-                    transform: [
-                      {
-                        translateY: fadeAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [12, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-              >
-                <View
-                  style={[
-                    styles.swipeContainer,
-                    { backgroundColor: "#071018" },
-                  ]}
-                >
-                  <Animated.View
-                    style={[
-                      styles.swipeTrackFill,
-                      {
-                        width: trackFillWidth,
-                        opacity: trackFillOpacity,
-                      },
-                    ]}
-                    pointerEvents="none"
-                  />
-
-                  <Animated.View
-                    style={[
-                      styles.swipeDraggable,
-                      {
-                        backgroundColor: PRIMARY,
-                        transform: [
-                          { translateX: dragXNative },
-                          { scale: thumbScale },
-                        ],
-                      },
-                    ]}
-                    {...panResponder.panHandlers}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.85}
-                      onPress={onPressBook}
-                      style={styles.swipeDraggableInner}
-                    >
-                      <Ionicons
-                        name="bag-check-outline"
-                        size={20}
-                        color="#000"
-                      />
-                    </TouchableOpacity>
-                  </Animated.View>
-
-                  <Animated.View
-                    style={[
-                      styles.swipeTextWrap,
-                      {
-                        opacity: swipeTextOpacity,
-                        transform: [{ translateX: swipeTextTranslateX }],
-                      },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={styles.swipeHint}>
-                        SWIPE FOR INSTANT PICKUP
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color="#4B5563"
-                      />
-                    </View>
-                  </Animated.View>
-                </View>
-              </Animated.View>
-            </View>
-          )}
+          ) : null}
 
           {/* ── SERVICES ── */}
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.section}>
-              <View style={styles.servicesGrid}>
-                {QUICK_SERVICES.map((s) => {
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 1.2 }}>OUR SERVICES</Text>
+                <TouchableOpacity onPress={() => router.push('/services/laundry')}>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ›</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {QUICK_SERVICES.slice(0, 3).map((s) => {
                   const isFeatured = s.key === "Shoe Spa";
                   return (
+                    // Replace only the inner card JSX (the TouchableOpacity and its children)
                     <TouchableOpacity
                       key={s.key}
-                      style={[
-                        styles.serviceCard,
-                        {
-                          backgroundColor: "#0D1F1C",
-                          borderColor: "#1A3330",
-                        },
-                      ]}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#052420',
+                        borderColor: '#1A3830',
+                        borderWidth: 1,
+                        borderRadius: 16,
+                        overflow: 'hidden',   // clips icon to card bounds
+                      }}
                       activeOpacity={0.85}
                       onPress={() => {
                         if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-                          router.push({
-                            pathname: "/services/[service]",
-                            params: {
-                              service: s.slug as
-                                | "shoe"
-                                | "laundry"
-                                | "dryclean",
-                            },
-                          });
+                          router.push({ pathname: "/services/[service]", params: { service: s.slug as "shoe" | "laundry" | "dryclean" } });
                         } else {
                           router.push(`/services/${s.slug}`);
                         }
                       }}
                     >
+                      {/* Icon area — fills top ~65% of card */}
                       <Animated.View
                         style={{
-                          transform: [{ scale: isFeatured ? shoeSpaPulse : 1 }],
+
+                          width: '100%',
+                          aspectRatio: 1,           // square icon zone
+                          alignItems: 'center',
+                          justifyContent: 'center',
+
                         }}
                       >
-                        <View
-                          style={[
-                            styles.serviceIconWrapper,
-                            { backgroundColor: "#0A3D3C" },
-                          ]}
-                        >
-                          <SvgUri uri={s.icon} width={32} height={32} />
-                        </View>
+                        <SvgUri uri={s.icon} width="100%" height="99%" />
                       </Animated.View>
 
-                      <View style={{ flex: 1 }}>
+                      {/* Text area — sits below icon */}
+                      <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
                         <Text
-                          style={[styles.serviceLabel, { color: theme.text }]}
+                          style={{
+                            color: '#C9E9E2',
+                            fontSize: 13,
+                            fontWeight: '800',
+                            letterSpacing: 0.6,
+                            marginBottom: 2,
+                          }}
+                          numberOfLines={1}
                         >
                           {s.label}
+                        </Text>
+                        <Text
+                          style={{
+                            color: '#BACBC0',
+                            fontSize: 9,
+                            fontWeight: '500',
+                            lineHeight: 11,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {s.subtitle}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -1091,6 +1184,47 @@ export default function Home() {
           </LinearGradient>
         </View>
       </ScrollView>
+
+
+      {activeType === 'none' && !bookingLoading && (
+        <View style={{
+          position: 'absolute',
+          bottom: insets.bottom - 26,
+          left: 16,
+          right: 16,
+          zIndex: 50,
+        }}>
+          <Animated.View style={[
+            styles.pickupCard,
+            {
+              opacity: fadeAnim,
+              backgroundColor: '#052420',
+              borderColor: '#1A2F2C',
+              marginHorizontal: 0,
+              marginTop: 0,
+              transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+            },
+          ]}>
+            <View style={[styles.swipeContainer, { backgroundColor: '#001714' }]}>
+              <Animated.View style={[styles.swipeTrackFill, { width: trackFillWidth, opacity: trackFillOpacity }]} pointerEvents="none" />
+              <Animated.View
+                style={[styles.swipeDraggable, { backgroundColor: PRIMARY, transform: [{ translateX: dragXNative }, { scale: thumbScale }] }]}
+                {...panResponder.panHandlers}
+              >
+                <TouchableOpacity activeOpacity={0.85} onPress={onPressBook} style={styles.swipeDraggableInner}>
+                  <Ionicons name="bag-check-outline" size={20} color="#000" />
+                </TouchableOpacity>
+              </Animated.View>
+              <Animated.View style={[styles.swipeTextWrap, { opacity: swipeTextOpacity, transform: [{ translateX: swipeTextTranslateX }] }]} pointerEvents="none">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
+                  <Ionicons name="chevron-forward" size={14} color="#4B5563" />
+                </View>
+              </Animated.View>
+            </View>
+          </Animated.View>
+        </View>
+      )}
 
       <FloatingCart onOpen={() => setCartOpen(true)} />
 
@@ -1137,7 +1271,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A3330",
+    borderBottomColor: "#1A2F2C",
   },
   searchResultImageContainer: {
     width: 50,
@@ -1145,7 +1279,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     marginRight: 12,
-    backgroundColor: "#1A3330",
+    backgroundColor: "#1A2F2C",
   },
   searchResultImage: {
     width: "100%",
@@ -1194,8 +1328,8 @@ const styles = StyleSheet.create({
   },
   searchBarWrap: {
     paddingHorizontal: 16,
-    paddingBottom: 15,
-    paddingTop: 10,
+    paddingBottom: 1,
+    paddingTop: 5,
   },
   searchBar: {
     flexDirection: "row",
@@ -1300,6 +1434,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
+    
   },
   swipeHint: {
     fontWeight: "800",

@@ -29,6 +29,7 @@ interface Props {
     selectedSlot: number;
     onSelect: (index: number, slot: Slot) => void;
      onSlotsUpdate?: (slots: Slot[]) => void;  
+     renderSlots?: (slots: any[]) => React.ReactNode;
 }
 
 const SlotPicker: React.FC<Props> = ({

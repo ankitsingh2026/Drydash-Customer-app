@@ -19,7 +19,7 @@ export default function OrderStatusBadge({
 		<View
 			style={[
 				styles.wrap,
-				{ backgroundColor: `${accent}1A`, borderColor: `${accent}40` },
+				{ backgroundColor: `${accent}1A`, borderColor: `${accent}20` },
 			]}
 		>
 			<Ionicons name={icon} size={12} color={accent} />
@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 12,
 		paddingVertical: 6,
 		borderRadius: 999,
-		borderWidth: 1,
+	//	borderWidth: 1,
 		alignSelf: "flex-start",
 	},
 	label: {

@@ -141,7 +141,7 @@ export default function SelectAddressLocationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]}>
+  <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={C.text} />
@@ -227,28 +227,28 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
+    // borderRadius: 19,
+    // borderWidth: 1,
     borderColor: C.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0D1F1C",
+    // backgroundColor: "#0D1F1C",
   },
   headerTitle: {
     marginLeft: 14,
-    fontSize: 34 / 2,
+    fontSize: 32 / 2,
     fontWeight: "800",
     color: C.text,
   },
   searchWrap: {
     backgroundColor: "#0D1F1C",
     marginTop: 14,
-    marginHorizontal: 16,
+    marginHorizontal: 12,
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: 16,
-    minHeight: 56,
-    paddingHorizontal: 14,
+    minHeight: 48,
+    paddingHorizontal: 10,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: C.text,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "500",
   },
   goText: {
@@ -314,26 +314,28 @@ const styles = StyleSheet.create({
   },
   bottomTitle: {
     color: C.text,
-    fontSize: 40 / 2,
-    fontWeight: "800",
+    fontSize: 34 / 2,
+    fontWeight: "700",
   },
   bottomSubTitle: {
     marginTop: 4,
     color: C.subText,
-    fontSize: 34 / 2,
+    fontSize: 28 / 2,
     fontWeight: "500",
   },
   confirmBtn: {
-    marginTop: 18,
-    height: 56,
-    borderRadius: 14,
+    marginTop: 10,
+    height: 45,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: C.pink,
+    alignSelf:"center",
+    paddingHorizontal:16
   },
   confirmText: {
     color: "#031612",
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
