@@ -14,6 +14,8 @@ import {
 import CancelPickupConfirmModal from "./CancelPickupConfirmModal";
 import ReschedulePickupModal from "./ReschedulePickupModal";
 import { router } from "expo-router";
+import { showAlert } from "@/components/Customalert";
+
 type PickupStatusCardProps = {
     pickup: PickupRecord;
     onPress?: () => void;
@@ -680,20 +682,21 @@ export default function PickupStatusCard({
     const [cancelModalVisible, setCancelModalVisible] = useState(false);
     const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
-    const [feedbackVisible, setFeedbackVisible] = useState(false);
-    const [feedbackTitle, setFeedbackTitle] = useState("");
-    const [feedbackMessage, setFeedbackMessage] = useState("");
-    const [feedbackTone, setFeedbackTone] = useState<"success" | "error" | "info">("info");
+    // const [feedbackVisible, setFeedbackVisible] = useState(false);
+    // const [feedbackTitle, setFeedbackTitle] = useState("");
+    // const [feedbackMessage, setFeedbackMessage] = useState("");
+    // const [feedbackTone, setFeedbackTone] = useState<"success" | "error" | "info">("info");
 
     const showFeedback = (
         title: string,
         message: string,
         tone: "success" | "error" | "info" = "info",
     ) => {
-        setFeedbackTitle(title);
-        setFeedbackMessage(message);
-        setFeedbackTone(tone);
-        setFeedbackVisible(true);
+        // setFeedbackTitle(title);
+        // setFeedbackMessage(message);
+        // setFeedbackTone(tone);
+        // setFeedbackVisible(true);
+          showAlert({ type: tone, title, message });
     };
 
     const openCancelModal = () => setCancelModalVisible(true);
@@ -709,9 +712,9 @@ export default function PickupStatusCard({
         setRescheduleModalVisible(false);
     };
 
-    const closeFeedbackModal = () => {
-        setFeedbackVisible(false);
-    };
+    // const closeFeedbackModal = () => {
+    //     setFeedbackVisible(false);
+    // };
 
     const handleCancelPickup = async () => {
         if (!pickup?._id) {
@@ -831,13 +834,13 @@ export default function PickupStatusCard({
                 onClose={closeRescheduleModal}
                 onConfirm={handleReschedulePickup}
             />
-            <PickupFeedbackModal
-                visible={feedbackVisible}
-                title={feedbackTitle}
-                message={feedbackMessage}
-                tone={feedbackTone}
-                onClose={closeFeedbackModal}
-            />
+            {/* <PickupFeedbackModal
+                // visible={feedbackVisible}
+                // title={feedbackTitle}
+                // message={feedbackMessage}
+                // tone={feedbackTone}
+                // onClose={closeFeedbackModal}
+            /> */}
         </>
     );
 }
