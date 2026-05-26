@@ -1206,7 +1206,7 @@ export default function OrderTrackingScreen() {
   }, [selectedPickup]);
 
   const storeName = selectedPickup?.plantName || "Green Park";
-  const storeSubtitle = locationText;
+  const storeSubtitle = selectedPickup?.Address || null; 
 
   const deliveredAt = ORDER.deliveredAt;
 

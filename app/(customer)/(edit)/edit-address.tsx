@@ -155,6 +155,7 @@ export default function EditAddress() {
 
       if (isEditing) {
         await updateAddressApi(editId, payload);
+        router.push("/(customer)/(tabs)/home")
       } else {
         await saveAddressApi(payload);
         router.push("/(customer)/(tabs)/home")
