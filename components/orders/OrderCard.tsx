@@ -284,7 +284,7 @@ function ScheduledPickupCard({
                             <Ionicons name="cart-outline" size={20} color="#A5F5D7" />
                             {itemCount > 0 && (
                                 <View style={styles.cartBadge}>
-                                    <Text style={styles.cartBadgeText}>{itemCount} 12</Text>
+                                    <Text style={styles.cartBadgeText}>{itemCount}</Text>
                                 </View>
                             )}
                         </View>

@@ -85,7 +85,7 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "SHOE SPA",
     subtitle: "Deep Clean and restore",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/ShoeSpa.svg",
+    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Shoes.svg",
     featured: true,
   },
   {
