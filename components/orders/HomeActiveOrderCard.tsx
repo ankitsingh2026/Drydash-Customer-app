@@ -63,7 +63,7 @@ const formatCardTime = (value?: string) => {
   });
 };
 
-const statusMeta = (status?: string) => {
+const statusMeta = (status?: string, isPaid?: boolean) => {
   const s = normalizeKey(status);
 
   if (s === "delivered") {
@@ -101,7 +101,7 @@ const statusMeta = (status?: string) => {
       accent: ACCENT,
       icon: "bicycle-outline" as const,
       title: "Your order is on the way",
-      subtitle: "Complete payment to continue delivery.",
+      subtitle: isPaid ? "Sit back and relax, your order will reach you shortly." : "Complete payment to continue delivery.",
       actionText: "Pay Now",
       showClose: false,
     };
@@ -112,7 +112,7 @@ const statusMeta = (status?: string) => {
     accent: ACCENT,
     icon: "time-outline" as const,
     title: "Processing your order",
-    subtitle: "Pay now to choose delivery slot.",
+    subtitle: isPaid ? "Your items are being processed." : "Pay now to choose delivery slot.",
     actionText: "Pay Now",
     showClose: false,
   };
@@ -131,7 +131,7 @@ export default function HomeActiveOrderCard({
   const [razorpayData, setRazorpayData] = useState<any>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const meta = statusMeta(order.status);
+  const meta = statusMeta(order.status, order.isPaid);
   const amount = order.totalAmount ?? order.price ?? 0;
   const itemCount = Array.isArray(order.items) ? order.items.length : 0;
   const statusKey = normalizeKey(order.status);
