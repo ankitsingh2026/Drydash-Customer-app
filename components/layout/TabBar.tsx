@@ -198,33 +198,43 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     }
   };
 
-  // Helper to get active slot from serviceData (API response)
-  const getActiveSlot = () => {
-    return serviceData?.data?.activeSlot || null;
+  // Helper to get best slot from serviceData (API response)
+  const getBestSlot = () => {
+    if (!serviceData?.data || !serviceData.serviceAvailable) return null;
+    if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
+    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
+      return serviceData.data.allSlots.find((s: any) => s.enabled) || serviceData.data.allSlots[0];
+    }
+    return null;
   };
 
   // Determine display color
   const getServiceColor = () => {
     if (serviceLoading) return "#2FE6A6";
-    const activeSlot = getActiveSlot();
-    if (activeSlot) return "#2FE6A6";
-    if (serviceData?.serviceAvailable === false && !activeSlot)
-      return "#FFA500";
-    return "#FF6B6B";          
+    const bestSlot = getBestSlot();
+    if (bestSlot) return "#2FE6A6";
+    
+    if (serviceData?.message === "Zone not configured" || !serviceData?.data?.zoneInfo) {
+      return "#FF6B6B";
+    }
+
+    return "#FFA500";          
   };
 
   // Get text for non‑slot cases
   const getDisplayText = () => {
     if (serviceLoading) return "Checking...";
-    const activeSlot = getActiveSlot();
+    
+    if (!serviceData) {
+      if (zoneData && !zoneData.zoneFound) return "Not in your area";
+      return "Checking...";
+    }
 
-    // Zone not found → not in your area
-    if (!zoneData?.zoneFound) {
+    if (serviceData.message === "Zone not configured" || !serviceData.data?.zoneInfo) {
       return "Not in your area";
     }
 
-    // Zone found but no active slot → currently unavailable
-    if (!activeSlot) {
+    if (!serviceData.serviceAvailable || serviceData.data?.allSlots?.length === 0) {
       return "Currently unavailable";
     }
 
@@ -233,10 +243,18 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
   // Format slot time and day (Today/Tomorrow)
   const getSlotInfo = () => {
-    const activeSlot = getActiveSlot();
-    if (!activeSlot) return null;
+    const slot = getBestSlot();
+    if (!slot) return null;
 
-    const startTimeStr = activeSlot.startTime || activeSlot.time?.split(" - ")[0] || "";
+    if (slot.deliveryLabel) {
+      const parts = slot.deliveryLabel.split(" by ");
+      if (parts.length === 2) {
+        return { dayLabel: parts[0], time: parts[1] };
+      }
+      return { dayLabel: slot.deliveryLabel, time: "" };
+    }
+
+    const startTimeStr = slot.startTime || slot.time?.split(" - ")[0] || "";
     let hour = 0,
       minute = 0;
     const match = startTimeStr.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
@@ -329,8 +347,10 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                     <Text style={styles.deliveryLabel}>Delivery by</Text>
                   </View>
                   <Text style={styles.deliveryTime}>
-                    Tomorrow 
-                    <Text style={styles.deliverySubTime}> 10 AM</Text>
+                    {slotInfo.dayLabel}
+                    {slotInfo.time ? (
+                      <Text style={styles.deliverySubTime}> {slotInfo.time}</Text>
+                    ) : null}
                   </Text>
                 </View>
               ) : (

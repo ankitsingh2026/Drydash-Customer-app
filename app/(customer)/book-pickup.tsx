@@ -225,14 +225,66 @@ export default function BookPickup() {
     cartSubtotal,
   );
 
-  const getActiveSlot = () => serviceData?.data?.activeSlot || null;
+  // Helper to get best slot from serviceData (API response)
+  const getBestSlot = () => {
+    if (selectedSlotData) return selectedSlotData;
+    if (!serviceData?.data || !serviceData.serviceAvailable) return null;
+    if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
+    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
+      return serviceData.data.allSlots.find((s: any) => s.enabled) || serviceData.data.allSlots[0];
+    }
+    return null;
+  };
 
+  // Determine display color
+  const getServiceColor = () => {
+    if (serviceLoading) return "#2FE6A6";
+    const bestSlot = getBestSlot();
+    if (bestSlot) return "#2FE6A6";
+    
+    if (serviceData?.message === "Zone not configured" || !serviceData?.data?.zoneInfo) {
+      return "#FF6B6B";
+    }
+
+    return "#FFA500";          
+  };
+
+  // Get text for non‑slot cases
+  const getDisplayText = () => {
+    if (serviceLoading) return "Checking...";
+    
+    if (!serviceData) {
+      if (zoneData && !zoneData.zoneFound) return "Not in your area";
+      return "Checking...";
+    }
+
+    if (serviceData.message === "Zone not configured" || !serviceData.data?.zoneInfo) {
+      return "Not in your area";
+    }
+
+    if (!serviceData.serviceAvailable || serviceData.data?.allSlots?.length === 0) {
+      return "Currently unavailable";
+    }
+
+    return "Service unavailable";
+  };
+
+  // Format slot time and day (Today/Tomorrow)
   const getSlotInfo = () => {
-    const activeSlot = getActiveSlot();
-    if (!activeSlot) return null;
+    const slot = getBestSlot();
+    if (!slot) return null;
 
-    const startTimeStr = activeSlot.startTime || activeSlot.time?.split(" - ")[0] || "";
-    let hour = 0, minute = 0;
+    if (slot.deliveryLabel) {
+      const parts = slot.deliveryLabel.split(" by ");
+      if (parts.length === 2) {
+        return { dayLabel: parts[0], time: parts[1] };
+      }
+      return { dayLabel: slot.deliveryLabel, time: "" };
+    }
+
+    const startTimeStr = slot.startTime || slot.time?.split(" - ")[0] || "";
+    let hour = 0,
+      minute = 0;
     const match = startTimeStr.match(/(\d+)(?::(\d+))?\s*(AM|PM)/i);
     if (match) {
       hour = parseInt(match[1]);
@@ -248,7 +300,9 @@ export default function BookPickup() {
         const period = simple[2].toUpperCase();
         if (period === "PM" && hour !== 12) hour += 12;
         if (period === "AM" && hour === 12) hour = 0;
-      } else return null;
+      } else {
+        return null;
+      }
     }
 
     const now = new Date();
@@ -258,6 +312,8 @@ export default function BookPickup() {
 
     let slotDate = new Date();
     slotDate.setHours(hour, minute, 0, 0);
+
+    // If slot time already passed today, it's for tomorrow
     if (slotDate < now) {
       slotDate = new Date(tomorrow);
       slotDate.setHours(hour, minute, 0, 0);
@@ -265,6 +321,7 @@ export default function BookPickup() {
 
     const isToday = slotDate.toDateString() === today.toDateString();
     const isTomorrow = slotDate.toDateString() === tomorrow.toDateString();
+
     let dayLabel = "";
     if (isToday) dayLabel = "Today";
     else if (isTomorrow) dayLabel = "Tomorrow";
@@ -276,22 +333,6 @@ export default function BookPickup() {
     const timeString = `${displayHour} ${period}`;
 
     return { dayLabel, time: timeString };
-  };
-
-  const getServiceColor = () => {
-    if (serviceLoading) return "#2FE6A6";
-    const activeSlot = getActiveSlot();
-    if (activeSlot) return "#2FE6A6";
-    if (serviceData?.serviceAvailable === false && !activeSlot) return "#FFA500";
-    return "#FF6B6B";
-  };
-
-  const getDisplayText = () => {
-    if (serviceLoading) return "Checking...";
-    const activeSlot = getActiveSlot();
-    if (!zoneData?.zoneFound) return "Not in your area";
-    if (!activeSlot) return "Currently unavailable";
-    return "Service unavailable";
   };
   const calculateDiscount = (coupon: any, subtotal: number) => {
     if (!coupon) return 0;
@@ -1071,7 +1112,7 @@ export default function BookPickup() {
     selectedSlotData &&
     selectedSlotData.availableCapacity === 0;
 
-  const hasActiveSlot = !!getActiveSlot();
+  const hasActiveSlot = !!getBestSlot();
   const isAreaServiceable = zoneData?.zoneFound === true;
   const isServiceAvailableForNow = isAreaServiceable && hasActiveSlot;
   const isTodaySlotSelected = pickupType === "today" && selectedSlotIndex !== -1 && hasAvailableSlots;
@@ -1295,8 +1336,8 @@ export default function BookPickup() {
                         </Text>
                       </View>
                       <Text style={{ color: "#2FE6A6", fontSize: 16, fontWeight: "800" }}>
-                        {/* {slotInfo.dayLabel} at {slotInfo.time} */}
-                        Tomorrow 10 AM
+                        {slotInfo.dayLabel}
+                        {slotInfo.time ? ` ${slotInfo.time}` : ""}
                       </Text>
                     </View>
                   );
@@ -1623,7 +1664,7 @@ export default function BookPickup() {
                   style={ms.pickSelectTab}
                 >
                   Pickup by{" "}
-                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery by 11 AM tomorrow
+                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery: {selectedSlotData.deliveryLabel || "11 AM tomorrow"}
                 </Text>
               )}
 
@@ -1836,6 +1877,7 @@ export default function BookPickup() {
                 <Text style={s.estimatedText}>
                   ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
                   {selectedSlotData.time}
+                  {selectedSlotData.deliveryLabel ? ` • DELIVERY: ${selectedSlotData.deliveryLabel.toUpperCase()}` : ""}
                 </Text>
               </View>
             )}
