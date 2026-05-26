@@ -614,7 +614,7 @@ export default function Orders() {
                     </View>
 
                     {/* Reorder for delivered */}
-                    {isDelivered && (
+                    {/* {isDelivered && (
                       <TouchableOpacity
                         style={styles.reorderBtn}
                         activeOpacity={0.85}
@@ -627,7 +627,7 @@ export default function Orders() {
                         />
                         <Text style={styles.reorderText}>Reorder Items</Text>
                       </TouchableOpacity>
-                    )}
+                    )} */}
 
                     {/* Tap hint for non-delivered */}
                     {!isDelivered && (

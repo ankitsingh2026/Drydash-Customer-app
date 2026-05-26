@@ -171,7 +171,12 @@ export default function NotificationsTopSheet({
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             {notifications.length > 0 && (
-              <TouchableOpacity onPress={markAllRead}>
+              <TouchableOpacity
+                onPress={async () => {
+                  await markAllRead();
+                  onClose();
+                }}
+              >
                 <Text style={{ color: theme.primary, fontWeight: "700" }}>
                   Mark all as read
                 </Text>
