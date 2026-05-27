@@ -68,15 +68,15 @@ export default function ServicesPage() {
   console.log("Selected Address in Services Page:", selectedAddress);
 
   return (
-    <View style={[styles.root, { backgroundColor: "#021410" }]}>
-      <SafeAreaView style={{ flex: 1,  }}>
+    <SafeAreaView style={[styles.root, { backgroundColor: "#021410" }]}>
+      <View style={{ flex: 1, }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
             <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 6, padding: 4 }}>
               <Ionicons name="arrow-back" size={24} color="#2FE6A6" />
             </TouchableOpacity>
-            
+
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Ionicons name="paper-plane-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
@@ -98,40 +98,40 @@ export default function ServicesPage() {
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <Text style={styles.sectionTitle}>OUR SERVICES</Text>
-          
+
           <View style={styles.grid}>
             {SERVICES.map((s) => (
-             <TouchableOpacity
-  key={s.key}
-  activeOpacity={0.85}
-  onPress={() => {
-    if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-      router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
-    } else {
-      router.push(`/services/${s.slug}`);
-    }
-  }}
-  style={styles.card}
->
-  <View style={styles.iconContainer}>
-    <SvgUri uri={s.icon} width="100%" height="100%" />
-  </View>
+              <TouchableOpacity
+                key={s.key}
+                activeOpacity={0.85}
+                onPress={() => {
+                  if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                    router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
+                  } else {
+                    router.push(`/services/${s.slug}`);
+                  }
+                }}
+                style={styles.card}
+              >
+                <View style={styles.iconContainer}>
+                  <SvgUri uri={s.icon} width="90%" height="90%" />
+                </View>
 
-  {/* Divider Line */}
-  <View style={styles.divider} />
+                {/* Divider Line */}
+                <View style={styles.divider} />
 
-  <View style={styles.textContainer}>
-    <Text style={styles.cardTitle}>{s.label}</Text>
-    <Text style={styles.cardSub} numberOfLines={1}>
-      {s.subtitle}
-    </Text>
-  </View>
-</TouchableOpacity>
+                <View style={styles.textContainer}>
+                  <Text style={styles.cardTitle}>{s.label}</Text>
+                  <Text style={styles.cardSub} numberOfLines={1}>
+                    {s.subtitle}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 10, 
+    paddingTop: 10,
     paddingBottom: 40,
   },
   sectionTitle: {
@@ -172,22 +172,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
   },
-card: {
-  width: (width - 32 - 12) / 2,
-  backgroundColor: "#062B25",
-  borderRadius: 18,
-  borderWidth: 1,
-  borderColor: "#17433B",
-  overflow: "hidden",
-  paddingBottom: 14,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.25,
-  shadowRadius: 6,
-  elevation: 5,
-},
+  card: {
+    width: (width - 32 - 12) / 2,
+    backgroundColor: "#062B25",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#17433B",
+    overflow: "hidden",
+    paddingBottom: 9,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
+  },
   iconContainer: {
     width: "100%",
     aspectRatio: 1.1,
@@ -195,26 +195,26 @@ card: {
     justifyContent: "center",
     backgroundColor: "#052420",
   },
-textContainer: {
-  paddingHorizontal: 12,
-  paddingTop: 10,
-},
+  textContainer: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+  },
 
-cardTitle: {
-  color: "#F5FFF9",
-  fontSize: 16,
-  fontWeight: "800",
-},
+  cardTitle: {
+    color: "#F5FFF9",
+    fontSize: 16,
+    fontWeight: "800",
+  },
 
-cardSub: {
-  color: "#7FA394",
-  fontSize: 11,
-  fontWeight: "500",
-},
+  cardSub: {
+    color: "#7FA394",
+    fontSize: 11,
+    fontWeight: "500",
+  },
   divider: {
-  height: 1,
-  backgroundColor: "#1F4A42",
-  marginHorizontal: 12,
-  opacity: 0.8,
-},
+    height: 1,
+    backgroundColor: "#1F4A42",
+    marginHorizontal: 12,
+    opacity: 0.8,
+  },
 });

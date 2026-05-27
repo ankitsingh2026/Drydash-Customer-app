@@ -6,7 +6,13 @@ import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext";
-export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
+export default function FloatingCart({
+  onOpen,
+  bottomOffset = 20,
+}: {
+  onOpen: () => void;
+  bottomOffset?: number;
+}) {
   const { items } = useCart();
   const insets = useSafeAreaInsets();
 
@@ -31,7 +37,7 @@ export default function FloatingCart({ onOpen }: { onOpen: () => void }) {
       style={[
         styles.outerWrapper,
         {
-          bottom: insets.bottom + 12,
+         bottom: insets.bottom + bottomOffset,
           transform: [{ translateY }],
         },
       ]}
