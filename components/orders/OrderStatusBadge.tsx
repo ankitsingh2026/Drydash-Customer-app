@@ -23,7 +23,7 @@ export default function OrderStatusBadge({
 			]}
 		>
 			<Ionicons name={icon} size={12} color={accent} />
-			<Text style={[styles.label, { color: accent }]}>{label}</Text>
+			<Text style={[styles.label]}>{label}</Text>
 		</View>
 	);
 }
@@ -32,18 +32,19 @@ const styles = StyleSheet.create({
 	wrap: {
 		flexDirection: "row",
 		alignItems: "center",
-		gap: 6,
-		paddingHorizontal: 12,
-		paddingVertical: 6,
+		gap: 4,
+		paddingHorizontal: 10,
+		paddingVertical: 3,
 		borderRadius: 999,
 	//	borderWidth: 1,
 		alignSelf: "flex-start",
 	},
 	label: {
-		fontSize: 11,
-		fontWeight: "800",
-		letterSpacing: 0.9,
+		fontSize:9,
+		fontWeight: "500",
+		letterSpacing: 0.7,
 		textTransform: "uppercase",
+		color:"#fff"
 	},
 });
 

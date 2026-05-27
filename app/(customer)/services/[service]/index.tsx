@@ -976,7 +976,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   updateBtn: {
-    backgroundColor: "#56BFAB",
+    backgroundColor: "#00D9A3",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -985,7 +985,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   updateBtnText: {
-    color: "#fff",
+    color: "#000",
     fontWeight: "800",
     fontSize: 14,
   },

@@ -2180,12 +2180,14 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
+     marginBottom:30
   },
   totalAmountBarText: {
     color: "#05352A",
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 0.2,
+   
   },
 
   itemCard: {

@@ -196,6 +196,7 @@ export default function Home() {
   const [activeBooking, setActiveBooking] = useState<any>(null);
   const [activeType, setActiveType] = useState<"none" | "pickup" | "order">("none");
   const [bookingLoading, setBookingLoading] = useState(false);
+  const TAB_BAR_HEIGHT = 0;
 
   // Search states
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
@@ -1189,7 +1190,7 @@ export default function Home() {
       {activeType === 'none' && !bookingLoading && (
         <View style={{
           position: 'absolute',
-          bottom: insets.bottom - 26,
+          bottom: TAB_BAR_HEIGHT + insets.bottom + 12,
           left: 16,
           right: 16,
           zIndex: 50,
@@ -1199,7 +1200,8 @@ export default function Home() {
             {
               opacity: fadeAnim,
               backgroundColor: '#052420',
-              borderColor: '#1A2F2C',
+              borderWidth: 1,
+              borderColor: theme.lightborder,
               marginHorizontal: 0,
               marginTop: 0,
               transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
@@ -1434,7 +1436,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
-    
+
   },
   swipeHint: {
     fontWeight: "800",

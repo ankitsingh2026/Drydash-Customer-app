@@ -215,6 +215,7 @@ export default function BookPickup() {
   const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
 
   const { items, setQty, removeItem, clear } = useCart();
+  const preSelectedTimeRef = useRef<string>("");
 
   const cartSubtotal = items.reduce(
     (sum, item) => sum + item.qty * item.price,
@@ -239,22 +240,18 @@ export default function BookPickup() {
   };
 
   const { preSelectedSlotIndex, preSelectedSlotTime } = useLocalSearchParams<{
-  preSelectedSlotIndex?: string;
-  preSelectedSlotTime?: string;
-}>();
+    preSelectedSlotIndex?: string;
+    preSelectedSlotTime?: string;
+  }>();
 
 
-useEffect(() => {
-  if (preSelectedSlotIndex !== undefined && preSelectedSlotIndex !== "") {
-    const idx = parseInt(preSelectedSlotIndex, 10);
-    if (!isNaN(idx)) {
-      setSelectedSlotIndex(idx);
-      if (preSelectedSlotTime) {
-        setSelectedSlotData({ time: preSelectedSlotTime });
-      }
+  useEffect(() => {
+    if (preSelectedSlotTime && preSelectedSlotTime !== "") {
+      preSelectedTimeRef.current = preSelectedSlotTime;
+      // Also set slot data immediately so the UI hint shows
+      setSelectedSlotData({ time: preSelectedSlotTime });
     }
-  }
-}, []);
+  }, []);
 
   const getActiveSlot = () => serviceData?.data?.activeSlot || null;
 
@@ -263,18 +260,18 @@ useEffect(() => {
     if (serviceLoading) return "#2FE6A6";
     const bestSlot = getBestSlot();
     if (bestSlot) return "#2FE6A6";
-    
+
     if (serviceData?.message === "Zone not configured" || !serviceData?.data?.zoneInfo) {
       return "#FF6B6B";
     }
 
-    return "#FFA500";          
+    return "#FFA500";
   };
 
   // Get text for non‑slot cases
   const getDisplayText = () => {
     if (serviceLoading) return "Checking...";
-    
+
     if (!serviceData) {
       if (zoneData && !zoneData.zoneFound) return "Not in your area";
       return "Checking...";
@@ -1511,73 +1508,82 @@ useEffect(() => {
                 </Text>
 
                 {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
-                    <SlotPicker
-                      lat={selectedPickupAddr.latitude}
-                      lng={selectedPickupAddr.longitude}
-                      zoneId={zoneData?.zoneId}
-                      selectedSlot={selectedSlotIndex}
-                      onSelect={(index, slot) => {
-                        setSelectedSlotIndex(index);
-                        setSelectedSlotData(slot);
-                      }}
-                      onSlotsUpdate={(slots) => {
-                        const available = slots.some(
-                          (s) =>
-                            s.enabled &&
-                            s.status !== "expired" &&
-                            s.availableCapacity > 0
-                        );
+                  <SlotPicker
+                    lat={selectedPickupAddr.latitude}
+                    lng={selectedPickupAddr.longitude}
+                    zoneId={zoneData?.zoneId}
+                    selectedSlot={selectedSlotIndex}
+                    onSelect={(index, slot) => {
+                      setSelectedSlotIndex(index);
+                      setSelectedSlotData(slot);
+                    }}
+                    onSlotsUpdate={(slots) => {
+                      const available = slots.some(
+                        (s) => s.enabled && s.status !== "expired" && s.availableCapacity > 0
+                      );
+                      setHasAvailableSlots(available);
 
-                        setHasAvailableSlots(available);
-                      }}
-                    />
-                  ) : (
-                    <TouchableOpacity 
-                      activeOpacity={0.8}
-                      onPress={() => {
-                        setModalMode("pickup");
-                        setModalVisible(true);
-                      }}
-                      style={s.noSlotBox}
-                    >
-                      <View style={{
-                        borderRadius: 16,
-                        padding: 16,
-                        backgroundColor: "#0B1F19",
-                        borderWidth: 1,
-                        borderColor: "#1E3327",
-                      }}>
-                        <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
-                          <View style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 18,
-                            backgroundColor: "#2A2F1C",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginRight: 10,
+                      // ─── Auto-select pre-selected slot from home screen ───
+                      if (preSelectedTimeRef.current && selectedSlotIndex === -1) {
+                        const targetTime = preSelectedTimeRef.current;
+                        const matchIndex = slots.findIndex(
+                          (s) => s.time === targetTime && s.enabled && s.status !== "expired"
+                        );
+                        if (matchIndex !== -1) {
+                          setSelectedSlotIndex(matchIndex);
+                          setSelectedSlotData(slots[matchIndex]);
+                          preSelectedTimeRef.current = ""; // clear so it doesn't re-trigger
+                        }
+                      }
+                    }}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setModalMode("pickup");
+                      setModalVisible(true);
+                    }}
+                    style={s.noSlotBox}
+                  >
+                    <View style={{
+                      borderRadius: 16,
+                      padding: 16,
+                      backgroundColor: "#0B1F19",
+                      borderWidth: 1,
+                      borderColor: "#1E3327",
+                    }}>
+                      <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+                        <View style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: "#2A2F1C",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginRight: 10,
+                        }}>
+                          <Ionicons name="location" size={18} color="#00E1A2" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{
+                            color: "#CFFFF1",
+                            fontSize: 14,
+                            fontWeight: "700",
+                          }}>Location Required</Text>
+                          <Text style={{
+                            color: "#7A9B87",
+                            fontSize: 12,
+                            marginTop: 4,
+                            lineHeight: 18,
                           }}>
-                            <Ionicons name="location" size={18} color="#00E1A2" />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{
-                              color: "#CFFFF1",
-                              fontSize: 14,
-                              fontWeight: "700",
-                            }}>Location Required</Text>
-                            <Text style={{
-                              color: "#7A9B87",
-                              fontSize: 12,
-                              marginTop: 4,
-                              lineHeight: 18,
-                            }}>
-                              Please select a pickup address to view available slots for today.
-                            </Text>
-                          </View>
+                            Please select a pickup address to view available slots for today.
+                          </Text>
                         </View>
                       </View>
-                    </TouchableOpacity>
-                  )}
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
               <TouchableOpacity
                 onPress={() => router.push("/services/[service]")}
@@ -1798,7 +1804,7 @@ useEffect(() => {
                     }}
                   />
                 ) : (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => {
                       setModalMode("pickup");
@@ -3028,7 +3034,7 @@ const s = StyleSheet.create({
   removeBtn: {
     padding: 2,
   },
-  noSlotBox : {
+  noSlotBox: {
     marginTop: 8,
   }
 });

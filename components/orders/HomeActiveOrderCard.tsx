@@ -44,7 +44,7 @@ type HomeActiveOrderCardProps = {
 
 const ACCENT = "#29E6B0";
 const BORDER = "#1A3330";
-const SURFACE = "#0D1F1C";
+const SURFACE = "#00D9A3";
 const MUTED = "#6B7280";
 
 const normalize = (status?: string) =>
@@ -317,7 +317,7 @@ export default function HomeActiveOrderCard({
                     style={styles.chatBtnHeader}
                     onPress={() => router.push("/(customer)/(assistant)/chat")}
                   >
-                    <Ionicons name="chatbubble-ellipses" size={15} color={SURFACE} />
+                    <Ionicons name="chatbubble-ellipses" size={22} color={SURFACE} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -334,8 +334,10 @@ export default function HomeActiveOrderCard({
               </View>
             ) : null}
 
-
-            <Text style={styles.title}>{meta.title}</Text>
+         { !isOutForDelivery ? (
+          <Text style={styles.title}>{meta.title}</Text>
+         ): null}
+            
 
             {meta.subtitle && isDelivered ? (
               <Text style={styles.subtitle}>{meta.subtitle}</Text>
@@ -347,7 +349,7 @@ export default function HomeActiveOrderCard({
                 <View style={styles.riderRow}>
                   <Ionicons name="bicycle-outline" size={28} color={ACCENT} />
                   <Text style={styles.riderText}>
-                    <Text style={styles.riderName}>{riderName} </Text>
+                    <Text style={styles.riderName}>{riderName}</Text>
                     {" on  the way with\nyour delivery"}
                   </Text>
                 </View>
@@ -573,8 +575,6 @@ const styles = StyleSheet.create({
   chatBtn: {
     width: 40,
     height: 40,
-    borderRadius: 28,
-    backgroundColor: ACCENT,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: ACCENT,
@@ -605,10 +605,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   chatBtnHeader: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: ACCENT,
+  
+    color: "#fff ",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -619,14 +617,14 @@ const styles = StyleSheet.create({
   },
   subtitleAbove: {
     color: ACCENT,
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 10,
+    fontWeight: "600",
     letterSpacing: 0.4,
   },
   riderName: {
-    fontWeight: "700",
+    fontWeight: "600",
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 13,
     textTransform: "uppercase"
   },
 
@@ -639,7 +637,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: "#FFFFFF",
-    fontSize: 22,        // was 20
+    fontSize: 20,        // was 20
     lineHeight: 32,      // was 36
     fontWeight: "600",
     letterSpacing: -0.5,

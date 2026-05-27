@@ -19,7 +19,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 17,
+      "versionCode": 21,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
