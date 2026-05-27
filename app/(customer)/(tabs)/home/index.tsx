@@ -1227,14 +1227,14 @@ export default function Home() {
           </Animated.View>
         </View>
       )}
-     <FloatingCart
-  onOpen={() => setCartOpen(true)}
-  bottomOffset={
-    activeType === "none"
-      ? 95
-      : 12
-  }
-/>
+      <FloatingCart
+        onOpen={() => setCartOpen(true)}
+        bottomOffset={
+          activeType === "none"
+            ? 95
+            : 12
+        }
+      />
       <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
 
       <ProductServicePopup
