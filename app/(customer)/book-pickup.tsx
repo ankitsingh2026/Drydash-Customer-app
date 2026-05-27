@@ -288,17 +288,52 @@ export default function BookPickup() {
     return "Service unavailable";
   };
 
+  const getDynamicDeliveryLabel = (slot: any) => {
+    if (!slot || !slot.deliveryLabel) return "11 AM tomorrow";
+    
+    const parts = slot.deliveryLabel.split(" by ");
+    const labelRelative = parts[0];
+    const time = parts[1] || "";
+    
+    let deliveryDate = new Date();
+    if (pickupType === "schedule") {
+      deliveryDate = new Date(date);
+    }
+    
+    if (labelRelative.toLowerCase() === "tomorrow") {
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
+    } else if (labelRelative.toLowerCase() !== "today") {
+      return slot.deliveryLabel;
+    }
+
+    const today = new Date();
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    
+    let dayLabel = "";
+    if (deliveryDate.toDateString() === today.toDateString()) {
+      dayLabel = "Today";
+    } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
+      dayLabel = "Tomorrow";
+    } else {
+      dayLabel = deliveryDate.toLocaleDateString("en-IN", { weekday: "short" });
+    }
+    
+    return time ? `${dayLabel} by ${time}` : dayLabel;
+  };
+
   // Format slot time and day (Today/Tomorrow)
   const getSlotInfo = () => {
     const slot = getBestSlot();
     if (!slot) return null;
 
     if (slot.deliveryLabel) {
-      const parts = slot.deliveryLabel.split(" by ");
+      const dynamicLabel = getDynamicDeliveryLabel(slot);
+      const parts = dynamicLabel.split(" by ");
       if (parts.length === 2) {
         return { dayLabel: parts[0], time: parts[1] };
       }
-      return { dayLabel: slot.deliveryLabel, time: "" };
+      return { dayLabel: dynamicLabel, time: "" };
     }
 
     const startTimeStr = slot.startTime || slot.time?.split(" - ")[0] || "";
@@ -1692,7 +1727,7 @@ export default function BookPickup() {
                   style={ms.pickSelectTab}
                 >
                   Pickup by{" "}
-                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery: {selectedSlotData.deliveryLabel || "11 AM tomorrow"}
+                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery: {getDynamicDeliveryLabel(selectedSlotData)}
                 </Text>
               )}
 
@@ -1893,6 +1928,15 @@ export default function BookPickup() {
                 </LinearGradient>
               </View>
 
+              {selectedSlotData?.time && (
+                <Text
+                  style={ms.pickSelectTab}
+                >
+                  Pickup by{" "}
+                  {selectedSlotData.time.split(" - ")[1]} • Estimated delivery: {getDynamicDeliveryLabel(selectedSlotData)}
+                </Text>
+              )}
+
               <SpecialInstructionsSection />
             </>
           )}
@@ -1905,7 +1949,7 @@ export default function BookPickup() {
                 <Text style={s.estimatedText}>
                   ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
                   {selectedSlotData.time}
-                  {selectedSlotData.deliveryLabel ? ` • DELIVERY: ${selectedSlotData.deliveryLabel.toUpperCase()}` : ""}
+                  {selectedSlotData.deliveryLabel ? ` • DELIVERY: ${getDynamicDeliveryLabel(selectedSlotData).toUpperCase()}` : ""}
                 </Text>
               </View>
             )}
