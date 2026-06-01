@@ -675,7 +675,15 @@ export default function Home() {
         backgroundColor={theme.background}
         translucent={false}
       />
-      <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
+      
+        // showsVerticalScrollIndicator={false}
+        // keyboardShouldPersistTaps="handled"
+        // nestedScrollEnabled={true}
+        // bounces={false}            
+        // overScrollMode="never" 
+       
+       >
         <View>
           {/* ── SEARCH BAR ── */}
           <View style={{ position: "relative", zIndex: 1000 }}>
@@ -756,8 +764,10 @@ export default function Home() {
                   <ScrollView
                     style={styles.searchResultsList}
                     showsVerticalScrollIndicator={false}
-                    nestedScrollEnabled={true}
-                  >
+                    nestedScrollEnabled={true}  
+                    // keyboardShouldPersistTaps="handled"
+                    // bounces={false}
+                                      >
                     {searchResults.map((item) => (
                       <TouchableOpacity
                         key={item._id}
@@ -823,8 +833,8 @@ export default function Home() {
           <TouchableOpacity
             activeOpacity={0.92}
             style={{
-              marginHorizontal: 16,
-              height: 160,
+              marginHorizontal: 14,
+              height: 130,
             }}
           >
             <SvgUri
@@ -836,14 +846,14 @@ export default function Home() {
 
           {/* ── AVAILABLE SLOTS ── */}
           {activeType === 'none' && !bookingLoading && (
-            <View style={{ marginHorizontal: 16, marginTop: 8 }}>
+            <View style={{ marginHorizontal: 12 }}>
               <Text
                 style={{
                   color: "#4E7060",
                   fontSize: 11,
                   fontWeight: "800",
-                  letterSpacing: 1.2,
-                  marginBottom: 10,
+                  letterSpacing: 0.7,
+                  // marginBottom: 0,
                 }}
               >
                 AVAILABLE SLOTS
@@ -1083,7 +1093,7 @@ export default function Home() {
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={styles.section}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 1.2 }}>OUR SERVICES</Text>
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
                 <TouchableOpacity onPress={() => router.push('/services')}>
                   <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
                 </TouchableOpacity>
@@ -1190,7 +1200,7 @@ export default function Home() {
       {activeType === 'none' && !bookingLoading && (
         <View style={{
           position: 'absolute',
-          bottom: TAB_BAR_HEIGHT + insets.bottom + 12,
+          bottom: TAB_BAR_HEIGHT + insets.bottom,
           left: 16,
           right: 16,
           zIndex: 50,
@@ -1468,7 +1478,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  section: { marginTop: 20, paddingHorizontal: 16 },
+  section: { marginTop: 14, paddingHorizontal: 16 },
   servicesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

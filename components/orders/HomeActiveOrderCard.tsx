@@ -90,8 +90,19 @@ const statusMeta = (status?: string, isPaid?: boolean) => {
     };
   }
 
+  if (s === "intransit") {
+    return {
+      label: "In Transit",
+      accent: ACCENT,
+      icon: "bicycle-outline" as const,
+      title: "Your pickup has been completed",
+      subtitle: "Your items are on the way to our facility.",
+      actionText: "Pay Now",
+      showClose: false,
+    };
+  }
+
   if (
-    s === "intransit" ||
     s === "readyfordelivery" ||
     s === "deliveryriderassigned" ||
     s === "outfordelivery"
@@ -138,14 +149,18 @@ export default function HomeActiveOrderCard({
   const isDelivered = statusKey === "delivered";
   const isCancelled =
     statusKey === "cancelled" || statusKey === "canceled" || statusKey === "deleted";
+  const isInTransit = statusKey === "intransit";
   const isOutForDelivery =
     statusKey === "deliveryriderassigned" ||
     statusKey === "deliverriderassigned" ||
     statusKey === "outfordelivery" ||
     statusKey === "readyfordelivery";
-  const riderName = String(order.riderName ?? "").trim() || "Your rider";
+  const riderName = String(order.riderName ?? "").trim() || "Rider";
+  const pickupRiderName = order.assignedRider.pickup.riderName;
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
+  console.log("riderName======>>>", riderName);
+  console.log("order======>>>", order);
 
   const handleArchiveOrder = useCallback(async () => {
     if (!order._id || !isDelivered) return;
@@ -325,7 +340,7 @@ export default function HomeActiveOrderCard({
             </View>
 
 
-            {meta.subtitle && !isOutForDelivery && !isDelivered ? (
+            {meta.subtitle && !isOutForDelivery && !isInTransit && !isDelivered ? (
               <View style={styles.subtitleAboveRow}>
                 <Ionicons name="flash" size={12} color={ACCENT} />
                 <Text style={styles.subtitleAbove}>
@@ -334,7 +349,7 @@ export default function HomeActiveOrderCard({
               </View>
             ) : null}
 
-         { !isOutForDelivery ? (
+         { !isOutForDelivery && !isInTransit ? (
           <Text style={styles.title}>{meta.title}</Text>
          ): null}
             
@@ -351,6 +366,17 @@ export default function HomeActiveOrderCard({
                   <Text style={styles.riderText}>
                     <Text style={styles.riderName}>{riderName}</Text>
                     {" on  the way with\nyour delivery"}
+                  </Text>
+                </View>
+              </>
+            ) : isInTransit ? (
+              <>
+                {/* <Text style={styles.title}>{meta.title}</Text> */}
+                <View style={[styles.riderRow, { marginTop: 6 }]}>
+                  <Ionicons name="checkmark-circle-outline" size={26} color={ACCENT} />
+                  <Text style={styles.riderText}>
+                    <Text style={styles.riderName}>{pickupRiderName}</Text>
+                    {" has successfully picked up your items."}
                   </Text>
                 </View>
               </>
@@ -390,7 +416,7 @@ export default function HomeActiveOrderCard({
                     <Ionicons name="chatbubble-ellipses" size={20} color={SURFACE} />
                   </TouchableOpacity>
                 </>
-              ) : !order.isPaid || isOutForDelivery ? (
+              ) : !order.isPaid ? (
                 <TouchableOpacity
                   onPress={onPress}
                   disabled={paymentLoading}
@@ -670,4 +696,3 @@ const styles = StyleSheet.create({
 
   },
 });
-
