@@ -717,13 +717,11 @@ export default function Home() {
         translucent={false}
       />
       <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
-      
         // showsVerticalScrollIndicator={false}
         // keyboardShouldPersistTaps="handled"
         // nestedScrollEnabled={true}
         // bounces={false}            
-        // overScrollMode="never" 
-       
+        // overScrollMode="never"        
        >
         <View>
           {/* ── SEARCH BAR ── */}
@@ -808,6 +806,7 @@ export default function Home() {
                     nestedScrollEnabled={true}  
                     // keyboardShouldPersistTaps="handled"
                     // bounces={false}
+                  
                                       >
                     {searchResults.map((item) => (
                       <TouchableOpacity
@@ -1241,9 +1240,9 @@ export default function Home() {
       {activeType === 'none' && !bookingLoading && (
         <View style={{
           position: 'absolute',
-          bottom: TAB_BAR_HEIGHT + insets.bottom,
-          left: 16,
-          right: 16,
+          bottom: 0,           // anchor to bottom edge
+          left: 0,
+          right: 0,
           zIndex: 50,
           paddingHorizontal: 16,
           paddingBottom: TAB_BAR_HEIGHT + 2,
