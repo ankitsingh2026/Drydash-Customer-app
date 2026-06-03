@@ -159,8 +159,6 @@ export default function HomeActiveOrderCard({
   const pickupRiderName = order.assignedRider.pickup.riderName;
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
-  console.log("riderName======>>>", riderName);
-  console.log("order======>>>", order);
 
   const handleArchiveOrder = useCallback(async () => {
     if (!order._id || !isDelivered) return;

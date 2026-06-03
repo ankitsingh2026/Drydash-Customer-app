@@ -457,16 +457,22 @@ export default function BookPickup() {
     };
   }, []);
 
+  // Extract unique service types from cart items
+const activeServiceTypes = Array.from(
+  new Set(items.map((item: any) => item.type).filter(Boolean))
+);
+  console.log("Active service types for coupons:", activeServiceTypes);
+
   useEffect(() => {
     if (couponOpen) {
       loadCoupons();
     }
-  }, [couponOpen, cartSubtotal, serviceType]);
+  }, [couponOpen, cartSubtotal, activeServiceTypes]);
 
   const loadCoupons = async () => {
     try {
       setCouponLoading(true);
-      const res = await fetchAllValidCoupons(cartSubtotal, serviceType);
+      const res = await fetchAllValidCoupons(cartSubtotal, undefined, activeServiceTypes);
       console.log("COUPONS API RES ===>", res);
       setCoupons(res?.data || res || []);
     } catch (err) {

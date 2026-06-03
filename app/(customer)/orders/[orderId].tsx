@@ -353,7 +353,7 @@ console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
         category,
       });
 
-      const res = await fetchAllValidCoupons(subtotal, category);
+      const res = await fetchAllValidCoupons(subtotal, orderId);
       const couponsFromApi: Coupon[] = Array.isArray(res?.data) ? res.data : [];
 
       const now = new Date();
@@ -552,6 +552,8 @@ const handlePaymentSuccess = async (data: any) => {
           amount: String(fullAmount),
           discount: "0",
           paymentId: 'COD',
+          address: singleOrderDetails?.address,
+          items: JSON.stringify(singleOrderDetails?.items),
         },
       });
       return;
@@ -580,6 +582,8 @@ const handlePaymentSuccess = async (data: any) => {
         orderId,
         amount: String(singleOrderDetails?.totalAmount),
         paymentId: data.razorpay_payment_id,
+        address: singleOrderDetails?.address,
+        items: JSON.stringify(singleOrderDetails?.items),
       },
     });
   } catch (error) {

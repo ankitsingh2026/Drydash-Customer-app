@@ -41,6 +41,7 @@ type ProductServicePopupProps = {
     process?: ProcessStep[];
     displayPrice?: string;
     unit?: string;
+    type?: string;
   } | null;
 };
 
@@ -83,6 +84,7 @@ export default function ProductServicePopup({
         title: product.title,
         price: product.price,
         image: product.image,
+        type: product.type,
       });
     }
   };
@@ -94,6 +96,7 @@ export default function ProductServicePopup({
         title: product.title,
         price: product.price,
         image: product.image,
+        type: product.type,
       });
     }
   };

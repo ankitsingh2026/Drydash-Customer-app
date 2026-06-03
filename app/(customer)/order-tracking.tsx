@@ -1036,10 +1036,8 @@ export default function OrderTrackingScreen() {
 
     try {
       setCouponLoading(true);
-      const couponServiceType =
-        selectedPickup?.serviceType || selectedPickup?.service || "Laundry";
-
-      const res = await fetchAllValidCoupons(bill.subtotal, couponServiceType);
+      
+      const res = await fetchAllValidCoupons(bill.subtotal, selectedPickup?._id)
       console.log("COUPONS API RES ===>", res);
       setCoupons(res?.data || res || []);
     } catch (err) {

@@ -35,6 +35,7 @@ const INITIAL_REGION: Region = {
 export default function SelectAddressLocationScreen() {
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
+  const preventFetchRef = useRef(false);
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<Region>({
     ...INITIAL_REGION,
@@ -57,6 +58,11 @@ export default function SelectAddressLocationScreen() {
   }, [region.latitude, region.longitude]);
 
   useEffect(() => {
+    if (preventFetchRef.current) {
+      preventFetchRef.current = false;
+      return;
+    }
+
     if (query.length > 2) {
       const delayDebounceFn = setTimeout(() => {
         fetchSuggestions(query);
@@ -88,6 +94,7 @@ export default function SelectAddressLocationScreen() {
   const handleSelectSuggestion = async (placeId: string, description: string) => {
     try {
       setSearching(true);
+      preventFetchRef.current = true;
       setQuery(description);
       setShowSuggestions(false);
       const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
@@ -222,18 +229,25 @@ export default function SelectAddressLocationScreen() {
           {searching ? (
             <ActivityIndicator size="small" color={C.pink} />
           ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              {query.length > 0 && (
-                <TouchableOpacity onPress={() => { setQuery(""); setSuggestions([]); setShowSuggestions(false); }}>
-                  <Ionicons name="close-circle" size={20} color={C.subText} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={handleSearch}>
-                <Text style={styles.goText}>Go</Text>
+            query.length > 0 ? (
+              <TouchableOpacity onPress={() => { setQuery(""); setSuggestions([]); setShowSuggestions(false); }}>
+                <Ionicons name="close-circle" size={20} color={C.subText} />
               </TouchableOpacity>
-            </View>
+            ) : null
           )}
         </View>
+      </View>
+
+      <View style={styles.mapContainer}>
+        <MapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={styles.map}
+          initialRegion={region}
+          onRegionChangeComplete={(nextRegion) => setRegion(nextRegion)}
+          showsUserLocation
+          showsMyLocationButton={false}
+        />
 
         {showSuggestions && suggestions.length > 0 && (
           <View style={styles.suggestionsContainer}>
@@ -241,6 +255,7 @@ export default function SelectAddressLocationScreen() {
               data={suggestions}
               keyExtractor={(item) => item.place_id}
               keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
               ListHeaderComponent={
                 <TouchableOpacity
                   style={styles.suggestionItem}
@@ -286,18 +301,6 @@ export default function SelectAddressLocationScreen() {
             />
           </View>
         )}
-      </View>
-
-      <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={styles.map}
-          initialRegion={region}
-          onRegionChangeComplete={(nextRegion) => setRegion(nextRegion)}
-          showsUserLocation
-          showsMyLocationButton={false}
-        />
 
         <View pointerEvents="none" style={styles.pinOverlay}>
           <Ionicons name="location" size={48} color={C.pink} />
@@ -388,9 +391,9 @@ const styles = StyleSheet.create({
   },
   suggestionsContainer: {
     position: "absolute",
-    top: 56,
-    left: 0,
-    right: 0,
+    top: 0,
+    left: 12,
+    right: 12,
     backgroundColor: "#0D1F1C",
     borderRadius: 12,
     borderWidth: 1,
@@ -401,6 +404,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
+    zIndex: 10,
   },
   suggestionItem: {
     flexDirection: "row",

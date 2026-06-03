@@ -46,6 +46,7 @@ type Item = {
   price: number;
   category: string;
   image: string;
+  type?: string;
 };
 
 type ProcessStep = {
@@ -165,6 +166,7 @@ export default function ServiceDetail() {
           process: item.process || [], // Store the process steps
           displayPrice: item.displayPrice,
           unit: item.unit,
+          type: item.type,
         }));
 
         setApiData((prev) => ({ ...prev, [serviceType]: transformedItems }));
@@ -191,7 +193,6 @@ export default function ServiceDetail() {
     );
   };
 
-  // Update the Item interface at the top
   type Item = {
     id: string;
     title: string;
@@ -202,6 +203,7 @@ export default function ServiceDetail() {
     process?: ProcessStep[];
     displayPrice?: string;
     unit?: string;
+    type?: string;
   };
 
   // Get fallback image based on service type
@@ -282,6 +284,7 @@ export default function ServiceDetail() {
                 price: item.price,
                 qty: 0,
                 image: item.itemId?.images?.[0]?.url || getFallbackImage(service || "shoe"),
+                type: item.itemId?.type || item.type,
               };
             }
             deduped[itemId].qty += item.quantity || 1;
@@ -656,6 +659,7 @@ const handleAddToCart = () => {
                         title: item.title,
                         price: item.price,
                         image: item.image,
+                        type: item.type,
                       })
                     }
                     style={[styles.addBtn]}
@@ -684,6 +688,7 @@ const handleAddToCart = () => {
                           title: item.title,
                           price: item.price,
                           image: item.image,
+                          type: item.type,
                         })
                       }
                       style={styles.qtyBtn}
