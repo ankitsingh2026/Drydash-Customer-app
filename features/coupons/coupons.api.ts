@@ -6,25 +6,17 @@ export const fetchAllValidCoupons = async (
   serviceTypes?: string[]
 ) => {
   try {
-    const params: any = {
-      cartAmount,
-    };
+    let res = null
 
-    if (id != null) {
-      params.id = id;
-    }
-
-    if (serviceTypes?.length) {
-      params.serviceTypes = serviceTypes;
-    }
-
-    console.log("Coupon Request Params:", params);
-
-    const res = await oldApiClient.get("/v1/customercoupons", {
-      params,
+    if(id){
+     res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}&id=${id}`, {
+      serviceTypes: serviceTypes
     });
-
-    console.log("Coupon Response:", res.data);
+    }else{
+    res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}`, {
+      serviceTypes: serviceTypes
+    });
+    }
 
     return res.data;
   } catch (error: any) {

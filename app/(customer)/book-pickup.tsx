@@ -467,7 +467,7 @@ const activeServiceTypes = Array.from(
     if (couponOpen) {
       loadCoupons();
     }
-  }, [couponOpen, cartSubtotal, activeServiceTypes]);
+  }, [couponOpen, cartSubtotal]);
 
   const loadCoupons = async () => {
     try {

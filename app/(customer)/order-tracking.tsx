@@ -957,25 +957,26 @@ export default function OrderTrackingScreen() {
       });
     });
 
-    // cart items map
-    const cartMap = new Map();
+    // current items map (what is displayed on the screen)
+    const currentItemsMap = new Map();
 
-    cart.items.forEach((item) => {
-      cartMap.set(String(item.id), {
-        itemId: String(item.id),
+    items.forEach((item: any) => {
+      const itemId = String(item.cartId || item.id);
+      currentItemsMap.set(itemId, {
+        itemId,
         quantity: item.qty,
       });
     });
 
     // 1. Handle existing items
     originalMap.forEach((originalItem, itemId) => {
-      const cartItem = cartMap.get(itemId);
+      const currentItem = currentItemsMap.get(itemId);
 
-      if (cartItem) {
+      if (currentItem) {
         // updated quantity
         finalItems.push({
           itemId,
-          quantity: cartItem.quantity,
+          quantity: currentItem.quantity,
         });
       } else {
         // removed item
@@ -987,11 +988,11 @@ export default function OrderTrackingScreen() {
     });
 
     // 2. Handle newly added items
-    cartMap.forEach((cartItem, itemId) => {
+    currentItemsMap.forEach((currentItem, itemId) => {
       if (!originalMap.has(itemId)) {
         finalItems.push({
           itemId,
-          quantity: cartItem.quantity,
+          quantity: currentItem.quantity,
         });
       }
     });
