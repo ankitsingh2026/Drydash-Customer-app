@@ -39,6 +39,8 @@ interface NotificationContextType {
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  paymentUpdate: any;
+  setPaymentUpdate: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -84,6 +86,7 @@ export const NotificationProvider = ({
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [paymentUpdate, setPaymentUpdate] = useState<any>(null);
 
   const customerId = user?.user?.id ?? user?.id;
   const socketRef = useRef<Socket | null>(null);
@@ -168,6 +171,12 @@ export const NotificationProvider = ({
       refreshNotifications();
     });
 
+
+    socket.on("webhook_trigger", (data) => {
+      console.log("Received payment update:", data);
+      setPaymentUpdate(data);
+    });
+
     socket.on("CUSTOMER_NOTIFICATION", (payload: any) => {
       const item = normalizeNotification(payload?.notification);
 
@@ -249,6 +258,8 @@ export const NotificationProvider = ({
         markRead,
         markAllRead,
         refreshNotifications,
+        paymentUpdate,
+        setPaymentUpdate,
       }}
     >
       {children}

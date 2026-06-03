@@ -132,6 +132,16 @@ const SlotPicker: React.FC<Props> = ({
 
     // console.log("✅ Visible slots:", visibleSlots);
 
+    const scrollRef = useRef<ScrollView>(null);
+
+    useEffect(() => {
+        if (visibleSlots.length > 0 && selectedSlot >= 0 && scrollRef.current) {
+            setTimeout(() => {
+                scrollRef.current?.scrollTo({ x: selectedSlot * 160, animated: true });
+            }, 100);
+        }
+    }, [visibleSlots, selectedSlot]);
+
     if (loading) {
         return <SlotSkeleton />;
     }
@@ -163,6 +173,7 @@ const SlotPicker: React.FC<Props> = ({
 
     return (
         <ScrollView
+            ref={scrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginTop: 12 }}

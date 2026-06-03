@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Platform,
   StyleSheet,
   Text,
@@ -34,6 +35,7 @@ const INITIAL_REGION: Region = {
 export default function SelectAddressLocationScreen() {
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
+  const preventFetchRef = useRef(false);
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<Region>({
     ...INITIAL_REGION,
@@ -44,6 +46,8 @@ export default function SelectAddressLocationScreen() {
   const [searching, setSearching] = useState(false);
   const [locationName, setLocationName] = useState("");
   const [locationSubName, setLocationSubName] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     fetchCurrentLocation();
@@ -52,6 +56,67 @@ export default function SelectAddressLocationScreen() {
   useEffect(() => {
     resolveAddress(region.latitude, region.longitude);
   }, [region.latitude, region.longitude]);
+
+  useEffect(() => {
+    if (preventFetchRef.current) {
+      preventFetchRef.current = false;
+      return;
+    }
+
+    if (query.length > 2) {
+      const delayDebounceFn = setTimeout(() => {
+        fetchSuggestions(query);
+      }, 300);
+      return () => clearTimeout(delayDebounceFn);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [query]);
+
+  const fetchSuggestions = async (text: string) => {
+    try {
+      const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&components=country:in&location=${region.latitude},${region.longitude}&origin=${region.latitude},${region.longitude}&radius=50000&key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.status === "OK") {
+        setSuggestions(data.predictions);
+        setShowSuggestions(true);
+      } else {
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error("fetchSuggestions error", error);
+    }
+  };
+
+  const handleSelectSuggestion = async (placeId: string, description: string) => {
+    try {
+      setSearching(true);
+      preventFetchRef.current = true;
+      setQuery(description);
+      setShowSuggestions(false);
+      const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.status === "OK") {
+        const location = data.result.geometry.location;
+        const next: Region = {
+          ...region,
+          latitude: location.lat,
+          longitude: location.lng,
+        };
+        setRegion(next);
+        mapRef.current?.animateToRegion(next, 450);
+      }
+    } catch (error) {
+      console.error("place details error", error);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   const fullAddressLabel = useMemo(() => {
     return [locationName, locationSubName].filter(Boolean).join(", ");
@@ -141,7 +206,7 @@ export default function SelectAddressLocationScreen() {
   };
 
   return (
-  <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={C.text} />
@@ -149,24 +214,28 @@ export default function SelectAddressLocationScreen() {
         <Text style={styles.headerTitle}>Select Your Location</Text>
       </View>
 
-      <View style={styles.searchWrap}>
-        <Ionicons name="search-outline" size={22} color={C.subText} />
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search for apartment, street name..."
-          placeholderTextColor="#7BA79A"
-          onSubmitEditing={handleSearch}
-          returnKeyType="search"
-        />
-        {searching ? (
-          <ActivityIndicator size="small" color={C.pink} />
-        ) : (
-          <TouchableOpacity onPress={handleSearch}>
-            <Text style={styles.goText}>Go</Text>
-          </TouchableOpacity>
-        )}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchWrap}>
+          <Ionicons name="search-outline" size={22} color={C.subText} />
+          <TextInput
+            style={styles.searchInput}
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search for apartment, street name..."
+            placeholderTextColor="#7BA79A"
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searching ? (
+            <ActivityIndicator size="small" color={C.pink} />
+          ) : (
+            query.length > 0 ? (
+              <TouchableOpacity onPress={() => { setQuery(""); setSuggestions([]); setShowSuggestions(false); }}>
+                <Ionicons name="close-circle" size={20} color={C.subText} />
+              </TouchableOpacity>
+            ) : null
+          )}
+        </View>
       </View>
 
       <View style={styles.mapContainer}>
@@ -179,6 +248,59 @@ export default function SelectAddressLocationScreen() {
           showsUserLocation
           showsMyLocationButton={false}
         />
+
+        {showSuggestions && suggestions.length > 0 && (
+          <View style={styles.suggestionsContainer}>
+            <FlatList
+              data={suggestions}
+              keyExtractor={(item) => item.place_id}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              ListHeaderComponent={
+                <TouchableOpacity
+                  style={styles.suggestionItem}
+                  onPress={() => {
+                    setShowSuggestions(false);
+                    setQuery("");
+                    fetchCurrentLocation();
+                  }}
+                >
+                  <View style={{ alignItems: "center", marginRight: 12, width: 40 }}>
+                    <Ionicons name="locate" size={22} color={C.pink} />
+                  </View>
+                  <Text style={[styles.suggestionMainText, { color: C.pink }]}>Use current location</Text>
+                </TouchableOpacity>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.suggestionItem}
+                  onPress={() => handleSelectSuggestion(item.place_id, item.description)}
+                >
+                  <View style={{ alignItems: "center", marginRight: 12, width: 40 }}>
+                    <Ionicons name="location-outline" size={22} color={C.subText} />
+                    {item.distance_meters ? (
+                      <Text style={{ color: C.subText, fontSize: 10, marginTop: 4, fontWeight: "500" }}>
+                        {item.distance_meters >= 1000
+                          ? `${(item.distance_meters / 1000).toFixed(1)} km`
+                          : `${item.distance_meters} m`}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.suggestionMainText} numberOfLines={1}>
+                      {item.structured_formatting?.main_text || item.description}
+                    </Text>
+                    {item.structured_formatting?.secondary_text ? (
+                      <Text style={styles.suggestionSubText} numberOfLines={2}>
+                        {item.structured_formatting.secondary_text}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
 
         <View pointerEvents="none" style={styles.pinOverlay}>
           <Ionicons name="location" size={48} color={C.pink} />
@@ -240,10 +362,13 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: C.text,
   },
+  searchContainer: {
+    zIndex: 10,
+    marginHorizontal: 12,
+    marginTop: 14,
+  },
   searchWrap: {
     backgroundColor: "#0D1F1C",
-    marginTop: 14,
-    marginHorizontal: 12,
     borderWidth: 1,
     borderColor: C.border,
     borderRadius: 16,
@@ -263,6 +388,41 @@ const styles = StyleSheet.create({
     color: C.pink,
     fontSize: 15,
     fontWeight: "700",
+  },
+  suggestionsContainer: {
+    position: "absolute",
+    top: 0,
+    left: 12,
+    right: 12,
+    backgroundColor: "#0D1F1C",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    maxHeight: 450,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    zIndex: 10,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1A3330",
+  },
+  suggestionMainText: {
+    color: C.text,
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  suggestionSubText: {
+    color: C.subText,
+    fontSize: 13,
+    marginTop: 2,
   },
   mapContainer: {
     flex: 1,
@@ -330,8 +490,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: C.pink,
-    alignSelf:"center",
-    paddingHorizontal:16
+    alignSelf: "center",
+    paddingHorizontal: 16
   },
   confirmText: {
     color: "#031612",

@@ -1,18 +1,31 @@
 import { oldApiClient } from "@/lib/api/client";
 
-export const fetchAllValidCoupons = async (cartAmount: any, category: any) => {
+export const fetchAllValidCoupons = async (
+  cartAmount: number,
+  id?: string,
+  serviceTypes?: string[]
+) => {
   try {
-    console.log("i am called ---->>>", cartAmount, category);
-    const res = await oldApiClient.get("/v1/customercoupons", {
-      params: {
-        cartAmount
-      },
+    let res = null
+
+    if(id){
+     res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}&id=${id}`, {
+      serviceTypes: serviceTypes
+    });
+    }else{
+    res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}`, {
+      serviceTypes: serviceTypes
+    });
+    }
+
+    return res.data;
+  } catch (error: any) {
+    console.log("Coupon API Error:", {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
     });
 
-    console.log("this is the dataaaa====>>>>>>>>>", res?.data);
-    return res?.data;
-  } catch (error) {
-    console.log("this is the error in the coupons==>>", error);
     throw error;
   }
 };

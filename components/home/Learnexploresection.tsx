@@ -20,7 +20,7 @@ const FEATURE_VIDEO = {
   subtitle: "Watch our premium cleaning process",
   duration: "1:20",
   video: {
-    uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/app-videos/clothing.mp4",
+    uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/app-videos/drydash_vid1.mp4",
   },
 };
 
@@ -162,8 +162,8 @@ useEffect(() => {
 
         {/* Text */}
         <View style={styles.videoTextWrap}>
-          <Text style={styles.videoTitle}>{FEATURE_VIDEO.title}</Text>
-          <Text style={styles.videoSubtitle}>{FEATURE_VIDEO.subtitle}</Text>
+          {/* <Text style={styles.videoTitle}>{FEATURE_VIDEO.title}</Text> */}
+          {/* <Text style={styles.videoSubtitle}>{FEATURE_VIDEO.subtitle}</Text> */}
         </View>
 
         {/* Duration badge */}

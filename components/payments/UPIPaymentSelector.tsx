@@ -11,6 +11,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -69,6 +70,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [showCodConfirm, setShowCodConfirm] = useState(false);
 
   useEffect(() => {
     const detectApps = () => {
@@ -160,6 +162,29 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     setExpanded(false);
   };
 
+  const confirmCodAction = async () => {
+    setShowCodConfirm(false);
+    setLoading(true);
+    try {
+      const response = await oldApiClient.post(`/v1/payments/confirm-cod/${orderId}`);
+      if (response.data.success) {
+        // The backend only sets isCODConfirmed = true, no payment details are saved.
+        onSuccess({
+          razorpay_payment_id: 'COD',
+          razorpay_order_id: razorpayOrderId,
+          razorpay_signature: 'COD',
+        });
+      } else {
+        throw new Error(response.data.message || 'COD confirmation failed');
+      }
+    } catch (error: any) {
+      console.error('COD error:', error);
+      onFailure(error.message || 'Failed to confirm COD order');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async () => {
     if (!selectedApp) {
       Alert.alert('No payment method', 'Please select a payment method.');
@@ -168,25 +193,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
 
     // ---------- Cash on Delivery (uses confirm-cod API, no payment object saved) ----------
     if (selectedApp.isCod) {
-      setLoading(true);
-      try {
-        const response = await oldApiClient.post(`/v1/payments/confirm-cod/${orderId}`);
-        if (response.data.success) {
-          // The backend only sets isCODConfirmed = true, no payment details are saved.
-          onSuccess({
-            razorpay_payment_id: 'COD',
-            razorpay_order_id: razorpayOrderId,
-            razorpay_signature: 'COD',
-          });
-        } else {
-          throw new Error(response.data.message || 'COD confirmation failed');
-        }
-      } catch (error: any) {
-        console.error('COD error:', error);
-        onFailure(error.message || 'Failed to confirm COD order');
-      } finally {
-        setLoading(false);
-      }
+      setShowCodConfirm(true);
       return;
     }
 
@@ -250,6 +257,40 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
 
   return (
     <>
+      <Modal
+        visible={showCodConfirm}
+        transparent={true}
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="information-circle-outline" size={28} color={themeColor} />
+              <Text style={styles.modalTitle}>Delivery Time Update</Text>
+            </View>
+            <Text style={styles.modalText}>
+              If you confirm Cash on Delivery (COD), your order will be delivered during the day time.
+              {'\n\n'}
+              If you make an online payment now, we can deliver your item early in the morning.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalBtnCancel}
+                onPress={() => setShowCodConfirm(false)}
+              >
+                <Text style={styles.modalBtnCancelText}>Pay Online</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtnConfirm, { backgroundColor: themeColor }]}
+                onPress={confirmCodAction}
+              >
+                <Text style={styles.modalBtnConfirmText}>Confirm COD</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {expanded && canExpand && (
         <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFillObject}>
           <TouchableOpacity style={StyleSheet.absoluteFillObject} activeOpacity={1} onPress={closeExpand} />
@@ -386,4 +427,64 @@ const styles = StyleSheet.create({
   checkIcon: { marginLeft: 8 },
   fallback: { padding: 40, alignItems: 'center' },
   fallbackText: { marginTop: 12, color: '#64748b' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: DarkTheme.card,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginLeft: 10,
+  },
+  modalText: {
+    fontSize: 14,
+    color: '#cbd5e1',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  modalBtnCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#475569',
+  },
+  modalBtnCancelText: {
+    color: '#cbd5e1',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modalBtnConfirm: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  modalBtnConfirmText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 14,
+  },
 });

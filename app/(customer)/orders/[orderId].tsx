@@ -8,7 +8,6 @@ import {
 import { getOrdersApi, getSingleOrderDetailsApi } from "@/features/orders/orders.api";
 import {
   razorpayPaymentInitiate,
-  verifyRazorpayPayment,
 } from "@/features/payment/payment.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -28,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { useTheme } from "../../../context/ThemeContext";
+import { useNotifications } from "../../../context/NotificationContext";
 // import RazorpayWebView from "./RazorpayWebView";
 import { UPIPaymentSelector } from '@/components/payments/UPIPaymentSelector';
 
@@ -197,6 +197,7 @@ export default function OrderReceipt() {
   console.log("this is the orderId from params========>>>>>", orderId);
   const { theme } = useTheme();
   const { user } = useAuth();
+  const { paymentUpdate, setPaymentUpdate } = useNotifications();
 
   const [singleOrderDetails, setSingleOrderDetails] =
     useState<OrderDetails | null>(null);
@@ -213,8 +214,39 @@ export default function OrderReceipt() {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
   const [couponLoading, setCouponLoading] = useState(false);
   const [isPaymentDone, setIsPaymentDone] = useState(false);
-const [selectedDeliveryOption, setSelectedDeliveryOption] =
-  useState<boolean>(false);
+  
+  const [socketVerified, setSocketVerified] = useState(false);
+  const [razorpaySuccessData, setRazorpaySuccessData] = useState<any>(null);
+
+  const [selectedDeliveryOption, setSelectedDeliveryOption] =
+    useState<boolean>(false);
+
+useEffect(() => {
+  if (paymentUpdate && paymentUpdate.orderId === orderId) {
+    if (paymentUpdate.paymentStatus === "success" || paymentUpdate.isPaid) {
+      setSocketVerified(true);
+    } else if (paymentUpdate.paymentStatus === "failed") {
+      handlePaymentFailure("Payment failed");
+      setPaymentUpdate(null);
+    }
+  }
+}, [paymentUpdate, orderId]);
+
+useEffect(() => {
+  if (socketVerified && razorpaySuccessData) {
+    setIsPaymentDone(true);
+    if (orderId) {
+      confirmCouponApi({ orderId }).catch(console.error);
+    }
+    router.replace({
+      pathname: "/(customer)/orders/payment-success",
+      params: { orderId },
+    });
+    setPaymentUpdate(null);
+    setSocketVerified(false);
+    setRazorpaySuccessData(null);
+  }
+}, [socketVerified, razorpaySuccessData, orderId]);
 
 useEffect(() => {
   if (singleOrderDetails) {
@@ -353,7 +385,7 @@ console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
         category,
       });
 
-      const res = await fetchAllValidCoupons(subtotal, category);
+      const res = await fetchAllValidCoupons(subtotal, orderId);
       const couponsFromApi: Coupon[] = Array.isArray(res?.data) ? res.data : [];
 
       const now = new Date();
@@ -538,6 +570,7 @@ console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
 
 const handlePaymentSuccess = async (data: any) => {
   try {
+    console.log("payment success data==>>", data);
     setPaymentLoading(true);
 
     // Check if it's a COD payment (no real payment ID)
@@ -546,55 +579,30 @@ const handlePaymentSuccess = async (data: any) => {
       const fullAmount = (singleOrderDetails?.totalAmount || 0) + (singleOrderDetails?.discountAmount || 0);
       setIsPaymentDone(true);
       router.replace({
-        pathname: '/(customer)/orders/cod-success',
+        pathname: '/(customer)/orders/payment-success',
         params: {
           orderId,
           amount: String(fullAmount),
           discount: "0",
           paymentId: 'COD',
+          address: singleOrderDetails?.address,
+          items: JSON.stringify(singleOrderDetails?.items),
         },
       });
       return;
     }
 
-    // Normal payment flow (UPI or Card)
-    const verifyRes = await verifyRazorpayPayment({
-      razorpay_order_id: data.razorpay_order_id,
-      razorpay_payment_id: data.razorpay_payment_id,
-      razorpay_signature: data.razorpay_signature,
-    });
-
-    if (!verifyRes?.success) {
-      throw new Error('Verification failed');
-    }
-
-    if (orderId) {
-      await confirmCouponApi({ orderId });
-    }
-
-    setIsPaymentDone(true);
-
-    router.replace({
-      pathname: '/(customer)/orders/payment-success',
-      params: {
-        orderId,
-        amount: String(singleOrderDetails?.totalAmount),
-        paymentId: data.razorpay_payment_id,
-      },
-    });
+    // For online payments, wait for Razorpay UI to close and then set data
+    // The useEffect will trigger redirection once both Razorpay and Socket confirm success
+    setRazorpaySuccessData(data);
+    
+    // Fallback: If socket webhook doesn't arrive within 4 seconds, proceed anyway
+    setTimeout(() => {
+      setSocketVerified(true);
+    }, 4000);
   } catch (error) {
     console.error('Payment success error:', error);
-    router.replace({
-      pathname: '/(customer)/orders/payment-failure',
-      params: {
-        orderId,
-        amount: String(singleOrderDetails?.totalAmount),
-        reason: 'Payment verification failed',
-      },
-    });
-  } finally {
     setPaymentLoading(false);
-    // setShowPaymentWebView(false);
   }
 };
 

@@ -1,3 +1,5 @@
+
+
 import AppLoader from "@/components/AppLoader";
 import CartSheet from "@/components/CartSheet";
 import FloatingCart from "@/components/FloatingCart";
@@ -39,10 +41,12 @@ import { useAddress } from "@/context/AddressContext";
 import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
 import SlotPicker from "@/components/SlotPicker";
+import SwipeToAction from "@/components/SwipeToAction";
 
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
+
 
 type HomeOrder = {
   _id?: string;
@@ -410,7 +414,7 @@ export default function Home() {
   const PADDING = 4;
   const swipeContainerWidth = width - 32;
   const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8;
-  const SWIPE_THRESHOLD = MAX_DRAG * 0.5;
+  const SWIPE_THRESHOLD = MAX_DRAG * 0.25;
 
   const heroAnims = useRef(
     Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
@@ -553,23 +557,43 @@ export default function Home() {
     });
   }, []);
 
+  // const completeSwipe = useCallback(() => {
+  //   Animated.parallel([
+  //     Animated.timing(dragXNative, {
+  //       toValue: MAX_DRAG,
+  //       duration: 100,
+  //       easing: Easing.out(Easing.quad),
+  //       useNativeDriver: true,
+  //     }),
+  //     Animated.timing(dragXJS, {
+  //       toValue: MAX_DRAG,
+  //       duration: 500,
+  //       easing: Easing.out(Easing.quad),
+  //       useNativeDriver: false,
+  //     }),
+  //   ]).start(() => {
+  //     router.push("/book-pickup");
+  //     setTimeout(resetDrag, 2000);
+  //   });
+  // }, [resetDrag]);
+
   const completeSwipe = useCallback(() => {
     Animated.parallel([
       Animated.timing(dragXNative, {
         toValue: MAX_DRAG,
-        duration: 100,
-        easing: Easing.out(Easing.quad),
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(dragXJS, {
         toValue: MAX_DRAG,
-        duration: 500,
-        easing: Easing.out(Easing.quad),
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
       }),
     ]).start(() => {
       router.push("/book-pickup");
-      setTimeout(resetDrag, 2000);
+      setTimeout(resetDrag, 500);
     });
   }, [resetDrag]);
 
@@ -580,21 +604,35 @@ export default function Home() {
     resetDragRef.current = resetDrag;
   }, [completeSwipe, resetDrag]);
 
-  const onPressBook = () => {
-    const animate = (val: Animated.Value, useNative: boolean) =>
-      Animated.timing(val, {
-        toValue: SWIPE_THRESHOLD + 0,
-        duration: 200,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: useNative,
-      });
+  // const onPressBook = () => {
+  //   const animate = (val: Animated.Value, useNative: boolean) =>
+  //     Animated.timing(val, {
+  //       toValue: SWIPE_THRESHOLD + 0,
+  //       duration: 200,
+  //       easing: Easing.out(Easing.cubic),
+  //       useNativeDriver: useNative,
+  //     });
 
+  //   Animated.parallel([
+  //     animate(dragXNative, true),
+  //     animate(dragXJS, false),
+  //   ]).start(() => completeSwipeRef.current());
+  // };
+
+  const onPressBook = () => {
     Animated.parallel([
-      animate(dragXNative, true),
-      animate(dragXJS, false),
+      Animated.timing(dragXNative, {
+        toValue: MAX_DRAG * 0.25,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(dragXJS, {
+        toValue: MAX_DRAG * 0.25,
+        duration: 120,
+        useNativeDriver: false,
+      }),
     ]).start(() => completeSwipeRef.current());
   };
-
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
@@ -614,7 +652,10 @@ export default function Home() {
 
       onPanResponderRelease: (_, { dx, vx }) => {
         const current = dragXValue.current;
-        if (current >= SWIPE_THRESHOLD || vx > 0.8) {
+        if (
+          current >= SWIPE_THRESHOLD || // 25%
+          vx > 0.35                     // quick flick
+        ) {
           completeSwipeRef.current();
         } else {
           resetDragRef.current();
@@ -1204,36 +1245,19 @@ export default function Home() {
           left: 16,
           right: 16,
           zIndex: 50,
+          paddingHorizontal: 16,
+          paddingBottom: TAB_BAR_HEIGHT + 2,
+          // + (insets.bottom > 0 ? insets.bottom + 8 : 4)
         }}>
-          <Animated.View style={[
-            styles.pickupCard,
-            {
-              opacity: fadeAnim,
-              backgroundColor: '#052420',
-              borderWidth: 1,
-              borderColor: theme.lightborder,
-              marginHorizontal: 0,
-              marginTop: 0,
-              transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
-            },
-          ]}>
-            <View style={[styles.swipeContainer, { backgroundColor: '#001714' }]}>
-              <Animated.View style={[styles.swipeTrackFill, { width: trackFillWidth, opacity: trackFillOpacity }]} pointerEvents="none" />
-              <Animated.View
-                style={[styles.swipeDraggable, { backgroundColor: PRIMARY, transform: [{ translateX: dragXNative }, { scale: thumbScale }] }]}
-                {...panResponder.panHandlers}
-              >
-                <TouchableOpacity activeOpacity={0.85} onPress={onPressBook} style={styles.swipeDraggableInner}>
-                  <Ionicons name="bag-check-outline" size={20} color="#000" />
-                </TouchableOpacity>
-              </Animated.View>
-              <Animated.View style={[styles.swipeTextWrap, { opacity: swipeTextOpacity, transform: [{ translateX: swipeTextTranslateX }] }]} pointerEvents="none">
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.swipeHint}>SWIPE FOR INSTANT PICKUP</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#4B5563" />
-                </View>
-              </Animated.View>
-            </View>
+          <Animated.View style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+          }}>
+            <SwipeToAction
+              title="SWIPE FOR INSTANT PICKUP"
+              threshold={0.25}
+              onComplete={() => router.push("/book-pickup")}
+            />
           </Animated.View>
         </View>
       )}

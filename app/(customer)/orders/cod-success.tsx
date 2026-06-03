@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +19,7 @@ type ReceiptItem = {
   qty: number;
   price: number;
   icon?: keyof typeof Ionicons.glyphMap;
+  imageUrl?: string;
 };
 
 export default function CodSuccess() {
@@ -34,6 +36,8 @@ export default function CodSuccess() {
     itemName?: string;
     itemQty?: string;
     itemPrice?: string;
+    address?: string;
+    items?: string;
   }>();
 
   const receipt = useMemo(() => {
@@ -41,23 +45,42 @@ export default function CodSuccess() {
     const discount = Number(params.discount ?? "50");
     const subtotal = Number(params.subtotal ?? String(totalPaid + discount));
 
-    return {
-      orderId: params.orderId ?? "WZ2296",
-      date: params.date ?? "3/20/2026",
-      subtotal,
-      discount,
-      totalPaid,
-      addressTitle: params.addressTitle ?? "Main Residence",
-      addressLine1: params.addressLine1 ?? "42 Biolume Grove, Emerald",
-      addressLine2: params.addressLine2 ?? "District, Neo-Forest 4002",
-      items: [
+    let parsedItems: ReceiptItem[] = [];
+    try {
+      if (params.items) {
+        const rawItems = JSON.parse(params.items);
+        parsedItems = rawItems.map((it: any) => ({
+          name: it.heading || it.name || "Item",
+          qty: Number(it.quantity || it.qty || 1),
+          price: Number(it.price || 0),
+          icon: "shirt-outline",
+          imageUrl: it.imageUrl || undefined,
+        }));
+      }
+    } catch(e) {}
+
+    if (parsedItems.length === 0) {
+      parsedItems = [
         {
           name: params.itemName ?? "W & I (Wearables)",
           qty: Number(params.itemQty ?? "1"),
           price: Number(params.itemPrice ?? "100"),
           icon: "shirt-outline",
+
         } as ReceiptItem,
-      ],
+      ];
+    }
+
+    return {
+      orderId: params.orderId ?? "WZ2296",
+      date: params.date ?? new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      subtotal,
+      discount,
+      totalPaid,
+      addressTitle: params.addressTitle ?? "Delivery Location",
+      addressLine1: params.address || (params.addressLine1 ?? "Address details pending"),
+      addressLine2: params.addressLine2 ?? "",
+      items: parsedItems,
     };
   }, [params]);
 
@@ -66,27 +89,28 @@ export default function CodSuccess() {
       <StatusBar barStyle="light-content" backgroundColor="#04150F" />
 
       <View style={styles.root}>
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          <Pressable
+            onPress={() => router.replace("/(customer)/(tabs)/home")}
+            style={({ pressed }) => [
+              styles.backBtn,
+              pressed && { opacity: 0.7 },
+            ]}
+            hitSlop={12}
+          >
+            <Ionicons name="home" size={20} color="#DFFFEF" />
+          </Pressable>
+
+          <Text style={styles.headerTitle}>Order Confirmed</Text>
+
+          <View style={styles.headerSpacer} />
+        </View>
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Top bar */}
-          <View style={styles.topBar}>
-            <Pressable
-              onPress={() => router.replace("/(customer)/(tabs)/home")}
-              style={({ pressed }) => [
-                styles.backBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-              hitSlop={12}
-            >
-              <Ionicons name="home" size={20} color="#DFFFEF" />
-            </Pressable>
-
-            <Text style={styles.headerTitle}>Order Confirmed</Text>
-
-            <View style={styles.headerSpacer} />
-          </View>
 
           {/* Payment successful pill */}
           <View style={styles.successPillWrap}>
@@ -112,7 +136,7 @@ export default function CodSuccess() {
 
               <View style={styles.addressContent}>
                 <Text style={styles.sectionLabel}>DELIVERY ADDRESS</Text>
-                <Text style={styles.addressTitle}>{receipt.addressTitle}</Text>
+                {/* <Text style={styles.addressTitle}>{receipt.addressTitle}</Text> */}
                 <Text style={styles.addressLine}>{receipt.addressLine1}</Text>
                 <Text style={styles.addressLine}>{receipt.addressLine2}</Text>
               </View>
@@ -126,11 +150,15 @@ export default function CodSuccess() {
             <View key={`${item.name}-${idx}`} style={styles.itemCard}>
               <View style={styles.itemLeft}>
                 <View style={styles.iconBox}>
-                  <Ionicons
-                    name={item.icon ?? "shirt-outline"}
-                    size={18}
-                    color="#38F2B2"
-                  />
+                  {item.imageUrl ? (
+                    <Image
+                      source={{ uri: item.imageUrl }}
+                      style={{ width: 36, height: 36, borderRadius: 8 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Ionicons name={item.icon || "cube"} size={18} color="#BFFFE8" />
+                  )}
                 </View>
 
                 <View style={styles.itemTextWrap}>
@@ -215,7 +243,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === "android" ? 10 : 2,
+    paddingTop: 0,
     paddingBottom: 28,
   },
 
@@ -224,6 +252,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 18,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "android" ? 10 : 2,
   },
   backBtn: {
     width: 38,

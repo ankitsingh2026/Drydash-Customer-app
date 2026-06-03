@@ -1214,9 +1214,9 @@ const styles = StyleSheet.create({
     },
     pickupBigLine: {
         color: "#E9F8F3",
-        fontSize: 26,
+        fontSize: 18,
         fontWeight: "800",
-        lineHeight: 30,
+        lineHeight: 25,
         letterSpacing: 0.5,
     },
     pickupBigAccent: {
@@ -1272,7 +1272,7 @@ const styles = StyleSheet.create({
     },
     assignedRiderText: {
         color: "#82BDAE",
-        fontSize: 13,
+        fontSize: 12,
         lineHeight: 18,
         flexShrink: 1,
 
