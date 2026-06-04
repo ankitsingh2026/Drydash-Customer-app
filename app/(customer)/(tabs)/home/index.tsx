@@ -1264,7 +1264,7 @@ export default function Home() {
         onOpen={() => setCartOpen(true)}
         bottomOffset={
           activeType === "none"
-            ? 95
+            ? 60
             : 12
         }
       />

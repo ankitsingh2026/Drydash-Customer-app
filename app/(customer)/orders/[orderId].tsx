@@ -579,7 +579,7 @@ const handlePaymentSuccess = async (data: any) => {
       const fullAmount = (singleOrderDetails?.totalAmount || 0) + (singleOrderDetails?.discountAmount || 0);
       setIsPaymentDone(true);
       router.replace({
-        pathname: '/(customer)/orders/payment-success',
+        pathname: '/(customer)/orders/cod-success',
         params: {
           orderId,
           amount: String(fullAmount),

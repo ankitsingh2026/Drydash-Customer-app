@@ -1687,7 +1687,7 @@ const activeServiceTypes = Array.from(
                   </Text>
                 </TouchableOpacity>
                 {/* DELIVERY PREFERENCE TOGGLE */}
-                <View style={{ marginTop: 5, marginLeft: 15 }}>
+                {/* <View style={{ marginTop: 5, marginLeft: 15 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <Ionicons name="flash-outline" size={14} color="#9FFFD9" />
 
@@ -1726,7 +1726,7 @@ const activeServiceTypes = Array.from(
                         : "Changed your mind?"}
                     </Text>
                   </TouchableOpacity>
-                </View>
+                </View> */}
               </View>
               {selectedSlotData?.time && (
                 <Text
@@ -1998,7 +1998,7 @@ const activeServiceTypes = Array.from(
                 s.confirmBtn,
                 {
                   flex: 1,
-                  backgroundColor: theme.primary,
+                  backgroundColor: theme.subText,
                   opacity: bookingBlocked ? 0.55 : 1,
                 },
               ]}

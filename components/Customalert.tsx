@@ -177,7 +177,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
       const id = ++_idCounter;
       setAlerts(prev => [...prev, { ...config, id }]);
       const autoDuration = config.duration ?? (
-        config.type === 'error' || config.type === 'warning' ? 3000 : 0
+        config.type === 'error' || config.type === 'warning' ? 3000 : 2000
       );
       if (autoDuration > 0) {
         setTimeout(() => removeAlert(id), autoDuration);

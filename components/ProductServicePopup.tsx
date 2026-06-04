@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback,
     View,
+    PanResponder,
 } from "react-native";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
@@ -54,9 +55,101 @@ export default function ProductServicePopup({
   const { theme } = useTheme();
   const cart = useCart();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const scrollY = useRef(0);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollEnabledRef = useRef(true);
+  const isSwipingToClose = useRef(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      // Start capturing as soon as touch starts
+      onStartShouldSetPanResponderCapture: (evt, gestureState) => {
+        // Only capture if we're at the top of scroll OR if it's a downward gesture
+        const isAtTop = scrollY.current <= 0;
+        if (isAtTop) {
+          // Temporarily disable scrolling on ScrollView
+          if (scrollViewRef.current && scrollEnabledRef.current) {
+            scrollEnabledRef.current = false;
+            scrollViewRef.current.setNativeProps({ scrollEnabled: false });
+          }
+          return true;
+        }
+        return false;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const isVerticalDrag = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 15;
+        const isAtTop = scrollY.current <= 0;
+        if (isVerticalDrag && isAtTop) {
+          return true;
+        }
+        return false;
+      },
+      onPanResponderGrant: () => {
+        // Disable scrolling again (safe)
+        if (scrollViewRef.current && scrollEnabledRef.current) {
+          scrollEnabledRef.current = false;
+          scrollViewRef.current.setNativeProps({ scrollEnabled: false });
+        }
+        isSwipingToClose.current = true;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        // Optional: animate the modal with the drag
+        if (gestureState.dy > 0) {
+          slideAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        // Re-enable scrolling after a delay
+        setTimeout(() => {
+          if (scrollViewRef.current && !scrollEnabledRef.current) {
+            scrollEnabledRef.current = true;
+            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+          }
+        }, 100);
+        
+        if (gestureState.dy > 50) {
+          onCloseRef.current();
+        } else {
+          // Animate back to 0 if not closed
+          Animated.spring(slideAnim, {
+            toValue: 0,
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 250,
+          }).start();
+        }
+        isSwipingToClose.current = false;
+      },
+      onPanResponderTerminate: () => {
+        // Re-enable scrolling
+        setTimeout(() => {
+          if (scrollViewRef.current && !scrollEnabledRef.current) {
+            scrollEnabledRef.current = true;
+            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+          }
+        }, 100);
+        isSwipingToClose.current = false;
+        // Reset position
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
 
   React.useEffect(() => {
     if (visible) {
+      // Reset scroll position when opened
+      scrollY.current = 0;
+      scrollEnabledRef.current = true;
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+        scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+      }
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
@@ -122,170 +215,177 @@ export default function ProductServicePopup({
       animationType="none"
       onRequestClose={onClose}
     >
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.overlay}>
-          <TouchableWithoutFeedback>
-            <Animated.View
-              style={[
-                styles.container,
-                { transform: [{ translateY: slideAnim }] },
+      <View style={styles.overlay}>
+         <View style={styles.header}>
+            <View style={styles.dragIndicator} />
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <X size={16} color="#eef3f2" strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={StyleSheet.absoluteFill} />
+        </TouchableWithoutFeedback>
+        <Animated.View
+          style={[
+            styles.container,
+            { transform: [{ translateY: slideAnim }] },
+          ]}
+          {...panResponder.panHandlers}
+        >
+          {/* Drag bar + close */}
+
+          {/* Product image card */}
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: product.image }}
+              style={styles.productImage}
+              resizeMode="cover"
+            />
+
+            <LinearGradient
+              colors={[
+                "rgba(13,31,28,0.95)",
+                "rgba(13,31,28,0.6)",
+                "rgba(86,191,171,0.25)",
+                "rgba(0,0,0,0)",
               ]}
-            >
-              {/* Drag bar + close */}
-              <View style={styles.header}>
-                <View style={styles.dragIndicator} />
-                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-                  <X size={16} color="#eef3f2" strokeWidth={2.5} />
-                </TouchableOpacity>
-              </View>
+              start={{ x: 0, y: 1 }}
+              end={{ x: 0, y: 0 }}
+              style={styles.imageGradient}
+            />
 
-              {/* Product image card */}
-              <View style={styles.imageContainer}>
-                <Image
-                  source={{ uri: product.image }}
-                  style={styles.productImage}
-                  resizeMode="cover"
-                />
+            <TouchableOpacity style={styles.cartIconTop}>
+              <ShoppingBag size={16} color="#8AADA8" />
+            </TouchableOpacity>
 
-                <LinearGradient
-                  colors={[
-                    "rgba(13,31,28,0.95)",
-                    "rgba(13,31,28,0.6)",
-                    "rgba(86,191,171,0.25)",
-                    "rgba(0,0,0,0)",
-                  ]}
-                  start={{ x: 0, y: 1 }}
-                  end={{ x: 0, y: 0 }}
-                  style={styles.imageGradient}
-                />
+            <View style={styles.premiumBadge}>
+              <Star size={12} color="#4af4d5" fill="#56BFAB" />
+              <Text style={styles.premiumText}>
+                {product.category.toUpperCase()} SERVICE
+              </Text>
+            </View>
+          </View>
 
-                <TouchableOpacity style={styles.cartIconTop}>
-                  <ShoppingBag size={16} color="#8AADA8" />
-                </TouchableOpacity>
+          {/* Content with ScrollView */}
+          <ScrollView
+            ref={scrollViewRef}
+            showsVerticalScrollIndicator={false}
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={styles.scrollContent}
+            onScroll={(e) => {
+              scrollY.current = e.nativeEvent.contentOffset.y;
+            }}
+            scrollEventThrottle={16}
+            scrollEnabled={true}
+          >
+            <View style={styles.content}>
+              <Text style={styles.productTitle}>{product.title}</Text>
 
-                <View style={styles.premiumBadge}>
-                  <Star size={12} color="#4af4d5" fill="#56BFAB" />
-                  <Text style={styles.premiumText}>
-                    {product.category.toUpperCase()} SERVICE
-                  </Text>
-                </View>
-              </View>
-
-              {/* Content with ScrollView */}
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
-              >
-                <View style={styles.content}>
-                  <Text style={styles.productTitle}>{product.title}</Text>
-
-                  {/* Price and Unit */}
-                  <View style={styles.priceRow}>
-                    <Text style={styles.productPrice}>{priceDisplay}</Text>
-                    {product.unit && (
-                      <View style={styles.unitBadge}>
-                        <Text style={styles.unitText}>per {product.unit}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={styles.productDesc}>
-                    {product.description ||
-                      getDefaultDescription(product.category)}
-                  </Text>
-
-                  {/* Section label */}
-                  <View style={styles.processLabelRow}>
-                    <LinearGradient
-                      colors={["#56BFAB", "#00614D"]}
-                      style={styles.processAccentBar}
-                    />
-                    <Text style={styles.processSectionTitle}>The Process</Text>
-                  </View>
-
-                  {/* Dynamic Steps from API */}
-                  <View style={styles.steps}>
-                    {processSteps.map((step, index) => (
-                      <ProcessStep
-                        key={step.step || index}
-                        num={String(step.step || index + 1)}
-                        title={step.heading}
-                        description={step.description}
-                      />
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* Divider */}
-              <View style={styles.divider} />
-
-              {/* Footer */}
-              <View style={styles.footer}>
-                <View>
-                  <Text style={styles.totalLabel}>TOTAL PRICE</Text>
-                  <Text style={styles.totalPrice}>
-                    ₹{product.price.toFixed(2)}
-                  </Text>
-                  {product.unit && (
-                    <Text style={styles.unitHint}>per {product.unit}</Text>
-                  )}
-                </View>
-
-                {qty === 0 ? (
-                  <TouchableOpacity
-                    onPress={handleAddToCart}
-                    style={styles.addBtnWrapper}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={["#56BFAB", "#00A878", "#006B50"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.addBtn}
-                    >
-                      <Text style={styles.addBtnText}>Add to Bag →</Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.qtyContainer}>
-                    <TouchableOpacity
-                      onPress={() => cart.decreaseQty(product.id)}
-                      style={styles.qtyBtn}
-                    >
-                      <Minus size={15} color="#56BFAB" strokeWidth={2.5} />
-                    </TouchableOpacity>
-                    <Text style={styles.qtyText}>{qty}</Text>
-                    <TouchableOpacity
-                      onPress={handleIncrement}
-                      style={styles.qtyBtn}
-                    >
-                      <Plus size={15} color="#56BFAB" strokeWidth={2.5} />
-                    </TouchableOpacity>
+              {/* Price and Unit */}
+              <View style={styles.priceRow}>
+                <Text style={styles.productPrice}>{priceDisplay}</Text>
+                {product.unit && (
+                  <View style={styles.unitBadge}>
+                    <Text style={styles.unitText}>per {product.unit}</Text>
                   </View>
                 )}
               </View>
 
-              {cartTotalQty > 0 && (
-                <View
-                  style={{
-                    paddingTop: 5,
-                    paddingHorizontal: 20,
-                    marginBottom: 10,
-                  }}
-                >
-                  <FloatingCart onOpen={onOpenCart} />
-                </View>
+              <Text style={styles.productDesc}>
+                {product.description ||
+                  getDefaultDescription(product.category)}
+              </Text>
+
+              {/* Section label */}
+              <View style={styles.processLabelRow}>
+                <LinearGradient
+                  colors={["#56BFAB", "#00614D"]}
+                  style={styles.processAccentBar}
+                />
+                <Text style={styles.processSectionTitle}>The Process</Text>
+              </View>
+
+              {/* Dynamic Steps from API */}
+              <View style={styles.steps}>
+                {processSteps.map((step, index) => (
+                  <ProcessStep
+                    key={step.step || index}
+                    num={String(step.step || index + 1)}
+                    title={step.heading}
+                    description={step.description}
+                  />
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Divider */}
+          <View style={styles.divider} />
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <View>
+              <Text style={styles.totalLabel}>TOTAL PRICE</Text>
+              <Text style={styles.totalPrice}>
+                ₹{product.price.toFixed(2)}
+              </Text>
+              {product.unit && (
+                <Text style={styles.unitHint}>per {product.unit}</Text>
               )}
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+            </View>
+
+            {qty === 0 ? (
+              <TouchableOpacity
+                onPress={handleAddToCart}
+                style={styles.addBtnWrapper}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={["#56BFAB", "#00A878", "#006B50"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.addBtn}
+                >
+                  <Text style={styles.addBtnText}>Add to Bag →</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.qtyContainer}>
+                <TouchableOpacity
+                  onPress={() => cart.decreaseQty(product.id)}
+                  style={styles.qtyBtn}
+                >
+                  <Minus size={15} color="#56BFAB" strokeWidth={2.5} />
+                </TouchableOpacity>
+                <Text style={styles.qtyText}>{qty}</Text>
+                <TouchableOpacity
+                  onPress={handleIncrement}
+                  style={styles.qtyBtn}
+                >
+                  <Plus size={15} color="#56BFAB" strokeWidth={2.5} />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {cartTotalQty > 0 && (
+            <View
+              style={{
+                paddingTop: 5,
+                paddingHorizontal: 20,
+                marginBottom: 10,
+              }}
+            >
+              <FloatingCart onOpen={onOpenCart} />
+            </View>
+          )}
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
 
-// Helper functions for defaults
+// Helper functions for defaults (unchanged)
 function getDefaultProcess(category: string): ProcessStep[] {
   const defaultProcesses: Record<string, ProcessStep[]> = {
     "Shoe Spa": [
@@ -405,9 +505,10 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.9,
     overflow: "hidden",
+    flexShrink: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   header: {
     flexDirection: "row",

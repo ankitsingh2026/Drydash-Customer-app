@@ -26,6 +26,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  PanResponder,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
@@ -117,6 +118,24 @@ export default function ServiceDetail() {
   const [updating, setUpdating] = useState(false);
   const cartRef = useRef(cart);
   cartRef.current = cart;
+
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 30 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx < -50) {
+          if (tabRef.current < TABS.length - 1) switchTab(tabRef.current + 1);
+        } else if (gestureState.dx > 50) {
+          if (tabRef.current > 0) switchTab(tabRef.current - 1);
+        }
+      },
+    })
+  ).current;
 
   const switchTab = (i: number) => {
     Animated.parallel([
@@ -363,7 +382,7 @@ const handleAddToCart = () => {
   };
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <View style={[styles.root, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
       <Stack.Screen
         options={{
           headerShown: true,
@@ -589,12 +608,7 @@ const handleAddToCart = () => {
           renderItem={({ item }) => {
             const qty = cart.getQty(item.id);
             return (
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectedProduct(item);
-                  setPopupVisible(true);
-                }}
-                activeOpacity={0.7}
+              <View
                 style={[
                   styles.row,
                   {
@@ -603,7 +617,15 @@ const handleAddToCart = () => {
                   },
                 ]}
               >
-                {brokenImages.has(item.id) ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedProduct(item);
+                    setPopupVisible(true);
+                  }}
+                  activeOpacity={0.7}
+                  style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}
+                >
+                  {brokenImages.has(item.id) ? (
                   <View
                     style={[
                       styles.imagePlaceholder,
@@ -650,6 +672,7 @@ const handleAddToCart = () => {
                     ₹{item.price}
                   </Text>
                 </View>
+                </TouchableOpacity>
 
                 {qty === 0 ? (
                   <TouchableOpacity
@@ -697,7 +720,7 @@ const handleAddToCart = () => {
                     </TouchableOpacity>
                   </View>
                 )}
-              </TouchableOpacity>
+              </View>
             );
           }}
           ListEmptyComponent={
