@@ -416,7 +416,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
           refreshAddresses();
         }}
         onAddNewAddress={() => {
-          router.push("/select-address-location");
+          router.push("/edit-address");
         }}
       />
     </>

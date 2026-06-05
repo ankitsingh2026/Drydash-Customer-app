@@ -2687,7 +2687,7 @@ const activeServiceTypes = Array.from(
         }}
         onClose={() => setModalVisible(false)}
         onAddNewAddress={() => {
-          router.push("/select-address-location");
+          router.push("/edit-address");
         }}
       />
 

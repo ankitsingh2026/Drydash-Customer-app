@@ -230,12 +230,12 @@ export default function ProductServicePopup({
             styles.container,
             { transform: [{ translateY: slideAnim }] },
           ]}
-          {...panResponder.panHandlers}
+          // {...panResponder.panHandlers}
         >
           {/* Drag bar + close */}
 
           {/* Product image card */}
-          <View style={styles.imageContainer}>
+          <View style={styles.imageContainer} {...panResponder.panHandlers}>
             <Image
               source={{ uri: product.image }}
               style={styles.productImage}
@@ -278,7 +278,7 @@ export default function ProductServicePopup({
             scrollEventThrottle={16}
             scrollEnabled={true}
           >
-            <View style={styles.content}>
+            <View style={styles.content} {...panResponder.panHandlers}>
               <Text style={styles.productTitle}>{product.title}</Text>
 
               {/* Price and Unit */}
@@ -376,7 +376,7 @@ export default function ProductServicePopup({
                 marginBottom: 10,
               }}
             >
-              <FloatingCart onOpen={onOpenCart} />
+              {/* <FloatingCart onOpen={onOpenCart} /> */}
             </View>
           )}
         </Animated.View>

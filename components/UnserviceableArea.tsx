@@ -61,7 +61,7 @@ export default function UnserviceableArea() {
       <TouchableOpacity
         style={styles.primaryButton}
         activeOpacity={0.85}
-        onPress={() => router.push("/select-address-location")}
+        onPress={() => router.push("/edit-address")}
       >
         <Text style={styles.primaryButtonText}>Try a different pincode</Text>
       </TouchableOpacity>
