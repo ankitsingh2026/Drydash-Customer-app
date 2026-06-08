@@ -295,21 +295,46 @@ function ScheduledPickupCard({
                             <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
                                 <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
                             </TouchableOpacity>
-                            {menuVisible && (
-                                <View style={styles.dropdownMenu}>
-                                    <ActionTagButton
-                                        label="Reschedule"
-                                        icon="calendar-outline"
-                                        onPress={() => { setMenuVisible(false); onReschedule(); }}
-                                    />
-                                    <ActionTagButton
-                                        label="Cancel"
-                                        icon="close-outline"
-                                        tone="danger"
-                                        onPress={() => { setMenuVisible(false); onCancel(); }}
-                                    />
-                                </View>
-                            )}
+                            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+                                <TouchableOpacity 
+                                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }} 
+                                    activeOpacity={1} 
+                                    onPress={() => setMenuVisible(false)}
+                                >
+                                    <View style={{ backgroundColor: '#0B1F1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 }}>
+                                        <View style={{ width: 40, height: 4, backgroundColor: '#1E3A34', alignSelf: 'center', borderRadius: 2, marginBottom: 8 }} />
+                                        <Text style={{ color: '#E6FFF7', fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Order Options</Text>
+                                        
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            onPress={() => { setMenuVisible(false); onReschedule(); }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#102B25', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#1E3A34' }}
+                                        >
+                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#00E1A222', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                                <Ionicons name="calendar-outline" size={20} color="#00E1A2" />
+                                            </View>
+                                            <View>
+                                                <Text style={{ color: '#E6FFF7', fontSize: 16, fontWeight: '600' }}>Reschedule</Text>
+                                                <Text style={{ color: '#8FB3A8', fontSize: 13, marginTop: 2 }}>Change pickup date and time</Text>
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            onPress={() => { setMenuVisible(false); onCancel(); }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#2A1115', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#4A1D24' }}
+                                        >
+                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B6B22', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                                <Ionicons name="close-outline" size={22} color="#FF6B6B" />
+                                            </View>
+                                            <View>
+                                                <Text style={{ color: '#FF9FA8', fontSize: 16, fontWeight: '600' }}>Cancel Order</Text>
+                                                <Text style={{ color: '#C27A82', fontSize: 13, marginTop: 2 }}>This action cannot be undone</Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
+                                </TouchableOpacity>
+                            </Modal>
                         </View>
                     </View>
                 </View>
@@ -1269,6 +1294,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 6,
         paddingTop: 18, // vertically center with heading
+        marginLeft: 15,
     },
     assignedRiderText: {
         color: "#82BDAE",

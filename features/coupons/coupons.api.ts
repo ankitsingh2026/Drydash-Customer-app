@@ -10,7 +10,8 @@ export const fetchAllValidCoupons = async (
 
     if(id){
      res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}&id=${id}`, {
-      serviceTypes: serviceTypes
+      serviceTypes: serviceTypes,
+      userId: id
     });
     }else{
     res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}`, {

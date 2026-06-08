@@ -42,7 +42,7 @@ type HomeActiveOrderCardProps = {
   onRefresh?: () => void;
 };
 
-const ACCENT = "#29E6B0";
+const ACCENT = "#22EBAB";
 const BORDER = "#1A3330";
 const SURFACE = "#00D9A3";
 const MUTED = "#6B7280";

@@ -20,6 +20,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { oldApiClient } from '@/lib/api/client';
 import { DarkTheme } from '@/constants/colors';
+import { removeCouponApi } from '@/features/coupons/coupons.api';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -166,6 +167,11 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     setShowCodConfirm(false);
     setLoading(true);
     try {
+      try {
+        await removeCouponApi({ orderId });
+      } catch (err) {
+        console.error('Failed to remove coupon for COD:', err);
+      }
       const response = await oldApiClient.post(`/v1/payments/confirm-cod/${orderId}`);
       if (response.data.success) {
         // The backend only sets isCODConfirmed = true, no payment details are saved.
@@ -272,11 +278,21 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
               If you confirm Cash on Delivery (COD), your order will be delivered during the day time.
               {'\n\n'}
               If you make an online payment now, we can deliver your item early in the morning.
+              {'\n\n'}
+              <Text style={{ fontWeight: 'bold', color: '#eab308' }}>
+                Note: If you confirm COD then coupon is not applicable.
+              </Text>
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.modalBtnCancel}
-                onPress={() => setShowCodConfirm(false)}
+                onPress={() => {
+                  setShowCodConfirm(false);
+                  const firstUpi = installedApps.find(app => !app.isCod);
+                  if (firstUpi) {
+                    selectApp(firstUpi);
+                  }
+                }}
               >
                 <Text style={styles.modalBtnCancelText}>Pay Online</Text>
               </TouchableOpacity>

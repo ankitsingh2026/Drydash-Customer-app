@@ -23,7 +23,7 @@ export default function RootLayout() {
             <AddressProvider>
               <CartProvider>
                 <SlotSocketProvider>
-                  <StatusBar style="auto" />
+                  <StatusBar style="light" />
                   <Stack
                     screenOptions={{
                       headerShown: false,

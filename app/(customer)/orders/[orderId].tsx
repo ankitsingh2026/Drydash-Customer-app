@@ -907,12 +907,13 @@ const handlePaymentSuccess = async (data: any) => {
           <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKED BY</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName}</Text>
           </View>
         </View>
       </View>
 
       {/* Delivery Info */}
+      {isDelivered && (
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED TO</Text>
@@ -922,11 +923,11 @@ const handlePaymentSuccess = async (data: any) => {
           <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED BY</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName || "Rajesh Kumar"}</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName}</Text>
           </View>
         </View>
       </View>
-
+      )}
       {/* Address */}
       <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
         <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ADDRESS</Text>

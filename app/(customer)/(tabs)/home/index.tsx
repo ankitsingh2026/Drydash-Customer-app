@@ -691,7 +691,7 @@ export default function Home() {
             borderBottomColor: theme.border,
           }}
         />
-        <StatusBar style="dark" backgroundColor={theme.background} translucent={false} />
+        <StatusBar style="light" backgroundColor={theme.background} translucent={false} />
         <UnserviceableArea />
         {/* ✅ Add notifications sheet */}
         <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
@@ -712,7 +712,7 @@ export default function Home() {
         }}
       />
       <StatusBar
-        style={"dark"}
+        style={"light"}
         backgroundColor={theme.background}
         translucent={false}
       />
