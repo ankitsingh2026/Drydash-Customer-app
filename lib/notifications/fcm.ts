@@ -15,7 +15,7 @@ import DeviceInfo from "react-native-device-info";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
-const API_URL = "https://test.drydash.in";
+const API_URL = "https://api.shiptos.com";
 
 const app = getApp();
 const messaging = getMessaging(app);

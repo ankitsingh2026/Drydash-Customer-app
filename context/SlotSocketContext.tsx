@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
-const API_URL = "https://test.drydash.in"; 
+const API_URL = "https://api.shiptos.com"; 
 
 // Context type: exposes a subscribe function
 const SlotSocketContext = createContext<{ onSlotUpdate: (cb: () => void) => () => void }>({

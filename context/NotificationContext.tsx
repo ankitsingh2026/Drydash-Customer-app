@@ -12,7 +12,7 @@ import React, {
 import { io, Socket } from "socket.io-client";
 import { useAuthContext } from "./AuthContext";
 
-const API_URL = "https://test.drydash.in";
+const API_URL = "https://api.shiptos.com";
 
 type NotificationData = {
   pickupId?: string;

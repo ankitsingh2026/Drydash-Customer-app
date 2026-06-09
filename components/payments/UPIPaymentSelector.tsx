@@ -226,7 +226,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
       upi_app_package_name: selectedApp.package_name,
       '_[flow]': 'intent',
     };
-    RazorpayCheckout .open(options)
+    RazorpayCheckout.open(options)
       .then(onSuccess)
       .catch((error: any) => {
         if (error.code === 0 || error.code === 'PAYMENT_CANCELLED') onFailure('Payment cancelled');

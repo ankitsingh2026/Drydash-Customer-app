@@ -127,3 +127,9 @@ export const removeDeliveredOrderApi = async (id: string) => {
   console.log("Archive response:", data); 
   return data;
 };
+
+export const generateInvoiceApi = async (orderId: string) => {
+  const { data } = await oldApiClient.get(`/v1/generateInvoice/${orderId}`);
+  console.log("Invoice generation response====>:", data);
+  return data;
+};

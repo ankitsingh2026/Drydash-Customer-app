@@ -27,14 +27,14 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSele
       setLoading(true);
       try {
         const res = await fetch(
-          ` https://test.drydash.in/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
+          ` https://api.shiptos.com/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
         );
         const data = await res.json();
         setZone(data);
 
         if (data.zoneFound) {
           const serviceRes = await fetch(
-            "https://test.drydash.in/api/v1/slots/service/check",
+            "https://api.shiptos.com/api/v1/slots/service/check",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

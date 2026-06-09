@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
   },
   pinOverlay: {
     position: "absolute",
-    top: "50%",
+    top: "55%",
     left: "50%",
     alignItems: "center",
     transform: [{ translateX: -100 }, { translateY: -100 }], // Adjust based on pin and bubble size

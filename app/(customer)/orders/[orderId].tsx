@@ -30,6 +30,7 @@ import { useTheme } from "../../../context/ThemeContext";
 import { useNotifications } from "../../../context/NotificationContext";
 // import RazorpayWebView from "./RazorpayWebView";
 import { UPIPaymentSelector } from '@/components/payments/UPIPaymentSelector';
+import { DownloadInvoiceButton } from "@/components/orders/DownloadInvoiceButton";
 
 interface OrderItem {
   heading: string;
@@ -1030,10 +1031,7 @@ const handlePaymentSuccess = async (data: any) => {
                     {singleOrderDetails.payment?.paymentMode ? `Paid Via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid Via UPI"}
                   </Text>
                 </View>
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="download-outline" size={14} color="#94a3b8" style={{ marginRight: 6 }} />
-                  <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600' }}>Download Reciept</Text>
-                </TouchableOpacity>
+                <DownloadInvoiceButton orderId={orderId as string} />
               </View>
             )}
 
@@ -1257,8 +1255,7 @@ const handlePaymentSuccess = async (data: any) => {
               <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: '700' }}>Items</Text>
               {isPaid && (
                 <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="download-outline" size={14} color={theme.primary} style={{ marginRight: 4 }} />
-                  <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>Download Receipt</Text>
+                  <DownloadInvoiceButton orderId={orderId as string} />
                 </TouchableOpacity>
               )}
             </View>

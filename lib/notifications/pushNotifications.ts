@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 
 // const API_URL = process.env.EXPO_PUBLIC_API_URL!;
-const API_URL = "https://test.drydash.in";
+const API_URL = "https://api.shiptos.com";
 
 async function requestPermission() {
   if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
