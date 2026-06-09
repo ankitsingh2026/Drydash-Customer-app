@@ -227,10 +227,10 @@ export default function EditAddress() {
 
       setAddressForm((prev) => ({
         ...prev,
-        city: prev.city || newCity,
-        state: prev.state || newState,
-        pincode: prev.pincode || newPin,
-        landmarkArea: prev.landmarkArea || subregion,
+        city: newCity,
+        state: newState,
+        pincode: newPin,
+        landmarkArea: subregion,
         latitude: String(coords.latitude),
         longitude: String(coords.longitude),
       }));

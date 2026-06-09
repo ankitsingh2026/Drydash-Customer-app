@@ -44,6 +44,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     serviceLoading,
     zoneData,         // separate zone info from context
     updateServiceData,
+    setServiceLoading,
   } = useAddress();
 
     const { onSlotUpdate } = useSlotSocket();
@@ -108,6 +109,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
     const fetchData = async () => {
       console.log("Selected address changed:", selectedAddress);
+      setServiceLoading(true);
       const label = selectedAddress.id === "current_location" 
         ? selectedAddress.line1 
         : `${selectedAddress.line1}, ${selectedAddress.city}`;
@@ -167,7 +169,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       console.error("Full service data error:", error);
       updateServiceData({
         coords: { lat, lng },
-        zoneData: null,
+        zoneData: { zoneFound: false },
         serviceData: null,
       });
     }

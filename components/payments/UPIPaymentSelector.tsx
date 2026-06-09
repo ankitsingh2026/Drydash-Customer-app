@@ -38,6 +38,7 @@ interface UPIPaymentSelectorProps {
   defaultCod?: boolean;
   onSuccess: (data: any) => void;
   onFailure: (error: string) => void;
+  onPaymentMethodChange?: (isCod: boolean) => void;
 }
 
 const SUPPORTED_UPI_APPS = [
@@ -65,6 +66,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   defaultCod,
   onSuccess,
   onFailure,
+  onPaymentMethodChange,
 }) => {
   const insets = useSafeAreaInsets();
   const [installedApps, setInstalledApps] = useState<any[]>([]);
@@ -72,6 +74,12 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showCodConfirm, setShowCodConfirm] = useState(false);
+
+  useEffect(() => {
+    if (selectedApp && onPaymentMethodChange) {
+      onPaymentMethodChange(selectedApp.isCod);
+    }
+  }, [selectedApp]);
 
   useEffect(() => {
     const detectApps = () => {
@@ -203,16 +211,14 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
       return;
     }
 
-    // ---------- UPI Intent (unchanged) ----------
+    // ---------- UPI Intent ----------
     setLoading(true);
     const options = {
-      key_id: razorpayKeyId,
+      key: razorpayKeyId,
       amount: amount.toString(),
       currency: 'INR',
       order_id: razorpayOrderId,
       name: 'DryDash',
-      email: customerEmail,
-      contact: customerPhone,
       description: `Order ${razorpayOrderId}`,
       prefill: { name: customerName, email: customerEmail, contact: customerPhone },
       theme: { color: themeColor },
@@ -220,10 +226,10 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
       upi_app_package_name: selectedApp.package_name,
       '_[flow]': 'intent',
     };
-    RazorpayCustomUI.open(options)
+    RazorpayCheckout .open(options)
       .then(onSuccess)
       .catch((error: any) => {
-        if (error.code === 'PAYMENT_CANCELLED') onFailure('Payment cancelled');
+        if (error.code === 0 || error.code === 'PAYMENT_CANCELLED') onFailure('Payment cancelled');
         else onFailure(error.description || error.message || 'Payment failed');
       })
       .finally(() => setLoading(false));
@@ -277,11 +283,9 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
             <Text style={styles.modalText}>
               If you confirm Cash on Delivery (COD), your order will be delivered during the day time.
               {'\n\n'}
-              If you make an online payment now, we can deliver your item early in the morning.
+              <Text style={{ color: '#bcb121', fontWeight: 'bold' }}>Note: If you confirm COD, then coupon is not applicable.</Text>
               {'\n\n'}
-              <Text style={{ fontWeight: 'bold', color: '#eab308' }}>
-                Note: If you confirm COD then coupon is not applicable.
-              </Text>
+              If you make an online payment now, we can deliver your item early in the morning.
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity

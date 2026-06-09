@@ -207,7 +207,7 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
-  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress } = useAddress();
+  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
 
 
   const { notifications } = useNotifications();
@@ -423,29 +423,31 @@ export default function Home() {
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setLoading(false);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }).start();
+    if (!addressLoading && zoneData !== null) {
+      const t = setTimeout(() => {
+        setLoading(false);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
 
-      Animated.stagger(
-        80,
-        heroAnims.map((a) =>
-          Animated.timing(a, {
-            toValue: 1,
-            duration: 450,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: true,
-          }),
-        ),
-      ).start();
-    }, 1500);
+        Animated.stagger(
+          80,
+          heroAnims.map((a) =>
+            Animated.timing(a, {
+              toValue: 1,
+              duration: 450,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: true,
+            }),
+          ),
+        ).start();
+      }, 500);
 
-    return () => clearTimeout(t);
-  }, []);
+      return () => clearTimeout(t);
+    }
+  }, [addressLoading, zoneData]);
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -678,11 +680,11 @@ export default function Home() {
     }, [params.orderPlaced, refreshBooking]),
   );
 
-  if (loading) return <AppLoader />;
+  const PRIMARY = theme.primary;
 
-  if (!serviceLoading && zoneData?.zoneFound === false) {
-    return (
-      <>
+  return (
+    <View style={{ flex: 1 }}>
+      <SafeAreaProvider>
         <TabBar
           onOpenNotifications={() => setOpen(true)}
           onWalletPress={() => router.push("/(customer)/wallet")}
@@ -691,32 +693,17 @@ export default function Home() {
             borderBottomColor: theme.border,
           }}
         />
-        <StatusBar style="light" backgroundColor={theme.background} translucent={false} />
-        <UnserviceableArea />
-        {/* ✅ Add notifications sheet */}
-        <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
-      </>
-    );
-  }
+        <StatusBar
+          style={"light"}
+          backgroundColor={theme.background}
+          translucent={false}
+        />
 
-  const PRIMARY = theme.primary;
-
-  return (
-    <SafeAreaProvider>
-      <TabBar
-        onOpenNotifications={() => setOpen(true)}
-        onWalletPress={() => router.push("/(customer)/wallet")}
-        style={{
-          backgroundColor: theme.card,
-          borderBottomColor: theme.border,
-        }}
-      />
-      <StatusBar
-        style={"light"}
-        backgroundColor={theme.background}
-        translucent={false}
-      />
-      <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
+        {!serviceLoading && zoneData?.zoneFound === false ? (
+          <UnserviceableArea />
+        ) : (
+          <>
+            <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
         // showsVerticalScrollIndicator={false}
         // keyboardShouldPersistTaps="handled"
         // nestedScrollEnabled={true}
@@ -1268,20 +1255,28 @@ export default function Home() {
             : 12
         }
       />
-      <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+            <ProductServicePopup
+              visible={popupVisible}
+              onOpenCart={() => setCartOpen(true)}
+              onClose={() => {
+                setPopupVisible(false);
+                setSelectedProduct(null);
+              }}
+              product={selectedProduct}
+            />
 
-      <ProductServicePopup
-        visible={popupVisible}
-        onOpenCart={() => setCartOpen(true)}
-        onClose={() => {
-          setPopupVisible(false);
-          setSelectedProduct(null);
-        }}
-        product={selectedProduct}
-      />
+            <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} />
+          </>
+        )}
+        <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
+      </SafeAreaProvider>
 
-      <CartSheet visible={cartOpen} onClose={() => setCartOpen(false)} />
-    </SafeAreaProvider>
+      {(loading || serviceLoading) && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 99999, elevation: 99999 }]}>
+          <AppLoader />
+        </View>
+      )}
+    </View>
   );
 }
 

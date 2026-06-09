@@ -49,7 +49,7 @@ interface OrderDetails {
   updatedAt?: string;
   status?: string;
   plantName?: string;
-  note?: string;
+  notes?: string;
   customerName?: string;
   riderName?: string;
   totalAmount?: number;
@@ -158,7 +158,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
     updatedAt: toSafeText(raw.updatedAt),
     status: toSafeText(raw.status, "processing"),
     plantName: toSafeText(raw.plantName, "Green Park"),
-    note: toSafeText(raw.note),
+    notes: toSafeText(raw.notes),
     customerName: toSafeText(raw.customerName),
     riderName: toSafeText(raw.riderName),
     totalAmount: toSafeNumber(raw.totalAmount, 0),
@@ -220,7 +220,10 @@ export default function OrderReceipt() {
 
   const [selectedDeliveryOption, setSelectedDeliveryOption] =
     useState<boolean>(false);
+  const [isCodSelected, setIsCodSelected] = useState<boolean>(false);
 
+
+    console.log("this is the singleOrderDetails in the beginning of the component========>>>>>", singleOrderDetails);
 useEffect(() => {
   if (paymentUpdate && paymentUpdate.orderId === orderId) {
     if (paymentUpdate.paymentStatus === "success" || paymentUpdate.isPaid) {
@@ -294,7 +297,7 @@ useEffect(() => {
       const data = await getSingleOrderDetailsApi(orderId);
 
 
-      console.log("this is the data==>>", data)
+      console.log("this is the data single ==>>", data)
 
       let rawOrderDetails =
         data?.order_details ||
@@ -1063,7 +1066,7 @@ const handlePaymentSuccess = async (data: any) => {
               <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
             </View>
 
-            {!isPaid && (
+            {!isPaid && !isCodSelected && (
               <>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 12 }}>
                   <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>AVAILABLE COUPONS</Text>
@@ -1140,7 +1143,7 @@ const handlePaymentSuccess = async (data: any) => {
             <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>SPECIAL INSTRUCTIONS</Text>
             <View style={{ backgroundColor: '#071b16', borderRadius: 16, padding: 16, marginBottom: 24 }}>
               <TextInput
-                value={singleOrderDetails.note || ""}
+                value={singleOrderDetails.notes || ""}
                 placeholder="Any specific requirements for your wash?"
                 placeholderTextColor="#475569"
                 multiline
@@ -1148,11 +1151,11 @@ const handlePaymentSuccess = async (data: any) => {
                 textAlignVertical="top"
                 style={{ color: theme.text, fontSize: 14, minHeight: 60 }}
               />
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 8 }}>
+              {/* <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 8 }}>
                 <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Fragile</Text></View>
                 <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Eco-Wash</Text></View>
                 <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Hypoallergenic</Text></View>
-              </View>
+              </View> */}
             </View>
 
             {renderCombinedOrderDetails()}
@@ -1199,6 +1202,7 @@ const handlePaymentSuccess = async (data: any) => {
     onSuccess={handlePaymentSuccess}
     onFailure={handlePaymentFailure}
     defaultCod={singleOrderDetails?.isCODConfirmed}
+    onPaymentMethodChange={setIsCodSelected}
   />
 )}
 

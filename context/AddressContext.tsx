@@ -28,6 +28,7 @@ type AddressContextType = {
   // 👆 SERVICE STATES
   updateServiceData: (data: any) => void;
   clearServiceData: () => void;
+  setServiceLoading: (loading: boolean) => void;
 };
 
 const AddressContext = createContext<AddressContextType | undefined>(undefined);
@@ -207,6 +208,7 @@ return (
       currentActiveSlot,
       updateServiceData,
       clearServiceData,
+      setServiceLoading,
       // 👆 SERVICE
     }}
   >
