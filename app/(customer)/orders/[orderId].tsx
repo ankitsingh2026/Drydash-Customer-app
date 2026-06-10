@@ -1328,7 +1328,7 @@ const handlePaymentSuccess = async (data: any) => {
             {renderCombinedOrderDetails()}
 
             <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>NEED HELP?</Text>
-            <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: theme.lightborder, shadowColor : theme.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}>
+            <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: theme.lightborder, shadowColor : theme.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}  onPress={() => router.push("/(customer)/(assistant)/chat")}>
               <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B3326', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                 <Ionicons name="chatbubble-ellipses" size={20} color={theme.primary} />
               </View>

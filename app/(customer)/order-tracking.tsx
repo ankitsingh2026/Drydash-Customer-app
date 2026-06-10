@@ -773,7 +773,7 @@ function HelpCard() {
     <View style={styles.sectionCard}>
       <Text style={styles.helpTitle}>NEED HELP?</Text>
 
-      <TouchableOpacity activeOpacity={0.8} style={styles.chatCard}>
+      <TouchableOpacity activeOpacity={0.8} style={styles.chatCard}  onPress={() => router.push("/(customer)/(assistant)/chat")}>
         <View style={styles.chatIconWrap}>
           <Ionicons
             name="chatbubble-ellipses-outline"

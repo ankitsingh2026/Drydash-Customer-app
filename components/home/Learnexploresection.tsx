@@ -134,43 +134,20 @@ useEffect(() => {
 
       {/* ── Featured Video Card ── */}
 
-      <View style={styles.videoCard} pointerEvents="none">
-        <VideoView
-          player={player}
-          style={styles.videoThumbnail}
-          contentFit="cover"
-        />
-        {/* Dark overlay */}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.7)"]}
-          style={StyleSheet.absoluteFill}
-        />
-
-        {/* Play button */}
-        {/* <Animated.View
-          style={[styles.playButtonWrap, { transform: [{ scale: playScale }] }]}
-        >
-          <View style={styles.playButton}>
-            <Ionicons
-              name="play"
-              size={26}
-              color="#000"
-              style={{ marginLeft: 3 }}
-            />
-          </View>
-        </Animated.View> */}
-
-        {/* Text */}
-        <View style={styles.videoTextWrap}>
-          {/* <Text style={styles.videoTitle}>{FEATURE_VIDEO.title}</Text> */}
-          {/* <Text style={styles.videoSubtitle}>{FEATURE_VIDEO.subtitle}</Text> */}
-        </View>
-
-        {/* Duration badge */}
-        {/* <View style={styles.durationBadge}>
-          <Text style={styles.durationText}>{FEATURE_VIDEO.duration}</Text>
-        </View> */}
-      </View>
+<View style={styles.videoCard}>
+  <VideoView
+    player={player}
+    style={styles.videoThumbnail}
+    contentFit="cover"
+    nativeControls={false}
+  />
+  <TouchableOpacity
+    style={styles.invisibleOverlay}
+    onPress={() => {
+      // Do nothing on press, or call player.pause()/play() if needed
+    }}
+  />
+</View>
 
       {/* ── Article Cards (horizontal scroll) ── */}
       <ScrollView
@@ -282,6 +259,11 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginBottom: 3,
   },
+  invisibleOverlay: {
+  ...StyleSheet.absoluteFillObject, // Cover the entire video area
+  backgroundColor: 'transparent',
+  zIndex: 10,
+},
   videoSubtitle: {
     fontSize: 12,
     fontWeight: "500",
