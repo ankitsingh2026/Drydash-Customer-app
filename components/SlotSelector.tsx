@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { BASE_URL } from "@/lib/api/client";
 
 interface Slot {
   time: string;
@@ -27,14 +28,14 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSele
       setLoading(true);
       try {
         const res = await fetch(
-          ` https://api.shiptos.com/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
+          `${BASE_URL}/api/v1/slots/location/resolve?lat=${lat}&lng=${lng}`
         );
         const data = await res.json();
         setZone(data);
 
         if (data.zoneFound) {
           const serviceRes = await fetch(
-            "https://api.shiptos.com/api/v1/slots/service/check",
+            `${BASE_URL}/api/v1/slots/service/check`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

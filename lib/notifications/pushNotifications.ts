@@ -3,9 +3,8 @@ import messaging from "@react-native-firebase/messaging";
 import DeviceInfo from "react-native-device-info";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { BASE_URL } from "../api/client";
 
-// const API_URL = process.env.EXPO_PUBLIC_API_URL!;
-const API_URL = "https://api.shiptos.com";
 
 async function requestPermission() {
   if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
@@ -37,7 +36,7 @@ export async function registerCustomerPushToken(customerId: string) {
 
   await AsyncStorage.setItem("fcmToken", token);
 
-  await axios.post(`${API_URL}/api/v1/customer/push-tokens/register`, {
+  await axios.post(`${BASE_URL}/api/v1/customer/push-tokens/register`, {
     customerId,
     token,
     platform: Platform.OS,
@@ -52,7 +51,7 @@ export async function unregisterCustomerPushToken() {
   if (!token) return;
 
   try {
-    await axios.post(`${API_URL}/api/v1/customer/push-tokens/unregister`, {
+    await axios.post(`${BASE_URL}/api/v1/customer/push-tokens/unregister`, {
       token,
     });
   } finally {

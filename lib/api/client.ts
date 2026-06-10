@@ -8,7 +8,7 @@ export const apiClient = axios.create({
 });
 
 export const oldApiClient = axios.create({
-  baseURL: "https://api.shiptos.com/api", // old backend
+  baseURL: "https://test.drydash.in/api", // old backend
   // baseURL: "http://localhost:5001/api/",
   headers: { "Content-Type": "application/json" },
 });
@@ -18,3 +18,5 @@ apiClient.interceptors.request.use(async (config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+export const BASE_URL = "https://test.drydash.in"; 

@@ -14,8 +14,8 @@ import { getApp } from "@react-native-firebase/app";
 import DeviceInfo from "react-native-device-info";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
+import { BASE_URL } from "../api/client";
 
-const API_URL = "https://api.shiptos.com";
 
 const app = getApp();
 const messaging = getMessaging(app);
@@ -71,7 +71,7 @@ export async function registerCustomerPushToken(
 
     // Send to backend
     await axios.post(
-      `${API_URL}/api/v1/customer/push-tokens/register`,
+      `${BASE_URL}/api/v1/customer/push-tokens/register`,
       {
         customerId,
         token,
@@ -89,7 +89,7 @@ export async function registerCustomerPushToken(
         );
 
         await axios.post(
-          `${API_URL}/api/v1/customer/push-tokens/register`,
+          `${BASE_URL}/api/v1/customer/push-tokens/register`,
           {
             customerId,
             token: newToken,
@@ -126,7 +126,7 @@ export async function unregisterCustomerPushToken() {
     if (!token) return;
 
     await axios.post(
-      `${API_URL}/api/v1/customer/push-tokens/unregister`,
+      `${BASE_URL}/api/v1/customer/push-tokens/unregister`,
       {
         token,
       }

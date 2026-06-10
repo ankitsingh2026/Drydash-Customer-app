@@ -11,8 +11,8 @@ import React, {
 } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuthContext } from "./AuthContext";
+import { BASE_URL } from "@/lib/api/client";
 
-const API_URL = "https://api.shiptos.com";
 
 type NotificationData = {
   pickupId?: string;
@@ -110,7 +110,7 @@ export const NotificationProvider = ({
 
     try {
       const res = await axios.get(
-        `${API_URL}/api/v1/customer/notifications/${customerId}`,
+        `${BASE_URL}/api/v1/customer/notifications/${customerId}`,
       );
 
       const data = Array.isArray(res.data?.data) ? res.data.data : [];
@@ -159,7 +159,7 @@ export const NotificationProvider = ({
       socketRef.current = null;
     }
 
-    const socket = io(API_URL, {
+    const socket = io(BASE_URL, {
       transports: ["websocket", "polling"],
       reconnection: true,
     });
@@ -224,7 +224,7 @@ export const NotificationProvider = ({
     setUnreadCount((prev) => Math.max(0, prev - 1));
 
     try {
-      await axios.patch(`${API_URL}/api/v1/customer/notifications/read/${id}`, {
+      await axios.patch(`${BASE_URL}/api/v1/customer/notifications/read/${id}`, {
         customerId,
       });
     } catch (err) {
@@ -242,7 +242,8 @@ export const NotificationProvider = ({
 
     try {
       await axios.patch(
-        `${API_URL}/api/v1/customer/notifications/read-all/${customerId}`,
+        `${BASE_URL
+        }/api/v1/customer/notifications/read-all/${customerId}`,
       );
     } catch (err) {
       console.log("markAllRead error", err);

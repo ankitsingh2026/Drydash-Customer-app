@@ -1,7 +1,7 @@
+import { BASE_URL } from "@/lib/api/client";
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
-const API_URL = "https://api.shiptos.com"; 
 
 // Context type: exposes a subscribe function
 const SlotSocketContext = createContext<{ onSlotUpdate: (cb: () => void) => () => void }>({
@@ -12,7 +12,7 @@ export const SlotSocketProvider = ({ children }: { children: React.ReactNode }) 
   const listeners = useRef<Set<() => void>>(new Set());
 
   useEffect(() => {
-    const socket: Socket = io(API_URL, { transports: ["websocket", "polling"] });
+    const socket: Socket = io(BASE_URL, { transports: ["websocket", "polling"] });
 
     socket.on("slot_updated", () => {
       listeners.current.forEach(cb => cb());
