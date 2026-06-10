@@ -472,7 +472,7 @@ function RatingCard() {
         <Ionicons name="star" size={17} color={DarkTheme.primary} />
       </View>
 
-      <Text style={styles.ratingText}>How were your ordered items?</Text>
+      {/* <Text style={styles.ratingText}>How were your ordered items?</Text> */}
 
       <TouchableOpacity activeOpacity={0.85} style={styles.rateBtn}>
         <Text style={styles.rateBtnText}>Rate Now</Text>

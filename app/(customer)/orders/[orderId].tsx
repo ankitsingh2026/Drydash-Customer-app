@@ -1286,13 +1286,13 @@ const handlePaymentSuccess = async (data: any) => {
               </View>
             ))}
 
-            <View style={{ backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 4, marginBottom: 24 }}>
+            {/* <View style={{ backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 4, marginBottom: 24 }}>
               <Ionicons name="star" size={20} color="#FBBF24" style={{ marginRight: 12 }} />
               <Text style={{ color: theme.text, flex: 1, fontSize: 14, fontWeight: '600' }}>How Were Your Ordered Items?</Text>
               <TouchableOpacity style={{ borderWidth: 1, borderColor: theme.primary, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
                 <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>Rate Now</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
