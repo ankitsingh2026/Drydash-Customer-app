@@ -8,7 +8,7 @@ export const apiClient = axios.create({
 });
 
 export const oldApiClient = axios.create({
-  baseURL: "https://test.drydash.in/api", // old backend
+  baseURL: "https://api.shiptos.com/api", // old backend
   headers: { "Content-Type": "application/json" },
 });
 
@@ -18,4 +18,4 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-export const BASE_URL = "https://test.drydash.in"; 
+export const BASE_URL = "https://api.shiptos.com"; 

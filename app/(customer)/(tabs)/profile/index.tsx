@@ -115,10 +115,10 @@ export default function Profile() {
 Download DryDash:
 
 Android:
-https://play.google.com/store/apps/details?id=com.drydash.newcustomer
+https://play.google.com/store/apps/details?id=com.drydash.newCustomer
 
 iOS:
-https://apps.apple.com/app/id000000000
+https://apps.apple.com/in/app/drydash/id6761757578
 
 Use my referral code: DRYDASH50
 

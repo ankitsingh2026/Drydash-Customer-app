@@ -241,24 +241,30 @@ export function AlertOverlay() {
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 60 : 40,
-    left: 12,
-    right: 12,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',  
+    alignItems: 'center',      
     zIndex: 9999,
+    pointerEvents: 'box-none',
     gap: 8,
   },
   card: {
-    borderRadius: 16,          // rounder to match your app cards
+    width: '90%',            
+    maxWidth: 400,             
+    borderRadius: 16,
     borderLeftWidth: 3,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    shadowColor: '#00E1A2',    // green glow instead of black
+    shadowColor: '#00E1A2',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 12,
     borderWidth: 1,
-    borderColor: '#1E3A34',    // your border color
+    borderColor: '#1E3A34',
   },
   headerRow: {
     flexDirection: 'row',

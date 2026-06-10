@@ -31,6 +31,7 @@ import { useNotifications } from "../../../context/NotificationContext";
 // import RazorpayWebView from "./RazorpayWebView";
 import { UPIPaymentSelector } from '@/components/payments/UPIPaymentSelector';
 import { DownloadInvoiceButton } from "@/components/orders/DownloadInvoiceButton";
+import { DownloadBillButton } from "@/components/orders/DownloadBillButton";
 
 interface OrderItem {
   heading: string;
@@ -1021,7 +1022,7 @@ const handlePaymentSuccess = async (data: any) => {
               </View>
             ))}
 
-            {isPaid && (
+            {isPaid ? (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: theme.primary, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
@@ -1032,6 +1033,10 @@ const handlePaymentSuccess = async (data: any) => {
                   </Text>
                 </View>
                 <DownloadInvoiceButton orderId={orderId as string} />
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8, marginBottom: 5 }}>
+                <DownloadBillButton orderId={orderId as string} />
               </View>
             )}
 
@@ -1253,9 +1258,13 @@ const handlePaymentSuccess = async (data: any) => {
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: '700' }}>Items</Text>
-              {isPaid && (
+              {isPaid ? (
                 <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <DownloadInvoiceButton orderId={orderId as string} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <DownloadBillButton orderId={orderId as string} />
                 </TouchableOpacity>
               )}
             </View>

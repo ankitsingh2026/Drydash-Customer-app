@@ -5,28 +5,28 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
-import { generateInvoiceApi } from '@/features/orders/orders.api';
+import { getSingleOrderDetailsApi } from '@/features/orders/orders.api';
 
-interface DownloadInvoiceButtonProps {
+interface DownloadBillButtonProps {
   orderId: string;
 }
 
-export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ orderId }) => {
+export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId }) => {
   const [isDownloading, setIsDownloading] = useState(false);
 
-  const downloadInvoicePdf = async () => {
+  const downloadBillPdf = async () => {
     if (isDownloading) return;
     setIsDownloading(true);
     try {
       // 1. Fetch data
-      const responseData = await generateInvoiceApi(orderId);
-      const apiData = responseData?.data || responseData;
+      const responseData = await getSingleOrderDetailsApi(orderId);
+      const apiData = responseData?.data?.order_details || responseData?.order_details || responseData;
       
-      if (!apiData || !apiData.invoiceNumber) {
+      if (!apiData || (!apiData.order_id && !apiData.orderId)) {
         if (responseData?.message) {
           throw new Error(responseData.message);
         }
-        throw new Error('Failed to generate invoice data from server.');
+        throw new Error('Failed to fetch order details from server.');
       }
 
       // Format dates
@@ -36,17 +36,18 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
       };
 
-      const invoiceDate = formatDate(apiData.invoiceDate);
-      const paidDate = formatDate(apiData.payment?.paidAt || apiData.createdAt);
+      const orderDate = formatDate(apiData.createdAt);
       
       const itemsHtml = (apiData.items || []).map((item: any) => {
         const price = Number(item.price) || 0;
         const total = price; 
+        const sku = item.itemId?.sku || item.sku || 'N/A';
+        const sacid = item.itemId?.sacid || item.sacid || 'N/A';
         return `
           <tr>
-            <td>${item.sku || 'N/A'}</td>
-            <td>${item.label || 'Service'}</td>
-            <td>${item.sacid || 'N/A'}</td>
+            <td>${sku}</td>
+            <td>${item.label || item.heading || 'Service'}</td>
+            <td>${sacid}</td>
             <td>1</td>
             <td>${price.toFixed(2)}</td>
             <td>${total.toFixed(2)}</td>
@@ -54,14 +55,14 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         `;
       }).join('');
 
-      const subtotal = Number(apiData.subtotal) || 0;
+      const subtotal = Number(apiData.price) || 0;
       const discount = Number(apiData.discountAmount) || 0;
       const taxable = subtotal - discount;
       const taxAmt = Number(apiData.taxAmount) || 0;
       
       let cgst = 0;
       let sgst = 0;
-      if (taxAmt < 1) { // It's a percentage (e.g. 0.18)
+      if (taxAmt < 1 && taxAmt > 0) { // It's a percentage (e.g. 0.18)
         cgst = (taxable * taxAmt) / 2;
         sgst = (taxable * taxAmt) / 2;
       } else { // It's an absolute value
@@ -90,13 +91,10 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
         phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>',
         mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
-        shieldCheck: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
         receipt: '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17V7"/>',
         fileDigit: '<path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><rect width="4" height="6" x="2" y="12" rx="1"/><path d="M10 12h2v6"/><path d="M10 18h4"/>',
         tag: '<path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/>',
         creditCard: '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/>',
-        badgeCheck: '<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/>',
-        checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
         shirt: '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>',
         calendarDays: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>',
         fileCheck: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="m9 15 2 2 4-4"/>'
@@ -119,8 +117,7 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             .logo-section { flex: 1; display: flex; flex-direction: column; }
             .logo-img { height: 40px; object-fit: contain; }
             .invoice-title { flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; }
-            .invoice-title h1 { font-size: 32px; margin: 0; color: #02362A; letter-spacing: 0.5px; font-weight: 800; }
-            .paid-badge { background: #00A67E; color: #fff; padding: 4px 16px; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; margin-top: 8px; font-size: 14px; gap: 4px; }
+            .invoice-title h1 { font-size: 26px; margin: 0; color: #02362A; letter-spacing: 0.5px; font-weight: 800; text-transform: uppercase; }
             
             .top-right { flex: 1; display: flex; flex-direction: column; align-items: flex-end; }
             .tr-inner { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; }
@@ -128,9 +125,6 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             .tr-icon { color: #00A67E; margin-top: 2px; }
             .tr-content { display: flex; flex-direction: column; font-size: 12px; color: #4a5568; }
             .tr-content strong { color: #1a202c; font-size: 13px; margin-top: 2px; }
-            
-            .gst-info { color: #00A67E; font-weight: 600; margin-bottom: 20px; font-size: 12px; display: flex; justify-content: flex-start; }
-            .gst-info span { color: #4a5568; font-weight: normal; }
             
             /* Main Box */
             .main-box { border: 1px solid #00A67E; border-radius: 8px; padding: 24px; display: flex; justify-content: space-between; margin-bottom: 20px; position: relative; overflow: hidden; }
@@ -142,7 +136,6 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             
             .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.05; text-align: center; z-index: 1; }
             .watermark-circle { border: 2px dashed #00A67E; border-radius: 50%; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; position: relative; }
-            .watermark-text { position: absolute; width: 100%; height: 100%; font-size: 9px; font-weight: bold; color: #00A67E; letter-spacing: 1px; }
             
             /* Bill To Box */
             .bill-to-box { display: flex; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
@@ -162,8 +155,8 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             td:nth-child(2), th:nth-child(2) { text-align: left; }
             
             /* Summary Section */
-            .summary-section { display: flex; gap: 20px; page-break-inside: avoid; }
-            .summary-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
+            .summary-section { display: flex; gap: 20px; page-break-inside: avoid; justify-content: flex-end; }
+            .summary-box { width: 50%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
             .box-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: #02362A; margin-bottom: 16px; }
             .box-icon { color: #00A67E; }
             .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: #4a5568; }
@@ -191,27 +184,20 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
               </div>
             </div>
             <div class="invoice-title">
-              <h1>INVOICE</h1>
-              <div class="paid-badge">${renderIcon('badgeCheck', 16)} Paid</div>
-              <div style="color: #00A67E; font-size: 12px; margin-top: 10px; font-weight: 600;">Invoice Generated Successfully</div>
+              <h1>BILL</h1>
+              <div style="color: #00A67E; font-size: 12px; margin-top: 10px; font-weight: 600;">Bill Generated Successfully</div>
             </div>
             <div class="top-right">
               <div class="tr-inner">
                 <div class="tr-item">
-                  <div class="tr-icon">${renderIcon('receipt')}</div>
-                  <div class="tr-content">Invoice Number<strong>${apiData.invoiceNumber || 'N/A'}</strong></div>
-                </div>
-                <div class="tr-item">
                   <div class="tr-icon">${renderIcon('fileDigit')}</div>
-                  <div class="tr-content">Bill Number<strong>${apiData.orderId || 'N/A'}</strong></div>
+                  <div class="tr-content">Order ID<strong>${apiData.order_id || apiData.orderId || 'N/A'}</strong></div>
                 </div>
               </div>
             </div>
           </div>
           
-          <div class="gst-info">
-            <div>GSTIN: <span>${apiData.gstNumber || 'N/A'}</span></div>
-          </div>
+          <div style="margin-bottom: 20px;"></div>
           
           <div class="main-box">
             <div class="watermark">
@@ -221,22 +207,14 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             </div>
             <div class="main-col">
               <div class="mb-item">
-                <div class="mb-icon">${renderIcon('calendar')}</div>
-                <div class="mb-content">Invoice Date<strong>${invoiceDate}</strong></div>
-              </div>
-              <div class="mb-item">
                 <div class="mb-icon">${renderIcon('tag')}</div>
-                <div class="mb-content">Order ID<strong>${apiData.orderId || 'N/A'}</strong></div>
+                <div class="mb-content">Order ID<strong>${apiData.order_id || apiData.orderId || 'N/A'}</strong></div>
               </div>
             </div>
             <div class="main-col">
               <div class="mb-item">
                 <div class="mb-icon">${renderIcon('calendarDays')}</div>
-                <div class="mb-content">Pickup Date<strong>${apiData.createdAt ? formatDate(apiData.createdAt) : 'N/A'}</strong></div>
-              </div>
-              <div class="mb-item">
-                <div class="mb-icon">${renderIcon('truck')}</div>
-                <div class="mb-content">Delivery Date<strong>${paidDate}</strong></div>
+                <div class="mb-content">Order Date<strong>${orderDate}</strong></div>
               </div>
             </div>
           </div>
@@ -246,7 +224,6 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
               <div class="bt-item bt-title"><div class="bt-icon">${renderIcon('user')}</div> BILL TO</div>
               <div class="bt-item"><div class="bt-icon">${renderIcon('user')}</div> <strong style="color: #02362A;">${apiData.customerName || 'N/A'}</strong></div>
               <div class="bt-item"><div class="bt-icon">${renderIcon('phone')}</div> +${apiData.contactNo || 'N/A'}</div>
-              <div class="bt-item"><div class="bt-icon">${renderIcon('mail')}</div> ${apiData.email || 'N/A'}</div>
             </div>
             <div class="bill-to-right">
               <div style="color: #00A67E; margin-top: 2px; margin-right: 12px; flex-shrink: 0;">${renderIcon('mapPin')}</div>
@@ -279,6 +256,7 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
             <div class="summary-box">
               <div class="box-title"><div class="box-icon">${renderIcon('receipt')}</div> ORDER SUMMARY</div>
               <div class="summary-row"><span>Subtotal</span> <strong>₹${subtotal.toFixed(2)}</strong></div>
+              <div class="summary-row"><span>Delivery Charges</span> <strong>₹${(Number(apiData.deliveryCharges) || 0).toFixed(2)}</strong></div>
               <div class="summary-row"><span>Discount</span> <strong class="discount-val">-₹${discount.toFixed(2)}</strong></div>
               <div style="height: 12px;"></div>
               <div class="summary-row"><span>Taxable Amount</span> <strong>₹${taxable.toFixed(2)}</strong></div>
@@ -286,23 +264,12 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
               <div class="summary-row"><span>SGST (9%)</span> <strong>₹${sgst.toFixed(2)}</strong></div>
               <div class="grand-total">GRAND TOTAL <span>₹${grandTotal.toFixed(2)}</span></div>
             </div>
-            
-            <div class="summary-box">
-              <div class="box-title"><div class="box-icon">${renderIcon('creditCard')}</div> PAYMENT INFORMATION</div>
-              <div class="summary-row"><span>Payment Status</span> <strong style="color: #00A67E; display: flex; align-items: center; gap: 4px;">Paid ${renderIcon('checkCircle', 14)}</strong></div>
-              <div class="summary-row"><span>Mode of Payment</span> <strong>${apiData.payment?.mode?.toUpperCase() || 'N/A'}</strong></div>
-              <div class="summary-row"><span>Transaction ID</span> <strong>${apiData.payment?.transactionId || 'N/A'}</strong></div>
-              <div class="summary-row"><span>Reference Number</span> <strong>TXN${Math.floor(Math.random()*1000000000)}</strong></div>
-              <div class="summary-row"><span>Payment Date</span> <strong>${paidDate}</strong></div>
-              <div class="summary-row"><span>Payment Gateway</span> <strong>Razorpay</strong></div>
-            </div>
           </div>
           
           <div class="footer">
             <div class="footer-icon">${renderIcon('fileCheck', 24)}</div>
             <div class="footer-text">
-              <strong>This is a computer-generated invoice and does not require a physical signature.</strong><br>
-              GST compliant invoice. Subject to jurisdiction.
+              <strong>This is a computer-generated proforma invoice and does not require a physical signature.</strong><br>
             </div>
           </div>
         </body>
@@ -316,7 +283,7 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
       });
 
       // 4. Save and share the file with a clear filename
-      const customFileName = `Invoice_${apiData.invoiceNumber || orderId}.pdf`;
+      const customFileName = `Bill_${apiData.order_id || apiData.orderId || orderId}.pdf`;
       const newUri = FileSystem.documentDirectory + customFileName;
       
       // Move to a properly named file
@@ -325,17 +292,17 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         to: newUri
       });
 
-      Alert.alert('Success', 'Invoice downloaded successfully. Opening share dialog...');
+      Alert.alert('Success', 'Bill downloaded successfully. Opening share dialog...');
 
       await Sharing.shareAsync(newUri, {
         mimeType: 'application/pdf',
-        dialogTitle: 'Save or Share Invoice',
+        dialogTitle: 'Save or Share Bill',
         UTI: 'com.adobe.pdf'
       });
 
     } catch (error: any) {
-      console.log('Invoice error:', error);
-      let errMsg = 'Failed to download invoice. Please try again later.';
+      console.log('Bill error:', error);
+      let errMsg = 'Failed to download bill. Please try again later.';
       if (error.response?.data?.message) {
         errMsg = error.response.data.message;
       } else if (error.message) {
@@ -349,7 +316,7 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
 
   return (
     <TouchableOpacity 
-      onPress={downloadInvoicePdf} 
+      onPress={downloadBillPdf} 
       style={styles.button}
       disabled={isDownloading}
       activeOpacity={0.7}
@@ -360,7 +327,7 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         <Ionicons name="download-outline" size={16} color="#2FE6A6" style={styles.icon} />
       )}
       <Text style={styles.text}>
-        {isDownloading ? "Downloading Invoice..." : "Download Receipt"}
+        {isDownloading ? "Downloading Bill..." : "Download Bill"}
       </Text>
     </TouchableOpacity>
   );
