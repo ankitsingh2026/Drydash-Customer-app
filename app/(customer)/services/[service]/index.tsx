@@ -383,7 +383,7 @@ const handleAddToCart = () => {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
-      <Stack.Screen
+       <Stack.Screen
         options={{
           headerShown: true,
           headerBackVisible: false,
@@ -403,9 +403,9 @@ const handleAddToCart = () => {
               onPress={() => router.back()}
               style={{
                 padding: 8,
-                marginLeft: 8,
+                // marginLeft: 8,
                 borderRadius: 12,
-                backgroundColor: theme.card,
+                // backgroundColor: theme.card,
               }}
             >
               <ArrowLeft size={20} color={theme.text} />

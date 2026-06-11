@@ -248,10 +248,10 @@ const styles = StyleSheet.create({
     backBtn: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+      //  borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.03)",
+      //  backgroundColor: "rgba(255,255,255,0.03)",
     },
     headerTitle: {
         flex: 1,
@@ -334,10 +334,10 @@ const styles = StyleSheet.create({
     sectionIconWrap: {
         width: 40,
         height: 40,
-        borderRadius: 14,
+        
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 1,
+       
     },
     sectionTitle: {
         flex: 1,

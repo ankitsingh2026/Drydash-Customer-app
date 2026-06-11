@@ -95,7 +95,7 @@ export default function SupportIndex() {
           </Animated.View>
 
           {/* action buttons */}
-          <Animated.View style={{ opacity: fade, gap: 10, marginTop: 4 }}>
+         <Animated.View style={styles.actionRow}>
             {/* Chat with Us */}
             <TouchableOpacity
               activeOpacity={0.88}
@@ -190,7 +190,13 @@ const styles = StyleSheet.create({
     height: 50,
     gap: 10,
   },
-
+actionRow: {
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 12,
+  marginTop: 8,
+},
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -199,14 +205,17 @@ const styles = StyleSheet.create({
   },
 
   chatBtnOuter: {
-    borderRadius: 14,
-    overflow: "hidden",
-    shadowColor: C.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
+  flex: 1,
+  maxWidth: 170,
+  borderRadius: 16,
+  overflow: "hidden",
+
+  shadowColor: C.primary,
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 5,
+},
   chatBtn: {
     height: 52,
     flexDirection: "row",
@@ -220,17 +229,21 @@ const styles = StyleSheet.create({
     color: "#021410",
   },
 
-  callBtn: {
-    height: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: C.card,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
+callBtn: {
+  flex: 1,
+  maxWidth: 170,
+  height: 52,
+
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 8,
+
+  backgroundColor: C.card,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: C.border,
+},
   callBtnText: {
     fontSize: 15,
     fontWeight: "700",

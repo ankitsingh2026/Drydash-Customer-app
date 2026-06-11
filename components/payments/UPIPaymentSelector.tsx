@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import RazorpayCustomUI from 'react-native-customui';
+// import RazorpayCustomUI from 'react-native-customui';
 import RazorpayCheckout from 'react-native-razorpay';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { oldApiClient } from '@/lib/api/client';
@@ -81,76 +81,33 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     }
   }, [selectedApp]);
 
-  useEffect(() => {
-    const detectApps = () => {
-      try {
-        if (RazorpayCustomUI.getAppsWhichSupportUPI && typeof RazorpayCustomUI.getAppsWhichSupportUPI === 'function') {
-          RazorpayCustomUI.getAppsWhichSupportUPI((result: any) => {
-            let appsArray = result?.data || [];
-            if (appsArray.length === 0) {
-              const fallback = SUPPORTED_UPI_APPS.map(app => ({
-                id: app.package_name,
-                package_name: app.package_name,
-                name: app.name,
-                icon: null,
-                isCod: false,
-              }));
-              setInstalledApps(fallback);
-              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-              return;
-            }
-            const filtered = appsArray
-              .filter((app: any) =>
-                SUPPORTED_UPI_APPS.some(s => s.package_name === (app.packageName || app.package_name))
-              )
-              .map((app: any) => ({
-                id: app.packageName || app.package_name,
-                package_name: app.packageName || app.package_name,
-                name: app.appName || app.name,
-                icon: app.appLogo ? { uri: app.appLogo } : null,
-                isCod: false,
-              }));
-            if (filtered.length === 0) {
-              const fallback = SUPPORTED_UPI_APPS.map(app => ({
-                id: app.package_name,
-                package_name: app.package_name,
-                name: app.name,
-                icon: null,
-                isCod: false,
-              }));
-              setInstalledApps(fallback);
-              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-            } else {
-              setInstalledApps(filtered);
-              setSelectedApp(defaultCod ? COD_OPTION : filtered[0]);
-            }
-          });
-        } else {
-          const fallback = SUPPORTED_UPI_APPS.map(app => ({
-            id: app.package_name,
-            package_name: app.package_name,
-            name: app.name,
-            icon: null,
-            isCod: false,
-          }));
-          setInstalledApps(fallback);
-          setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-        }
-      } catch (error) {
-        console.error('UPI detection error:', error);
-        const fallback = SUPPORTED_UPI_APPS.map(app => ({
-          id: app.package_name,
-          package_name: app.package_name,
-          name: app.name,
-          icon: null,
-          isCod: false,
-        }));
-        setInstalledApps(fallback);
-        setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-      }
-    };
-    detectApps();
-  }, [defaultCod]);
+useEffect(() => {
+  const detectApps = () => {
+    try {
+      const fallback = SUPPORTED_UPI_APPS.map(app => ({
+        id: app.package_name,
+        package_name: app.package_name,
+        name: app.name,
+        icon: app.localIcon,
+        isCod: false,
+      }));
+      setInstalledApps(fallback);
+      setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+    } catch (error) {
+      console.error('UPI detection error:', error);
+      const fallback = SUPPORTED_UPI_APPS.map(app => ({
+        id: app.package_name,
+        package_name: app.package_name,
+        name: app.name,
+        icon: null,
+        isCod: false,
+      }));
+      setInstalledApps(fallback);
+      setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+    }
+  };
+  detectApps();
+}, [defaultCod]);
 
   const toggleExpand = () => {
     if (getAllOptions().length <= 1) return;
