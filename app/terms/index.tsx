@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.03)",
+      
     },
     headerCenter: {
         flex: 1,

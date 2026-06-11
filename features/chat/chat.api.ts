@@ -9,7 +9,7 @@ export const getOrCreateRoom = async (
   orderId?: string,
   chatType: 'global' | 'order' = 'global'
 ): Promise<ChatRoom> => {
-  const response = await oldApiClient.post('v1/chat/create-room', { customerId, orderId, chatType });
+  const response = await oldApiClient.post('/v1/chat/create-room', { customerId, orderId, chatType });
   return response.data.room;
 };
 
@@ -18,7 +18,7 @@ export const getRoomByCustomer = async (
   orderId?: string,
   chatType: 'global' | 'order' = 'global'
 ): Promise<ChatRoom | null> => {
-  const response = await oldApiClient.get('v1/chat/room/exists', {
+  const response = await oldApiClient.get('/v1/chat/room/exists', {
     params: { customerId, orderId, chatType },
   });
   return response.data.room || null;

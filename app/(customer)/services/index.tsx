@@ -13,6 +13,12 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { SvgUri } from "react-native-svg";
 import { useAddress } from "@/context/AddressContext";
 import { useTheme } from "@/context/ThemeContext";
+import ShoesIcon from "../../../assets/homeicons/Shoes.svg";
+import DrycleanIcon from "../../../assets/homeicons/DryClean-logo.svg";
+import LaundryIcon from "../../../assets/homeicons/Laundry-logo.svg";
+import OnsiteIcon from "../../../assets/homeicons/on-site.svg";
+import CarwashIcon from "../../../assets/homeicons/car-wash.svg";
+import ExpressIcon from "../../../assets/homeicons/8-hours-delivery.svg";
 
 const { width } = Dimensions.get("window");
 
@@ -22,45 +28,44 @@ const SERVICES = [
     slug: "shoe",
     label: "SHOE SPA",
     subtitle: "Deep Clean and restore",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Shoes.svg",
+    icon: ShoesIcon,
   },
   {
     key: "Dry Clean",
     slug: "dryclean",
     label: "DRY CLEAN",
     subtitle: "Gentle and premium care",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/DryClean-logo.svg",
+    icon: DrycleanIcon,
   },
   {
     key: "Laundry",
     slug: "laundry",
     label: "LAUNDRY",
     subtitle: "Fresh & hygienic",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Laundry-logo.svg",
+    icon: LaundryIcon,
   },
   {
     key: "Onsite",
     slug: "onsite",
     label: "ON-SITE",
     subtitle: "Expert service, right where you are",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/on-site.svg",
+    icon: OnsiteIcon,
   },
   {
     key: "CarWash",
     slug: "carwash",
     label: "CAR-WASH",
     subtitle: "Drive away fresh and clean",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/car-wash.svg",
+    icon: CarwashIcon,
   },
   {
     key: "Express",
     slug: "express",
     label: "8-HOURS DELIVERY",
     subtitle: "Fast service, delivered same day",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/8-hours+delivery.svg",
+    icon: ExpressIcon,
   },
 ];
-
 export default function ServicesPage() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -100,34 +105,40 @@ export default function ServicesPage() {
           <Text style={styles.sectionTitle}>OUR SERVICES</Text>
 
           <View style={styles.grid}>
-            {SERVICES.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                activeOpacity={0.85}
-                onPress={() => {
-                  if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-                    router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
-                  } else {
-                    router.push(`/services/${s.slug}`);
-                  }
-                }}
-                style={styles.card}
-              >
-                <View style={styles.iconContainer}>
-                  <SvgUri uri={s.icon} width="90%" height="90%" />
-                </View>
+            {SERVICES.map((s) => {
+              const Icon = s.icon;
 
-                {/* Divider Line */}
-                <View style={styles.divider} />
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                      router.push({
+                        pathname: "/services/[service]",
+                        params: { service: s.slug as any },
+                      });
+                    } else {
+                      router.push(`/services/${s.slug}`);
+                    }
+                  }}
+                  style={styles.card}
+                >
+                  <View style={styles.iconContainer}>
+                    <Icon width="90%" height="90%" />
+                  </View>
 
-                <View style={styles.textContainer}>
-                  <Text style={styles.cardTitle}>{s.label}</Text>
-                  <Text style={styles.cardSub} numberOfLines={1}>
-                    {s.subtitle}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.divider} />
+
+                  <View style={styles.textContainer}>
+                    <Text style={styles.cardTitle}>{s.label}</Text>
+                    <Text style={styles.cardSub} numberOfLines={1}>
+                      {s.subtitle}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       </View>

@@ -4,6 +4,7 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { useEffect, useRef } from "react";
 import {
   Animated,
+  AppState,
   Dimensions,
   Image,
   ScrollView,
@@ -97,29 +98,23 @@ export default function LearnExploreSection() {
   }, []);
 
 
-const player = useVideoPlayer(FEATURE_VIDEO.video.uri);
+  const player = useVideoPlayer(FEATURE_VIDEO.video.uri, (player) => {
+    player.loop = true;
+    player.muted = true;
+    player.play();
+  });
 
-useEffect(() => {
-  if (!player) return;
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        player.play();
+      }
+    });
 
-  player.loop = true;
-  player.muted = true;
-
-  const playVideo = async () => {
-    try {
-      await player.play();
-    } catch (e) {
-      console.log("Video play error:", e);
-    }
-  };
-
-  const timeout = setTimeout(playVideo, 300);
-
-  return () => {
-    clearTimeout(timeout);
-    // ❌ DO NOTHING HERE (no pause)
-  };
-}, [player]);
+    return () => {
+      subscription.remove();
+    };
+  }, [player]);
 
 
   return (

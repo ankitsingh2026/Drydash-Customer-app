@@ -444,7 +444,7 @@ const sendUserMessage = async (text: string) => {
     const content = text ?? input;
     if (!content.trim()) return;
     setInput("");
-    Keyboard.dismiss();
+    // Keyboard.dismiss(); // Keeping keyboard open on send
     sendUserMessage(content);
   };
 
@@ -464,7 +464,7 @@ const sendUserMessage = async (text: string) => {
 }, [roomId]);
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView style={styles.root}>
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
@@ -485,57 +485,58 @@ const sendUserMessage = async (text: string) => {
 
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 70}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === "ios" ? 88 : 0}
         >
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <View style={{ flex: 1 }}>
-              <FlatList
-                ref={(r) => (flatRef.current = r)}
-                data={messages}
-                keyExtractor={(item) => item.id}
-                renderItem={renderItem}
-                contentContainerStyle={styles.chatContent}
-                showsVerticalScrollIndicator={false}
-                onContentSizeChange={scrollBottom}
-              />
+          <View style={{ flex: 1 }}>
+            <FlatList
+              ref={(r) => (flatRef.current = r)}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              renderItem={renderItem}
+              contentContainerStyle={styles.chatContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              onContentSizeChange={scrollBottom}
+              onLayout={scrollBottom}
+            />
 
-              {botTyping && <TypingIndicator />}
-              {otherTyping && (
-                <View style={styles.otherTypingContainer}>
-                  <Text style={styles.otherTypingText}>Admin is typing...</Text>
-                </View>
-              )}
-
-              {/* Input row */}
-              <View style={styles.inputRow}>
-                <TouchableOpacity style={styles.attachBtn}>
-                  <Ionicons name="add-circle-outline" size={24} color={C.subText} />
-                </TouchableOpacity>
-                <TextInput
-                  value={input}
-                  onChangeText={handleInputChange}
-                  placeholder="Type your message..."
-                  placeholderTextColor={C.subText}
-                  style={styles.input}
-                  returnKeyType="send"
-                  onSubmitEditing={() => send()}
-                  onFocus={scrollBottom}
-                />
-                <TouchableOpacity onPress={() => send()} style={styles.sendBtnOuter}>
-                  <LinearGradient
-                    colors={[C.primary, C.primaryDim]}
-                    style={styles.sendBtn}
-                  >
-                    <Ionicons name="send" size={15} color="#021410" />
-                  </LinearGradient>
-                </TouchableOpacity>
+            {botTyping && <TypingIndicator />}
+            {otherTyping && (
+              <View style={styles.otherTypingContainer}>
+                <Text style={styles.otherTypingText}>Admin is typing...</Text>
               </View>
+            )}
+
+            {/* Input row */}
+            <View style={styles.inputRow}>
+              <TouchableOpacity style={styles.attachBtn}>
+                <Ionicons name="add-circle-outline" size={24} color={C.subText} />
+              </TouchableOpacity>
+              <TextInput
+                value={input}
+                onChangeText={handleInputChange}
+                placeholder="Type your message..."
+                placeholderTextColor={C.subText}
+                style={styles.input}
+                returnKeyType="send"
+                onSubmitEditing={() => send()}
+                onFocus={scrollBottom}
+              />
+              <TouchableOpacity onPress={() => send()} style={styles.sendBtnOuter}>
+                <LinearGradient
+                  colors={[C.primary, C.primaryDim]}
+                  style={styles.sendBtn}
+                >
+                  <Ionicons name="send" size={15} color="#021410" />
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          </TouchableWithoutFeedback>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
