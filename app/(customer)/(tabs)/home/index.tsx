@@ -42,7 +42,13 @@ import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
 import SlotPicker from "@/components/SlotPicker";
 import SwipeToAction from "@/components/SwipeToAction";
-
+import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
+import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
+import LaundryIcon from "../../../../assets/homeicons/Laundry-logo.svg";
+import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
+import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
+import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
+import Banner from "../../../../assets/homeicons/Banner1.svg";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -89,7 +95,7 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "SHOE SPA",
     subtitle: "Deep Clean and restore",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Shoes.svg",
+    icon: ShoesIcon,
     featured: true,
   },
   {
@@ -97,35 +103,35 @@ const QUICK_SERVICES = [
     slug: "dryclean",
     label: "DRY CLEAN",
     subtitle: "Gentle and premium care",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/DryClean-logo.svg",
+    icon: DrycleanIcon,
   },
   {
     key: "Laundry",
     slug: "laundry",
     label: "LAUNDRY",
     subtitle: "Fresh & hygienic",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Laundry-logo.svg",
+    icon: LaundryIcon,
   },
   {
     key: "Onsite",
     slug: "onsite",
     label: "On-Site",
     subtitle: "At-home service",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/onsite.svg",
+    icon: OnsiteIcon,
   },
   {
     key: "carwash",
     slug: "carwash",
     label: "Car-Wash",
     subtitle: "At-home service",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/carwash.svg",
+    icon: CarwashIcon,
   },
   {
     key: "express",
     slug: "express",
     label: "8-Hour Delivery",
     subtitle: "Express Delivery",
-    icon: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/icons/express.svg",
+    icon: ExpressIcon,
   },
 ];
 
@@ -858,18 +864,19 @@ export default function Home() {
 
 
           <TouchableOpacity
-            activeOpacity={0.92}
-            style={{
-              marginHorizontal: 14,
-              height: 130,
-            }}
-          >
-            <SvgUri
-              uri="https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/Banner.svg"
-              width="100%"
-              height="100%"
-            />
-          </TouchableOpacity>
+                    activeOpacity={0.92}
+                    style={{
+                      marginHorizontal: 14,
+                      height: 130,
+                    }}
+                  >
+                    <Banner
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                      }}
+                    />
+                  </TouchableOpacity>
 
           {/* ── AVAILABLE SLOTS ── */}
           {activeType === 'none' && !bookingLoading && (
@@ -1128,6 +1135,7 @@ export default function Home() {
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {QUICK_SERVICES.slice(0, 3).map((s) => {
                   const isFeatured = s.key === "Shoe Spa";
+                   const Icon = s.icon;
                   return (
                     // Replace only the inner card JSX (the TouchableOpacity and its children)
                     <TouchableOpacity
@@ -1152,15 +1160,13 @@ export default function Home() {
                       {/* Icon area — fills top ~65% of card */}
                       <Animated.View
                         style={{
-
-                          width: '100%',
-                          aspectRatio: 1,           // square icon zone
-                          alignItems: 'center',
-                          justifyContent: 'center',
-
+                          width: "100%",
+                          aspectRatio: 1,
+                          alignItems: "center",
+                          justifyContent: "center",
                         }}
                       >
-                        <SvgUri uri={s.icon} width="100%" height="99%" />
+                        <Icon width="80%" height="80%" />
                       </Animated.View>
 
                       {/* Text area — sits below icon */}
