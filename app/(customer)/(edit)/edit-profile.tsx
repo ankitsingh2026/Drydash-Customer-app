@@ -3,7 +3,7 @@ import { getMeApi, unActivatedUser } from "@/features/auth/auth.api";
 import { useAuth } from "@/hooks/useAuth";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Trash2 } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
 
@@ -280,6 +280,7 @@ export default function EditProfile() {
               onPress={() => setDeleteModal(true)}
               style={styles.deleteBtn}
             >
+              <Trash2 color="#FF3B30" size={18} />
               <Text style={styles.deleteText}>
                 Delete Account
               </Text>
@@ -477,15 +478,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   deleteBtn: {
-    marginTop: 18,
+    marginTop: 32,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    justifyContent: "center",
+    paddingVertical: 16,
+    backgroundColor: "rgba(255, 59, 48, 0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 59, 48, 0.3)",
+    borderRadius: 14,
+    gap: 8,
   },
 
   deleteText: {
     color: "#FF3B30",
     fontSize: 15,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
 
   modalOverlay: {

@@ -313,7 +313,7 @@ export default function EditAddress() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.safe} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardAvoidingView style={styles.safe} behavior="padding">
       {/* Map Section */}
       <View style={styles.mapContainer}>
         <MapView
@@ -407,7 +407,7 @@ export default function EditAddress() {
                 {areaSubName || "Confirm your exact drop location"}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color={C.subText} />
+            {/* <Ionicons name="chevron-forward" size={20} color={C.subText} /> */}
           </TouchableOpacity>
 
           {!locationEnabled && (
@@ -482,14 +482,14 @@ export default function EditAddress() {
             </View>
           </View>
 
-          <View style={styles.section}>
+          {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>DOOR/BUILDING IMAGE (OPTIONAL)</Text>
             <TouchableOpacity style={styles.imageBox}>
               <Ionicons name="camera-outline" size={24} color={C.pink} />
               <Text style={styles.imageBoxText}>Add an image</Text>
               <Text style={styles.imageBoxSub}>This helps our delivery partners find your exact location faster</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           <View style={{ height: 90 + insets.bottom }} />
         </ScrollView>
@@ -515,10 +515,10 @@ export default function EditAddress() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    // backgroundColor: C.bg,
+    backgroundColor: C.bg,
   },
   mapContainer: {
-    flex: 0.45,
+    flex: 0.65,
     position: "relative",
   },
   map: {
@@ -660,7 +660,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: C.card,
-    padding: 16,
+    padding: 10,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: C.borderStrong,
