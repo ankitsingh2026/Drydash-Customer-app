@@ -41,10 +41,12 @@ interface OrderItem {
   type?: string;
   category?: string;
   imageUrl?: string;
+  [key: string]: any;
 }
 
 interface OrderDetails {
   _id: string;
+  appCustomerId?: string;
   order_id?: string;
   orderId?: string;
   createdAt: string;
@@ -136,8 +138,9 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
 
   const normalizedItems: OrderItem[] = Array.isArray(raw.items)
     ? raw.items.map((item: any, index: number) => {
-      const typeLabel = toSafeText(item?.type);
+      const typeLabel = toSafeText(item?.itemId?.type ?? item?.type);
       return {
+        ...item,
         heading: toSafeText(
           item?.heading ?? item?.label ?? item?.name,
           typeLabel || `Item ${index + 1}`,
@@ -146,7 +149,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
         price: toSafeNumber(item?.price, 0),
         unit: toSafeText(item?.unit),
         type: typeLabel,
-        category: toSafeText(item?.category),
+        category: toSafeText(item?.itemId?.category ?? item?.category),
         imageUrl: item?.itemId?.images?.[0]?.url || null,
       };
     })
@@ -154,6 +157,7 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
 
   return {
     _id: toSafeText(raw._id),
+    appCustomerId: raw.appCustomerId || "",
     order_id: toSafeText(raw.order_id),
     orderId: toSafeText(raw.orderId),
     createdAt: toSafeText(raw.createdAt, new Date().toISOString()),
@@ -390,7 +394,7 @@ console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
         category,
       });
 
-      const res = await fetchAllValidCoupons(subtotal, orderId);
+      const res = await fetchAllValidCoupons(subtotal, orderId, order?.appCustomerId);
       const couponsFromApi: Coupon[] = Array.isArray(res?.data) ? res.data : [];
 
       const now = new Date();
@@ -1064,9 +1068,14 @@ const handlePaymentSuccess = async (data: any) => {
                </View>
             )}
             
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
-              <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
+            <View style={{ marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <View>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+                  <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
+                </View>
+                <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
+              </View>
             </View>
 
             {!isPaid && !isCodSelected && (
@@ -1329,9 +1338,14 @@ const handlePaymentSuccess = async (data: any) => {
                </View>
             )}
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
-              <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>₹{finalTotal?.toFixed(0)}</Text>
+            <View style={{ marginBottom: 32 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                <View>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+                  <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
+                </View>
+                <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>₹{finalTotal?.toFixed(0)}</Text>
+              </View>
             </View>
 
             {renderCombinedOrderDetails()}

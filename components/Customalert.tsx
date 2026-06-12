@@ -176,8 +176,9 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     _showAlert = (config: AlertConfig) => {
       const id = ++_idCounter;
       setAlerts(prev => [...prev, { ...config, id }]);
+      const isActionable = !!(config.primaryLabel || config.onPrimary);
       const autoDuration = config.duration ?? (
-        config.type === 'error' || config.type === 'warning' ? 3000 : 2000
+        isActionable ? 0 : (config.type === 'error' || config.type === 'warning' ? 3000 : 2000)
       );
       if (autoDuration > 0) {
         setTimeout(() => removeAlert(id), autoDuration);
@@ -216,8 +217,9 @@ export function AlertOverlay() {
       const id = ++_idCounter;
       setAlerts(p => [...p, { ...config, id }]);
 
+      const isActionable = !!(config.primaryLabel || config.onPrimary);
       const autoDuration = config.duration ?? (
-        config.type === 'error' || config.type === 'warning' ? 3000 : 0
+        isActionable ? 0 : (config.type === 'error' || config.type === 'warning' ? 3000 : 2000)
       );
       if (autoDuration > 0) {
         setTimeout(() => setAlerts(p => p.filter(a => a.id !== id)), autoDuration);
@@ -241,11 +243,11 @@ export function AlertOverlay() {
 const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: 0,
+    top: 60,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'center',  
+    // justifyContent: 'center',  
     alignItems: 'center',      
     zIndex: 9999,
     pointerEvents: 'box-none',

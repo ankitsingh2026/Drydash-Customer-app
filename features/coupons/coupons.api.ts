@@ -3,15 +3,16 @@ import { oldApiClient } from "@/lib/api/client";
 export const fetchAllValidCoupons = async (
   cartAmount: number,
   id?: string,
-  serviceTypes?: string[]
+  serviceTypes?: string[],
+  appCustomerId?: string
 ) => {
   try {
     let res = null
 
     if(id){
      res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}&id=${id}`, {
-      serviceTypes: serviceTypes,
-      userId: id
+      // serviceTypes: serviceTypes,
+      userId: appCustomerId || null
     });
     }else{
     res = await oldApiClient.post(`/v1/customercoupons?cartAmount=${cartAmount}`, {

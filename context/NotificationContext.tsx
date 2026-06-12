@@ -242,8 +242,7 @@ export const NotificationProvider = ({
 
     try {
       await axios.patch(
-        `${BASE_URL
-        }/api/v1/customer/notifications/read-all/${customerId}`,
+        `${BASE_URL}/api/v1/customer/notifications/read-all/${customerId}`,
       );
     } catch (err) {
       console.log("markAllRead error", err);

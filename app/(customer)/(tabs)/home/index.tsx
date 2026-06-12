@@ -868,6 +868,7 @@ export default function Home() {
                     style={{
                       marginHorizontal: 14,
                       height: 130,
+                      marginTop: 10,
                     }}
                   >
                     <Banner

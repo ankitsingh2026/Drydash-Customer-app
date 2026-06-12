@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showAlert } from '../Customalert';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -292,7 +293,11 @@ export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId 
         to: newUri
       });
 
-      Alert.alert('Success', 'Bill downloaded successfully. Opening share dialog...');
+      showAlert({
+        type: 'success',
+        title: 'Success',
+        message: 'Bill downloaded successfully.',
+      });
 
       await Sharing.shareAsync(newUri, {
         mimeType: 'application/pdf',
@@ -308,7 +313,11 @@ export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId 
       } else if (error.message) {
         errMsg = error.message;
       }
-      Alert.alert('Download Error', errMsg); 
+      showAlert({
+        type: 'error',
+        title: 'Download Error',
+        message: errMsg,
+      }); 
     } finally {
       setIsDownloading(false);
     }
