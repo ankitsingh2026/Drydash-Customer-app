@@ -76,7 +76,8 @@ export default function SelectAddressLocationScreen() {
 
   const fetchSuggestions = async (text: string) => {
     try {
-      const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      // const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      const API_KEY = "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY";
       const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&components=country:in&location=${region.latitude},${region.longitude}&origin=${region.latitude},${region.longitude}&radius=50000&key=${API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
@@ -97,7 +98,8 @@ export default function SelectAddressLocationScreen() {
       preventFetchRef.current = true;
       setQuery(description);
       setShowSuggestions(false);
-      const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      // const API_KEY = "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM";
+      const API_KEY = "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY";
       const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&key=${API_KEY}`;
       const response = await fetch(url);
       const data = await response.json();
