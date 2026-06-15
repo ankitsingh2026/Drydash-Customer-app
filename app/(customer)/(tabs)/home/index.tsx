@@ -710,558 +710,557 @@ export default function Home() {
         ) : (
           <>
             <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
-        // showsVerticalScrollIndicator={false}
-        // keyboardShouldPersistTaps="handled"
-        // nestedScrollEnabled={true}
-        // bounces={false}            
-        // overScrollMode="never"        
-       >
-        <View>
-          {/* ── SEARCH BAR ── */}
-          <View style={{ position: "relative", zIndex: 1000 }}>
-            <Animated.View
-              style={[styles.searchBarWrap, { opacity: fadeAnim }]}
+            // showsVerticalScrollIndicator={false}
+            // keyboardShouldPersistTaps="handled"
+            // nestedScrollEnabled={true}
+            // bounces={false}            
+            // overScrollMode="never"        
             >
-              <View
-                style={[
-                  styles.searchBar,
-                  { backgroundColor: "#052420", borderColor: "#1A2F2C" },
-                ]}
-              >
-                <Ionicons
-                  name="search-outline"
-                  size={18}
-                  color="#6B7280"
-                  style={{ marginRight: 8 }}
-                />
-                <TextInput
-                  value={searchQuery}
-                  onChangeText={handleSearchChange}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  placeholder=""
-                  style={[styles.searchInput, { color: theme.text }]}
-                />
-                {searchQuery === "" && !isFocused && (
-                  <View style={styles.placeholderTicker} pointerEvents="none">
-                    <Animated.View
-                      style={{
-                        transform: [{ translateY: placeholderAnim }],
-                      }}
-                    >
-                      <Text style={styles.placeholderText}>
-                        {`Search "${words[placeholderIndex]}"`}
-                      </Text>
-                      <Text style={styles.placeholderText}>
-                        {`Search "${words[(placeholderIndex + 1) % words.length]}"`}
-                      </Text>
-                    </Animated.View>
-                  </View>
-                )}
-                {searchQuery.length > 0 ? (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSearchQuery("");
-                      setShowSearchResults(false);
-                      setSearchResults([]);
-                    }}
+              <View>
+                {/* ── SEARCH BAR ── */}
+                <View style={{ position: "relative", zIndex: 1000 }}>
+                  <Animated.View
+                    style={[styles.searchBarWrap, { opacity: fadeAnim }]}
                   >
-                    <Ionicons name="close-circle" size={18} color="#6B7280" />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity>
-                    {/* <Ionicons name="mic-outline" size={18} color="#6B7280" /> */}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </Animated.View>
-
-            {showSearchResults && (
-              <View
-                style={[
-                  styles.searchResultsContainer,
-                  { backgroundColor: "#052420", borderColor: "#1A2F2C" },
-                ]}
-              >
-                {searchLoading ? (
-                  <View style={styles.loadingContainer}>
-                    <Ionicons name="reload-outline" size={30} color="#56BFAB" />
-                    <Text
-                      style={[styles.loadingText, { color: theme.subText }]}
+                    <View
+                      style={[
+                        styles.searchBar,
+                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
+                      ]}
                     >
-                      Searching...
-                    </Text>
-                  </View>
-                ) : searchResults.length > 0 ? (
-                  <ScrollView
-                    style={styles.searchResultsList}
-                    showsVerticalScrollIndicator={false}
-                    nestedScrollEnabled={true}  
-                    // keyboardShouldPersistTaps="handled"
-                    // bounces={false}
-                  
-                                      >
-                    {searchResults.map((item) => (
-                      <TouchableOpacity
-                        key={item._id}
-                        style={styles.searchResultItem}
-                        onPress={() => handleProductPress(item)}
-                      >
-                        <View style={styles.searchResultImageContainer}>
-                          <Image
-                            source={{ uri: item.images?.[0]?.url || "" }}
-                            style={styles.searchResultImage}
-                            resizeMode="cover"
-                          />
-                        </View>
-                        <View style={styles.searchResultContent}>
-                          <Text
-                            style={[
-                              styles.searchResultTitle,
-                              { color: theme.text },
-                            ]}
-                          >
-                            {item.label}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.searchResultCategory,
-                              { color: theme.subText },
-                            ]}
-                          >
-                            {item.category?.label || item.type}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.searchResultPrice,
-                              { color: theme.primary },
-                            ]}
-                          >
-                            {item.displayPrice || `₹${item.price}`}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
-                ) : (
-                  <View style={styles.noResultsContainer}>
-                    <Ionicons name="search-outline" size={40} color="#4B5563" />
-                    <Text
-                      style={[styles.noResultsText, { color: theme.subText }]}
-                    >
-                      No products found
-                    </Text>
-                    <Text
-                      style={[styles.noResultsSubtext, { color: "#4B5563" }]}
-                    >
-                      Try searching for "Shoe Spa" or "Dry Clean"
-                    </Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-
-          <TouchableOpacity
-                    activeOpacity={0.92}
-                    style={{
-                      marginHorizontal: 14,
-                      height: 130,
-                      marginTop: 10,
-                    }}
-                  >
-                    <Banner
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                      }}
-                    />
-                  </TouchableOpacity>
-
-          {/* ── AVAILABLE SLOTS ── */}
-          {activeType === 'none' && !bookingLoading && (
-            <View style={{ marginHorizontal: 12 }}>
-              <Text
-                style={{
-                  color: "#4E7060",
-                  fontSize: 11,
-                  fontWeight: "800",
-                  letterSpacing: 0.7,
-                  // marginBottom: 0,
-                }}
-              >
-                AVAILABLE SLOTS
-              </Text>
-
-              {contextSelectedAddress?.latitude && contextSelectedAddress?.longitude ? (
-                <SlotPicker
-                  lat={contextSelectedAddress.latitude}
-                  lng={contextSelectedAddress.longitude}
-                  zoneId={zoneData?.zoneId}
-                  selectedSlot={selectedSlotIndex}
-                  onSelect={(index: number, slot: any) => {
-                    setSelectedSlotIndex(index);
-                    setSelectedSlotData(slot);
-                    // Navigate to book-pickup with pre-selected slot
-                    router.push({
-                      pathname: "/(customer)/book-pickup",
-                      params: {
-                        preSelectedSlotIndex: String(index),
-                        preSelectedSlotTime: slot?.time ?? "",
-                      },
-                    });
-                  }}
-                  onSlotsUpdate={(slots: any[]) => {
-                    const available = slots.some(
-                      (s: any) =>
-                        s.enabled && s.status !== "expired" && s.availableCapacity > 0
-                    );
-                    setHasAvailableSlots(available);
-                    console.log("ALL SLOTS", slots.length);
-
-                  }}
-                  renderSlots={(slots: any[]) => {
-                    const visible = slots.filter((s) => s.enabled && s.status !== "expired");
-                    const shown = visible.slice(0, 2);
-                    const remaining = visible.length - 2;
-                    console.log(
-                      "VISIBLE",
-                      visible.map((s) => ({
-                        time: s.time,
-                        enabled: s.enabled,
-                        status: s.status,
-                      }))
-                    );
-                    return (
-                      <View style={{ flexDirection: "row", alignItems: "stretch", gap: 10 }}>
-                        {shown.map((slot, i) => {
-                          const isFull = slot.availableCapacity === 0;
-                          const isFilling =
-                            slot.availableCapacity > 0 && slot.availableCapacity <= 3;
-                          console.log("REMAINING", remaining);
-                          return (
-                            <TouchableOpacity
-                              key={i}
-                              activeOpacity={0.88}
-                              disabled={isFull}
-                              onPress={() => {
-                                router.push({
-                                  pathname: "/(customer)/book-pickup",
-                                  params: {
-                                    preSelectedSlotIndex: String(slots.indexOf(slot)),
-                                    preSelectedSlotTime: slot?.time ?? "",
-                                  },
-                                });
-                              }}
-                              style={{
-                                flex: 1,
-                                minHeight: 86,
-                                backgroundColor: "#071C14",
-                                borderRadius: 18,
-                                borderWidth: 1.2,
-                                borderColor: isFull ? "#1A2F2C" : "#214434",
-                                paddingHorizontal: 14,
-                                paddingVertical: 12,
-                                opacity: isFull ? 0.45 : 1,
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  color: isFull ? "#4E7060" : "#F7F8F5",
-                                  fontSize: 15,
-                                  fontWeight: "800",
-                                  letterSpacing: 0.2,
-                                }}
-                              >
-                                {slot.time}
-                              </Text>
-
-                              {isFull ? (
-                                <Text
-                                  style={{
-                                    color: "#FF6B6B",
-                                    fontSize: 11,
-                                    fontWeight: "700",
-                                    marginTop: 8,
-                                  }}
-                                >
-                                  Slot Full
-                                </Text>
-                              ) : (
-                                <View
-                                  style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    marginTop: 8,
-                                    gap: 5,
-                                  }}
-                                >
-                                  <Text style={{ fontSize: 12, color: "#C8F135" }}>⚡</Text>
-                                  <Text
-                                    style={{
-                                      color: "#C8F135",
-                                      fontSize: 11,
-                                      fontWeight: "700",
-                                    }}
-                                  >
-                                    {isFilling ? "Filling fast" : "Available"}
-                                  </Text>
-                                </View>
-                              )}
-                            </TouchableOpacity>
-                          );
-                        })}
-
-                        {remaining > 0 && (
-                          <TouchableOpacity
-                            activeOpacity={0.9}
-                            onPress={() => router.push("/(customer)/book-pickup")}
+                      <Ionicons
+                        name="search-outline"
+                        size={18}
+                        color="#6B7280"
+                        style={{ marginRight: 8 }}
+                      />
+                      <TextInput
+                        value={searchQuery}
+                        onChangeText={handleSearchChange}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        placeholder=""
+                        style={[styles.searchInput, { color: theme.text }]}
+                      />
+                      {searchQuery === "" && !isFocused && (
+                        <View style={styles.placeholderTicker} pointerEvents="none">
+                          <Animated.View
                             style={{
-                              width: 64,
-                              minHeight: 86,
-                              backgroundColor: "#071C14",
-                              borderRadius: 18,
-                              borderWidth: 1.2,
-                              borderColor: "#214434",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              paddingHorizontal: 8,
+                              transform: [{ translateY: placeholderAnim }],
                             }}
                           >
-                            <Text
-                              style={{
-                                color: "#F7F8F5",
-                                fontSize: 20,
-                                fontWeight: "900",
-                                lineHeight: 24,
-                              }}
-                            >
-                              +{remaining}
+                            <Text style={styles.placeholderText}>
+                              {`Search "${words[placeholderIndex]}"`}
                             </Text>
-                            <Text
-                              style={{
-                                color: "#B2BDB6",
-                                fontSize: 11,
-                                fontWeight: "700",
-                                marginTop: 2,
-                              }}
-                            >
-                              More
+                            <Text style={styles.placeholderText}>
+                              {`Search "${words[(placeholderIndex + 1) % words.length]}"`}
                             </Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    );
-                  }}
-                />
-              ) : (
+                          </Animated.View>
+                        </View>
+                      )}
+                      {searchQuery.length > 0 ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSearchQuery("");
+                            setShowSearchResults(false);
+                            setSearchResults([]);
+                          }}
+                        >
+                          <Ionicons name="close-circle" size={18} color="#6B7280" />
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity>
+                          {/* <Ionicons name="mic-outline" size={18} color="#6B7280" /> */}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </Animated.View>
+
+                  {showSearchResults && (
+                    <View
+                      style={[
+                        styles.searchResultsContainer,
+                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
+                      ]}
+                    >
+                      {searchLoading ? (
+                        <View style={styles.loadingContainer}>
+                          <Ionicons name="reload-outline" size={30} color="#56BFAB" />
+                          <Text
+                            style={[styles.loadingText, { color: theme.subText }]}
+                          >
+                            Searching...
+                          </Text>
+                        </View>
+                      ) : searchResults.length > 0 ? (
+                        <ScrollView
+                          style={styles.searchResultsList}
+                          showsVerticalScrollIndicator={false}
+                          nestedScrollEnabled={true}
+                        // keyboardShouldPersistTaps="handled"
+                        // bounces={false}
+
+                        >
+                          {searchResults.map((item) => (
+                            <TouchableOpacity
+                              key={item._id}
+                              style={styles.searchResultItem}
+                              onPress={() => handleProductPress(item)}
+                            >
+                              <View style={styles.searchResultImageContainer}>
+                                <Image
+                                  source={{ uri: item.images?.[0]?.url || "" }}
+                                  style={styles.searchResultImage}
+                                  resizeMode="cover"
+                                />
+                              </View>
+                              <View style={styles.searchResultContent}>
+                                <Text
+                                  style={[
+                                    styles.searchResultTitle,
+                                    { color: theme.text },
+                                  ]}
+                                >
+                                  {item.label}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.searchResultCategory,
+                                    { color: theme.subText },
+                                  ]}
+                                >
+                                  {item.category?.label || item.type}
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.searchResultPrice,
+                                    { color: theme.primary },
+                                  ]}
+                                >
+                                  {item.displayPrice || `₹${item.price}`}
+                                </Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      ) : (
+                        <View style={styles.noResultsContainer}>
+                          <Ionicons name="search-outline" size={40} color="#4B5563" />
+                          <Text
+                            style={[styles.noResultsText, { color: theme.subText }]}
+                          >
+                            No products found
+                          </Text>
+                          <Text
+                            style={[styles.noResultsSubtext, { color: "#4B5563" }]}
+                          >
+                            Try searching for "Shoe Spa" or "Dry Clean"
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+
+
                 <TouchableOpacity
-                  activeOpacity={0.8}
-                  onPress={() => router.push("/(customer)/book-pickup")}
+                  activeOpacity={0.92}
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    backgroundColor: "#071C14",
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: "#1A2F2C",
-                    padding: 14,
-                    gap: 10,
+                    height: 130,
+                    width: "100%",
+                    paddingHorizontal: 16,
                   }}
                 >
-                  <View
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 17,
-                      backgroundColor: "#0F2D1F",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ionicons name="location-outline" size={16} color="#00E1A2" />
-                  </View>
-                  <Text style={{ color: "#4E7060", fontSize: 12, fontWeight: "600" }}>
-                    Select a pickup address to view today's slots
-                  </Text>
+                  <Banner
+                    width="100%"
+                    height={130}
+                    preserveAspectRatio="xMidYMid meet"
+                  />
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
-          {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
-          {activeType === "pickup" && activeBooking ? (
-            <View style={{ marginHorizontal: 16 }}>
-              <PickupStatusCard
-                pickup={activeBooking}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(customer)/order-tracking",
-                    params: {
-                      pickupId: activeBooking?._id,
-                    },
-                  })
-                }
-                onActionComplete={refreshBooking}
-              />
-            </View>
-          ) : activeType === "order" && activeBooking ? (
-            <View style={{ marginHorizontal: 16 }}>
-              <HomeActiveOrderCard
-                order={activeBooking}
-                onPress={() =>
-                  activeBooking.order_id
-                    ? router.push(`/orders/${activeBooking.order_id}`)
-                    : router.push("/(customer)/(tabs)/orders")
-                }
-                onClose={() => {
-                  setActiveType("none");
-                  setActiveBooking(null);
-                }}
-                onRefresh={refreshBooking}
-              />
-            </View>
-          ) : null}
 
-          {/* ── SERVICES ── */}
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <View style={styles.section}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
-                <TouchableOpacity onPress={() => router.push('/services')}>
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {QUICK_SERVICES.slice(0, 3).map((s) => {
-                  const isFeatured = s.key === "Shoe Spa";
-                   const Icon = s.icon;
-                  return (
-                    // Replace only the inner card JSX (the TouchableOpacity and its children)
-                    <TouchableOpacity
-                      key={s.key}
+                {/* ── AVAILABLE SLOTS ── */}
+                {activeType === 'none' && !bookingLoading && (
+                  <View style={{ marginHorizontal: 12 }}>
+                    <Text
                       style={{
-                        flex: 1,
-                        backgroundColor: '#052420',
-                        borderColor: '#1A3830',
-                        borderWidth: 1,
-                        borderRadius: 16,
-                        overflow: 'hidden',   // clips icon to card bounds
-                      }}
-                      activeOpacity={0.85}
-                      onPress={() => {
-                        if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-                          router.push({ pathname: "/services/[service]", params: { service: s.slug as "shoe" | "laundry" | "dryclean" } });
-                        } else {
-                          router.push(`/services/${s.slug}`);
-                        }
+                        color: "#4E7060",
+                        fontSize: 11,
+                        fontWeight: "800",
+                        letterSpacing: 0.7,
+                        // marginBottom: 0,
                       }}
                     >
-                      {/* Icon area — fills top ~65% of card */}
-                      <Animated.View
+                      AVAILABLE SLOTS
+                    </Text>
+
+                    {contextSelectedAddress?.latitude && contextSelectedAddress?.longitude ? (
+                      <SlotPicker
+                        lat={contextSelectedAddress.latitude}
+                        lng={contextSelectedAddress.longitude}
+                        zoneId={zoneData?.zoneId}
+                        selectedSlot={selectedSlotIndex}
+                        onSelect={(index: number, slot: any) => {
+                          setSelectedSlotIndex(index);
+                          setSelectedSlotData(slot);
+                          // Navigate to book-pickup with pre-selected slot
+                          router.push({
+                            pathname: "/(customer)/book-pickup",
+                            params: {
+                              preSelectedSlotIndex: String(index),
+                              preSelectedSlotTime: slot?.time ?? "",
+                            },
+                          });
+                        }}
+                        onSlotsUpdate={(slots: any[]) => {
+                          const available = slots.some(
+                            (s: any) =>
+                              s.enabled && s.status !== "expired" && s.availableCapacity > 0
+                          );
+                          setHasAvailableSlots(available);
+                          console.log("ALL SLOTS", slots.length);
+
+                        }}
+                        renderSlots={(slots: any[]) => {
+                          const visible = slots.filter((s) => s.enabled && s.status !== "expired");
+                          const shown = visible.slice(0, 2);
+                          const remaining = visible.length - 2;
+                          console.log(
+                            "VISIBLE",
+                            visible.map((s) => ({
+                              time: s.time,
+                              enabled: s.enabled,
+                              status: s.status,
+                            }))
+                          );
+                          return (
+                            <View style={{ flexDirection: "row", alignItems: "stretch", gap: 10 }}>
+                              {shown.map((slot, i) => {
+                                const isFull = slot.availableCapacity === 0;
+                                const isFilling =
+                                  slot.availableCapacity > 0 && slot.availableCapacity <= 3;
+                                console.log("REMAINING", remaining);
+                                return (
+                                  <TouchableOpacity
+                                    key={i}
+                                    activeOpacity={0.88}
+                                    disabled={isFull}
+                                    onPress={() => {
+                                      router.push({
+                                        pathname: "/(customer)/book-pickup",
+                                        params: {
+                                          preSelectedSlotIndex: String(slots.indexOf(slot)),
+                                          preSelectedSlotTime: slot?.time ?? "",
+                                        },
+                                      });
+                                    }}
+                                    style={{
+                                      flex: 1,
+                                      minHeight: 86,
+                                      backgroundColor: "#071C14",
+                                      borderRadius: 18,
+                                      borderWidth: 1.2,
+                                      borderColor: isFull ? "#1A2F2C" : "#214434",
+                                      paddingHorizontal: 14,
+                                      paddingVertical: 12,
+                                      opacity: isFull ? 0.45 : 1,
+                                      justifyContent: "space-between",
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        color: isFull ? "#4E7060" : "#F7F8F5",
+                                        fontSize: 15,
+                                        fontWeight: "800",
+                                        letterSpacing: 0.2,
+                                      }}
+                                    >
+                                      {slot.time}
+                                    </Text>
+
+                                    {isFull ? (
+                                      <Text
+                                        style={{
+                                          color: "#FF6B6B",
+                                          fontSize: 11,
+                                          fontWeight: "700",
+                                          marginTop: 8,
+                                        }}
+                                      >
+                                        Slot Full
+                                      </Text>
+                                    ) : (
+                                      <View
+                                        style={{
+                                          flexDirection: "row",
+                                          alignItems: "center",
+                                          marginTop: 8,
+                                          gap: 5,
+                                        }}
+                                      >
+                                        <Text style={{ fontSize: 12, color: "#C8F135" }}>⚡</Text>
+                                        <Text
+                                          style={{
+                                            color: "#C8F135",
+                                            fontSize: 11,
+                                            fontWeight: "700",
+                                          }}
+                                        >
+                                          {isFilling ? "Filling fast" : "Available"}
+                                        </Text>
+                                      </View>
+                                    )}
+                                  </TouchableOpacity>
+                                );
+                              })}
+
+                              {remaining > 0 && (
+                                <TouchableOpacity
+                                  activeOpacity={0.9}
+                                  onPress={() => router.push("/(customer)/book-pickup")}
+                                  style={{
+                                    width: 64,
+                                    minHeight: 86,
+                                    backgroundColor: "#071C14",
+                                    borderRadius: 18,
+                                    borderWidth: 1.2,
+                                    borderColor: "#214434",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    paddingHorizontal: 8,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      color: "#F7F8F5",
+                                      fontSize: 20,
+                                      fontWeight: "900",
+                                      lineHeight: 24,
+                                    }}
+                                  >
+                                    +{remaining}
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      color: "#B2BDB6",
+                                      fontSize: 11,
+                                      fontWeight: "700",
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    More
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          );
+                        }}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => router.push("/(customer)/book-pickup")}
                         style={{
-                          width: "100%",
-                          aspectRatio: 1,
+                          flexDirection: "row",
                           alignItems: "center",
-                          justifyContent: "center",
+                          backgroundColor: "#071C14",
+                          borderRadius: 16,
+                          borderWidth: 1,
+                          borderColor: "#1A2F2C",
+                          padding: 14,
+                          gap: 10,
                         }}
                       >
-                        <Icon width="80%" height="80%" />
-                      </Animated.View>
+                        <View
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 17,
+                            backgroundColor: "#0F2D1F",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Ionicons name="location-outline" size={16} color="#00E1A2" />
+                        </View>
+                        <Text style={{ color: "#4E7060", fontSize: 12, fontWeight: "600" }}>
+                          Select a pickup address to view today's slots
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+                {/* ── ACTIVE ORDER / PICKUP STATUS CARD OR SWIPE TO BOOK STRIP ── */}
+                {activeType === "pickup" && activeBooking ? (
+                  <View style={{ marginHorizontal: 16 }}>
+                    <PickupStatusCard
+                      pickup={activeBooking}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/(customer)/order-tracking",
+                          params: {
+                            pickupId: activeBooking?._id,
+                          },
+                        })
+                      }
+                      onActionComplete={refreshBooking}
+                    />
+                  </View>
+                ) : activeType === "order" && activeBooking ? (
+                  <View style={{ marginHorizontal: 16 }}>
+                    <HomeActiveOrderCard
+                      order={activeBooking}
+                      onPress={() =>
+                        activeBooking.order_id
+                          ? router.push(`/orders/${activeBooking.order_id}`)
+                          : router.push("/(customer)/(tabs)/orders")
+                      }
+                      onClose={() => {
+                        setActiveType("none");
+                        setActiveBooking(null);
+                      }}
+                      onRefresh={refreshBooking}
+                    />
+                  </View>
+                ) : null}
 
-                      {/* Text area — sits below icon */}
-                      <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
-                        <Text
-                          style={{
-                            color: '#C9E9E2',
-                            fontSize: 13,
-                            fontWeight: '800',
-                            letterSpacing: 0.6,
-                            marginBottom: 2,
-                          }}
-                          numberOfLines={1}
-                        >
-                          {s.label}
-                        </Text>
-                        <Text
-                          style={{
-                            color: '#BACBC0',
-                            fontSize: 9,
-                            fontWeight: '500',
-                            lineHeight: 11,
-                          }}
-                          numberOfLines={2}
-                        >
-                          {s.subtitle}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                {/* ── SERVICES ── */}
+                <Animated.View style={{ opacity: fadeAnim }}>
+                  <View style={styles.section}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
+                      <TouchableOpacity onPress={() => router.push('/services')}>
+                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {QUICK_SERVICES.slice(0, 3).map((s) => {
+                        const isFeatured = s.key === "Shoe Spa";
+                        const Icon = s.icon;
+                        return (
+                          // Replace only the inner card JSX (the TouchableOpacity and its children)
+                          <TouchableOpacity
+                            key={s.key}
+                            style={{
+                              flex: 1,
+                              backgroundColor: '#052420',
+                              borderColor: '#1A3830',
+                              borderWidth: 1,
+                              borderRadius: 16,
+                              overflow: 'hidden',   // clips icon to card bounds
+                            }}
+                            activeOpacity={0.85}
+                            onPress={() => {
+                              if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                                router.push({ pathname: "/services/[service]", params: { service: s.slug as "shoe" | "laundry" | "dryclean" } });
+                              } else {
+                                router.push(`/services/${s.slug}`);
+                              }
+                            }}
+                          >
+                            {/* Icon area — fills top ~65% of card */}
+                            <Animated.View
+                              style={{
+                                width: "100%",
+                                aspectRatio: 1,
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Icon width="80%" height="80%" />
+                            </Animated.View>
+
+                            {/* Text area — sits below icon */}
+                            <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
+                              <Text
+                                style={{
+                                  color: '#C9E9E2',
+                                  fontSize: 13,
+                                  fontWeight: '800',
+                                  letterSpacing: 0.6,
+                                  marginBottom: 2,
+                                }}
+                                numberOfLines={1}
+                              >
+                                {s.label}
+                              </Text>
+                              <Text
+                                style={{
+                                  color: '#BACBC0',
+                                  fontSize: 9,
+                                  fontWeight: '500',
+                                  lineHeight: 11,
+                                }}
+                                numberOfLines={2}
+                              >
+                                {s.subtitle}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </Animated.View>
               </View>
-            </View>
-          </Animated.View>
-        </View>
-        <LearnExploreSection />
+              <LearnExploreSection />
 
-        <View style={styles.wrapper}>
-          <LinearGradient
-            colors={["#001A17", "#00332B", "#004D3F"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0.7 }}
-            style={styles.card}
-          >
-            <View style={styles.glowCircle} />
+              <View style={styles.wrapper}>
+                <LinearGradient
+                  colors={["#001A17", "#00332B", "#004D3F"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0.7 }}
+                  style={styles.card}
+                >
+                  <View style={styles.glowCircle} />
 
-            <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
+                  <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
 
-            <Text style={styles.title}>
-              Eco-Friendly{"\n"}Cleaning{"\n"}Solvents
-            </Text>
+                  <Text style={styles.title}>
+                    Eco-Friendly{"\n"}Cleaning{"\n"}Solvents
+                  </Text>
 
-            <Text style={styles.desc}>
-              Gentle on your skin,{"\n"}
-              gentler on the planet. Our{"\n"}
-              green cleaning tech{"\n"}
-              preserves fiber life by{"\n"}40%.
-            </Text>
-          </LinearGradient>
-        </View>
-      </ScrollView>
+                  <Text style={styles.desc}>
+                    Gentle on your skin,{"\n"}
+                    gentler on the planet. Our{"\n"}
+                    green cleaning tech{"\n"}
+                    preserves fiber life by{"\n"}40%.
+                  </Text>
+                </LinearGradient>
+              </View>
+            </ScrollView>
 
 
-      {activeType === 'none' && !bookingLoading && (
-        <View style={{
-          position: 'absolute',
-          bottom: 0,           // anchor to bottom edge
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          paddingHorizontal: 16,
-          paddingBottom: TAB_BAR_HEIGHT + 2,
-          // + (insets.bottom > 0 ? insets.bottom + 8 : 4)
-        }}>
-          <Animated.View style={{
-            opacity: fadeAnim,
-            transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
-          }}>
-            <SwipeToAction
-              title="SWIPE FOR INSTANT PICKUP"
-              threshold={0.25}
-              onComplete={() => router.push("/book-pickup")}
+            {activeType === 'none' && !bookingLoading && (
+              <View style={{
+                position: 'absolute',
+                bottom: 0,           // anchor to bottom edge
+                left: 0,
+                right: 0,
+                zIndex: 50,
+                paddingHorizontal: 16,
+                paddingBottom: TAB_BAR_HEIGHT + 2,
+                // + (insets.bottom > 0 ? insets.bottom + 8 : 4)
+              }}>
+                <Animated.View style={{
+                  opacity: fadeAnim,
+                  transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+                }}>
+                  <SwipeToAction
+                    title="SWIPE FOR INSTANT PICKUP"
+                    threshold={0.25}
+                    onComplete={() => router.push("/book-pickup")}
+                  />
+                </Animated.View>
+              </View>
+            )}
+            <FloatingCart
+              onOpen={() => setCartOpen(true)}
+              bottomOffset={
+                activeType === "none"
+                  ? 60
+                  : 12
+              }
             />
-          </Animated.View>
-        </View>
-      )}
-      <FloatingCart
-        onOpen={() => setCartOpen(true)}
-        bottomOffset={
-          activeType === "none"
-            ? 60
-            : 12
-        }
-      />
             <ProductServicePopup
               visible={popupVisible}
               onOpenCart={() => setCartOpen(true)}

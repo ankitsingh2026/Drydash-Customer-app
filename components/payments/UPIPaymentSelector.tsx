@@ -42,10 +42,10 @@ interface UPIPaymentSelectorProps {
 }
 
 const SUPPORTED_UPI_APPS = [
-  { package_name: 'com.google.android.apps.nbu.paisa.user', name: 'Google Pay' },
-  { package_name: 'com.phonepe.app', name: 'PhonePe' },
-  { package_name: 'net.one97.paytm', name: 'Paytm' },
-  { package_name: 'in.amazon.mShop.android.shopping', name: 'Amazon Pay' },
+  { package_name: 'com.google.android.apps.nbu.paisa.user', name: 'Google Pay', localIcon: require('@/assets/images/icons/google-pay.png'), },
+  { package_name: 'com.phonepe.app', name: 'PhonePe', localIcon: require('@/assets/images/icons/phone-pe.png') },
+  { package_name: 'net.one97.paytm', name: 'Paytm', localIcon: require('@/assets/images/icons/paytm.png') },
+  { package_name: 'in.amazon.mShop.android.shopping', name: 'Amazon Pay', localIcon: require('@/assets/images/icons/amazon-pay.png') },
 ];
 
 const COD_OPTION = {
@@ -92,7 +92,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
                 id: app.package_name,
                 package_name: app.package_name,
                 name: app.name,
-                icon: null,
+                icon: app.localIcon,
                 isCod: false,
               }));
               setInstalledApps(fallback);
