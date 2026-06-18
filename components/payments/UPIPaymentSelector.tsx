@@ -16,11 +16,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import RazorpayCheckout from 'react-native-razorpay';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+// import Ionicons from 'react-native-vector-icons/Ionicons';
 import { oldApiClient } from '@/lib/api/client';
 import { DarkTheme } from '@/constants/colors';
 import { removeCouponApi } from '@/features/coupons/coupons.api';
-
+import { Ionicons } from '@expo/vector-icons';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -41,16 +41,17 @@ interface UPIPaymentSelectorProps {
 }
 
 const SUPPORTED_UPI_APPS = [
-  { package_name: 'com.google.android.apps.nbu.paisa.user', name: 'Google Pay' },
-  { package_name: 'com.phonepe.app', name: 'PhonePe' },
-  { package_name: 'net.one97.paytm', name: 'Paytm' },
-  { package_name: 'in.amazon.mShop.android.shopping', name: 'Amazon Pay' },
+  { package_name: 'com.google.android.apps.nbu.paisa.user', name: 'Google Pay', localIcon: require('@/assets/images/icons/google-pay.png'), },
+  { package_name: 'com.phonepe.app', name: 'PhonePe', localIcon: require('@/assets/images/icons/phone-pe.png') },
+  { package_name: 'net.one97.paytm', name: 'Paytm', localIcon: require('@/assets/images/icons/paytm.png') },
+  { package_name: 'in.amazon.mShop.android.shopping', name: 'Amazon Pay', localIcon: require('@/assets/images/icons/amazon-pay.png') },
 ];
 
 const COD_OPTION = {
   id: 'cod',
   name: 'Cash/UPI on Delivery',
   isCod: true,
+  localIcon: require('@/assets/images/icons/cash-on-delivery.png')
 };
 
 export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
@@ -80,33 +81,33 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     }
   }, [selectedApp]);
 
-useEffect(() => {
-  const detectApps = () => {
-    try {
-      const fallback = SUPPORTED_UPI_APPS.map(app => ({
-        id: app.package_name,
-        package_name: app.package_name,
-        name: app.name,
-        icon: app.localIcon,
-        isCod: false,
-      }));
-      setInstalledApps(fallback);
-      setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-    } catch (error) {
-      console.error('UPI detection error:', error);
-      const fallback = SUPPORTED_UPI_APPS.map(app => ({
-        id: app.package_name,
-        package_name: app.package_name,
-        name: app.name,
-        icon: null,
-        isCod: false,
-      }));
-      setInstalledApps(fallback);
-      setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-    }
-  };
-  detectApps();
-}, [defaultCod]);
+  useEffect(() => {
+    const detectApps = () => {
+      try {
+        const fallback = SUPPORTED_UPI_APPS.map(app => ({
+          id: app.package_name,
+          package_name: app.package_name,
+          name: app.name,
+          icon: app.localIcon,
+          isCod: false,
+        }));
+        setInstalledApps(fallback);
+        setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+      } catch (error) {
+        console.error('UPI detection error:', error);
+        const fallback = SUPPORTED_UPI_APPS.map(app => ({
+          id: app.package_name,
+          package_name: app.package_name,
+          name: app.name,
+          icon: app.localIcon,
+          isCod: false,
+        }));
+        setInstalledApps(fallback);
+        setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+      }
+    };
+    detectApps();
+  }, [defaultCod]);
 
   const toggleExpand = () => {
     if (getAllOptions().length <= 1) return;
@@ -206,7 +207,15 @@ useEffect(() => {
   const renderPaymentIcon = (item: any, size: number = 40) => {
     const iconStyle = size === 40 ? styles.paymentIcon : styles.otherIcon;
     if (item.isCod) {
-      return <Ionicons name="cash-outline" size={size} color="#555" style={iconStyle} />;
+      return (
+        <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
+          <Ionicons
+            name="wallet-outline"
+            size={size === 40 ? 24 : 20}
+            color="#22c55e"
+          />
+        </View>
+      );
     }
     if (item.icon) {
       return <Image source={item.icon} style={iconStyle} onError={() => console.log('Icon error:', item.name)} />;
@@ -383,6 +392,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 40,
   },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  smallIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
   paymentTextContainer: { flex: 1 },
   paymentLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   payLabel: { fontSize: 11, fontWeight: '600', color: '#888', letterSpacing: 0.5 },

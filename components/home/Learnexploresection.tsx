@@ -21,7 +21,7 @@ const FEATURE_VIDEO = {
   subtitle: "Watch our premium cleaning process",
   duration: "1:20",
   video: {
-    uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/app-videos/drydash_vid1.mp4",
+    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4",
   },
 };
 
@@ -31,7 +31,7 @@ const ARTICLES = [
     title: "How to maintain white sneakers",
     subtitle: "Keep your kicks looking brand new with...",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
+      uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_shoe.png",
     },
   },
   {
@@ -39,7 +39,7 @@ const ARTICLES = [
     title: "The Art of Caring for Silk",
     subtitle: "Gentle techniques for delicate fabrics...",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
+      uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_suit.png",
     },
   },
   {
@@ -47,7 +47,7 @@ const ARTICLES = [
     title: "Deep Clean Your Sofa at Home",
     subtitle: "Step-by-step guide to sofa care...",
     image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
+       uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_sofa.png",
     },
   },
 ];

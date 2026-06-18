@@ -864,19 +864,18 @@ export default function Home() {
                 </View>
 
 
-                <TouchableOpacity
-
+                 <TouchableOpacity
                   activeOpacity={0.92}
                   style={{
-                    marginHorizontal: 14,
                     height: 130,
+                    width: "100%",
+                    paddingHorizontal: 16,
                   }}
                 >
                   <Banner
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                    }}
+                    width="100%"
+                    height={130}
+                    preserveAspectRatio="xMidYMid meet"
                   />
                 </TouchableOpacity>
 
