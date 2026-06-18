@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-// import RazorpayCustomUI from 'react-native-customui';
 import RazorpayCheckout from 'react-native-razorpay';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { oldApiClient } from '@/lib/api/client';
