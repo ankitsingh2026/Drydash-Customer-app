@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useChat } from "../../../../context/ChatContext";
 import {
   Animated,
   BackHandler,
@@ -32,6 +33,7 @@ export default function SupportIndex() {
   const fade = useRef(new Animated.Value(0)).current;
   const slideY = useRef(new Animated.Value(20)).current;
   const [search, setSearch] = useState("");
+  const { unreadCount } = useChat();
 
   useEffect(() => {
     Animated.parallel([
@@ -96,7 +98,7 @@ export default function SupportIndex() {
 
           {/* action buttons */}
           <Animated.View style={{ opacity: fade, gap: 10, marginTop: 4 }}>
-            {/* Chat with Us */}
+             {/* Chat with Us */}
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={() => router.push("/(customer)/(assistant)/chat")}
@@ -110,6 +112,11 @@ export default function SupportIndex() {
               >
                 <Ionicons name="chatbubble-ellipses-outline" size={18} color="#021410" />
                 <Text style={styles.chatBtnText}>Chat with Us</Text>
+                {unreadCount > 0 && (
+                  <View style={styles.chatBadge}>
+                    <Text style={styles.chatBadgeText}>{unreadCount}</Text>
+                  </View>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 
@@ -218,6 +225,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: "#021410",
+  },
+  chatBadge: {
+    backgroundColor: "#021410",
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    marginLeft: 6,
+  },
+  chatBadgeText: {
+    color: "#2FE6A6",
+    fontSize: 10,
+    fontWeight: "900",
+    includeFontPadding: false,
+    textAlign: "center",
   },
 
   callBtn: {

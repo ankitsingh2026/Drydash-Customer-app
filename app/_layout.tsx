@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { ChatProvider } from "@/context/ChatContext";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -20,23 +21,25 @@ export default function RootLayout() {
       <AuthProvider>
         <ThemeProvider>
           <NotificationProvider>
-            <AddressProvider>
-              <CartProvider>
-                <SlotSocketProvider>
-                  <StatusBar style="light" />
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: "#0B1F1A" },
-                    }}
-                  >
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(customer)" />
-                  </Stack>
-                </SlotSocketProvider>
-              </CartProvider>
-            </AddressProvider>
+            <ChatProvider>
+              <AddressProvider>
+                <CartProvider>
+                  <SlotSocketProvider>
+                    <StatusBar style="light" />
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        contentStyle: { backgroundColor: "#0B1F1A" },
+                      }}
+                    >
+                      <Stack.Screen name="index" />
+                      <Stack.Screen name="(auth)" />
+                      <Stack.Screen name="(customer)" />
+                    </Stack>
+                  </SlotSocketProvider>
+                </CartProvider>
+              </AddressProvider>
+            </ChatProvider>
           </NotificationProvider>
         </ThemeProvider>
       </AuthProvider>
