@@ -12,6 +12,7 @@
 
     "ios": {
       "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
         // "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
         "googleMapsApiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
@@ -75,6 +76,7 @@
         }
       ],
       "expo-video",
+      "@react-native-firebase/app",
       "@react-native-firebase/messaging",
       "expo-build-properties"
     ],
