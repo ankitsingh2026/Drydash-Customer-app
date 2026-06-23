@@ -9,11 +9,10 @@
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
-        // "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
         "googleMapsApiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
       },
       "bundleIdentifier": "com.drydash.customer"
@@ -31,7 +30,6 @@
       ],
       "config": {
         "googleMaps": {
-          // "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
           "apiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
         }
       },
@@ -75,8 +73,11 @@
         }
       ],
       "expo-video",
+      "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      "expo-build-properties"
+
+      "expo-build-properties",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -22,7 +22,7 @@ const BLOG_DATA: Record<string, any> = {
     subtitle: "Keep your kicks looking brand new with our easy daily care routine.",
     date: "May 15, 2026",
     author: "DryDash Experts",
-    image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
+    image: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_shoe.png",
     content: [
       { type: "h2", text: "1. The Magic of Daily Wiping" },
       { type: "p", text: "White sneakers are a staple, but they act like a magnet for dirt. The secret to longevity isn't washing them constantly—it's regular maintenance. After every wear, take a damp cloth and gently wipe away any surface dust or mud before it has a chance to set in." },
@@ -37,7 +37,7 @@ const BLOG_DATA: Record<string, any> = {
     subtitle: "Gentle techniques to ensure your delicate fabrics last a lifetime.",
     date: "May 10, 2026",
     author: "DryDash Experts",
-    image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
+    image: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_suit.png",
     content: [
       { type: "h2", text: "1. Hand Washing is Key" },
       { type: "p", text: "Silk is incredibly delicate and usually doesn't survive the aggressive spinning of a washing machine. Fill a basin with cold water and add a few drops of mild, pH-neutral detergent designed specifically for silk. Gently agitate the garment for no more than 5 minutes." },
@@ -52,7 +52,7 @@ const BLOG_DATA: Record<string, any> = {
     subtitle: "Step-by-step guide to rejuvenating your living room centerpiece.",
     date: "May 02, 2026",
     author: "DryDash Experts",
-    image: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
+    image: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_sofa.png",
     content: [
       { type: "h2", text: "1. Vacuum First" },
       { type: "p", text: "Before applying any cleaning solutions, remove all crumbs, dust, and pet hair. Use the upholstery attachment on your vacuum and make sure to get into the crevices and under the cushions." },
