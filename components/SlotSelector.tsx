@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { BASE_URL } from "@/lib/api/client";
+import { useTheme } from "../context/ThemeContext";
 
 interface Slot {
   time: string;
@@ -18,6 +19,8 @@ interface SlotSelectorProps {
 }
 
 export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSelect }) => {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [loading, setLoading] = useState(true);
   const [zone, setZone] = useState<any>(null);
   const [service, setService] = useState<any>(null);
@@ -72,7 +75,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSele
   }, [selectedSlotIdx]);
 
   if (loading) {
-    return <ActivityIndicator color="#00E1A2" />;
+    return <ActivityIndicator color={theme.primary} />;
   }
 
   if (!zone?.zoneFound) {
@@ -116,7 +119,7 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSele
             style={[
               styles.slotText,
               slot.isActive && { color: "#FFD600" },
-              !slot.enabled && { color: "#6B8F7B" },
+              !slot.enabled && { color: theme.textSecondary },
             ]}
           >
             {slot.time}
@@ -131,31 +134,31 @@ export const SlotSelector: React.FC<SlotSelectorProps> = ({ lat, lng, onSlotSele
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   slotRow: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   slotBtn: {
     minWidth: 120,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "#0D2B24",
+    backgroundColor: theme.background,
     marginBottom: 10,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.card,
   },
   slotActive: { borderColor: "#FFD600" },
-  slotSelected: { borderColor: "#00E1A2", backgroundColor: "#00110E" },
-  slotDisabled: { backgroundColor: "#1E3327" },
-  slotText: { color: "#CFFFF1", fontWeight: "700" },
+  slotSelected: { borderColor: theme.primary, backgroundColor: theme.background },
+  slotDisabled: { backgroundColor: theme.card },
+  slotText: { color: theme.text, fontWeight: "700" },
   fillingFast: { color: "#FFD600", fontSize: 12, marginTop: 2 },
-  slotCapacity: { color: "#00E1A2", fontSize: 12, marginTop: 2 },
+  slotCapacity: { color: theme.primary, fontSize: 12, marginTop: 2 },
   noSlotBox: {
-    backgroundColor: "#1E3327",
+    backgroundColor: theme.card,
     borderRadius: 10,
     padding: 16,
     alignItems: "center",
     marginBottom: 10,
   },
   noSlotText: { color: "#FFD600", fontWeight: "700", marginTop: 6 },
-  noSlotSubText: { color: "#6B8F7B", fontSize: 12, marginTop: 4, textAlign: "center" },
+  noSlotSubText: { color: theme.textSecondary, fontSize: 12, marginTop: 4, textAlign: "center" },
 });

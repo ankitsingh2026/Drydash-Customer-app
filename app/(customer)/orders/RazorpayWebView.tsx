@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
+import { useTheme } from "@/context/ThemeContext";
 
 interface RazorpayWebViewProps {
   amount: number;
@@ -43,6 +44,9 @@ export default function RazorpayWebView({
   onFailure,
   onCancel,
 }: RazorpayWebViewProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   const webViewRef = useRef<WebView>(null);
 
   console.log("Razorpay Key =>", razorpayKey);
@@ -217,11 +221,11 @@ setTimeout(function(){
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   loading: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: theme.text,
   },
 });

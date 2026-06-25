@@ -11,7 +11,27 @@ import {
 import { useTheme } from "../../../context/ThemeContext";
 
 export default function PaymentFailure() {
+  
   const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
+  function Row({
+    label,
+    value,
+    theme,
+  }: {
+    label: string;
+    value: string;
+    theme: any;
+  }) {
+    return (
+      <View style={styles.row}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={[styles.rowValue, { color: theme.text }]}>{value}</Text>
+      </View>
+    );
+  }
+
   const { orderId, amount, reason } = useLocalSearchParams<{
     orderId: string;
     amount: string;
@@ -62,7 +82,7 @@ export default function PaymentFailure() {
           { transform: [{ scale }], opacity: fade },
         ]}
       >
-        <Ionicons name="close" size={64} color="#fff" />
+        <Ionicons name="close" size={64} color={theme.text} />
       </Animated.View>
 
       {/* TEXT */}
@@ -70,7 +90,7 @@ export default function PaymentFailure() {
         <Text style={[styles.title, { color: theme.text }]}>
           Payment Failed
         </Text>
-        <Text style={[styles.sub, { color: "#94a3b8" }]}>
+        <Text style={[styles.sub, { color: theme.textSecondary }]}>
           {parsedReason}
         </Text>
 
@@ -99,7 +119,7 @@ export default function PaymentFailure() {
 
         <TouchableOpacity
           style={[styles.btnOutline, { borderColor: theme.border }]}
-          onPress={() => router.replace("/(customer)/home")}
+          onPress={() => router.replace("/(customer)/home" as any)}
         >
           <Text style={[styles.btnOutlineText, { color: theme.text }]}>
             Back to Home
@@ -111,24 +131,7 @@ export default function PaymentFailure() {
   );
 }
 
-function Row({
-  label,
-  value,
-  theme,
-}: {
-  label: string;
-  value: string;
-  theme: any;
-}) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, { color: theme.text }]}>{value}</Text>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   root: {
     flex: 1,
     alignItems: "center",
@@ -140,10 +143,10 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "#EF4444",
+    backgroundColor: "#FF6B6B",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#EF4444",
+    shadowColor: "#FF6B6B",
     shadowOpacity: 0.4,
     shadowRadius: 20,
     elevation: 10,
@@ -164,7 +167,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  rowLabel: { fontSize: 13, color: "#94a3b8" },
+  rowLabel: { fontSize: 13, color: theme.textSecondary },
   rowValue: { fontSize: 13, fontWeight: "700" },
   btnGroup: { width: "100%", gap: 12 },
   btn: {
@@ -173,7 +176,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  btnText: { fontWeight: "900", fontSize: 15, color: "#000" },
+  btnText: { fontWeight: "900", fontSize: 15, color: theme.background },
   btnOutline: {
     height: 52,
     borderRadius: 14,

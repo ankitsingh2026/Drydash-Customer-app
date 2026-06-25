@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 type BadgeIcon = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -15,6 +16,9 @@ export default function OrderStatusBadge({
 	accent,
 	icon = "time-outline",
 }: OrderStatusBadgeProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
 	return (
 		<View
 			style={[
@@ -28,7 +32,7 @@ export default function OrderStatusBadge({
 	);
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
 	wrap: {
 		flexDirection: "row",
 		alignItems: "center",
@@ -44,7 +48,7 @@ const styles = StyleSheet.create({
 		fontWeight: "500",
 		letterSpacing: 0.7,
 		textTransform: "uppercase",
-		color:"#fff"
+		color:theme.text
 	},
 });
 

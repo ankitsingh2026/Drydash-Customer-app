@@ -17,10 +17,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import RazorpayCustomUI from 'react-native-customui';
 import RazorpayCheckout from 'react-native-razorpay';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { oldApiClient } from '@/lib/api/client';
 import { DarkTheme } from '@/constants/colors';
 import { removeCouponApi } from '@/features/coupons/coupons.api';
+import { useTheme } from '@/context/ThemeContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -69,6 +70,51 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   onPaymentMethodChange,
 }) => {
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  // styles is defined below — using lazy init pattern via useMemo to handle temporal dead zone
+  const styles = React.useMemo(() => StyleSheet.create({
+    wrapper: { marginTop: 20, position: 'relative', zIndex: 10 },
+    container: {
+      backgroundColor: theme.card,
+      paddingHorizontal: 16, paddingTop: 16, paddingBottom: 20,
+      shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
+      shadowOpacity: 0.08, shadowRadius: 10, elevation: 8,
+    },
+    mainRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: 12 },
+    paymentSelectSection: { flex: 1, justifyContent: 'center' as const },
+    paymentContent: { flexDirection: 'row' as const, alignItems: 'center' as const },
+    paymentIcon: { width: 40, height: 40, marginRight: 12, borderRadius: 8, backgroundColor: isDark ? theme.card : '#f0f0f0' },
+    paymentTextContainer: { flex: 1 },
+    paymentLabelRow: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 2 },
+    payLabel: { fontSize: 11, fontWeight: '600' as const, color: theme.textSecondary, letterSpacing: 0.5 },
+    chevronIcon: { marginLeft: 6 },
+    paymentName: { fontSize: 16, fontWeight: '700' as const, color: theme.text },
+    placeOrderBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 40, alignItems: 'center' as const, justifyContent: 'center' as const },
+    buttonContent: { flexDirection: 'row' as const, alignItems: 'baseline' as const, gap: 8 },
+    placeOrderText: { color: theme.background, fontWeight: '700' as const, fontSize: 14 },
+    buttonAmount: { color: theme.background, fontWeight: '800' as const, fontSize: 16 },
+    expandableListContainer: { position: 'relative' as const, zIndex: 20, marginBottom: 8 },
+    expandableList: { backgroundColor: theme.card, borderRadius: 12, overflow: 'hidden' as const, borderWidth: 1, borderColor: theme.border },
+    otherOption: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingVertical: 12, paddingHorizontal: 16 },
+    otherOptionBorder: { borderBottomWidth: 1, borderBottomColor: theme.border },
+    otherIcon: { width: 32, height: 32, marginRight: 12 },
+    otherName: { fontSize: 15, fontWeight: '600' as const, color: theme.text, flex: 1 },
+    selectedOption: { backgroundColor: isDark ? theme.background : '#f4f4f5' },
+    selectedName: { color: theme.primary, fontWeight: '700' as const },
+    checkIcon: { marginLeft: 8 },
+    fallback: { padding: 40, alignItems: 'center' as const },
+    fallbackText: { marginTop: 12, color: theme.textSecondary },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center' as const, alignItems: 'center' as const, padding: 20 },
+    modalContent: { backgroundColor: theme.card, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, borderWidth: 1, borderColor: theme.border },
+    modalHeader: { flexDirection: 'row' as const, alignItems: 'center' as const, marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: '700' as const, color: theme.text, marginLeft: 10 },
+    modalText: { fontSize: 14, color: theme.textSecondary, lineHeight: 22, marginBottom: 24 },
+    modalActions: { flexDirection: 'row' as const, justifyContent: 'flex-end' as const, gap: 12 },
+    modalBtnCancel: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 1, borderColor: theme.border },
+    modalBtnCancelText: { color: theme.textSecondary, fontWeight: '600' as const, fontSize: 14 },
+    modalBtnConfirm: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
+    modalBtnConfirmText: { color: theme.background, fontWeight: '700' as const, fontSize: 14 },
+  }), [theme, isDark]);
   const [installedApps, setInstalledApps] = useState<any[]>([]);
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -401,10 +447,10 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   wrapper: { marginTop: 20, position: 'relative', zIndex: 10 },
   container: {
-    backgroundColor: DarkTheme.card,
+    backgroundColor: theme.card,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 20,
@@ -423,30 +469,30 @@ const styles = StyleSheet.create({
     marginRight: 12,
     resizeMode: 'contain',
     borderRadius: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: isDark ? theme.card : '#f0f0f0',
     textAlign: 'center',
     lineHeight: 40,
   },
   paymentTextContainer: { flex: 1 },
   paymentLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  payLabel: { fontSize: 11, fontWeight: '600', color: '#888', letterSpacing: 0.5 },
+  payLabel: { fontSize: 11, fontWeight: '600', color: theme.textSecondary, letterSpacing: 0.5 },
   chevronIcon: { marginLeft: 6 },
-  paymentName: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  paymentName: { fontSize: 16, fontWeight: '700', color: theme.text },
   placeOrderBtn: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   buttonContent: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  placeOrderText: { color: '#000', fontWeight: '700', fontSize: 14 },
-  buttonAmount: { color: '#000', fontWeight: '800', fontSize: 16 },
+  placeOrderText: { color: theme.background, fontWeight: '700', fontSize: 14 },
+  buttonAmount: { color: theme.background, fontWeight: '800', fontSize: 16 },
   expandableListContainer: { position: 'relative', zIndex: 20, marginBottom: 8 },
-  expandableList: { backgroundColor: '#f8f9fa', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#e9ecef' },
+  expandableList: { backgroundColor: theme.card, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: theme.border },
   otherOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16 },
-  otherOptionBorder: { borderBottomWidth: 1, borderBottomColor: '#e9ecef' },
+  otherOptionBorder: { borderBottomWidth: 1, borderBottomColor: theme.border },
   otherIcon: { width: 32, height: 32, marginRight: 12, resizeMode: 'contain' },
-  otherName: { fontSize: 15, fontWeight: '600', color: '#333', flex: 1 },
-  selectedOption: { backgroundColor: '#f4f4f5' },
-  selectedName: { color: '#000', fontWeight: '700' },
+  otherName: { fontSize: 15, fontWeight: '600', color: theme.text, flex: 1 },
+  selectedOption: { backgroundColor: isDark ? theme.background : '#f4f4f5' },
+  selectedName: { color: theme.primary, fontWeight: '700' },
   checkIcon: { marginLeft: 8 },
   fallback: { padding: 40, alignItems: 'center' },
-  fallbackText: { marginTop: 12, color: '#64748b' },
+  fallbackText: { marginTop: 12, color: theme.textSecondary },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -455,13 +501,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: DarkTheme.card,
+    backgroundColor: theme.card,
     borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: theme.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -471,12 +517,12 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: theme.text,
     marginLeft: 10,
   },
   modalText: {
     fontSize: 14,
-    color: '#cbd5e1',
+    color: theme.textSecondary,
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -490,10 +536,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: theme.border,
   },
   modalBtnCancelText: {
-    color: '#cbd5e1',
+    color: theme.textSecondary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -503,7 +549,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   modalBtnConfirmText: {
-    color: '#000',
+    color: theme.background,
     fontWeight: '700',
     fontSize: 14,
   },

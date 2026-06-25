@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -58,6 +59,9 @@ const PILLS = [
 ];
 
 export default function LearnExploreSection() {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   const router = useRouter();
   const playScale = useRef(new Animated.Value(1)).current;
 
@@ -179,7 +183,7 @@ export default function LearnExploreSection() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   container: {
     paddingHorizontal: 16,
     paddingTop: 20,
@@ -196,12 +200,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
   },
   viewAll: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#00C896",
+    color: theme.primary,
   },
 
   /* Video card */
@@ -211,9 +215,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: "hidden",
     marginBottom: 15,
-    backgroundColor: "#0D1F1C",
+    backgroundColor: theme.background,
     justifyContent: "flex-end",
-    borderColor: "#13574f",
+    borderColor: theme.background,
     borderWidth: 1.5,
   },
   videoThumbnail: {
@@ -223,7 +227,7 @@ const styles = StyleSheet.create({
   },
   videoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 20, 14, 0.55)",
+    backgroundColor: theme.card,
   },
   playButtonWrap: {
     position: "absolute",
@@ -236,10 +240,10 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#00C896",
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#00C896",
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
@@ -251,7 +255,7 @@ const styles = StyleSheet.create({
   videoTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
     marginBottom: 3,
   },
   invisibleOverlay: {
@@ -268,17 +272,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 14,
     right: 14,
-    backgroundColor: "rgba(0,0,0,0.65)",
+    backgroundColor: theme.card,
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderWidth: 1,
-    borderColor: "#1A3330",
+    borderColor: theme.card,
   },
   durationText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: theme.text,
   },
 
   /* Article cards */
@@ -289,18 +293,18 @@ const styles = StyleSheet.create({
   },
   articleCard: {
     width: width * 0.6,
-    backgroundColor: "#0D1F1C",
+    backgroundColor: theme.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#1A3330",
+    borderColor: theme.border,
     overflow: "hidden",
   },
   imageContainer: {
     margin: 10,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#0A0F0E",
-    borderColor: "#1F3D38",
+    backgroundColor: theme.background,
+    borderColor: theme.card,
   },
 
   articleImage: {
@@ -313,13 +317,13 @@ const styles = StyleSheet.create({
   articleTitle: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
     lineHeight: 18,
     marginBottom: 3,
   },
   articleSubtitle: {
     fontSize: 11,
     fontWeight: "500",
-    color: "#6B7280",
+    color: theme.textSecondary,
   },
 });

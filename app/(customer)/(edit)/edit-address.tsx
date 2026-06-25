@@ -19,22 +19,11 @@ import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAddress } from "@/context/AddressContext";
+import { useTheme } from "@/context/ThemeContext";
 import { saveAddressApi, updateAddressApi } from "@/features/orders/orders.api";
 import { showAlert } from "@/components/Customalert";
 
-const C = {
-  bg: "#031612",
-  card: "#071613",
-  white: "#0B1E1A",
-  text: "#E6FFF7",
-  subText: "#8FB3A8",
-  border: "#163028",
-  borderStrong: "#1F3E38",
-  pink: "#22EBAB",
-  disabled: "#27443C",
-  disabledText: "#6A9387",
-  inputBg: "#0B1C18",
-};
+
 
 const INITIAL_REGION: Region = {
   latitude: 28.6139,
@@ -44,6 +33,8 @@ const INITIAL_REGION: Region = {
 };
 
 export default function EditAddress() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
@@ -309,9 +300,9 @@ export default function EditAddress() {
   };
 
   const renderLabelIcon = (label: string, active: boolean) => {
-    if (label === "home") return <Home size={16} color={active ? C.pink : C.text} />;
-    if (label === "work") return <Briefcase size={16} color={active ? C.pink : C.text} />;
-    return <MapPin size={16} color={active ? C.pink : C.text} />;
+    if (label === "home") return <Home size={16} color={active ? theme.primary : theme.text} />;
+    if (label === "work") return <Briefcase size={16} color={active ? theme.primary : theme.text} />;
+    return <MapPin size={16} color={active ? theme.primary : theme.text} />;
   };
 
   return (
@@ -331,22 +322,22 @@ export default function EditAddress() {
         {/* Top Search Overlay */}
         <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 16) }]}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={C.text} />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           
           <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={20} color={C.subText} />
+            <Ionicons name="search-outline" size={20} color={theme.textSecondary} />
             <TextInput
               style={styles.searchInput}
               value={query}
               onChangeText={setQuery}
               placeholder="Search for area, street name..."
-              placeholderTextColor="#7BA79A"
+              placeholderTextColor={theme.textSecondary}
             />
-            {searching && <ActivityIndicator size="small" color={C.pink} />}
+            {searching && <ActivityIndicator size="small" color={theme.primary} />}
             {query.length > 0 && !searching && (
               <TouchableOpacity onPress={() => { setQuery(""); setSuggestions([]); setShowSuggestions(false); }}>
-                <Ionicons name="close-circle" size={20} color={C.subText} />
+                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -364,7 +355,7 @@ export default function EditAddress() {
                   style={styles.suggestionItem}
                   onPress={() => handleSelectSuggestion(item.place_id, item.description)}
                 >
-                  <Ionicons name="location-outline" size={22} color={C.subText} style={{ marginRight: 12 }} />
+                  <Ionicons name="location-outline" size={22} color={theme.textSecondary} style={{ marginRight: 12 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.suggestionMainText} numberOfLines={1}>
                       {item.structured_formatting?.main_text || item.description}
@@ -386,11 +377,11 @@ export default function EditAddress() {
             <Text style={styles.bubbleText}>Move pin to your exact pickup location</Text>
             <View style={styles.bubbleArrow} />
           </View>
-          <Ionicons name="location" size={48} color={C.pink} style={styles.pinIcon} />
+          <Ionicons name="location" size={48} color={theme.primary} style={styles.pinIcon} />
         </View>
 
         <TouchableOpacity style={styles.currentLocBtn} onPress={fetchCurrentLocation}>
-          <Ionicons name="locate" size={20} color={C.pink} />
+          <Ionicons name="locate" size={20} color={theme.primary} />
           <Text style={styles.currentLocText}>Use current location</Text>
         </TouchableOpacity>
       </View>
@@ -401,7 +392,7 @@ export default function EditAddress() {
           {/* Selected Location Card */}
           <TouchableOpacity style={styles.locationCard}>
             <View style={styles.locIconWrap}>
-              <Ionicons name="location" size={20} color={C.pink} />
+              <Ionicons name="location" size={20} color={theme.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.areaTitle}>{areaName || "Selected Location"}</Text>
@@ -409,7 +400,7 @@ export default function EditAddress() {
                 {areaSubName || "Confirm your exact drop location"}
               </Text>
             </View>
-            {/* <Ionicons name="chevron-forward" size={20} color={C.subText} /> */}
+            {/* <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} /> */}
           </TouchableOpacity>
 
           {!locationEnabled && (
@@ -427,9 +418,9 @@ export default function EditAddress() {
                 value={addressForm.houseFloor}
                 onChangeText={(t: string) => setAddressForm((p) => ({ ...p, houseFloor: t }))}
                 placeholder="Floor, House No., Apartment, Landmark"
-                placeholderTextColor="#6A9387"
+                placeholderTextColor={theme.textSecondary}
               />
-              <Building2 size={20} color={C.pink} style={{ marginRight: 12 }} />
+              <Building2 size={20} color={theme.primary} style={{ marginRight: 12 }} />
             </View>
           </View>
 
@@ -437,7 +428,7 @@ export default function EditAddress() {
             <Text style={styles.sectionTitle}>RECEIVER DETAILS</Text>
             <View style={styles.receiverCard}>
               <View style={styles.receiverIconWrap}>
-                <Ionicons name="call" size={18} color={C.text} />
+                <Ionicons name="call" size={18} color={theme.text} />
               </View>
               <View style={{ flex: 1 }}>
                 <TextInput
@@ -445,19 +436,19 @@ export default function EditAddress() {
                   value={addressForm.contactName}
                   onChangeText={(t: string) => setAddressForm((p) => ({ ...p, contactName: t }))}
                   placeholder="Name"
-                  placeholderTextColor="#6A9387"
+                  placeholderTextColor={theme.textSecondary}
                 />
                 <TextInput
                   style={styles.receiverInputPhone}
                   value={addressForm.contactPhone}
                   onChangeText={(t: string) => setAddressForm((p) => ({ ...p, contactPhone: t }))}
                   placeholder="Phone Number"
-                  placeholderTextColor="#6A9387"
+                  placeholderTextColor={theme.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
                 />
               </View>
-              <Pencil size={18} color={C.subText} style={{ alignSelf: "flex-start", marginTop: 4 }} />
+              <Pencil size={18} color={theme.textSecondary} style={{ alignSelf: "flex-start", marginTop: 4 }} />
             </View>
           </View>
 
@@ -487,7 +478,7 @@ export default function EditAddress() {
           {/* <View style={styles.section}>
             <Text style={styles.sectionTitle}>DOOR/BUILDING IMAGE (OPTIONAL)</Text>
             <TouchableOpacity style={styles.imageBox}>
-              <Ionicons name="camera-outline" size={24} color={C.pink} />
+              <Ionicons name="camera-outline" size={24} color={theme.primary} />
               <Text style={styles.imageBoxText}>Add an image</Text>
               <Text style={styles.imageBoxSub}>This helps our delivery partners find your exact location faster</Text>
             </TouchableOpacity>
@@ -503,7 +494,7 @@ export default function EditAddress() {
             disabled={!saveEnabled}
           >
             {loading ? (
-              <ActivityIndicator color="#031612" />
+              <ActivityIndicator color={theme.background} />
             ) : (
               <Text style={[styles.saveText, !saveEnabled && styles.saveTextDisabled]}>Save address <Ionicons name="checkmark-circle-outline" size={20} /></Text>
             )}
@@ -514,10 +505,24 @@ export default function EditAddress() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => {
+  const C = {
+    bg: theme.background,
+    card: theme.card,
+    white: theme.card,
+    text: theme.text,
+    subText: theme.textSecondary,
+    border: theme.border,
+    borderStrong: theme.border,
+    pink: theme.primary,
+    disabled: theme.isDark ? theme.border : "#E0EDEA",
+    disabledText: theme.textSecondary,
+    inputBg: theme.inputBackground,
+  };
+  return StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: theme.background,
   },
   mapContainer: {
     flex: 0.65,
@@ -540,7 +545,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(3, 22, 18, 0.8)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -548,7 +553,7 @@ const styles = StyleSheet.create({
   searchWrap: {
     flex: 1,
     height: 48,
-    backgroundColor: "rgba(3, 22, 18, 0.8)",
+    backgroundColor: theme.card,
     borderRadius: 24,
     flexDirection: "row",
     alignItems: "center",
@@ -559,7 +564,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: C.text,
+    color: theme.text,
     fontSize: 15,
   },
   suggestionsContainer: {
@@ -581,12 +586,12 @@ const styles = StyleSheet.create({
     borderBottomColor: C.border,
   },
   suggestionMainText: {
-    color: C.text,
+    color: theme.text,
     fontSize: 15,
     fontWeight: "500",
   },
   suggestionSubText: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
@@ -599,14 +604,14 @@ const styles = StyleSheet.create({
     width: 200,
   },
   bubble: {
-    backgroundColor: "rgba(10, 78, 63, 0.9)",
+    backgroundColor: theme.card,
     paddingHorizontal: 6,
     paddingTop: 5,
     borderRadius: 8,
     alignItems: "center",
   },
   bubbleText: {
-    color: C.pink,
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
@@ -621,7 +626,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    borderTopColor: "rgba(3, 22, 18, 0.9)",
+    borderTopColor: theme.card,
     marginTop: 0,
   },
   pinIcon: {
@@ -631,7 +636,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 26,
     alignSelf: "center",
-    backgroundColor: "rgba(3, 22, 18, 0.9)",
+    backgroundColor: theme.card,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
@@ -642,13 +647,13 @@ const styles = StyleSheet.create({
     borderColor: C.borderStrong,
   },
   currentLocText: {
-    color: C.pink,
+    color: theme.primary,
     fontWeight: "700",
     fontSize: 14,
   },
   bottomSheet: {
     flex: 0.55,
-    backgroundColor: C.bg,
+    backgroundColor: theme.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     marginTop: -20, // Overlap map slightly
@@ -674,22 +679,22 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 225, 162, 0.1)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
   areaTitle: {
-    color: C.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: "700",
   },
   areaSub: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
   permissionBox: {
-    backgroundColor: "rgba(0, 225, 162, 0.05)",
+    backgroundColor: theme.card,
     borderWidth: 1,
     borderColor: C.borderStrong,
     borderRadius: 12,
@@ -697,13 +702,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   permissionTitle: {
-    color: C.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 6,
   },
   permissionAction: {
-    color: C.pink,
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -711,7 +716,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 0.5,
@@ -728,7 +733,7 @@ const styles = StyleSheet.create({
   customInput: {
     flex: 1,
     height: 52,
-    color: C.text,
+    color: theme.text,
     paddingHorizontal: 16,
     fontSize: 15,
   },
@@ -745,19 +750,19 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
   receiverInputName: {
-    color: C.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: "600",
     padding: 0,
     marginBottom: 4,
   },
   receiverInputPhone: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 14,
     padding: 0,
   },
@@ -769,7 +774,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: C.bg,
+    backgroundColor: theme.background,
     borderWidth: 1,
     borderColor: C.borderStrong,
     borderRadius: 24,
@@ -777,15 +782,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   labelChipActive: {
-    borderColor: C.pink,
+    borderColor: theme.primary,
   },
   labelChipText: {
-    color: C.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "600",
   },
   labelChipTextActive: {
-    color: C.pink,
+    color: theme.primary,
   },
   imageBox: {
     backgroundColor: C.card,
@@ -797,14 +802,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   imageBoxText: {
-    color: C.pink,
+    color: theme.primary,
     fontSize: 15,
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 6,
   },
   imageBoxSub: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 12,
     textAlign: "center",
   },
@@ -813,14 +818,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: C.bg,
+    backgroundColor: theme.background,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
   saveBtn: {
     height: 54,
     borderRadius: 14,
-    backgroundColor: C.pink,
+    backgroundColor: theme.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -830,11 +835,12 @@ const styles = StyleSheet.create({
     backgroundColor: C.disabled,
   },
   saveText: {
-    color: "#031612",
+    color: theme.background,
     fontSize: 16,
     fontWeight: "700",
   },
   saveTextDisabled: {
-    color: C.disabledText,
+    color: theme.textSecondary,
   },
-});
+  });
+};

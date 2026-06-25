@@ -43,6 +43,22 @@ export async function registerCustomerPushToken(customerId: string) {
     deviceId,
   });
 
+  // Set up token refresh listener to keep backend in sync
+  messaging().onTokenRefresh(async (newToken) => {
+    try {
+      await AsyncStorage.setItem("fcmToken", newToken);
+      await axios.post(`${BASE_URL}/api/v1/customer/push-tokens/register`, {
+        customerId,
+        token: newToken,
+        platform: Platform.OS,
+        deviceId,
+      });
+      console.log("FCM push token auto-refreshed and saved to backend");
+    } catch (err) {
+      console.log("FCM push token auto-refresh failed:", err);
+    }
+  });
+
   return token;
 }
 

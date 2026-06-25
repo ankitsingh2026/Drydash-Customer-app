@@ -167,6 +167,8 @@ function AccordionCard({
         inputRange: [0, 1],
         outputRange: ["0deg", "180deg"],
     });
+        const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
 
     return (
         <View style={[styles.cardOuter, { borderColor: colors.border }]}>
@@ -234,10 +236,10 @@ function AccordionCard({
                                     <View
                                         style={[
                                             styles.bulletDot,
-                                            { backgroundColor: "#fff" },
+                                            { backgroundColor: theme.text },
                                         ]}
                                     />
-                                    <Text style={[styles.bulletText, { color: "#fff" }]}>
+                                    <Text style={[styles.bulletText, { color: colors.text }]}>
                                         {bullet}
                                     </Text>
                                 </View>
@@ -253,14 +255,15 @@ function AccordionCard({
 // ── Screen ────────────────────────────────────────────────────────────────────
 export default function TermsScreen() {
     const router = useRouter();
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
     const [openIndex, setOpenIndex] = useState<number | null>(1);
 
     const colors = {
         bg: theme.background,
         card: theme.card,
-        card2: theme.card || "#0A251E",
-        border: theme.border || "#0E3A2F",
+        card2: theme.card || theme.background,
+        border: theme.border || theme.background,
         primary: theme.primary,
         primarySoft: `${theme.primary}1F`,
         text: theme.text,
@@ -272,7 +275,7 @@ export default function TermsScreen() {
 
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
 
             {/* ── Header ── */}
             <View style={styles.header}>
@@ -325,7 +328,7 @@ export default function TermsScreen() {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     safe: { flex: 1 },
 
     // header
@@ -342,7 +345,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "rgba(255,255,255,0.03)",
+        backgroundColor: theme.card,
     },
     headerCenter: {
         flex: 1,
@@ -362,7 +365,7 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         marginBottom: 10,
         fontWeight: "500",
-        color: "#fff"
+        color: theme.text
     },
 
     // scroll content

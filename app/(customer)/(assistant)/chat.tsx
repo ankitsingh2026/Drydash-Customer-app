@@ -18,21 +18,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { sendTyping, sendStopTyping } from "../../../features/chat/chat.socket";
 import { useChat } from "../../../context/ChatContext";
+import { useTheme } from "../../../context/ThemeContext";
 
-/* ─── palette (unchanged) ─── */
-const C = {
-  bg: "#021410",
-  card: "#0B1E1A",
-  cardInner: "#0D2420",
-  border: "#1A3330",
-  primary: "#2FE6A6",
-  primaryDim: "#1A9E74",
-  text: "#E6FFF7",
-  subText: "#6B8F84",
-  muted: "#3A5E55",
-  userBubble: "#2FE6A6",
-  botBubble: "#0D1F1C",
-};
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -40,6 +27,9 @@ function now() {
 
 /* ─── PricingCard (exactly as in your original) ─── */
 function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpecialist: () => void }) {
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   return (
     <View style={styles.pricingCard}>
       <Text style={styles.pricingIntro}>
@@ -54,7 +44,7 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
         ].map((item, i) => (
           <View
             key={item.label}
-            style={[styles.priceRow, i < 2 && { borderBottomWidth: 1, borderColor: "#1A3330" }]}
+            style={[styles.priceRow, i < 2 && { borderBottomWidth: 1, borderColor: C.border }]}
           >
             <Text style={styles.priceLabel}>{item.label}</Text>
             <View style={styles.priceRight}>
@@ -88,7 +78,7 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
             end={{ x: 1, y: 0 }}
             style={styles.catalogBtn}
           >
-            <Ionicons name="book-outline" size={14} color="#021410" />
+            <Ionicons name="book-outline" size={14} color={C.bg} />
             <Text style={styles.catalogBtnText}>Full Catalog</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -108,6 +98,9 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
 
 /* ─── TypingIndicator (unchanged) ─── */
 function TypingIndicator() {
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
 
   useEffect(() => {
@@ -161,6 +154,9 @@ function Bubble({
   onCatalog: () => void;
   onSpecialist: () => void;
 }) {
+    const { theme, isDark } = useTheme();
+    const C = buildChatColors(theme, isDark);
+    const styles = makeChatStyles(C);
   const fade  = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(msg.senderType === "customer" ? 16 : -16)).current;
 
@@ -202,7 +198,7 @@ function Bubble({
 
         {msg.type === "text" ? (
           <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleBot]}>
-            <Text style={[styles.bubbleText, { color: isUser ? "#021410" : C.text }]}>
+            <Text style={[styles.bubbleText, { color: isUser ? C.bg : C.text }]}>
               {msg.text}
             </Text>
           </View>
@@ -224,7 +220,10 @@ function Bubble({
 }
 
 /* ─── Main Component ─── */
-export default function SupportChat() {
+export default function SupportChat() { 
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   const params = useLocalSearchParams<{ topic?: string }>();
   const flatRef = useRef<FlatList<any>>(null);
   const [input, setInput] = useState("");
@@ -381,7 +380,7 @@ export default function SupportChat() {
                   colors={[C.primary, C.primaryDim]}
                   style={styles.sendBtn}
                 >
-                  <Ionicons name="send" size={15} color="#021410" />
+                  <Ionicons name="send" size={15} color={C.bg} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -392,8 +391,23 @@ export default function SupportChat() {
   );
 }
 
-/* ─── Styles (exactly as in your original file) ─── */
-const styles = StyleSheet.create({
+function buildChatColors(theme: any, isDark: boolean) {
+  return {
+    bg: theme.background,
+    card: theme.card,
+    cardInner: theme.inputBackground,
+    border: theme.border,
+    primary: theme.primary,
+    primaryDim: isDark ? theme.card : theme.background,
+    text: theme.text,
+    subText: theme.textSecondary,
+    muted: theme.textSecondary,
+    userBubble: theme.primary,
+    botBubble: isDark ? theme.background : theme.card,
+  };
+}
+
+const makeChatStyles = (C: ReturnType<typeof buildChatColors>) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     height: 56,
@@ -445,7 +459,7 @@ const styles = StyleSheet.create({
   pricingActions: { gap: 8 },
   catalogBtnOuter: { borderRadius: 10, overflow: "hidden" },
   catalogBtn: { height: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  catalogBtnText: { fontSize: 13, fontWeight: "800", color: "#021410" },
+  catalogBtnText: { fontSize: 13, fontWeight: "800", color: C.bg },
   specialistBtn: { height: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: C.card, borderRadius: 10, borderWidth: 1, borderColor: C.border },
   specialistBtnText: { fontSize: 13, fontWeight: "700", color: C.text },
   typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 14, marginBottom: 10 },

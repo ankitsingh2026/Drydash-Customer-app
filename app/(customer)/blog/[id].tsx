@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { useTheme } from "../../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
@@ -65,7 +66,9 @@ const BLOG_DATA: Record<string, any> = {
 };
 
 export default function BlogArticleScreen() {
-  const { id } = useLocalSearchParams();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+    const { id } = useLocalSearchParams();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
@@ -78,7 +81,7 @@ export default function BlogArticleScreen() {
         <View style={styles.imageContainer}>
           <Image source={{ uri: article.image }} style={styles.heroImage} resizeMode="cover" />
           <LinearGradient
-            colors={["rgba(0,0,0,0.7)", "transparent", "rgba(10,20,16,1)"]}
+            colors={[theme.card, "transparent", theme.card]}
             locations={[0, 0.3, 1]}
             style={StyleSheet.absoluteFillObject}
           />
@@ -88,7 +91,7 @@ export default function BlogArticleScreen() {
             style={[styles.backButton, { top: insets.top + 10 }]} 
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color="#FFF" />
+            <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
         </View>
 
@@ -122,10 +125,10 @@ export default function BlogArticleScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A1410",
+    backgroundColor: theme.background,
   },
   imageContainer: {
     width: width,
@@ -142,7 +145,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     backdropFilter: "blur(10px)",
@@ -159,7 +162,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   metaText: {
-    color: "#00E1A2",
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -169,13 +172,13 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#00E1A2",
+    backgroundColor: theme.primary,
     marginHorizontal: 10,
   },
   title: {
     fontSize: 28,
     fontWeight: "900",
-    color: "#FFFFFF",
+    color: theme.text,
     lineHeight: 34,
     marginBottom: 12,
   },
@@ -187,7 +190,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#1A332B",
+    backgroundColor: theme.card,
     marginVertical: 24,
   },
   bodyContainer: {
@@ -196,7 +199,7 @@ const styles = StyleSheet.create({
   heading2: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
     marginTop: 10,
     marginBottom: 4,
   },

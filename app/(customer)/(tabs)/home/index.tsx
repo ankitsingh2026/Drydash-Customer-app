@@ -187,6 +187,7 @@ const HERO_SLIDES = [
 
 export default function Home() {
   const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -700,7 +701,7 @@ export default function Home() {
           }}
         />
         <StatusBar
-          style={"light"}
+          style={theme.statusBar}
           backgroundColor={theme.background}
           translucent={false}
         />
@@ -725,13 +726,13 @@ export default function Home() {
                     <View
                       style={[
                         styles.searchBar,
-                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
+                        { backgroundColor: theme.inputBackground, borderColor: theme.border },
                       ]}
                     >
                       <Ionicons
                         name="search-outline"
                         size={18}
-                        color="#6B7280"
+                        color={theme.textSecondary}
                         style={{ marginRight: 8 }}
                       />
                       <TextInput
@@ -766,11 +767,11 @@ export default function Home() {
                             setSearchResults([]);
                           }}
                         >
-                          <Ionicons name="close-circle" size={18} color="#6B7280" />
+                          <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity>
-                          {/* <Ionicons name="mic-outline" size={18} color="#6B7280" /> */}
+                          {/* <Ionicons name="mic-outline" size={18} color={theme.textSecondary} /> */}
                         </TouchableOpacity>
                       )}
                     </View>
@@ -780,12 +781,12 @@ export default function Home() {
                     <View
                       style={[
                         styles.searchResultsContainer,
-                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
+                        { backgroundColor: theme.modalBackground, borderColor: theme.border },
                       ]}
                     >
                       {searchLoading ? (
                         <View style={styles.loadingContainer}>
-                          <Ionicons name="reload-outline" size={30} color="#56BFAB" />
+                          <Ionicons name="reload-outline" size={30} color={theme.primary} />
                           <Text
                             style={[styles.loadingText, { color: theme.subText }]}
                           >
@@ -883,7 +884,7 @@ export default function Home() {
                   <View style={{ marginHorizontal: 12 }}>
                     <Text
                       style={{
-                        color: "#4E7060",
+                        color: theme.textSecondary,
                         fontSize: 11,
                         fontWeight: "800",
                         letterSpacing: 0.7,
@@ -938,7 +939,6 @@ export default function Home() {
                                 const isFull = slot.availableCapacity === 0;
                                 const isFilling =
                                   slot.availableCapacity > 0 && slot.availableCapacity <= 3;
-                                console.log("REMAINING", remaining);
                                 return (
                                   <TouchableOpacity
                                     key={i}
@@ -956,10 +956,10 @@ export default function Home() {
                                     style={{
                                       flex: 1,
                                       minHeight: 86,
-                                      backgroundColor: "#071C14",
+                                      backgroundColor: theme.card,
                                       borderRadius: 18,
                                       borderWidth: 1.2,
-                                      borderColor: isFull ? "#1A2F2C" : "#214434",
+                                      borderColor: isFull ? theme.border : theme.lightborder,
                                       paddingHorizontal: 14,
                                       paddingVertical: 12,
                                       opacity: isFull ? 0.45 : 1,
@@ -968,7 +968,7 @@ export default function Home() {
                                   >
                                     <Text
                                       style={{
-                                        color: isFull ? "#4E7060" : "#F7F8F5",
+                                        color: isFull ? theme.textSecondary : theme.text,
                                         fontSize: 15,
                                         fontWeight: "800",
                                         letterSpacing: 0.2,
@@ -997,10 +997,10 @@ export default function Home() {
                                           gap: 5,
                                         }}
                                       >
-                                        <Text style={{ fontSize: 12, color: "#C8F135" }}>⚡</Text>
+                                        <Text style={{ fontSize: 12, color: theme.subText }}>⚡</Text>
                                         <Text
                                           style={{
-                                            color: "#C8F135",
+                                            color: theme.subText,
                                             fontSize: 11,
                                             fontWeight: "700",
                                           }}
@@ -1020,10 +1020,10 @@ export default function Home() {
                                   style={{
                                     width: 64,
                                     minHeight: 86,
-                                    backgroundColor: "#071C14",
+                                    backgroundColor: theme.card,
                                     borderRadius: 18,
                                     borderWidth: 1.2,
-                                    borderColor: "#214434",
+                                    borderColor: theme.lightborder,
                                     alignItems: "center",
                                     justifyContent: "center",
                                     paddingHorizontal: 8,
@@ -1031,7 +1031,7 @@ export default function Home() {
                                 >
                                   <Text
                                     style={{
-                                      color: "#F7F8F5",
+                                      color: theme.text,
                                       fontSize: 20,
                                       fontWeight: "900",
                                       lineHeight: 24,
@@ -1041,7 +1041,7 @@ export default function Home() {
                                   </Text>
                                   <Text
                                     style={{
-                                      color: "#B2BDB6",
+                                      color: theme.textSecondary,
                                       fontSize: 11,
                                       fontWeight: "700",
                                       marginTop: 2,
@@ -1062,10 +1062,10 @@ export default function Home() {
                         style={{
                           flexDirection: "row",
                           alignItems: "center",
-                          backgroundColor: "#071C14",
+                          backgroundColor: theme.card,
                           borderRadius: 16,
                           borderWidth: 1,
-                          borderColor: "#1A2F2C",
+                          borderColor: theme.border,
                           padding: 14,
                           gap: 10,
                         }}
@@ -1075,14 +1075,14 @@ export default function Home() {
                             width: 34,
                             height: 34,
                             borderRadius: 17,
-                            backgroundColor: "#0F2D1F",
+                            backgroundColor: theme.inputBackground,
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
-                          <Ionicons name="location-outline" size={16} color="#00E1A2" />
+                          <Ionicons name="location-outline" size={16} color={theme.subText} />
                         </View>
-                        <Text style={{ color: "#4E7060", fontSize: 12, fontWeight: "600" }}>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: "600" }}>
                           Select a pickup address to view today's slots
                         </Text>
                       </TouchableOpacity>
@@ -1127,9 +1127,9 @@ export default function Home() {
                 <Animated.View style={{ opacity: fadeAnim }}>
                   <View style={styles.section}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
                       <TouchableOpacity onPress={() => router.push('/services')}>
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
+                        <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
                       </TouchableOpacity>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1142,8 +1142,8 @@ export default function Home() {
                             key={s.key}
                             style={{
                               flex: 1,
-                              backgroundColor: '#052420',
-                              borderColor: '#1A3830',
+                              backgroundColor: theme.card,
+                              borderColor: theme.border,
                               borderWidth: 1,
                               borderRadius: 16,
                               overflow: 'hidden',   // clips icon to card bounds
@@ -1173,7 +1173,7 @@ export default function Home() {
                             <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
                               <Text
                                 style={{
-                                  color: '#C9E9E2',
+                                  color: theme.text,
                                   fontSize: 13,
                                   fontWeight: '800',
                                   letterSpacing: 0.6,
@@ -1185,7 +1185,7 @@ export default function Home() {
                               </Text>
                               <Text
                                 style={{
-                                  color: '#BACBC0',
+                                  color: theme.textSecondary,
                                   fontSize: 9,
                                   fontWeight: '500',
                                   lineHeight: 11,
@@ -1206,7 +1206,7 @@ export default function Home() {
 
               <View style={styles.wrapper}>
                 <LinearGradient
-                  colors={["#001A17", "#00332B", "#004D3F"]}
+                  colors={theme.ordergradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0.7 }}
                   style={styles.card}
@@ -1286,7 +1286,7 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   root: { flex: 1 },
 
   searchResultsContainer: {
@@ -1300,10 +1300,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     zIndex: 1001,
     elevation: 6,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    backgroundColor: theme.modalBackground,
+    borderColor: theme.border,
   },
   searchResultsList: {
     maxHeight: 400,
@@ -1312,7 +1314,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A2F2C",
+    borderBottomColor: theme.border,
   },
   searchResultImageContainer: {
     width: 50,
@@ -1320,7 +1322,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     marginRight: 12,
-    backgroundColor: "#1A2F2C",
+    backgroundColor: theme.border,
   },
   searchResultImage: {
     width: "100%",
@@ -1334,14 +1336,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
+    color: theme.text,
   },
   searchResultCategory: {
     fontSize: 11,
     marginBottom: 2,
+    color: theme.textSecondary,
   },
   searchResultPrice: {
     fontSize: 13,
     fontWeight: "700",
+    color: theme.subText,
   },
   loadingContainer: {
     padding: 32,
@@ -1351,6 +1356,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     marginTop: 10,
+    color: theme.textSecondary,
   },
   noResultsContainer: {
     padding: 32,
@@ -1362,10 +1368,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 4,
+    color: theme.text,
   },
   noResultsSubtext: {
     fontSize: 12,
     textAlign: "center",
+    color: theme.textSecondary,
   },
   searchBarWrap: {
     paddingHorizontal: 16,
@@ -1379,12 +1387,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
+    backgroundColor: theme.inputBackground,
+    borderColor: theme.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
     paddingVertical: 0,
+    color: theme.text,
   },
   placeholderTicker: {
     position: "absolute",
@@ -1396,7 +1407,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   placeholderText: {
-    color: "#4B5563",
+    color: theme.placeholderText,
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 18,
@@ -1408,7 +1419,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: 34,
-    backgroundColor: "#00C896",
+    backgroundColor: theme.primary,
   },
   heroCard: {
     width: CARD_WIDTH,
@@ -1424,12 +1435,12 @@ const styles = StyleSheet.create({
   },
   heroTextWrap: {
     padding: 12,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: theme.card,
   },
   heroTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
     lineHeight: 26,
   },
   heroSubtitle: {
@@ -1475,12 +1486,11 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
-
   },
   swipeHint: {
     fontWeight: "800",
     fontSize: 12,
-    color: "#FFFFFF",
+    color: theme.text,
     letterSpacing: 1.5,
     marginLeft: 30,
   },
@@ -1516,6 +1526,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
+    backgroundColor: theme.card,
+    borderColor: theme.border,
   },
   serviceIconWrapper: {
     width: 42,
@@ -1524,7 +1536,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
+  serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2, color: theme.text },
   wrapper: {
     padding: 16,
   },
@@ -1536,20 +1548,20 @@ const styles = StyleSheet.create({
   tag: {
     fontSize: 10,
     letterSpacing: 2,
-    color: "#6B9E7E",
+    color: theme.subText,
     marginBottom: 10,
     fontWeight: "700",
   },
   title: {
     fontSize: 22,
     fontWeight: "900",
-    color: "#E6FFF4",
+    color: theme.text,
     lineHeight: 28,
     marginBottom: 12,
   },
   desc: {
     fontSize: 13,
-    color: "#9CCFC0",
+    color: theme.textSecondary,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -1561,6 +1573,6 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 100,
     borderWidth: 18,
-    borderColor: "rgba(51,240,162,0.15)",
+    borderColor: theme.card,
   },
 });

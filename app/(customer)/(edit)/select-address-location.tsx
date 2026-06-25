@@ -16,14 +16,7 @@ import MapView, { PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { showAlert } from "@/components/Customalert";
 
-const C = {
-  bg: "#031612",
-  text: "#E6FFF7",
-  subText: "#8FB3A8",
-  border: "#1A3330",
-  pink: "#00E1A2",
-  darkBubble: "#0F172A",
-};
+import { useTheme } from "@/theme/useTheme";
 
 const INITIAL_REGION: Region = {
   latitude: 28.6139,
@@ -33,6 +26,18 @@ const INITIAL_REGION: Region = {
 };
 
 export default function SelectAddressLocationScreen() {
+  const { theme, colors, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+
+
+  const C = {
+    bg: colors.background,
+    text: colors.text,
+    subText: colors.subText,
+    border: colors.border,
+    pink: colors.primary,
+    darkBubble: isDark ? theme.background : theme.text,
+  };
   const params = useLocalSearchParams();
   const mapRef = useRef<MapView>(null);
   const preventFetchRef = useRef(false);
@@ -208,23 +213,23 @@ export default function SelectAddressLocationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: C.bg }]} edges={["top", "bottom"]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select Your Location</Text>
+        <Text style={[styles.headerTitle, { color: C.text }]}>Select Your Location</Text>
       </View>
 
       <View style={styles.searchContainer}>
-        <View style={styles.searchWrap}>
+        <View style={[styles.searchWrap, { backgroundColor: colors.card, borderColor: C.border }]}>
           <Ionicons name="search-outline" size={22} color={C.subText} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: C.text }]}
             value={query}
             onChangeText={setQuery}
             placeholder="Search for apartment, street name..."
-            placeholderTextColor="#7BA79A"
+            placeholderTextColor={colors.placeholderText}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
           />
@@ -252,7 +257,7 @@ export default function SelectAddressLocationScreen() {
         />
 
         {showSuggestions && suggestions.length > 0 && (
-          <View style={styles.suggestionsContainer}>
+          <View style={[styles.suggestionsContainer, { backgroundColor: colors.card, borderColor: C.border }]}>
             <FlatList
               data={suggestions}
               keyExtractor={(item) => item.place_id}
@@ -260,7 +265,7 @@ export default function SelectAddressLocationScreen() {
               nestedScrollEnabled={true}
               ListHeaderComponent={
                 <TouchableOpacity
-                  style={styles.suggestionItem}
+                  style={[styles.suggestionItem, { borderBottomColor: C.border }]}
                   onPress={() => {
                     setShowSuggestions(false);
                     setQuery("");
@@ -275,7 +280,7 @@ export default function SelectAddressLocationScreen() {
               }
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.suggestionItem}
+                  style={[styles.suggestionItem, { borderBottomColor: C.border }]}
                   onPress={() => handleSelectSuggestion(item.place_id, item.description)}
                 >
                   <View style={{ alignItems: "center", marginRight: 12, width: 40 }}>
@@ -289,11 +294,11 @@ export default function SelectAddressLocationScreen() {
                     ) : null}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.suggestionMainText} numberOfLines={1}>
+                    <Text style={[styles.suggestionMainText, { color: C.text }]} numberOfLines={1}>
                       {item.structured_formatting?.main_text || item.description}
                     </Text>
                     {item.structured_formatting?.secondary_text ? (
-                      <Text style={styles.suggestionSubText} numberOfLines={2}>
+                      <Text style={[styles.suggestionSubText, { color: C.subText }]} numberOfLines={2}>
                         {item.structured_formatting.secondary_text}
                       </Text>
                     ) : null}
@@ -308,27 +313,27 @@ export default function SelectAddressLocationScreen() {
           <Ionicons name="location" size={48} color={C.pink} />
         </View>
 
-        <View style={styles.bubble}>
+        <View style={[styles.bubble, { backgroundColor: C.darkBubble }]}>
           {/* <Text style={styles.bubbleTitle}>Order will be delivered here</Text> */}
-          <Text style={styles.bubbleSub}>Place the pin to your exact location</Text>
+          <Text style={[styles.bubbleSub, { color: isDark ? "#9FC0CF" : theme.background }]}>Place the pin to your exact location</Text>
         </View>
       </View>
 
-      <View style={styles.bottomCard}>
+      <View style={[styles.bottomCard, { backgroundColor: colors.card, borderColor: C.border }]}>
         {loadingAddress ? (
           <View style={styles.locationRowLoading}>
             <ActivityIndicator size="small" color={C.pink} />
-            <Text style={styles.bottomSubTitle}>Detecting area...</Text>
+            <Text style={[styles.bottomSubTitle, { color: C.subText }]}>Detecting area...</Text>
           </View>
         ) : (
           <>
-            <Text style={styles.bottomTitle}>{locationName || "Selected location"}</Text>
-            <Text style={styles.bottomSubTitle}>{locationSubName || "Confirm this location"}</Text>
+            <Text style={[styles.bottomTitle, { color: C.text }]}>{locationName || "Selected location"}</Text>
+            <Text style={[styles.bottomSubTitle, { color: C.subText }]}>{locationSubName || "Confirm this location"}</Text>
           </>
         )}
 
-        <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmLocation}>
-          <Text style={styles.confirmText}>Confirm Location</Text>
+        <TouchableOpacity style={[styles.confirmBtn, { backgroundColor: C.pink }]} onPress={handleConfirmLocation}>
+          <Text style={[styles.confirmText, { color: isDark ? theme.background : theme.text }]}>Confirm Location</Text>
         </TouchableOpacity>
 
         {Platform.OS === "android" && <View style={{ height: 8 }} />}
@@ -337,10 +342,9 @@ export default function SelectAddressLocationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: C.bg,
   },
   header: {
     flexDirection: "row",
@@ -351,18 +355,13 @@ const styles = StyleSheet.create({
   backBtn: {
     width: 38,
     height: 38,
-    // borderRadius: 19,
-    // borderWidth: 1,
-    borderColor: C.border,
     alignItems: "center",
     justifyContent: "center",
-    // backgroundColor: "#0D1F1C",
   },
   headerTitle: {
     marginLeft: 14,
     fontSize: 32 / 2,
     fontWeight: "800",
-    color: C.text,
   },
   searchContainer: {
     zIndex: 10,
@@ -370,9 +369,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   searchWrap: {
-    backgroundColor: "#0D1F1C",
     borderWidth: 1,
-    borderColor: C.border,
     borderRadius: 16,
     minHeight: 48,
     paddingHorizontal: 10,
@@ -382,12 +379,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: C.text,
     fontSize: 14,
     fontWeight: "500",
   },
   goText: {
-    color: C.pink,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -396,13 +391,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 12,
     right: 12,
-    backgroundColor: "#0D1F1C",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: C.border,
     maxHeight: 450,
     elevation: 5,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
@@ -414,15 +407,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A3330",
   },
   suggestionMainText: {
-    color: C.text,
     fontSize: 15,
     fontWeight: "500",
   },
   suggestionSubText: {
-    color: C.subText,
     fontSize: 13,
     marginTop: 2,
   },
@@ -444,26 +434,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 120,
     alignSelf: "center",
-    backgroundColor: "#071E2B",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   bubbleTitle: {
-    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "800",
   },
   bubbleSub: {
     marginTop: 2,
-    color: "#9FC0CF",
     fontSize: 13,
     fontWeight: "500",
   },
   bottomCard: {
     borderTopWidth: 1,
-    borderColor: C.border,
-    backgroundColor: "#0B1E1A",
     paddingHorizontal: 18,
     paddingTop: 14,
     paddingBottom: 18,
@@ -475,13 +460,11 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   bottomTitle: {
-    color: C.text,
     fontSize: 34 / 2,
     fontWeight: "700",
   },
   bottomSubTitle: {
     marginTop: 4,
-    color: C.subText,
     fontSize: 28 / 2,
     fontWeight: "500",
   },
@@ -491,12 +474,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.pink,
     alignSelf: "center",
     paddingHorizontal: 16
   },
   confirmText: {
-    color: "#031612",
     fontSize: 16,
     fontWeight: "600",
   },

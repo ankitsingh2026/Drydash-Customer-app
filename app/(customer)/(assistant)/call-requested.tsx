@@ -11,21 +11,26 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-/* ─── palette ─── */
-const C = {
-  bg: "#021410",
-  card: "#0B1E1A",
-  border: "#1A3330",
-  primary: "#2FE6A6",
-  primaryDim: "#1A9E74",
-  text: "#E6FFF7",
-  subText: "#6B8F84",
-  muted: "#3A5E55",
-};
+import { useTheme } from "../../../context/ThemeContext";
 
 /* ─── pulsing ring ─── */
+function buildCallColors(theme: any, isDark: boolean) {
+  return {
+    bg: theme.background,
+    card: theme.card,
+    border: theme.border,
+    primary: theme.primary,
+    primaryDim: isDark ? theme.card : theme.background,
+    text: theme.text,
+    subText: theme.textSecondary,
+    muted: theme.textSecondary,
+  };
+}
+
 function PulseRing() {
+  const { theme, isDark } = useTheme();
+  const C = buildCallColors(theme, isDark);
+  const styles = makeCallStyles(C);
   const ring1 = useRef(new Animated.Value(0)).current;
   const ring2 = useRef(new Animated.Value(0)).current;
 
@@ -79,6 +84,9 @@ function PulseRing() {
 
 /* ─── screen ─── */
 export default function CallRequested() {
+    const { theme, isDark } = useTheme();
+    const C = buildCallColors(theme, isDark);
+  const styles = makeCallStyles(C);
   const fade  = useRef(new Animated.Value(0)).current;
   const slideY = useRef(new Animated.Value(30)).current;
 
@@ -155,7 +163,7 @@ export default function CallRequested() {
               style={styles.homeBtn}
             >
               <Text style={styles.homeBtnText}>Go to Home</Text>
-              <Ionicons name="arrow-forward" size={18} color="#021410" />
+              <Ionicons name="arrow-forward" size={18} color={C.bg} />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -175,7 +183,7 @@ export default function CallRequested() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeCallStyles = (C: ReturnType<typeof buildCallColors>) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   header: {
@@ -297,7 +305,7 @@ const styles = StyleSheet.create({
   homeBtnText: {
     fontSize: 16,
     fontWeight: "900",
-    color: "#021410",
+    color: C.bg,
   },
 
   /* footer icons */

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Dimensions } from "react-native";
 import * as Haptics from "expo-haptics"; // add this
+import { useTheme } from "../context/ThemeContext";
 
 interface SwipeToActionProps {
   title?: string;
@@ -25,10 +26,13 @@ export default function SwipeToAction({
   title = "SWIPE FOR INSTANT PICKUP",
   onComplete,
   height = 56,
-  thumbColor = "#00E1A2",
+  thumbColor,
   backgroundColor = "#052420",
   threshold = 0.25,
 }: SwipeToActionProps) {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
+  const effectiveThumbColor = thumbColor ?? theme.primary;
   const SCREEN_WIDTH = Dimensions.get("window").width;
   const COMPONENT_WIDTH = SCREEN_WIDTH - 30;
   const THUMB_PADDING = 5.8; // gap between thumb and bar edge
@@ -131,7 +135,7 @@ export default function SwipeToAction({
     <View
       style={[
         styles.container,
-        { width: COMPONENT_WIDTH, height, backgroundColor },
+        { width: COMPONENT_WIDTH, height },
       ]}
     >
       <Animated.View
@@ -155,7 +159,7 @@ export default function SwipeToAction({
             left: THUMB_PADDING,
             width: THUMB_SIZE,
             height: THUMB_SIZE,
-            backgroundColor: thumbColor,
+            backgroundColor: effectiveThumbColor,
             borderWidth: 0,
             transform: [{ translateX: dragX }, { scale: thumbScale }],
           },
@@ -163,7 +167,7 @@ export default function SwipeToAction({
         {...panResponder.panHandlers}
       >
         <Animated.View >
-          <Ionicons name="arrow-forward" size={22} color="#000" />
+          <Ionicons name="arrow-forward" size={22} color={theme.background} />
         </Animated.View>
       </Animated.View>
 
@@ -184,11 +188,14 @@ export default function SwipeToAction({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   container: {
     borderRadius: 20,
     overflow: "hidden",
     justifyContent: "center",
+    backgroundColor: theme.card,
+    borderColor: theme.lightborder,
+    borderWidth:1,
 
   },
   fill: {
@@ -196,7 +203,7 @@ const styles = StyleSheet.create({
     left: 0,
     top: 3.6,
     bottom: 4.3,
-    backgroundColor: "#00E1A2",
+    backgroundColor: theme.primary,
     borderRadius: 16,
     borderTopLeftRadius: 16,
     borderBottomLeftRadius: 16,
@@ -214,7 +221,7 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: "center",
-    color: "#fff",
+    color: theme.text,
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1.5,

@@ -15,6 +15,7 @@ import CancelPickupConfirmModal from "./CancelPickupConfirmModal";
 import ReschedulePickupModal from "./ReschedulePickupModal";
 import { router } from "expo-router";
 import { showAlert } from "@/components/Customalert";
+import { useTheme } from "../../context/ThemeContext";
 
 type PickupStatusCardProps = {
     pickup: PickupRecord;
@@ -31,11 +32,6 @@ type CardVariant =
     | "delivery"
     | "completed"
     | "cancelled";
-
-const ACCENT = "#29E6B0";
-const SURFACE = "#0D1F1C";
-const BORDER = "#1A3330";
-const MUTED = "#6B7280";
 
 const STATUS_ALIASES: Record<string, CardVariant> = {
     pending: "scheduled",
@@ -165,9 +161,12 @@ const getOrderCode = (pickup: PickupRecord) => {
 };
 
 function StatusPill({ label }: { label: string }) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
+    const accent = colors.subText;
     return (
         <View style={styles.statusPill}>
-            <Ionicons name="ellipse" size={10} color={ACCENT} />
+            <Ionicons name="ellipse" size={10} color={accent} />
             <Text style={styles.statusPillText}>{label}</Text>
         </View>
     );
@@ -182,13 +181,16 @@ function TagPill({
     icon?: React.ComponentProps<typeof Ionicons>["name"];
     tone?: "default" | "danger";
 }) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
+    const accent = colors.subText;
     return (
         <View style={styles.tagPill}>
             {icon ? (
                 <Ionicons
                     name={icon}
                     size={13}
-                    color={tone === "danger" ? "#FF9FA8" : "#A5F5D7"}
+                    color={tone === "danger" ? "#FF9FA8" : accent}
                 />
             ) : null}
             <Text
@@ -222,6 +224,8 @@ function ActionTagButton({
 }
 
 function IconPair() {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     return (
         <View style={styles.iconPairWrap}>
             <View style={styles.iconCircle}>
@@ -235,15 +239,20 @@ function IconPair() {
 }
 
 function ChatFab() {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
+    const background = colors.background;
     return (
         <TouchableOpacity style={styles.chatFab}
             onPress={() => router.push("/(customer)/(assistant)/chat")}>
-            <Ionicons name="chatbubble-ellipses" size={25} color="#003C31" />
+            <Ionicons name="chatbubble-ellipses" size={25} color={background} />
         </TouchableOpacity>
     );
 }
 
 function RiderAvatar({ pickup }: { pickup: PickupRecord }) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     return (
         <View style={styles.riderAvatar}>
             <Text style={styles.riderAvatarText}>
@@ -262,14 +271,14 @@ function ScheduledPickupCard({
     onReschedule: () => void;
     onCancel: () => void;
 }) {
+    const { colors, isDark, theme } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const getItemCount = (pickup: PickupRecord) => {
         if (!pickup?.items?.length) return 0;
         return pickup.items.reduce((total, item) => total + (item.quantity || 0), 0);
     };
     const itemCount = getItemCount(pickup);
     const highlightTime = getSlotEndLabel(pickup);
-    const scheduleTitle = getScheduledTitle(pickup);
-    // Split "Pickup today before 3PM" → prefix = "TODAY\nBEFORE ", accent = "3PM"
     const isItToday = isToday(pickup.rescheduledDate || pickup.pickup_date);
     const dateLabel = isItToday ? "TODAY" : formatDate(pickup.rescheduledDate || pickup.pickup_date).toUpperCase();
     const [menuVisible, setMenuVisible] = useState(false);
@@ -277,59 +286,56 @@ function ScheduledPickupCard({
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-                {/* Header */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label={pickup.isRescheduled ? "RESCHEDULED" : "PICKUP SCHEDULED"} />
                     <View style={styles.headerRightActions}>
-                        {/* Cart icon with badge */}
                         <View style={styles.cartBadgeWrap}>
-                            <Ionicons name="cart-outline" size={20} color="#A5F5D7" />
+                            <Ionicons name="cart-outline" size={20} color={colors.subText} />
                             {itemCount > 0 && (
                                 <View style={styles.cartBadge}>
                                     <Text style={styles.cartBadgeText}>{itemCount}</Text>
                                 </View>
                             )}
                         </View>
-                        {/* Three-dot menu */}
                         <View style={styles.menuContainer}>
                             <TouchableOpacity onPress={() => setMenuVisible(!menuVisible)}>
-                                <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
+                                <Ionicons name="ellipsis-vertical" size={20} color={colors.subText} />
                             </TouchableOpacity>
                             <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-                                <TouchableOpacity 
-                                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }} 
-                                    activeOpacity={1} 
+                                <TouchableOpacity
+                                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+                                    activeOpacity={1}
                                     onPress={() => setMenuVisible(false)}
                                 >
-                                    <View style={{ backgroundColor: '#0B1F1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 }}>
-                                        <View style={{ width: 40, height: 4, backgroundColor: '#1E3A34', alignSelf: 'center', borderRadius: 2, marginBottom: 8 }} />
-                                        <Text style={{ color: '#E6FFF7', fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Order Options</Text>
-                                        
+                                    <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 }}>
+                                        <View style={{ width: 40, height: 4, backgroundColor: colors.border, alignSelf: 'center', borderRadius: 2, marginBottom: 8 }} />
+                                        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Order Options</Text>
+
                                         <TouchableOpacity
                                             activeOpacity={0.8}
                                             onPress={() => { setMenuVisible(false); onReschedule(); }}
-                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#102B25', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#1E3A34' }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 10, borderRadius: 16, borderWidth: 1, borderColor: colors.border }}
                                         >
-                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#00E1A222', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                                                <Ionicons name="calendar-outline" size={20} color="#00E1A2" />
+                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.subText + '22', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                                <Ionicons name="calendar-outline" size={20} color={colors.subText} />
                                             </View>
                                             <View>
-                                                <Text style={{ color: '#E6FFF7', fontSize: 16, fontWeight: '600' }}>Reschedule</Text>
-                                                <Text style={{ color: '#8FB3A8', fontSize: 13, marginTop: 2 }}>Change pickup date and time</Text>
+                                                <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Reschedule</Text>
+                                                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Change pickup date and time</Text>
                                             </View>
                                         </TouchableOpacity>
 
                                         <TouchableOpacity
                                             activeOpacity={0.8}
                                             onPress={() => { setMenuVisible(false); onCancel(); }}
-                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#2A1115', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#4A1D24' }}
+                                            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 10, borderRadius: 16, borderWidth: 1, borderColor: theme.border }}
                                         >
-                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B6B22', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                                            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B6B15', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
                                                 <Ionicons name="close-outline" size={22} color="#FF6B6B" />
                                             </View>
                                             <View>
-                                                <Text style={{ color: '#FF9FA8', fontSize: 16, fontWeight: '600' }}>Cancel Order</Text>
-                                                <Text style={{ color: '#C27A82', fontSize: 13, marginTop: 2 }}>This action cannot be undone</Text>
+                                                <Text style={{ color: theme.isDark ? '#FF9FA8' : '#C53030', fontSize: 16, fontWeight: '600' }}>Cancel Pickup</Text>
+                                                <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 2 }}>This action cannot be undone</Text>
                                             </View>
                                         </TouchableOpacity>
                                     </View>
@@ -339,7 +345,6 @@ function ScheduledPickupCard({
                     </View>
                 </View>
 
-                {/* Sublabel + big heading */}
                 <View style={styles.pickupHeadingBlock}>
                     <Text style={styles.pickupSubLabel}>PICKUP</Text>
                     <Text style={styles.pickupBigLine}>{dateLabel}</Text>
@@ -349,7 +354,6 @@ function ScheduledPickupCard({
                     </Text>
                 </View>
 
-                {/* Bottom row */}
                 <View style={styles.bottomRowCompact}>
                     <TouchableOpacity
                         activeOpacity={0.85}
@@ -370,8 +374,10 @@ function ScheduledPickupCard({
 }
 
 function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const itemCount = pickup.items?.length ?? 0;
-    const riderName = pickup.riderName || pickup.contactName || pickup.Name || "Your rider";
+    const riderName = pickup.riderName || "Your rider";
     const highlightTime = getSlotEndLabel(pickup);
     const isItToday = isToday(pickup.rescheduledDate || pickup.pickup_date);
     const dateLabel = isItToday ? "TODAY" : formatDate(pickup.rescheduledDate || pickup.pickup_date).toUpperCase();
@@ -382,7 +388,7 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                     <StatusPill label="RIDER ASSIGNED" />
                     <View style={styles.cartBadgeWrap}>
-                        <Ionicons name="cart-outline" size={20} color="#A5F5D7" />
+                        <Ionicons name="cart-outline" size={20} color={colors.subText} />
                         {itemCount > 0 && (
                             <View style={styles.cartBadge}>
                                 <Text style={styles.cartBadgeText}>{itemCount}</Text>
@@ -390,7 +396,6 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                         )}
                     </View>
                 </View>
-                {/* Heading + rider side by side */}
                 <View style={styles.assignedContentRow}>
                     <View style={styles.pickupHeadingBlock}>
                         <Text style={styles.pickupSubLabel}>PICKUP</Text>
@@ -401,7 +406,7 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                         </Text>
                     </View>
                     <View style={styles.assignedRiderRight}>
-                        <Ionicons name="bicycle-outline" size={18} color="#86DCC0" />
+                        <Ionicons name="bicycle-outline" size={18} color={colors.subText} />
                         <Text style={styles.assignedRiderText}>
                             <Text style={styles.assignedRiderName}>{riderName}</Text>
                             {" is on the way"}
@@ -409,7 +414,6 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
                     </View>
                 </View>
 
-                {/* Bottom row */}
                 <View style={styles.bottomRowCompact}>
                     <TouchableOpacity
                         activeOpacity={0.85}
@@ -430,12 +434,13 @@ function AssignedPickupCard({ pickup }: PickupStatusCardProps) {
 }
 
 function ProcessingPickupCard({ pickup }: PickupStatusCardProps) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const itemCount = pickup.items?.length ?? 0;
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-                {/* Header: status + payment pending pill + chat */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="ACTIVE ORDER" />
                     <View style={styles.processingHeaderRight}>
@@ -447,19 +452,15 @@ function ProcessingPickupCard({ pickup }: PickupStatusCardProps) {
                     </View>
                 </View>
 
-                {/* Hint line */}
                 <View style={styles.hintRow}>
-                    <Ionicons name="flash" size={13} color="#86DCC0" />
+                    <Ionicons name="flash" size={13} color={colors.subText} />
                     <Text style={styles.payHintText}>PAY NOW TO CHOOSE DELIVERY SLOT</Text>
                 </View>
 
-                {/* Big title */}
                 <Text style={styles.processingBigTitle}>PROCESSING YOUR{"\n"}ORDER</Text>
 
-                {/* Items tag */}
                 <TagPill label={`Total items: ${itemCount}`} />
 
-                {/* Full-width Pay Now */}
                 <TouchableOpacity style={styles.payNowBtnFull}>
                     <Text style={styles.payNowText}>Pay now</Text>
                 </TouchableOpacity>
@@ -475,12 +476,13 @@ function PaidPickupCard({
     pickup: PickupRecord;
     onReschedule: () => void;
 }) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const itemCount = pickup.items?.length ?? 0;
 
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-                {/* Header: status + paid pill + chat */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="ACTIVE ORDER" />
                     <View style={styles.processingHeaderRight}>
@@ -489,16 +491,13 @@ function PaidPickupCard({
                     </View>
                 </View>
 
-                {/* Hint line */}
                 <View style={styles.hintRow}>
-                    <Ionicons name="flash" size={13} color="#86DCC0" />
+                    <Ionicons name="flash" size={13} color={colors.subText} />
                     <Text style={styles.payHintText}>PAY NOW TO CHOOSE DELIVERY SLOT</Text>
                 </View>
 
-                {/* Big title */}
                 <Text style={styles.processingBigTitle}>PROCESSING YOUR{"\n"}ORDER</Text>
 
-                {/* Items tag */}
                 <TagPill label={`Total items: ${itemCount}`} />
             </View>
         </View>
@@ -506,6 +505,8 @@ function PaidPickupCard({
 }
 
 function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const orderCode = getOrderCode(pickup);
     const riderName = (
         pickup.riderName || pickup.contactName || pickup.Name || "Rider"
@@ -517,7 +518,6 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-                {/* Header */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="OUT FOR DELIVERY" />
                     <View style={styles.processingHeaderRight}>
@@ -533,9 +533,8 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
                     </View>
                 </View>
 
-                {/* Big rider name + subtitle */}
                 <View style={styles.deliveryRiderBlock}>
-                    <Ionicons name="bicycle-outline" size={32} color="#86DCC0" />
+                    <Ionicons name="bicycle-outline" size={32} color={colors.subText} />
                     <View style={{ flex: 1 }}>
                         <Text style={styles.deliveryRiderName}>{riderName}</Text>
                         <Text style={styles.deliveryRiderSub}>
@@ -544,7 +543,6 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
                     </View>
                 </View>
 
-                {/* Meta: items pill + order code */}
                 <View style={styles.deliveryBottomMeta}>
                     <TagPill label={`Total items: ${itemCount}`} />
                     <Text style={styles.deliveryMetaText}>
@@ -553,7 +551,6 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
                     </Text>
                 </View>
 
-                {/* Pay now — only if not paid */}
                 {!isPaid && (
                     <TouchableOpacity style={styles.payNowBtnFull}>
                         <Text style={styles.payNowText}>Pay now</Text>
@@ -566,6 +563,8 @@ function DeliveryPickupCard({ pickup }: PickupStatusCardProps) {
 
 
 function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const orderCode = getOrderCode(pickup);
     const deliveryTime = formatTime(pickup.updatedAt || pickup.pickup_date);
     const itemCount = pickup.items?.length ?? 0;
@@ -573,8 +572,6 @@ function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
-
-                {/* Header: pill + DISMISS */}
                 <View style={styles.headerRowCompact}>
                     <StatusPill label="ORDER COMPLETED" />
                     {onClose ? (
@@ -584,15 +581,12 @@ function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
                     ) : null}
                 </View>
 
-                {/* Big title */}
                 <Text style={styles.completedBigTitle}>DELIVERED{"\n"}SUCCESSFULLY</Text>
 
-                {/* Subtitle */}
                 <Text style={styles.completedSubtitle}>
                     Your order has been successfully delivered.
                 </Text>
 
-                {/* Meta: items pill + order code + time */}
                 <View style={styles.deliveryBottomMeta}>
                     <TagPill label={`Total items delivered: ${itemCount}`} />
                     <Text style={styles.deliveryMetaText}>
@@ -600,7 +594,6 @@ function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
                     </Text>
                 </View>
 
-                {/* Stars */}
                 <View style={styles.reviewRowCompact}>
                     <Ionicons name="star" size={26} color="#95F7D5" />
                     <Ionicons name="star" size={26} color="#95F7D5" />
@@ -609,20 +602,20 @@ function CompletedPickupCard({ pickup, onClose }: PickupStatusCardProps) {
                     <Ionicons name="star-outline" size={26} color="#325348" />
                 </View>
 
-                {/* Footer: Give a feedback + chat */}
                 <View style={styles.completedFooterRow}>
                     <TouchableOpacity>
                         <Text style={styles.reviewLinkText}>Give a feedback</Text>
                     </TouchableOpacity>
                     <ChatFab />
                 </View>
-
             </View>
         </View>
     );
 }
 
 function CancelledPickupCard({ pickup }: PickupStatusCardProps) {
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     return (
         <View style={styles.card}>
             <View style={styles.innerCompact}>
@@ -651,6 +644,8 @@ function PickupFeedbackModal({
 }) {
     const isError = tone === "error";
     const isSuccess = tone === "success";
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -707,21 +702,15 @@ export default function PickupStatusCard({
     const [cancelModalVisible, setCancelModalVisible] = useState(false);
     const [rescheduleModalVisible, setRescheduleModalVisible] = useState(false);
     const [actionLoading, setActionLoading] = useState(false);
-    // const [feedbackVisible, setFeedbackVisible] = useState(false);
-    // const [feedbackTitle, setFeedbackTitle] = useState("");
-    // const [feedbackMessage, setFeedbackMessage] = useState("");
-    // const [feedbackTone, setFeedbackTone] = useState<"success" | "error" | "info">("info");
 
+    const { colors, isDark } = useTheme();
+    const styles = makeStyles(colors, isDark);
     const showFeedback = (
         title: string,
         message: string,
         tone: "success" | "error" | "info" = "info",
     ) => {
-        // setFeedbackTitle(title);
-        // setFeedbackMessage(message);
-        // setFeedbackTone(tone);
-        // setFeedbackVisible(true);
-          showAlert({ type: tone, title, message });
+        showAlert({ type: tone, title, message });
     };
 
     const openCancelModal = () => setCancelModalVisible(true);
@@ -736,10 +725,6 @@ export default function PickupStatusCard({
         if (actionLoading) return;
         setRescheduleModalVisible(false);
     };
-
-    // const closeFeedbackModal = () => {
-    //     setFeedbackVisible(false);
-    // };
 
     const handleCancelPickup = async () => {
         if (!pickup?._id) {
@@ -813,8 +798,6 @@ export default function PickupStatusCard({
                 return <DeliveryPickupCard pickup={pickup} onClose={onClose} />;
             case "completed":
                 return <CompletedPickupCard pickup={pickup} onClose={onClose} />;
-            // case "cancelled":
-            //     return <CancelledPickupCard pickup={pickup} onClose={onClose} />;
             case "scheduled":
             default:
                 return (
@@ -859,550 +842,548 @@ export default function PickupStatusCard({
                 onClose={closeRescheduleModal}
                 onConfirm={handleReschedulePickup}
             />
-            {/* <PickupFeedbackModal
-                // visible={feedbackVisible}
-                // title={feedbackTitle}
-                // message={feedbackMessage}
-                // tone={feedbackTone}
-                // onClose={closeFeedbackModal}
-            /> */}
         </>
     );
 }
 
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: SURFACE,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: BORDER,
-        overflow: "visible",
-        shadowColor: "#000",
-        shadowOpacity: 0.2,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 5 },
-        elevation: 4,
-    },
-    innerCompact: {
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        gap: 10,
-    },
-    headerRowCompact: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: 8,
-        zIndex: 10,
-    },
-    headerLeftGroup: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    headerRightSingle: {
-        alignItems: "flex-end",
-        marginTop: -4,
-    },
-    rightStack: {
-        alignItems: "flex-end",
-        gap: 6,
-    },
-    statusPill: {
-        minHeight: 20,
-        borderRadius: 18,
-        borderWidth: 1,
-        borderColor: "#1F4E42",
-        backgroundColor: "#103126",
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        alignSelf: "flex-start",
-    },
-    statusPillText: {
-        color: "#B2F8DC",
-        fontSize: 9.5,
-        letterSpacing: 1,
-        fontWeight: "800",
-    },
-    tagPill: {
-        minHeight: 20,
-        borderRadius: 8,     // was 16 — squarer pill like image
-        borderWidth: 1,
-        borderColor: "#2A715D",
-        backgroundColor: "#12372D",
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-    },
-    tagPillText: {
-        color: "#9BF0CF",
-        fontSize: 12,        // was 11
-        fontWeight: "700",
-        letterSpacing: 0.3,
-    },
-    tagPillTextDanger: {
-        color: "#FF9FA8",
-    },
-    orderCodeText: {
-        color: "#9AB7AE",
-        fontSize: 12,
-        fontWeight: "500",
-    },
-    mainLine: {
-        color: "#E9F8F3",
-        fontSize: 17,
-        lineHeight: 22,
-        fontWeight: "500",
-    },
-    mainLineAccent: {
-        color: ACCENT,
-        fontWeight: "800",
-    },
-    strongTitle: {
-        color: "#D4ECE5",
-        fontSize: 17,
-        lineHeight: 22,
-        fontWeight: "800",
-    },
-    softTitle: {
-        color: "#82BDAE",
-        fontSize: 15,
-        lineHeight: 20,
-        flex: 1,
-    },
-    softTitleSmall: {
-        color: "#95B6AD",
-        fontSize: 12.5,
-        lineHeight: 18,
-    },
-    infoLine: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    infoLineText: {
-        color: "#86DCC0",
-        fontSize: 14,
-        fontWeight: "600",
-    },
-    riderLine: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    riderAvatar: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: "#0A1D18",
-        borderWidth: 1,
-        borderColor: BORDER,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    riderAvatarText: {
-        color: ACCENT,
-        fontSize: 12,
-        fontWeight: "700",
-    },
-    bottomRowCompact: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    bottomLeftCompact: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        flex: 1,
-    },
-    iconPairWrap: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginRight: 2,
-    },
-    iconCircle: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        borderWidth: 1,
-        borderColor: "#1F4E42",
-        backgroundColor: "#102E27",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    iconCircleOverlap: {
-        marginLeft: -8,
-    },
-    chatFab: {
-        width: 40,
-        height: 40,
-        borderRadius: 25,
-        backgroundColor: ACCENT,
-        alignItems: "center",
-        justifyContent: "center",
-        marginLeft: 10,
-    },
-    payRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-    },
-    payNowBtn: {
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: ACCENT,
-        paddingHorizontal: 16,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    payNowText: {
-        color: "#00382D",
-        fontSize: 16,
-        fontWeight: "900",
-    },
-    payHintText: {
-        color: "#5B9A88",
-        fontSize: 10,
-        fontWeight: "700",
-        letterSpacing: 0.8,
-        flex: 1,
-    },
-    chatOnlyRow: {
-        alignItems: "flex-end",
-        marginTop: -2,
-    },
-    successRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        marginTop: 4,
-    },
-    successText: {
-        color: "#8AE4C4",
-        fontSize: 13,
-        fontWeight: "500",
-    },
-    deliveryMetaText: {
-        color: "#A9C3BB",
-        fontSize: 12,
-        fontWeight: "500",
-    },
-    deliveryContentWrap: {
-        flex: 1,
-        paddingRight: 8,
-    },
-    completedRightTop: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    closeButtonCompact: {
-        width: 26,
-        height: 26,
-        borderRadius: 13,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    compDivider: {
-        height: 1,
-        backgroundColor: "#133A31",
-        marginTop: 2,
-    },
-    rateTitle: {
-        color: "#A9C3BB",
-        fontSize: 12,
-        fontWeight: "700",
-    },
-    reviewRowCompact: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    reviewLinkRow: {
-        marginTop: -2,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        alignSelf: "flex-start",
-    },
-    reviewLinkText: {
-        color: "#95F7D5",
-        fontSize: 14,
-        fontWeight: "600",
-    },
-    feedbackOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0,0,0,0.55)",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 20,
-    },
-    feedbackSheet: {
-        width: "100%",
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: "#1A3330",
-        backgroundColor: "#0D1F1C",
-        padding: 16,
-        gap: 10,
-    },
-    feedbackHeaderRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-    },
-    feedbackTitleWrap: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-        flex: 1,
-    },
-    feedbackTitle: {
-        color: "#CDECE2",
-        fontSize: 16,
-        fontWeight: "800",
-    },
-    feedbackTitleError: {
-        color: "#FFB1B7",
-    },
-    feedbackTitleSuccess: {
-        color: "#95F7D5",
-    },
-    feedbackCloseBtn: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#123329",
-        borderWidth: 1,
-        borderColor: "#23453E",
-    },
-    feedbackMessage: {
-        color: "#94B8AD",
-        fontSize: 13,
-        lineHeight: 18,
-    },
-    feedbackActionBtn: {
-        height: 40,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: "#2A715D",
-        backgroundColor: "#29E6B0",
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 2,
-    },
-    feedbackActionText: {
-        color: "#00382D",
-        fontSize: 13,
-        fontWeight: "800",
-    },
-    dropdownMenu: {
-        position: "absolute",
-        top: 24,
-        right: 0,
-        minWidth: 140,
 
-        backgroundColor: "#12372D",
-        borderRadius: 10,
-        padding: 8,
-        gap: 6,
-        borderWidth: 1,
-        borderColor: "#2A715D",
+/* ─── DYNAMIC STYLES (now accepts `colors` directly) ─── */
+const makeStyles = (colors: any, isDark: boolean) => {
+    const {
+        background,
+        card,
+        text,
+        subText,
+        textSecondary,
+        border,
+        inputBackground,
+        placeholderText,
+    } = colors;
 
-        zIndex: 9999,
-        elevation: 20, // for Android
-    },
-    menuContainer: {
-        position: "relative",
-        alignItems: "flex-end",
-        zIndex: 1000,
-    },
-    // Scheduled & Assigned heading block
-    pickupHeadingBlock: {
-        gap: 0,
-    },
-    pickupSubLabel: {
-        color: MUTED,
-        fontSize: 11,
-        fontWeight: "600",
-        letterSpacing: 1.2,
-        marginBottom: 2,
-    },
-    pickupBigLine: {
-        color: "#E9F8F3",
-        fontSize: 18,
-        fontWeight: "800",
-        lineHeight: 25,
-        letterSpacing: 0.5,
-    },
-    pickupBigAccent: {
-        color: ACCENT,
-        fontWeight: "800",
-    },
+    const accent = subText;
+    const muted = textSecondary;
 
-    // Scheduled header right side (cart + menu)
-    headerRightActions: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-    },
-    cartBadgeWrap: {
-        position: "relative",
-        width: 28,
-        height: 28,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    cartBadge: {
-        position: "absolute",
-        top: -4,
-        right: -6,
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: ACCENT,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 3,
-    },
-    cartBadgeText: {
-        color: "#003C31",
-        fontSize: 9,
-        fontWeight: "800",
-    },
-
-    // Assigned card
-    assignedContentRow: {
-        flexDirection: "row",
-        alignItems: "flex-start",
-        justifyContent: "space-between",
-        gap: 8,
-
-    },
-    assignedRiderRight: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingTop: 18, // vertically center with heading
-        marginLeft: 15,
-    },
-    assignedRiderText: {
-        color: "#82BDAE",
-        fontSize: 12,
-        lineHeight: 18,
-        flexShrink: 1,
-
-    },
-    assignedRiderName: {
-        color: "#E9F8F3",
-        fontWeight: "700",
-        textTransform: "uppercase"
-    },
-
-    // Processing / Paid shared
-    processingHeaderRight: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 8,
-    },
-    paymentPendingPill: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: "#6B4E10",
-        backgroundColor: "#2A1D06",
-    },
-    paymentPendingText: {
-        color: "#F5C842",
-        fontSize: 11,
-        fontWeight: "700",
-    },
-    hintRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 5,
-    },
-    processingBigTitle: {
-        color: "#FFFFFF",
-        fontSize: 28,        // was 22
-        fontWeight: "900",   // was 800
-        lineHeight: 34,
-        letterSpacing: 0.2,
-    },
-    payNowBtnFull: {
-        height: 48,
-        borderRadius: 10,    // less round, flatter
-        backgroundColor: ACCENT,
-        alignItems: "center",
-        justifyContent: "center",
-        marginTop: 6,
-    },
-
-    deliveryRiderBlock: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 10,
-        paddingVertical: 4,
-    },
-    deliveryRiderName: {
-        color: "#FFFFFF",
-        fontSize: 26,
-        fontWeight: "900",
-        letterSpacing: 0.5,
-        lineHeight: 30,
-    },
-    deliveryRiderSub: {
-        color: "#6B9E90",
-        fontSize: 14,
-        fontWeight: "400",
-        lineHeight: 20,
-        marginTop: 2,
-    },
-    deliveryBottomMeta: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 8,
-    },
-    dismissText: {
-        color: ACCENT,
-        fontSize: 12,
-        fontWeight: "800",
-        letterSpacing: 0.8,
-    },
-    completedBigTitle: {
-        color: "#FFFFFF",
-        fontSize: 28,
-        fontWeight: "900",
-        lineHeight: 34,
-        letterSpacing: 0.2,
-    },
-    completedSubtitle: {
-        color: "#6B9E90",
-        fontSize: 13,
-        fontWeight: "400",
-        lineHeight: 18,
-        marginTop: -4,
-    },
-    completedFooterRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginTop: 2,
-    },
-});
-
+    return StyleSheet.create({
+        card: {
+            backgroundColor: card,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: border,
+            overflow: "visible",
+            shadowColor: "#000",
+            shadowOpacity: 0.2,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 5 },
+            elevation: 4,
+        },
+        innerCompact: {
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            gap: 10,
+        },
+        headerRowCompact: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 8,
+            zIndex: 10,
+        },
+        headerLeftGroup: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        headerRightSingle: {
+            alignItems: "flex-end",
+            marginTop: -4,
+        },
+        rightStack: {
+            alignItems: "flex-end",
+            gap: 6,
+        },
+        statusPill: {
+            minHeight: 20,
+            borderRadius: 18,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: inputBackground,
+            paddingHorizontal: 8,
+            paddingVertical: 3,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            alignSelf: "flex-start",
+        },
+        statusPillText: {
+            color: accent,
+            fontSize: 9.5,
+            letterSpacing: 1,
+            fontWeight: "800",
+        },
+        tagPill: {
+            minHeight: 20,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: inputBackground,
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+        },
+        tagPillText: {
+            color: accent,
+            fontSize: 12,
+            fontWeight: "700",
+            letterSpacing: 0.3,
+        },
+        tagPillTextDanger: {
+            color: "#FF9FA8",
+        },
+        orderCodeText: {
+            color: textSecondary,
+            fontSize: 12,
+            fontWeight: "500",
+        },
+        mainLine: {
+            color: text,
+            fontSize: 17,
+            lineHeight: 22,
+            fontWeight: "500",
+        },
+        mainLineAccent: {
+            color: accent,
+            fontWeight: "800",
+        },
+        strongTitle: {
+            color: text,
+            fontSize: 17,
+            lineHeight: 22,
+            fontWeight: "800",
+        },
+        softTitle: {
+            color: textSecondary,
+            fontSize: 15,
+            lineHeight: 20,
+            flex: 1,
+        },
+        softTitleSmall: {
+            color: textSecondary,
+            fontSize: 12.5,
+            lineHeight: 18,
+        },
+        infoLine: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        infoLineText: {
+            color: accent,
+            fontSize: 14,
+            fontWeight: "600",
+        },
+        riderLine: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        riderAvatar: {
+            width: 42,
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: background,
+            borderWidth: 1,
+            borderColor: border,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        riderAvatarText: {
+            color: accent,
+            fontSize: 12,
+            fontWeight: "700",
+        },
+        bottomRowCompact: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        bottomLeftCompact: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flex: 1,
+        },
+        iconPairWrap: {
+            flexDirection: "row",
+            alignItems: "center",
+            marginRight: 2,
+        },
+        iconCircle: {
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: inputBackground,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        iconCircleOverlap: {
+            marginLeft: -8,
+        },
+        chatFab: {
+            width: 40,
+            height: 40,
+            borderRadius: 25,
+            backgroundColor: accent,
+            alignItems: "center",
+            justifyContent: "center",
+            marginLeft: 10,
+        },
+        payRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+        },
+        payNowBtn: {
+            height: 42,
+            borderRadius: 21,
+            backgroundColor: accent,
+            paddingHorizontal: 16,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        payNowText: {
+            color: background,
+            fontSize: 16,
+            fontWeight: "900",
+        },
+        payHintText: {
+            color: textSecondary,
+            fontSize: 10,
+            fontWeight: "700",
+            letterSpacing: 0.8,
+            flex: 1,
+        },
+        chatOnlyRow: {
+            alignItems: "flex-end",
+            marginTop: -2,
+        },
+        successRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 4,
+        },
+        successText: {
+            color: accent,
+            fontSize: 13,
+            fontWeight: "500",
+        },
+        deliveryMetaText: {
+            color: textSecondary,
+            fontSize: 12,
+            fontWeight: "500",
+        },
+        deliveryContentWrap: {
+            flex: 1,
+            paddingRight: 8,
+        },
+        completedRightTop: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        closeButtonCompact: {
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        compDivider: {
+            height: 1,
+            backgroundColor: border,
+            marginTop: 2,
+        },
+        rateTitle: {
+            color: textSecondary,
+            fontSize: 12,
+            fontWeight: "700",
+        },
+        reviewRowCompact: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        reviewLinkRow: {
+            marginTop: -2,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            alignSelf: "flex-start",
+        },
+        reviewLinkText: {
+            color: accent,
+            fontSize: 14,
+            fontWeight: "600",
+        },
+        feedbackOverlay: {
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            justifyContent: "center",
+            alignItems: "center",
+            paddingHorizontal: 20,
+        },
+        feedbackSheet: {
+            width: "100%",
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: card,
+            padding: 16,
+            gap: 10,
+        },
+        feedbackHeaderRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+        },
+        feedbackTitleWrap: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            flex: 1,
+        },
+        feedbackTitle: {
+            color: text,
+            fontSize: 16,
+            fontWeight: "800",
+        },
+        feedbackTitleError: {
+            color: "#FFB1B7",
+        },
+        feedbackTitleSuccess: {
+            color: accent,
+        },
+        feedbackCloseBtn: {
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: inputBackground,
+            borderWidth: 1,
+            borderColor: border,
+        },
+        feedbackMessage: {
+            color: textSecondary,
+            fontSize: 13,
+            lineHeight: 18,
+        },
+        feedbackActionBtn: {
+            height: 40,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: border,
+            backgroundColor: accent,
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 2,
+        },
+        feedbackActionText: {
+            color: background,
+            fontSize: 13,
+            fontWeight: "800",
+        },
+        dropdownMenu: {
+            position: "absolute",
+            top: 24,
+            right: 0,
+            minWidth: 140,
+            backgroundColor: card,
+            borderRadius: 10,
+            padding: 8,
+            gap: 6,
+            borderWidth: 1,
+            borderColor: border,
+            zIndex: 9999,
+            elevation: 20,
+        },
+        menuContainer: {
+            position: "relative",
+            alignItems: "flex-end",
+            zIndex: 1000,
+        },
+        pickupHeadingBlock: {
+            gap: 0,
+        },
+        pickupSubLabel: {
+            color: muted,
+            fontSize: 11,
+            fontWeight: "600",
+            letterSpacing: 1.2,
+            marginBottom: 2,
+        },
+        pickupBigLine: {
+            color: text,
+            fontSize: 18,
+            fontWeight: "800",
+            lineHeight: 25,
+            letterSpacing: 0.5,
+        },
+        pickupBigAccent: {
+            color: accent,
+            fontWeight: "800",
+        },
+        headerRightActions: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+        },
+        cartBadgeWrap: {
+            position: "relative",
+            width: 28,
+            height: 28,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        cartBadge: {
+            position: "absolute",
+            top: -4,
+            right: -6,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            backgroundColor: accent,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 3,
+        },
+        cartBadgeText: {
+            color: background,
+            fontSize: 9,
+            fontWeight: "800",
+        },
+        assignedContentRow: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 8,
+        },
+        assignedRiderRight: {
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            paddingTop: 18,
+            marginLeft: 15,
+        },
+        assignedRiderText: {
+            color: textSecondary,
+            fontSize: 12,
+            lineHeight: 18,
+            flexShrink: 1,
+        },
+        assignedRiderName: {
+            color: text,
+            fontWeight: "700",
+            textTransform: "uppercase",
+        },
+        processingHeaderRight: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+        },
+        paymentPendingPill: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            paddingHorizontal: 10,
+            paddingVertical: 5,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: "#6B4E10",
+            backgroundColor: "#2A1D06",
+        },
+        paymentPendingText: {
+            color: "#F5C842",
+            fontSize: 11,
+            fontWeight: "700",
+        },
+        hintRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+        },
+        processingBigTitle: {
+            color: text,
+            fontSize: 28,
+            fontWeight: "900",
+            lineHeight: 34,
+            letterSpacing: 0.2,
+        },
+        payNowBtnFull: {
+            height: 48,
+            borderRadius: 10,
+            backgroundColor: accent,
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 6,
+        },
+        deliveryRiderBlock: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            paddingVertical: 4,
+        },
+        deliveryRiderName: {
+            color: text,
+            fontSize: 26,
+            fontWeight: "900",
+            letterSpacing: 0.5,
+            lineHeight: 30,
+        },
+        deliveryRiderSub: {
+            color: textSecondary,
+            fontSize: 14,
+            fontWeight: "400",
+            lineHeight: 20,
+            marginTop: 2,
+        },
+        deliveryBottomMeta: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+        },
+        dismissText: {
+            color: accent,
+            fontSize: 12,
+            fontWeight: "800",
+            letterSpacing: 0.8,
+        },
+        completedBigTitle: {
+            color: text,
+            fontSize: 28,
+            fontWeight: "900",
+            lineHeight: 34,
+            letterSpacing: 0.2,
+        },
+        completedSubtitle: {
+            color: textSecondary,
+            fontSize: 13,
+            fontWeight: "400",
+            lineHeight: 18,
+            marginTop: -4,
+        },
+        completedFooterRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginTop: 2,
+        },
+    });
+};

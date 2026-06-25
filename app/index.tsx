@@ -7,6 +7,7 @@ import {
 } from "react-native-permissions";
 import { checkUpdate } from "@/utils/versionCheck";
 import UpdateModal from "@/components/UpdateModal";
+import { useTheme } from "@/theme/useTheme";
 
 type UpdateResult = {
   type: "force" | "optional" | "none";
@@ -16,14 +17,14 @@ type UpdateResult = {
 type UpdateType = "force" | "optional";
 
 export default function SplashScreen() {
-
+  const { colors } = useTheme();
   const [updateType, setUpdateType] = useState<UpdateType | null>(null);
   const updateTypeRef = useRef<UpdateType | null>(null);
   const [storeUrl, setStoreUrl] = useState<string | null>(null);
 
-  useEffect(() => {
-    updateTypeRef.current = updateType;
-  }, [updateType]);
+  // useEffect(() => {
+  //   updateTypeRef.current = updateType;
+  // }, [updateType]);
 
 
   const requestPermissions = async () => {
@@ -40,17 +41,17 @@ export default function SplashScreen() {
     }
   };
 
-  // useEffect(() => {
-  //   const init = async () => {
-  //     await requestPermissions(); //  ask  for permissions first
+  useEffect(() => {
+    const init = async () => {
+      await requestPermissions(); //  ask  for permissions first
 
-  //     setTimeout(() => {
-  //       router.replace("/(auth)/auth");
-  //     }, 1000);
-  //   };
+      setTimeout(() => {
+        router.replace("/(auth)/auth");
+      }, 1000);
+    };
 
-  //   init();
-  // }, []);
+    init();
+  }, []);
 
 
   useEffect(() => {
@@ -114,14 +115,14 @@ export default function SplashScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* <Image
         source={require("../assets/images/drydashlogo.png")}
         style={styles.logo}
         resizeMode="contain"
       />
 
-      <Text style={styles.slogan}>Smart Laundry. Seamless Life.</Text> */}
+      <Text style={[styles.slogan, { color: colors.subText }]}>Smart Laundry. Seamless Life.</Text> */}
       <UpdateModal
         visible={!!updateType}
         type={updateType}
@@ -138,7 +139,6 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0B1F1A",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -149,7 +149,6 @@ const styles = StyleSheet.create({
   },
   slogan: {
     paddingBottom: 20,
-    color: "#cbd5e1",
     fontSize: 16,
     letterSpacing: 0.8,
   },

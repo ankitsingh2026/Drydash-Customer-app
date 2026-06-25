@@ -81,7 +81,7 @@ export default function RecentActivityCarousel({ messages = DUMMY_ORDERS }) {
   }, [index, list.length, translateX]);
 
   /* STATUS metadata (icon name plus colors) */
-  const getStatusMeta = (status) => {
+  const getStatusMeta = (status: string) => {
     switch (status) {
       case "Washing":
         return {
@@ -175,7 +175,7 @@ export default function RecentActivityCarousel({ messages = DUMMY_ORDERS }) {
                           },
                         ]}
                       >
-                        <Ionicons name={meta.icon} size={20} color={meta.color} />
+                        <Ionicons name={meta.icon as any} size={20} color={meta.color} />
                       </View>
 
                       <View style={styles.statusTextBlock}>

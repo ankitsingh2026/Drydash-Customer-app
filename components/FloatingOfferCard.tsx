@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
 import {
@@ -36,6 +37,9 @@ export default function FloatingOfferCard({
   onPress,
   ctaText = "Claim Now",
 }: FloatingOfferCardProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   // Core entrance
   const scale      = useRef(new Animated.Value(0.72)).current;
   const opacity    = useRef(new Animated.Value(0)).current;
@@ -246,7 +250,7 @@ export default function FloatingOfferCard({
 
         {/* Close pill */}
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-          <Ionicons name="close" size={10} color="#fff" />
+          <Ionicons name="close" size={10} color={theme.text} />
         </Pressable>
 
         {/* Badge — pops from bottom-left */}
@@ -289,7 +293,7 @@ export default function FloatingOfferCard({
           >
             <Text style={styles.ctaText}>{ctaText}</Text>
             <View style={styles.ctaIcon}>
-              <Ionicons name="arrow-forward" size={9} color="#0D1F1C" />
+              <Ionicons name="arrow-forward" size={9} color={theme.background} />
             </View>
           </Pressable>
         </Animated.View>
@@ -298,7 +302,7 @@ export default function FloatingOfferCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   wrapper: {
     position: "absolute",
     right: 14,
@@ -307,7 +311,7 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     borderRadius: 18,
     overflow: "hidden",
-    backgroundColor: "#0E2420",
+    backgroundColor: theme.background,
     shadowColor: "#4ADE80",
     shadowOpacity: 0.22,
     shadowRadius: 24,
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: "100%",
     height: IMAGE_HEIGHT,
-    backgroundColor: "#071410",
+    backgroundColor: theme.background,
     overflow: "hidden",
   },
   vignette: {
@@ -344,7 +348,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 28,
-    backgroundColor: "rgba(255,255,255,0.09)",
+    backgroundColor: theme.card,
     transform: [{ skewX: "-18deg" }],
   },
 
@@ -356,11 +360,11 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 0.5,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderColor: theme.card,
   },
 
   /* ── Badge ── */
@@ -371,12 +375,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(10,28,24,0.88)",
+    backgroundColor: theme.card,
     paddingHorizontal: 7,
     paddingVertical: 3.5,
     borderRadius: 20,
     borderWidth: 0.8,
-    borderColor: "rgba(74,222,128,0.5)",
+    borderColor: theme.card,
   },
   pulseDot: {
     width: 4.5,
@@ -396,7 +400,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11,
     paddingTop: 9,
     paddingBottom: 11,
-    backgroundColor: "#0E2420",
+    backgroundColor: theme.background,
   },
   title: {
     color: "#E8F8EF",
@@ -406,7 +410,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.05,
   },
   subtitle: {
-    color: "#5D8A78",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "500",
     lineHeight: 14,
@@ -428,11 +432,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   ctaBtnPressed: {
-    backgroundColor: "#22C55E",
+    backgroundColor: theme.card,
     transform: [{ scale: 0.96 }],
   },
   ctaText: {
-    color: "#fff",
+    color: theme.text,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.2,
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "rgba(7,30,40,0.18)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     // color:"fff"

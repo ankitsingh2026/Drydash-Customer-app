@@ -1,3 +1,4 @@
+import { useTheme } from "../context/ThemeContext";
 // components/UnserviceableArea.tsx
 import { useAddress } from "@/context/AddressContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,6 +11,8 @@ import {
 const SERVED_AREAS = ["Delhi", "Gurgaon", "Noida", "Ghaziabad"];
 
 export default function UnserviceableArea() {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const { selectedAddress } = useAddress();
 
   const addressName = selectedAddress
@@ -29,10 +32,10 @@ export default function UnserviceableArea() {
       {/* Icon cluster */}
       <View style={styles.iconWrapper}>
         <View style={styles.iconRing}>
-          <Ionicons name="location-outline" size={44} color="#2FE6A6" style={{ opacity: 0.7 }} />
+          <Ionicons name="location-outline" size={44} color={theme.primary} style={{ opacity: 0.7 }} />
         </View>
         <View style={styles.crossBadge}>
-          <Ionicons name="close" size={14} color="#FFF" />
+          <Ionicons name="close" size={14} color={theme.text} />
         </View>
       </View>
 
@@ -68,7 +71,7 @@ export default function UnserviceableArea() {
 
       {/* Secondary CTA */}
       <TouchableOpacity style={styles.secondaryButton} activeOpacity={0.7}>
-        <Ionicons name="notifications-outline" size={16} color="#2FE6A6" style={{ opacity: 0.8 }} />
+        <Ionicons name="notifications-outline" size={16} color={theme.primary} style={{ opacity: 0.8 }} />
         <Text style={styles.secondaryButtonText}>Notify me when available</Text>
       </TouchableOpacity>
 
@@ -93,24 +96,24 @@ export default function UnserviceableArea() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   container: {
     flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 48,
-    backgroundColor: "#031612",
+    backgroundColor: theme.background,
   },
   brandPill: {
-    backgroundColor: "rgba(47,230,166,0.12)",
+    backgroundColor: theme.card,
     paddingHorizontal: 14,
     paddingVertical: 5,
     borderRadius: 20,
     marginBottom: 28,
   },
   brandPillText: {
-    color: "#2FE6A6",
+    color: theme.primary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -123,9 +126,9 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: "rgba(47,230,166,0.08)",
+    backgroundColor: theme.card,
     borderWidth: 1.5,
-    borderColor: "rgba(47,230,166,0.15)",
+    borderColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -136,36 +139,36 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#FF4040",
+    backgroundColor: "#FF6B6B",
     borderWidth: 2.5,
-    borderColor: "#031612",
+    borderColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: theme.text,
     textAlign: "center",
     marginBottom: 10,
     letterSpacing: -0.3,
   },
   subtitle: {
     fontSize: 14,
-    color: "#5E9080",
+    color: theme.textSecondary,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 28,
   },
   addressHighlight: {
-    color: "#8FB3A8",
+    color: theme.textSecondary,
     fontWeight: "600",
   },
   areasCard: {
     width: "100%",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: "rgba(47,230,166,0.12)",
+    borderColor: theme.card,
     borderRadius: 14,
     padding: 16,
     marginBottom: 24,
@@ -183,28 +186,28 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   areaPill: {
-    backgroundColor: "rgba(47,230,166,0.08)",
+    backgroundColor: theme.card,
     borderWidth: 0.5,
-    borderColor: "rgba(47,230,166,0.2)",
+    borderColor: theme.card,
     borderRadius: 20,
     paddingHorizontal: 11,
     paddingVertical: 5,
   },
   areaPillText: {
-    color: "#2FE6A6",
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "500",
   },
   primaryButton: {
     width: "100%",
-    backgroundColor: "#2FE6A6",
+    backgroundColor: theme.primary,
     paddingVertical: 15,
     borderRadius: 40,
     alignItems: "center",
     marginBottom: 12,
   },
   primaryButtonText: {
-    color: "#031612",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.2,
@@ -212,7 +215,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "rgba(47,230,166,0.18)",
+    borderColor: theme.lightborder,
     borderRadius: 40,
     paddingVertical: 14,
     flexDirection: "row",
@@ -222,7 +225,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   secondaryButtonText: {
-    color: "#2FE6A6",
+    color: theme.primary,
     fontSize: 14,
     fontWeight: "500",
     opacity: 0.85,
@@ -243,6 +246,6 @@ const styles = StyleSheet.create({
   divider: {
     width: 1,
     height: 28,
-    backgroundColor: "rgba(47,230,166,0.1)",
+    backgroundColor: theme.card,
   },
 });

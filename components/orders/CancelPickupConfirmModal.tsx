@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import React from "react";
 import {
     ActivityIndicator,
@@ -21,6 +22,9 @@ export default function CancelPickupConfirmModal({
   onClose,
   onConfirm,
 }: CancelPickupConfirmModalProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   return (
     <Modal
       visible={visible}
@@ -51,7 +55,7 @@ export default function CancelPickupConfirmModal({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={theme.text} />
               ) : (
                 <Text style={styles.dangerText}>Cancel Pickup</Text>
               )}
@@ -63,10 +67,10 @@ export default function CancelPickupConfirmModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: theme.backdrop,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -75,18 +79,18 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#1A3330",
-    backgroundColor: "#0D1F1C",
+    borderColor: theme.card,
+    backgroundColor: theme.background,
     padding: 16,
     gap: 10,
   },
   title: {
-    color: "#E9F8F3",
+    color: theme.text,
     fontSize: 18,
     fontWeight: "800",
   },
   message: {
-    color: "#8FB5A9",
+    color: theme.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -104,20 +108,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryBtn: {
-    borderColor: "#2A4F45",
-    backgroundColor: "#123329",
+    borderColor: theme.lightborder,
+    backgroundColor: theme.background,
   },
   dangerBtn: {
-    borderColor: "#7A2E36",
-    backgroundColor: "#6A2430",
+    borderColor: theme.error,
+    backgroundColor: theme.danger,
   },
   secondaryText: {
-    color: "#A5F5D7",
+    color: theme.text,
     fontWeight: "700",
     fontSize: 13,
   },
   dangerText: {
-    color: "#FFF",
+    color: theme.text,
     fontWeight: "700",
     fontSize: 13,
   },

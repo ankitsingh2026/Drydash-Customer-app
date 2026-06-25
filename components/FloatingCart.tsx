@@ -6,6 +6,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCart } from "../context/CartContext";
+import { useTheme } from "../context/ThemeContext";
 export default function FloatingCart({
   onOpen,
   bottomOffset = 20,
@@ -15,6 +16,8 @@ export default function FloatingCart({
 }) {
   const { items } = useCart();
   const insets = useSafeAreaInsets();
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
 
   const totalQty = items.reduce((s, i) => s + i.qty, 0);
 
@@ -43,7 +46,7 @@ export default function FloatingCart({
       ]}
     >
       <LinearGradient
-        colors={["#00E1A2", "#22EBAB", "#006B50", "#00E1A2"]}
+        colors={[theme.primary, theme.card, theme.primary, theme.primary]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradientBorder}
@@ -55,11 +58,11 @@ export default function FloatingCart({
         >
           <BlurView intensity={70} tint="dark" style={styles.blur}>
 
-            <View style={styles.topLine} />
+            {/* <View style={styles.topLine} /> */}
 
             {/* ICON + BADGE */}
             <View style={styles.iconWrap}>
-              <Ionicons name="bag-outline" size={22} color="#00E1A2" />
+              <Ionicons name="bag-outline" size={22} color="#fff" />
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{totalQty}</Text>
               </View>
@@ -67,7 +70,7 @@ export default function FloatingCart({
 
             <Text style={styles.label}>Checkout</Text>
 
-            <Ionicons name="arrow-forward" size={14} color="#00E1A2" />
+            <Ionicons name="arrow-forward" size={14} color="#fff" />
           </BlurView>
         </TouchableOpacity>
       </LinearGradient>
@@ -77,7 +80,7 @@ export default function FloatingCart({
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
 
   outerWrapper: {
     position: "absolute",   // ✅ REQUIRED (makes it floating)
@@ -91,7 +94,7 @@ const styles = StyleSheet.create({
   gradientBorder: {
     borderRadius: 50,
     padding: 2,
-    shadowColor: "#00E1A2",
+    shadowColor: theme.primary,
     shadowOpacity: 0.7,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
@@ -109,7 +112,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    backgroundColor: "rgba(8, 22, 18, 0.85)",
   },
 
   topLine: {
@@ -118,7 +120,7 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 0.5,
-    backgroundColor: "rgba(86,191,171,0.4)",
+    backgroundColor: theme.card,
   },
 
   iconWrap: {
@@ -136,15 +138,15 @@ const styles = StyleSheet.create({
     width: 15,
     height: 15,
     borderRadius: 8,
-    backgroundColor: "#0F6E56",
+    backgroundColor: theme.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "rgba(8,22,18,0.9)",
+    borderColor: theme.card,
   },
 
   badgeText: {
-    color: "#9FE1CB",
+    color: theme.primary,
     fontSize: 8,
     fontWeight: "700",
   },
