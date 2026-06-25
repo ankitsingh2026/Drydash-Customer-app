@@ -217,7 +217,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     color: theme.isDark ? theme.background : theme.text,
   },
   chatBadge: {
-    backgroundColor: theme.isDark ? theme.background : theme.text,
+    backgroundColor: '#fff',
     borderRadius: 9,
     minWidth: 18,
     height: 18,

@@ -185,12 +185,12 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#9CCFC0",
+    color: theme.primary,
     lineHeight: 24,
   },
   divider: {
     height: 1,
-    backgroundColor: theme.card,
+    backgroundColor: theme.lightborder,
     marginVertical: 24,
   },
   bodyContainer: {
@@ -206,7 +206,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   paragraph: {
     fontSize: 15,
     fontWeight: "400",
-    color: "#BACBC0",
+    color: theme.textSecondary,
     lineHeight: 24,
   },
 });
