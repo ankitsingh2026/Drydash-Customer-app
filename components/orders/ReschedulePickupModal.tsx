@@ -1,3 +1,4 @@
+import { useTheme } from "@/context/ThemeContext";
 import DateTimePicker, {
     DateTimePickerAndroid,
     DateTimePickerEvent,
@@ -50,7 +51,9 @@ export default function ReschedulePickupModal({
   onClose,
   onConfirm,
 }: ReschedulePickupModalProps) {
-  const defaultDate = useMemo(() => toDefaultDate(initialDate), [initialDate]);
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+    const defaultDate = useMemo(() => toDefaultDate(initialDate), [initialDate]);
 
   const [selectedDate, setSelectedDate] = useState(defaultDate);
   const [showIosPicker, setShowIosPicker] = useState(false);
@@ -125,8 +128,8 @@ export default function ReschedulePickupModal({
                   display="inline"
                   minimumDate={minimumDate}
                   onChange={handleDateChange}
-                  textColor="#D4F7EC"
-                  accentColor="#29E6B0"
+                  textColor={theme.text}
+                  accentColor={theme.primary}
                 />
               </View>
             ) : null}
@@ -147,7 +150,7 @@ export default function ReschedulePickupModal({
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#00382D" />
+                <ActivityIndicator size="small" color={theme.background} />
               ) : (
                 <Text style={styles.primaryText}>Update Pickup</Text>
               )}
@@ -159,10 +162,10 @@ export default function ReschedulePickupModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: theme.backdrop,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 20,
@@ -171,18 +174,18 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#1A3330",
-    backgroundColor: "#0D1F1C",
+    borderColor: theme.card,
+    backgroundColor: theme.background,
     padding: 16,
     gap: 10,
   },
   title: {
-    color: "#E9F8F3",
+    color: theme.text,
     fontSize: 18,
     fontWeight: "800",
   },
   message: {
-    color: "#8FB5A9",
+    color: theme.textSecondary,
     fontSize: 13,
     lineHeight: 18,
   },
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   inputLabel: {
-    color: "#9CCFC0",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -198,15 +201,15 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#23453E",
-    backgroundColor: "#122D27",
+    borderColor: theme.card,
+    backgroundColor: theme.background,
     paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   dateValue: {
-    color: "#D4F7EC",
+    color: theme.text,
     fontSize: 13,
     fontWeight: "600",
   },
@@ -215,8 +218,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#2A4F45",
-    backgroundColor: "#123329",
+    borderColor: theme.border,
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -227,9 +230,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#23453E",
+    borderColor: theme.card,
     overflow: "hidden",
-    backgroundColor: "#122D27",
+    backgroundColor: theme.background,
   },
   actionsRow: {
     flexDirection: "row",
@@ -245,20 +248,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   secondaryBtn: {
-    borderColor: "#2A4F45",
-    backgroundColor: "#123329",
+    borderColor: theme.border,
+    backgroundColor: theme.background,
   },
   primaryBtn: {
-    borderColor: "#2A715D",
-    backgroundColor: "#29E6B0",
+    borderColor: theme.border,
+    backgroundColor: theme.primary,
   },
   secondaryText: {
-    color: "#A5F5D7",
+    color: theme.text,
     fontWeight: "700",
     fontSize: 13,
   },
   primaryText: {
-    color: "#00382D",
+    color: theme.background,
     fontWeight: "800",
     fontSize: 13,
   },

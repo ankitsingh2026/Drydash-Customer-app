@@ -185,7 +185,7 @@ const makeStyles = (theme: any) =>
       width: 40,
       height: 40,
       borderRadius: 12,
-      backgroundColor: theme.card ?? "#1e2e2b",
+      backgroundColor: theme.card ?? theme.card,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -219,7 +219,7 @@ const makeStyles = (theme: any) =>
       letterSpacing: -0.5,
     },
     heroSub: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 13,
       marginTop: 6,
       textAlign: "center",
@@ -251,7 +251,7 @@ const makeStyles = (theme: any) =>
     },
     comingSoonCard: {
       marginHorizontal: 16,
-      backgroundColor: theme.card ?? "#1a2e2a",
+      backgroundColor: theme.card ?? theme.card,
       borderRadius: 20,
       padding: 20,
       marginBottom: 24,
@@ -265,7 +265,7 @@ const makeStyles = (theme: any) =>
       marginBottom: 8,
     },
     comingSoonCardDesc: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 13,
       lineHeight: 20,
       marginBottom: 16,
@@ -277,7 +277,7 @@ const makeStyles = (theme: any) =>
       alignItems: "center",
     },
     notifyBtnText: {
-      color: "#000",
+      color: theme.background,
       fontWeight: "700",
       fontSize: 14,
       letterSpacing: 0.3,
@@ -297,7 +297,7 @@ const makeStyles = (theme: any) =>
     },
     featureCard: {
       width: (width - 44) / 2,
-      backgroundColor: theme.card ?? "#1a2e2a",
+      backgroundColor: theme.card ?? theme.card,
       borderRadius: 16,
       padding: 16,
       borderWidth: 1,
@@ -311,7 +311,7 @@ const makeStyles = (theme: any) =>
       marginBottom: 3,
     },
     featureDesc: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 12,
     },
   });

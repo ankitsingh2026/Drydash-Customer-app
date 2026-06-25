@@ -201,7 +201,9 @@ export default function OrderReceipt() {
   const params = useLocalSearchParams();
   const orderId = String(params.orderId || "");
   console.log("this is the orderId from params========>>>>>", orderId);
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  const s = makeStyles(theme);
   const { user } = useAuth();
   const { paymentUpdate, setPaymentUpdate } = useNotifications();
 
@@ -882,25 +884,25 @@ const handlePaymentSuccess = async (data: any) => {
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ marginRight: 10 }}>
-            <View style={{ height: 2, width: 16, backgroundColor: '#fff', marginBottom: 4 }} />
-            <View style={{ height: 2, width: 16, backgroundColor: '#fff' }} />
+            <View style={{ height: 2, width: 16, backgroundColor: theme.text, marginBottom: 4 }} />
+            <View style={{ height: 2, width: 16, backgroundColor: theme.text }} />
           </View>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Order Details</Text>
+          <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>Order Details</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginRight: 6 }}>ORDER ID</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', marginRight: 6 }}>{displayOrderId.replace("#", "")}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginRight: 6 }}>ORDER ID</Text>
+          <Text style={{ color: theme.text, fontSize: 14, fontWeight: '700', marginRight: 6 }}>{displayOrderId.replace("#", "")}</Text>
           <TouchableOpacity>
-            <Ionicons name="copy-outline" size={16} color="#fff" />
+            <Ionicons name="copy-outline" size={16} color={theme.text} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Payment Status */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
-        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>PAYMENT STATUS</Text>
-        <View style={{ backgroundColor: isPaid ? 'rgba(34, 197, 94, 0.2)' : 'rgba(234, 179, 8, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
-          <Text style={{ color: isPaid ? '#22c55e' : '#eab308', fontSize: 12, fontWeight: '700' }}>
+        <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>PAYMENT STATUS</Text>
+        <View style={{ backgroundColor: isPaid ? theme.primary : 'rgba(234, 179, 8, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+          <Text style={{ color: isPaid ? theme.text : '#eab308', fontSize: 12, fontWeight: '700' }}>
             {isPaid ? (singleOrderDetails.payment?.paymentMode ? `Paid via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid via UPI") : "Payment Pending"}
           </Text>
         </View>
@@ -909,14 +911,14 @@ const handlePaymentSuccess = async (data: any) => {
       {/* Pickup Info */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP FROM</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP FROM</Text>
+          <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKED BY</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKED BY</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName}</Text>
+            <Image source={{ uri: "https://i.pravatar.cc/100?img=11" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: theme.border }} />
+            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.pickup?.riderName || singleOrderDetails.riderName}</Text>
           </View>
         </View>
       </View>
@@ -925,35 +927,35 @@ const handlePaymentSuccess = async (data: any) => {
       {isDelivered && (
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED TO</Text>
-          <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED TO</Text>
+          <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.customerName || name}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED BY</Text>
+          <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>DELIVERED BY</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: '#334155' }} />
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName}</Text>
+            <Image source={{ uri: "https://i.pravatar.cc/100?img=12" }} style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: theme.border }} />
+            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{singleOrderDetails.assignedRider?.delivery?.riderName || singleOrderDetails.riderName}</Text>
           </View>
         </View>
       </View>
       )}
       {/* Address */}
       <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
-        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ADDRESS</Text>
-        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600', lineHeight: 22 }}>{singleOrderDetails.address}</Text>
+        <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ADDRESS</Text>
+        <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600', lineHeight: 22 }}>{singleOrderDetails.address}</Text>
       </View>
 
       {/* Pickup Completed Date & Time */}
       <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' }}>
-        <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP COMPLETED DATE & TIME</Text>
-        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails.createdAt)}</Text>
+        <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>PICKUP COMPLETED DATE & TIME</Text>
+        <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails.createdAt)}</Text>
       </View>
 
         {/* Pickup Completed Date & Time */}
         {isDelivered && (
           <View style={{ padding: 16 }}>
-            <Text style={{ color: '#64748b', fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ORDER DELIVERED DATE & TIME</Text>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails?.statusHistory?.delivered || singleOrderDetails.createdAt)}</Text>
+            <Text style={{ color: theme.textSecondary, fontSize: 10, fontWeight: '700', marginBottom: 8, textTransform: 'uppercase' }}>ORDER DELIVERED DATE & TIME</Text>
+            <Text style={{ color: theme.text, fontSize: 14, fontWeight: '600' }}>{formatDateTime(singleOrderDetails?.statusHistory?.delivered || singleOrderDetails.createdAt)}</Text>
           </View>
         )}
 
@@ -975,13 +977,13 @@ const handlePaymentSuccess = async (data: any) => {
 
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="send-outline" size={16} color="#fff" style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
+                <Ionicons name="send-outline" size={16} color={theme.text} style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
                 <Text style={{ color: theme.text, fontSize: 18, fontWeight: 'bold' }} numberOfLines={1}>
                   {singleOrderDetails.plantName || "Green Park"}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+                <Ionicons name="chevron-down" size={16} color={theme.text} style={{ marginLeft: 4 }} />
               </View>
-              <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 2, marginLeft: 24 }} numberOfLines={1}>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2, marginLeft: 24 }} numberOfLines={1}>
                 {singleOrderDetails.address}
               </Text>
             </View>
@@ -996,14 +998,14 @@ const handlePaymentSuccess = async (data: any) => {
           >
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>ORDERED ITEMS ({singleOrderDetails.items?.length || 0})</Text>
-              <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '500' }}>Order Id :{displayOrderId}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>ORDERED ITEMS ({singleOrderDetails.items?.length || 0})</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '500' }}>Order Id :{displayOrderId}</Text>
             </View>
 
             {(singleOrderDetails.items || []).map((item, index) => (
               <View
                 key={index}
-                style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: '#0f2922', marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
+                style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.background, marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
               >
                 <View style={{ backgroundColor: theme.card, width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
                   {item.imageUrl ? (
@@ -1019,7 +1021,7 @@ const handlePaymentSuccess = async (data: any) => {
 
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginBottom: 4 }}>{item.heading}</Text>
-                  <Text style={{ color: '#94a3b8', fontSize: 13, fontWeight: '500' }}>Qty {item.quantity} · ₹{item.price}</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '500' }}>Qty {item.quantity} · ₹{item.price}</Text>
                 </View>
 
                 <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(0)}</Text>
@@ -1045,15 +1047,15 @@ const handlePaymentSuccess = async (data: any) => {
             )}
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: isPaid ? 0 : 16 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
-              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color="#fff" />
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
+              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color={theme.text} />
             </TouchableOpacity>
             
             {showBillBreakup && (
                <View style={{ marginBottom: 16 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Subtotal</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
                   </View>
                   {totalDiscount > 0 && (
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -1062,8 +1064,8 @@ const handlePaymentSuccess = async (data: any) => {
                     </View>
                   )}
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>GST (18%)</Text>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>GST (18%)</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
                   </View>
                </View>
             )}
@@ -1071,8 +1073,8 @@ const handlePaymentSuccess = async (data: any) => {
             <View style={{ marginBottom: 24 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
-                  <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
                 </View>
                 <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
               </View>
@@ -1081,31 +1083,31 @@ const handlePaymentSuccess = async (data: any) => {
             {!isPaid && !isCodSelected && (
               <>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, marginBottom: 12 }}>
-                  <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>AVAILABLE COUPONS</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' }}>AVAILABLE COUPONS</Text>
                   <TouchableOpacity onPress={openCouponModal}>
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW 〉</Text>
+                    <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>VIEW 〉</Text>
                   </TouchableOpacity>
                 </View>
                 
                 {appliedCoupon ? (
                   <View style={{ backgroundColor: 'transparent', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
                      <View>
-                        <View style={{ backgroundColor: '#06402b', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 4 }}>
+                        <View style={{ backgroundColor: isDark ? theme.background : '#E6F4F0', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start', marginBottom: 4 }}>
                           <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>'{appliedCoupon.code}'</Text>
                         </View>
-                        <Text style={{ color: '#64748b', fontSize: 12 }}>Saved ₹{totalDiscount?.toFixed(0)} on this order</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12 }}>Saved ₹{totalDiscount?.toFixed(0)} on this order</Text>
                      </View>
                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Ionicons name="checkmark-circle" size={16} color={theme.primary} style={{ marginRight: 4 }} />
                         <Text style={{ color: theme.primary, fontSize: 14, fontWeight: '600', marginRight: 16 }}>Applied</Text>
                         <TouchableOpacity onPress={() => appliedCoupon && handleCouponAction(appliedCoupon, "remove")}>
-                          <Ionicons name="trash-outline" size={20} color="#64748b" />
+                          <Ionicons name="trash-outline" size={20} color={theme.textSecondary} />
                         </TouchableOpacity>
                      </View>
                   </View>
                 ) : (
-                   <View style={{ marginBottom: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: '#071b16', borderRadius: 12, paddingHorizontal: 16, height: 48 }}>
-                     <MaterialCommunityIcons name="ticket-percent-outline" size={18} color="#475569" style={{ marginRight: 12 }} />
+                   <View style={{ marginBottom: 24, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.inputBackground, borderRadius: 12, paddingHorizontal: 16, height: 48 }}>
+                     <MaterialCommunityIcons name="ticket-percent-outline" size={18} color={theme.textSecondary} style={{ marginRight: 12 }} />
                      <TextInput
                        value={couponInput}
                        onChangeText={(t) => {
@@ -1113,7 +1115,7 @@ const handlePaymentSuccess = async (data: any) => {
                          setCouponError("");
                        }}
                        placeholder="Add coupon"
-                       placeholderTextColor="#475569"
+                       placeholderTextColor={theme.textSecondary}
                        style={{ flex: 1, color: theme.text, fontSize: 14 }}
                        autoCapitalize="characters"
                      />
@@ -1127,46 +1129,46 @@ const handlePaymentSuccess = async (data: any) => {
 
             {!isPaid && (
               <>
-                <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>DELIVERY OPTIONS</Text>
-                <View style={{ borderWidth: 1, borderColor: '#0f2922', borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>DELIVERY OPTIONS</Text>
+                <View style={{ borderWidth: 1, borderColor: theme.background, borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onPress={() => {
                       if (singleOrderDetails.isCODConfirmed) return;
                       setSelectedDeliveryOption(true);
                     }}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#0f2922', backgroundColor: selectedDeliveryOption === true ? '#062017' : 'transparent', opacity: singleOrderDetails.isCODConfirmed ? 0.5 : 1 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.background, backgroundColor: selectedDeliveryOption === true ? theme.background : 'transparent', opacity: singleOrderDetails.isCODConfirmed ? 0.5 : 1 }}
                   >
-                    <Ionicons name={selectedDeliveryOption === true ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === true ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === true ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
+                    <Ionicons name={selectedDeliveryOption === true ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === true ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === true ? theme.text : theme.textSecondary, fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onPress={() => setSelectedDeliveryOption(false)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === false ? '#062017' : 'transparent' }}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === false ? theme.background : 'transparent' }}
                   >
-                    <Ionicons name={selectedDeliveryOption === false ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === false ? theme.primary : "#6B8B83"} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === false ? "#fff" : "#6B8B83", fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
+                    <Ionicons name={selectedDeliveryOption === false ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === false ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
+                    <Text style={{ color: selectedDeliveryOption === false ? theme.text : theme.textSecondary, fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
 
-            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>SPECIAL INSTRUCTIONS</Text>
-            <View style={{ backgroundColor: '#071b16', borderRadius: 16, padding: 16, marginBottom: 24 }}>
+            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>SPECIAL INSTRUCTIONS</Text>
+            <View style={{ backgroundColor: theme.inputBackground, borderRadius: 16, padding: 16, marginBottom: 24 }}>
               <TextInput
                 value={singleOrderDetails.notes || ""}
                 placeholder="Any specific requirements for your wash?"
-                placeholderTextColor="#475569"
+                placeholderTextColor={theme.textSecondary}
                 multiline
                 editable={false}
                 textAlignVertical="top"
                 style={{ color: theme.text, fontSize: 14, minHeight: 60 }}
               />
               {/* <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 12, gap: 8 }}>
-                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Fragile</Text></View>
-                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Eco-Wash</Text></View>
-                <View style={{ backgroundColor: '#0b271f', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}># Hypoallergenic</Text></View>
+                <View style={{ backgroundColor: theme.inputBackground, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '600' }}># Fragile</Text></View>
+                <View style={{ backgroundColor: theme.inputBackground, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '600' }}># Eco-Wash</Text></View>
+                <View style={{ backgroundColor: theme.inputBackground, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}><Text style={{ color: theme.text, fontSize: 11, fontWeight: '600' }}># Hypoallergenic</Text></View>
               </View> */}
             </View>
 
@@ -1188,13 +1190,13 @@ const handlePaymentSuccess = async (data: any) => {
                 ]}
               >
                 {paymentLoading ? (
-                  <ActivityIndicator size="small" color="#001714" />
+                  <ActivityIndicator size="small" color=theme.background />
                 ) : (
                   <>
                     <Text style={s.payBtnText}>
                       Pay ₹{singleOrderDetails?.totalAmount?.toFixed(0)} Now
                     </Text>
-                    <Ionicons name="arrow-forward" size={18} color="#001714" />
+                    <Ionicons name="arrow-forward" size={18} color=theme.background />
                   </>
                 )}
               </TouchableOpacity>
@@ -1243,17 +1245,17 @@ const handlePaymentSuccess = async (data: any) => {
         >
           <View style={[s.processingHeader, { backgroundColor: theme.background, paddingTop: 40, paddingBottom: 10, zIndex: 10, marginBottom: 0 }]}>
             <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-              <Ionicons name="arrow-back" size={20} color="#fff" />
+              <Ionicons name="arrow-back" size={20} color={theme.text} />
             </TouchableOpacity>
 
             <View style={{ flex: 1,}}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name="send-outline" size={16} color="#fff" style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
+                <Ionicons name="send-outline" size={16} color={theme.text} style={{ transform: [{ rotate: '-45deg' }], marginRight: 6 }} />
                 <Text style={{ color: theme.text, fontSize: 18, fontWeight: 'bold' }} numberOfLines={1}>
                   {singleOrderDetails.plantName || "Green Park"}
                 </Text>
               </View>
-              <Text style={{ color: "#94a3b8", fontSize: 12, marginTop: 2,}} numberOfLines={1}>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2,}} numberOfLines={1}>
                 {singleOrderDetails.address}
               </Text>
             </View>
@@ -1266,7 +1268,7 @@ const handlePaymentSuccess = async (data: any) => {
             ]}
           >
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: '#94a3b8', fontSize: 14, fontWeight: '700' }}>Items</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '700' }}>Items</Text>
               {isPaid ? (
                 <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <DownloadInvoiceButton orderId={orderId as string} />
@@ -1313,26 +1315,26 @@ const handlePaymentSuccess = async (data: any) => {
             </View> */}
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
-              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color="#fff" />
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
+              <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color={theme.text} />
             </TouchableOpacity>
             
             {showBillBreakup && (
                <View style={{ backgroundColor: theme.card, marginBottom: 16, padding: 16, borderRadius: 16 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Subtotal</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Subtotal</Text>
                     <Text style={{ color: theme.text, fontSize: 14 }}>₹{subtotal.toFixed(0)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Delivery Handling</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Delivery Handling</Text>
                     <Text style={{ color: theme.text, fontSize: 14 }}>₹{Number(singleOrderDetails.deliveryCharges || 0).toFixed(0)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Service Charge</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Service Charge</Text>
                     <Text style={{ color: theme.text, fontSize: 14 }}>₹{Number(singleOrderDetails.taxAmount || 0).toFixed(0)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Text style={{ color: '#94a3b8', fontSize: 14 }}>Item Discount</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 14 }}>Item Discount</Text>
                     <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{Number(singleOrderDetails.discountAmount || 0).toFixed(0)}</Text>
                   </View>
                </View>
@@ -1341,8 +1343,8 @@ const handlePaymentSuccess = async (data: any) => {
             <View style={{ marginBottom: 32 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
-                  <Text style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 11, marginTop: 4 }}>Includes GST & all taxes</Text>
                 </View>
                 <Text style={{ color: theme.primary, fontSize: 18, fontWeight: '700' }}>₹{finalTotal?.toFixed(0)}</Text>
               </View>
@@ -1350,16 +1352,16 @@ const handlePaymentSuccess = async (data: any) => {
 
             {renderCombinedOrderDetails()}
 
-            <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>NEED HELP?</Text>
+            <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginBottom: 12 }}>NEED HELP?</Text>
             <TouchableOpacity style={{ backgroundColor: theme.card, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 0.5, borderColor: theme.lightborder, shadowColor : theme.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 }}  onPress={() => router.push("/(customer)/(assistant)/chat")}>
-              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#0B3326', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.inputBackground, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
                 <Ionicons name="chatbubble-ellipses" size={20} color={theme.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 2 }}>Chat with us</Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12 }}>We're here to help you 24/7</Text>
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginBottom: 2 }}>Chat with us</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>We're here to help you 24/7</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#64748b" />
+              <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
             </TouchableOpacity>
 
           </ScrollView>
@@ -1385,7 +1387,7 @@ const handlePaymentSuccess = async (data: any) => {
                 }}
                 style={s.backBtn}
               >
-                <Ionicons name="arrow-back" size={20} color="#fff" />
+                <Ionicons name="arrow-back" size={20} color={theme.text} />
               </TouchableOpacity>
               <Text style={[s.headerTitle, { color: theme.text }]}>Receipt</Text>
               <View style={[s.avatarCircle, { backgroundColor: theme.card }]}>
@@ -1497,11 +1499,11 @@ const handlePaymentSuccess = async (data: any) => {
               )}
 
               {!isPaid && (
-                <View style={[s.couponInputRow, { backgroundColor: "#00110E" }]}>
+                <View style={[s.couponInputRow, { backgroundColor: theme.inputBackground }]}>
                   <MaterialCommunityIcons
                     name="ticket-percent-outline"
                     size={18}
-                    color="#64748b"
+                    color={theme.textSecondary}
                     style={{ marginRight: 8 }}
                   />
                   <TextInput
@@ -1514,7 +1516,7 @@ const handlePaymentSuccess = async (data: any) => {
                       }
                     }}
                     placeholder="Coupon Code"
-                    placeholderTextColor="#475569"
+                    placeholderTextColor={theme.textSecondary}
                     style={[s.couponInput, { color: theme.text }]}
                     autoCapitalize="characters"
                   />
@@ -1522,20 +1524,20 @@ const handlePaymentSuccess = async (data: any) => {
                     <View
                       style={[
                         s.couponAppliedTag,
-                        { backgroundColor: "#0B3326", borderColor: "#22EBAB" },
+                        { backgroundColor: theme.inputBackground, borderColor: theme.primary },
                       ]}
                     >
                       <MaterialCommunityIcons
                         name="check-circle"
                         size={14}
-                        color="#22EBAB"
+                        color={theme.primary}
                       />
                       <Text style={s.couponAppliedText}>APPLIED</Text>
                     </View>
                   ) : (
                     <TouchableOpacity
                       onPress={handleManualApply}
-                      style={[s.couponApplyBtn, { backgroundColor: "#22EBAB" }]}
+                      style={[s.couponApplyBtn, { backgroundColor: theme.primary }]}
                     >
                       <Text style={s.couponApplyText}>Apply</Text>
                     </TouchableOpacity>
@@ -1559,7 +1561,7 @@ const handlePaymentSuccess = async (data: any) => {
                       </View>
                     </View>
 
-                    <Text style={[s.suggestionDesc, { color: "#94a3b8" }]}>
+                    <Text style={[s.suggestionDesc, { color: theme.textSecondary }]}>
                       Save ₹{calculateCouponValue(bestCoupon, subtotal)} on this
                       order
                     </Text>
@@ -1575,7 +1577,7 @@ const handlePaymentSuccess = async (data: any) => {
               )}
 
               {appliedCoupon && !isPaid && (
-                <View style={[s.appliedPill, { backgroundColor: "#0B3326" }]}>
+                <View style={[s.appliedPill, { backgroundColor: theme.inputBackground }]}>
                   <MaterialCommunityIcons
                     name="check-circle-outline"
                     size={14}
@@ -1631,7 +1633,7 @@ const handlePaymentSuccess = async (data: any) => {
               </View>
 
               <View style={s.secureSection}>
-                <Ionicons name="lock-closed-outline" size={12} color="#64748b" />
+                <Ionicons name="lock-closed-outline" size={12} color={theme.textSecondary} />
                 <Text style={s.secureText}> SECURE PAYMENT</Text>
               </View>
 
@@ -1639,17 +1641,17 @@ const handlePaymentSuccess = async (data: any) => {
                 <MaterialCommunityIcons
                   name="credit-card-outline"
                   size={26}
-                  color="#475569"
+                  color={theme.textSecondary}
                 />
                 <MaterialCommunityIcons
                   name="bank-outline"
                   size={26}
-                  color="#475569"
+                  color={theme.textSecondary}
                 />
                 <MaterialCommunityIcons
                   name="cellphone"
                   size={26}
-                  color="#475569"
+                  color={theme.textSecondary}
                 />
               </View>
 
@@ -1674,7 +1676,7 @@ const handlePaymentSuccess = async (data: any) => {
 }
 
 // (styles remain exactly as before)
-const s = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   container: {
     flexGrow: 1,
     paddingBottom: 20,
@@ -1687,7 +1689,7 @@ const s = StyleSheet.create({
 
   selectedDeliveryCard: {
     borderWidth: 1.5,
-    backgroundColor: "#0B3326",
+    backgroundColor: theme.inputBackground,
   },
 
   header: {
@@ -1713,9 +1715,9 @@ const s = StyleSheet.create({
     marginBottom: 24,
     padding: 16,
     borderRadius: 18,
-    backgroundColor: "#0D2B24",
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.04)",
+    borderColor: theme.card,
   },
 
   infoBlock: {
@@ -1732,7 +1734,7 @@ const s = StyleSheet.create({
 
   orderSmallId: {
     fontSize: 11,
-    color: "#7F948A",
+    color: theme.textSecondary,
     fontWeight: "600",
     letterSpacing: 0.7,
     marginBottom: 6,
@@ -1756,7 +1758,7 @@ const s = StyleSheet.create({
   },
 
   couponAppliedText: {
-    color: "#22EBAB",
+    color: theme.primary,
     fontWeight: "700",
     fontSize: 12,
     letterSpacing: 0.5,
@@ -1765,7 +1767,7 @@ const s = StyleSheet.create({
   liveTrackingBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0B3326",
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
@@ -1777,12 +1779,12 @@ const s = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#9FFFD3",
+    backgroundColor: theme.primary,
   },
 
   liveTrackingText: {
     fontSize: 10,
-    color: "#9FFFD3",
+    color: theme.primary,
     fontWeight: "700",
     letterSpacing: 0.7,
   },
@@ -1813,7 +1815,7 @@ const s = StyleSheet.create({
 
   infoLabel: {
     fontSize: 10,
-    color: "#7F948A",
+    color: theme.textSecondary,
     fontWeight: "600",
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -1849,7 +1851,7 @@ const s = StyleSheet.create({
   },
   itemInfo: { flex: 1, marginLeft: 12 },
   itemName: { fontSize: 16, fontWeight: "700" },
-  itemSub: { fontSize: 14, color: "#64748b", marginTop: 2 },
+  itemSub: { fontSize: 14, color: theme.textSecondary, marginTop: 2 },
   itemPrice: { fontSize: 14, fontWeight: "700" },
 
   offersHeader: {
@@ -1862,7 +1864,7 @@ const s = StyleSheet.create({
   },
   offersLabel: {
     fontSize: 12,
-    color: "#64748b",
+    color: theme.textSecondary,
     fontWeight: "700",
     letterSpacing: 1,
   },
@@ -1878,7 +1880,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 6,
     borderWidth: 0.5,
-    borderColor: "#000",
+    borderColor: theme.background,
   },
   couponInput: {
     flex: 1,
@@ -1888,13 +1890,13 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   couponApplyBtn: {
-    backgroundColor: "#1D3A35",
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 25,
     paddingVertical: 5,
     borderRadius: 20,
   },
   couponApplyText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontWeight: "700",
     fontSize: 13,
   },
@@ -1922,13 +1924,13 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   codeTag: {
-    backgroundColor: "#1E3A34",
+    backgroundColor: theme.border,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
   },
   codeTagText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -1947,16 +1949,16 @@ const s = StyleSheet.create({
   },
   suggestionDesc: { fontSize: 12, fontWeight: "500" },
   suggestionApplyBtn: {
-    backgroundColor: "#1D3A35",
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 25,
     paddingVertical: 5,
-    borderColor: "#4e8573",
+    borderColor: theme.border,
     borderWidth: 1,
     borderRadius: 20,
     marginLeft: 12,
   },
   suggestionApplyText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontWeight: "700",
     fontSize: 13,
   },
@@ -1988,19 +1990,19 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     // marginBottom: 10,
   },
-  billLabel: { fontSize: 13, color: "#64748b" },
+  billLabel: { fontSize: 13, color: theme.textSecondary },
   billValue: { fontSize: 13, fontWeight: "600" },
   discountValue: { fontSize: 13, fontWeight: "700", color: "#f87171" },
   savingsPill: {
     alignSelf: "center",
-    backgroundColor: "#0B3326",
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
     marginBottom: 10,
   },
   savingsPillText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -2021,7 +2023,7 @@ const s = StyleSheet.create({
   },
   secureText: {
     fontSize: 10,
-    color: "#64748b",
+    color: theme.textSecondary,
     fontWeight: "700",
     letterSpacing: 0.8,
   },
@@ -2045,7 +2047,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
   processingSubTitle: {
-    color: "#7F948A",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -2058,7 +2060,7 @@ const s = StyleSheet.create({
   },
   processingSectionLabel: {
     fontSize: 11,
-    color: "#7F948A",
+    color: theme.textSecondary,
     fontWeight: "700",
     letterSpacing: 1,
   },
@@ -2073,13 +2075,13 @@ const s = StyleSheet.create({
     alignSelf: "flex-start",
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(34, 235, 171, 0.3)",
-    backgroundColor: "#0B3326",
+    borderColor: theme.card,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
   processingStatusText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.3,
@@ -2094,7 +2096,7 @@ const s = StyleSheet.create({
   },
   processingItemSub: {
     fontSize: 14,
-    color: "#22EBAB",
+    color: theme.primary,
     marginTop: 2,
     fontWeight: "700",
   },
@@ -2129,7 +2131,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   processingCheckText: {
-    color: "#BCD7CE",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "600",
   },
@@ -2138,8 +2140,8 @@ const s = StyleSheet.create({
     minHeight: 96,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#1E3A34",
-    backgroundColor: "#061612",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 13,
@@ -2157,11 +2159,11 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#21453D",
-    backgroundColor: "#123329",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
   },
   processingTagText: {
-    color: "#B4D5C9",
+    color: theme.text,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -2170,8 +2172,8 @@ const s = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#21453D",
-    backgroundColor: "#0A251F",
+    borderColor: theme.border,
+    backgroundColor: theme.card,
     paddingHorizontal: 14,
     paddingVertical: 14,
     flexDirection: "row",
@@ -2185,12 +2187,12 @@ const s = StyleSheet.create({
     flex: 1,
   },
   processingActionTitle: {
-    color: "#D9F1E9",
+    color: theme.text,
     fontSize: 15,
     fontWeight: "700",
   },
   processingActionSub: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -2200,8 +2202,8 @@ const s = StyleSheet.create({
     marginBottom: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(34,235,171,0.15)",
-    backgroundColor: "#0A251F",
+    borderColor: theme.card,
+    backgroundColor: theme.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: "row",
@@ -2213,7 +2215,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
   },
   deliveredBannerSub: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -2223,8 +2225,8 @@ const s = StyleSheet.create({
     marginBottom: 12,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(34,235,171,0.12)",
-    backgroundColor: "#0A251F",
+    borderColor: theme.card,
+    backgroundColor: theme.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
     flexDirection: "row",
@@ -2239,12 +2241,12 @@ const s = StyleSheet.create({
   deliveredRateBtn: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(34,235,171,0.35)",
+    borderColor: theme.card,
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
   deliveredRateBtnText: {
-    color: "#9FFFD3",
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -2254,8 +2256,8 @@ const s = StyleSheet.create({
     marginBottom: 14,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "#0B3326",
+    borderColor: theme.card,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
@@ -2275,21 +2277,21 @@ const s = StyleSheet.create({
     paddingRight: 8,
   },
   deliveredLabel: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.7,
     marginBottom: 4,
   },
   deliveredValue: {
-    color: "#E8F4EF",
+    color: theme.text,
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 18,
   },
   deliveredHelpLabel: {
     paddingHorizontal: 20,
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -2314,7 +2316,7 @@ const s = StyleSheet.create({
     borderRadius: 50,
   },
   payBtnText: {
-    color: "#001714",
+    color: theme.background,
     fontWeight: "800",
     fontSize: 16,
     letterSpacing: 0.3,

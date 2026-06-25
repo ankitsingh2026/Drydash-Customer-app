@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { ChatProvider } from "@/context/ChatContext";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -13,34 +14,48 @@ import { AlertProvider } from "@/components/Customalert";
 
 setupInterceptors();
 
+import { useTheme } from "../theme/useTheme";
+
+function RootLayoutNav() {
+  const { colors, isDark } = useTheme();
+  
+  return (
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(customer)" />
+      </Stack>
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-    <AlertProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <NotificationProvider>
-            <AddressProvider>
-              <CartProvider>
-                <SlotSocketProvider>
-                  <StatusBar style="light" />
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: "#0B1F1A" },
-                    }}
-                  >
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="(customer)" />
-                  </Stack>
-                </SlotSocketProvider>
-              </CartProvider>
-            </AddressProvider>
-          </NotificationProvider>
-        </ThemeProvider>
-      </AuthProvider>
-      </AlertProvider>
+      <ThemeProvider>                             // ✅ Theme first
+        <AlertProvider>                           // ✅ Now inside ThemeProvider
+          <AuthProvider>
+            <NotificationProvider>
+              <ChatProvider>
+                <AddressProvider>
+                  <CartProvider>
+                    <SlotSocketProvider>
+                      <RootLayoutNav />
+                    </SlotSocketProvider>
+                  </CartProvider>
+                </AddressProvider>
+              </ChatProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </AlertProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

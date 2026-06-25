@@ -70,34 +70,35 @@ export default function ServicesPage() {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { selectedAddress } = useAddress();
+  const styles = makeStyles(theme);
   console.log("Selected Address in Services Page:", selectedAddress);
 
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: "#021410" }]}>
+    <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
       <View style={{ flex: 1, }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
             <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 6, padding: 4 }}>
-              <Ionicons name="arrow-back" size={24} color="#2FE6A6" />
+              <Ionicons name="arrow-back" size={24} color={theme.primary} />
             </TouchableOpacity>
 
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="paper-plane-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>
+                <Ionicons name="paper-plane-outline" size={18} color={theme.text} style={{ marginRight: 6 }} />
+                <Text style={{ color: theme.text, fontSize: 16, fontWeight: "800" }}>
                   {selectedAddress?.label || "Location"}
                 </Text>
-                <Ionicons name="chevron-down" size={16} color="#fff" style={{ marginLeft: 4 }} />
+                <Ionicons name="chevron-down" size={16} color={theme.text} style={{ marginLeft: 4 }} />
               </View>
-              <Text numberOfLines={1} style={{ color: "#8FB3A8", fontSize: 12, marginTop: 2 }}>
+              <Text numberOfLines={1} style={{ color: theme.subText, fontSize: 12, marginTop: 2 }}>
                 {selectedAddress?.line1 + ", " + selectedAddress?.city || "Select your location"}
               </Text>
             </View>
           </View>
 
           {/* <TouchableOpacity style={styles.bellBtn}>
-            <Ionicons name="notifications-outline" size={20} color="#fff" />
+            <Ionicons name="notifications-outline" size={20} color={theme.text} />
           </TouchableOpacity> */}
         </View>
 
@@ -146,86 +147,87 @@ export default function ServicesPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  bellBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#0D1F1C",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    color: "#BCCFC6",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 16,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  card: {
-    width: (width - 32 - 12) / 2,
-    backgroundColor: "#062B25",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#17433B",
-    overflow: "hidden",
-    paddingBottom: 9,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-  iconContainer: {
-    width: "100%",
-    aspectRatio: 1.1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#052420",
-  },
-  textContainer: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
+const makeStyles = (theme: any) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    bellBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: theme.card,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    scrollContent: {
+      paddingHorizontal: 16,
+      paddingTop: 10,
+      paddingBottom: 40,
+    },
+    sectionTitle: {
+      color: theme.subText,
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+      marginBottom: 16,
+    },
+    grid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    card: {
+      width: (width - 32 - 12) / 2,
+      backgroundColor: theme.card,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.border,
+      overflow: "hidden",
+      paddingBottom: 9,
+      shadowColor: theme.background,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: theme.isDark ? 0.25 : 0.05,
+      shadowRadius: 6,
+      elevation: 5,
+    },
+    iconContainer: {
+      width: "100%",
+      aspectRatio: 1.1,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.isDark ? theme.card : "#E6F4F0",
+    },
+    textContainer: {
+      paddingHorizontal: 12,
+      paddingTop: 10,
+    },
 
-  cardTitle: {
-    color: "#F5FFF9",
-    fontSize: 16,
-    fontWeight: "800",
-  },
+    cardTitle: {
+      color: theme.text,
+      fontSize: 16,
+      fontWeight: "800",
+    },
 
-  cardSub: {
-    color: "#7FA394",
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "#1F4A42",
-    marginHorizontal: 12,
-    opacity: 0.8,
-  },
-});
+    cardSub: {
+      color: theme.subText,
+      fontSize: 11,
+      fontWeight: "500",
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.border,
+      marginHorizontal: 12,
+      opacity: 0.8,
+    },
+  });

@@ -25,19 +25,8 @@ import {
 
 const { height: SCREEN_H } = Dimensions.get("window");
 import { showAlert, AlertOverlay } from "@/components/Customalert";
+import { useTheme } from "../context/ThemeContext";
 
-const C = {
-  pink: "#00E1A2",
-  text: "#E6FFF7",
-  subText: "#8FB3A8",
-  bg: "#031612",
-  white: "#0D1F1C",
-  border: "#1A3330",
-  borderDark: "#1F3E38",
-  successBg: "#163A2F",
-  successText: "#78F0C8",
-  danger: "#EF4444",
-};
 
 type Props = {
   visible: boolean;
@@ -56,6 +45,8 @@ export default function LocationPickerModal({
   onClose,
   onAddNewAddress,
 }: Props) {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const slideAnim = useRef(new Animated.Value(SCREEN_H)).current;
   const [gpsLoading, setGpsLoading] = useState(false);
   const [locationEnabled, setLocationEnabled] = useState<boolean | null>(null);
@@ -257,7 +248,7 @@ export default function LocationPickerModal({
         <TouchableOpacity style={styles.actionRow} activeOpacity={0.85} onPress={handleEnableLocation}>
           <View style={styles.actionRowLeft}>
             <View style={styles.targetIconWrap}>
-              <Ionicons name="locate-outline" size={20} color={C.pink} />
+              <Ionicons name="locate-outline" size={20} color={theme.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.actionTitle}>Use my Current Location</Text>
@@ -276,7 +267,7 @@ export default function LocationPickerModal({
         <TouchableOpacity style={styles.actionRow} activeOpacity={0.85} onPress={handleRequestPermission}>
           <View style={styles.actionRowLeft}>
             <View style={styles.targetIconWrap}>
-              <Ionicons name="key-outline" size={20} color={C.pink} />
+              <Ionicons name="key-outline" size={20} color={theme.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.actionTitle}>Grant Location Permission</Text>
@@ -299,7 +290,7 @@ export default function LocationPickerModal({
       >
         <View style={styles.actionRowLeft}>
           <View style={styles.targetIconWrap}>
-            <Ionicons name="locate-outline" size={20} color={C.pink} />
+            <Ionicons name="locate-outline" size={20} color={theme.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.actionTitle}>Use my Current Location</Text>
@@ -322,7 +313,7 @@ export default function LocationPickerModal({
 
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={onClose} style={styles.backBtn}>
-              <Ionicons name="chevron-back" size={22} color={C.text} />
+              <Ionicons name="chevron-back" size={22} color={theme.text} />
             </TouchableOpacity>
             <Text style={styles.headerText}>{headerTitle}</Text>
             <View style={styles.headerSpacer} />
@@ -331,12 +322,12 @@ export default function LocationPickerModal({
           <Text style={styles.headerSubText}>{headerSubtitle}</Text>
 
           <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={22} color={C.subText} />
+            <Ionicons name="search-outline" size={22} color={theme.textSecondary} />
             <TextInput
               value={searchText}
               onChangeText={setSearchText}
               placeholder="Search Address"
-              placeholderTextColor="#7BA79A"
+              placeholderTextColor={theme.textSecondary}
               style={styles.searchInput}
             />
           </View>
@@ -353,17 +344,17 @@ export default function LocationPickerModal({
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons name="add" size={22} color={C.pink} />
+                <Ionicons name="add" size={22} color={theme.primary} />
                 <Text style={styles.simpleRowLabel}>Add New Address</Text>
-                <Ionicons name="chevron-forward" size={20} color={C.subText} />
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {/* <View style={styles.card}>
               <TouchableOpacity style={styles.simpleRow} onPress={handleWhatsApp} activeOpacity={0.8}>
-                <Ionicons name="logo-whatsapp" size={21} color="#16A34A" />
+                <Ionicons name="logo-whatsapp" size={21} color={theme.card} />
                 <Text style={styles.simpleRowLabel}>Request address from friend</Text>
-                <Ionicons name="chevron-forward" size={20} color={C.subText} />
+                <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
               </TouchableOpacity>
             </View> */}
 
@@ -390,7 +381,7 @@ export default function LocationPickerModal({
                         activeOpacity={0.78}
                       >
                         <View style={styles.addrIconWrap}>
-                          <Ionicons name={iconName as any} size={19} color={C.subText} />
+                          <Ionicons name={iconName as any} size={19} color={theme.textSecondary} />
                         </View>
 
                         <View style={{ flex: 1 }}>
@@ -414,7 +405,7 @@ export default function LocationPickerModal({
                               handleEdit(addr);
                             }}
                           >
-                            <Pencil size={20} color="#6B7280" />
+                            <Pencil size={20} color={theme.textSecondary} />
                           </TouchableOpacity>
 
                           <TouchableOpacity
@@ -423,7 +414,7 @@ export default function LocationPickerModal({
                               handleDelete(addr.id);
                             }}
                           >
-                            <Trash2 size={20} color={C.danger} />
+                            <Trash2 size={20} color={"#ff4444"} />
                           </TouchableOpacity>
                         </View>
                       </TouchableOpacity>
@@ -442,18 +433,18 @@ export default function LocationPickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: theme.backdrop,
   },
   sheet: {
     maxHeight: SCREEN_H * 0.92,
-    backgroundColor: C.bg,
+    backgroundColor: theme.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 10,
@@ -462,7 +453,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 5,
     borderRadius: 100,
-    backgroundColor: "#315A52",
+    backgroundColor: theme.border,
     alignSelf: "center",
     marginTop: 8,
     marginBottom: 10,
@@ -477,16 +468,16 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.white,
+    backgroundColor: theme.card,
   },
   headerText: {
     flex: 1,
     marginLeft: 12,
     fontSize: 34 / 2,
-    color: C.text,
+    color: theme.text,
     fontWeight: "800",
   },
   headerSpacer: {
@@ -496,7 +487,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginTop: 4,
     marginBottom: 12,
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
@@ -504,9 +495,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: C.borderDark,
+    borderColor: theme.lightborder,
     borderRadius: 16,
-    backgroundColor: C.white,
+    backgroundColor: theme.background,
     height: 56,
     paddingHorizontal: 14,
     flexDirection: "row",
@@ -516,7 +507,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 17 / 1,
-    color: C.text,
+    color: theme.text,
     fontWeight: "500",
   },
   scrollContent: {
@@ -525,10 +516,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: C.white,
+    backgroundColor: theme.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: theme.border,
     overflow: "hidden",
   },
   actionRow: {
@@ -551,17 +542,17 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0D2B24",
+    backgroundColor: theme.background,
   },
   actionTitle: {
     fontSize: 19 / 1,
-    color: C.text,
+    color: theme.text,
     fontWeight: "700",
   },
   actionSubTitle: {
     marginTop: 2,
     fontSize: 14,
-    color: C.subText,
+    color: theme.textSecondary,
     lineHeight: 18,
   },
   enableBtn: {
@@ -569,14 +560,14 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: C.pink,
+    borderColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 14,
     marginLeft: 10,
   },
   enableBtnText: {
-    color: C.pink,
+    color: theme.primary,
     fontWeight: "800",
     fontSize: 16,
   },
@@ -590,7 +581,7 @@ const styles = StyleSheet.create({
   simpleRowLabel: {
     flex: 1,
     fontSize: 18 / 1,
-    color: C.text,
+    color: theme.text,
     fontWeight: "700",
   },
   savedTitle: {
@@ -598,7 +589,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     paddingHorizontal: 2,
     fontSize: 36 / 2,
-    color: C.text,
+    color: theme.text,
     fontWeight: "800",
   },
   emptyWrap: {
@@ -606,7 +597,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: {
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -621,7 +612,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: "#0D2B24",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -632,23 +623,23 @@ const styles = StyleSheet.create({
   },
   addrLabel: {
     fontSize: 17 / 1,
-    color: C.text,
+    color: theme.text,
     fontWeight: "800",
   },
   selectedBadge: {
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 8,
-    backgroundColor: C.successBg,
+    backgroundColor: "#e6fff2",
   },
   selectedBadgeText: {
-    color: C.successText,
+    color: "#00b359",
     fontSize: 11,
     fontWeight: "700",
   },
   addrLine: {
     marginTop: 4,
-    color: C.subText,
+    color: theme.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     fontWeight: "500",
@@ -662,6 +653,6 @@ const styles = StyleSheet.create({
   divider: {
     marginLeft: 58,
     height: 1,
-    backgroundColor: C.border,
+    backgroundColor: theme.border,
   },
 });

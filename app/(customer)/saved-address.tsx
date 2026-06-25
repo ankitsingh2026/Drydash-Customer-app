@@ -26,25 +26,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { showAlert } from "@/components/Customalert";
+import { useTheme } from "@/context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
-const C = {
-  bg: "#031612",
-  card: "#0B1E1A",
-  cardBorder: "#163028",
-  cardBorderActive: "#2FE6A6",
-  primary: "#2FE6A6",
-  primaryDim: "#1A9E74",
-  text: "#E6FFF7",
-  subText: "#6FA090",
-  muted: "#3A5E55",
-  danger: "#FF5A5A",
-  dangerBg: "#2A1515",
-  mapBg: "#061A14",
-  defaultBadgeBg: "#2FE6A6",
-  defaultBadgeText: "#031612",
-};
+
 
 type Address = {
   id: string;
@@ -63,6 +49,8 @@ type Address = {
 };
 
 function MapDecoration() {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.mapWrapper}>
       {[...Array(6)].map((_, i) => (
@@ -92,6 +80,9 @@ function AddressCard({
   onEdit,
   onDelete,
 }: {
+  theme?: any;
+  styles?: any;
+} & {
   address: Address;
   index: number;
   isSelected: boolean;
@@ -99,6 +90,8 @@ function AddressCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+    const { theme, isDark } = useTheme();
+    const styles = makeStyles(theme, isDark);
   const scale = useRef(new Animated.Value(0.96)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -143,9 +136,9 @@ function AddressCard({
           <View style={styles.cardContent}>
             <View style={styles.cardTopRow}>
               <View style={styles.labelRow}>
-                <IconComp size={17} color={isSelected ? C.primary : C.text} />
+                <IconComp size={17} color={isSelected ? theme.primary : theme.text} />
                 <Text
-                  style={[styles.cardLabel, isSelected && { color: C.primary }]}
+                  style={[styles.cardLabel, isSelected && { color: theme.primary }]}
                 >
                   {address.label}
                 </Text>
@@ -164,7 +157,7 @@ function AddressCard({
                   }}
                   style={styles.actionBtn}
                 >
-                  <Pencil size={15} color={C.subText} />
+                  <Pencil size={15} color={theme.textSecondary} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={(e) => {
@@ -173,7 +166,7 @@ function AddressCard({
                   }}
                   style={styles.actionBtn}
                 >
-                  <Trash2 size={15} color={C.subText} />
+                  <Trash2 size={15} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -186,7 +179,7 @@ function AddressCard({
 
           {/* {isSelected && (
             <View style={styles.checkmarkContainer}>
-              <CheckCircle size={22} color={C.primary} />
+              <CheckCircle size={22} color={theme.primary} />
             </View>
           )} */}
         </View>
@@ -196,7 +189,9 @@ function AddressCard({
 }
 
 export default function SavedAddresses() {
-  const { user } = useAuth();
+    const { theme, isDark } = useTheme();
+    const styles = makeStyles(theme, isDark);
+    const { user } = useAuth();
   const params = useLocalSearchParams();
   const authId = user?.user?.id ?? user?.id;
   const selectMode = params.selectMode === "true";
@@ -330,7 +325,7 @@ export default function SavedAddresses() {
             onPress={() => router.back()}
             style={styles.backBtn}
           >
-            <ArrowLeft size={22} color={C.text} />
+            <ArrowLeft size={22} color={theme.text} />
           </TouchableOpacity>
 
           <Text style={styles.headerTitle}>
@@ -357,11 +352,11 @@ export default function SavedAddresses() {
 
           {loading ? (
             <View style={styles.loader}>
-              <ActivityIndicator color={C.primary} size="large" />
+              <ActivityIndicator color={theme.primary} size="large" />
             </View>
           ) : addresses.length === 0 ? (
             <View style={styles.empty}>
-              <MapPin size={36} color={C.muted} />
+              <MapPin size={36} color={theme.textSecondary} />
               <Text style={styles.emptyText}>No saved locations yet</Text>
               <TouchableOpacity
                 onPress={handleAddNewAddress}
@@ -419,12 +414,12 @@ export default function SavedAddresses() {
               style={styles.addBtnOuter}
             >
               <LinearGradient
-                colors={[C.primary, C.primaryDim]}
+                colors={[theme.primary, isDark ? theme.card : theme.background]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.addBtn}
               >
-                {/* <CheckCircle size={20} color="#031612" strokeWidth={2.5} /> */}
+                {/* <CheckCircle size={20} color={theme.background} strokeWidth={2.5} /> */}
                 <Text style={styles.addBtnText}>Confirm Selection</Text>
               </LinearGradient>
             </TouchableOpacity>
@@ -435,12 +430,12 @@ export default function SavedAddresses() {
               style={styles.addBtnOuter}
             >
               <LinearGradient
-                colors={[C.primary, C.primaryDim]}
+                colors={[theme.primary, isDark ? theme.card : theme.background]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.addBtn}
               >
-                <MapPinPlus size={20} color="#031612" strokeWidth={2.5} />
+                <MapPinPlus size={20} color={theme.background} strokeWidth={2.5} />
                 <Text style={styles.addBtnText}>
                   {selectMode ? "Add New Address Instead" : "+ Add New Address"}
                 </Text>
@@ -453,7 +448,24 @@ export default function SavedAddresses() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => {
+  const C = {
+    bg: theme.background,
+    card: theme.card,
+    cardBorder: theme.border,
+    cardBorderActive: theme.primary,
+    primary: theme.primary,
+    primaryDim: isDark ? theme.card : theme.background,
+    text: theme.text,
+    subText: theme.textSecondary,
+    muted: theme.textSecondary,
+    danger: isDark ? "#FF5A5A" : "#FF6B6B",
+    dangerBg: isDark ? theme.border : "#FCE8E6",
+    mapBg: theme.inputBackground,
+    defaultBadgeBg: theme.primary,
+    defaultBadgeText: isDark ? theme.background : theme.text,
+  };
+  return StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: { height: 46, justifyContent: "center", paddingHorizontal: 14 },
   backBtn: {
@@ -469,7 +481,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 17,
     fontWeight: "800",
-    color: C.primary,
+    color: theme.primary,
   },
   scroll: { paddingBottom: 120 },
   tabRow: {
@@ -481,26 +493,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   activeTab: { gap: 6 },
-  activeTabText: { fontSize: 14, fontWeight: "700", color: C.text },
+  activeTabText: { fontSize: 14, fontWeight: "700", color: theme.text },
   countText: {
     fontSize: 11,
     fontWeight: "700",
-    color: C.subText,
+    color: theme.textSecondary,
     letterSpacing: 0.8,
   },
   list: { paddingHorizontal: 16, gap: 12 },
   loader: { paddingVertical: 60, alignItems: "center" },
   empty: { paddingVertical: 60, alignItems: "center", gap: 12 },
-  emptyText: { color: C.subText, fontSize: 14, fontWeight: "600" },
+  emptyText: { color: theme.textSecondary, fontSize: 14, fontWeight: "600" },
   emptyAddBtn: {
     backgroundColor: C.card,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: C.primary,
+    borderColor: theme.primary,
   },
-  emptyAddBtnText: { color: C.primary, fontSize: 14, fontWeight: "700" },
+  emptyAddBtnText: { color: theme.primary, fontSize: 14, fontWeight: "700" },
   card: {
     backgroundColor: C.card,
     borderRadius: 16,
@@ -510,18 +522,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     position: "relative",
   },
-  cardActive: { borderColor: "#1A4035" },
-  cardSelected: { borderColor: C.primary, borderWidth: 2 },
+  cardActive: { borderColor: theme.border },
+  cardSelected: { borderColor: theme.primary, borderWidth: 2 },
   cardAccentBar: {
     width: 3,
-    backgroundColor: C.primary,
+    backgroundColor: theme.primary,
     borderRadius: 3,
     marginVertical: 12,
     marginLeft: 2,
   },
   cardSelectedBar: {
     width: 3,
-    backgroundColor: C.primary,
+    backgroundColor: theme.primary,
     borderRadius: 3,
     marginVertical: 12,
     marginLeft: 2,
@@ -539,7 +551,7 @@ const styles = StyleSheet.create({
     gap: 8,
     flexWrap: "wrap",
   },
-  cardLabel: { fontSize: 16, fontWeight: "800", color: C.text },
+  cardLabel: { fontSize: 16, fontWeight: "800", color: theme.text },
   defaultBadge: {
     backgroundColor: C.defaultBadgeBg,
     paddingHorizontal: 7,
@@ -559,15 +571,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0D2620",
+    backgroundColor: theme.inputBackground,
   },
   addressLine1: {
     fontSize: 14,
     fontWeight: "700",
-    color: C.text,
+    color: theme.text,
     marginBottom: 3,
   },
-  addressLine2: { fontSize: 12, color: C.subText, fontWeight: "500" },
+  addressLine2: { fontSize: 12, color: theme.textSecondary, fontWeight: "500" },
   checkmarkContainer: { position: "absolute", right: 12, top: 12 },
   mapWrapper: {
     marginTop: 20,
@@ -577,7 +589,7 @@ const styles = StyleSheet.create({
     backgroundColor: C.mapBg,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#0F2C24",
+    borderColor: theme.border,
     position: "relative",
   },
   gridLineH: {
@@ -585,14 +597,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "#0D2A22",
+    backgroundColor: theme.inputBackground,
   },
   gridLineV: {
     position: "absolute",
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: "#0D2A22",
+    backgroundColor: theme.inputBackground,
   },
   roadOuter: {
     position: "absolute",
@@ -602,7 +614,7 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: "#1A4035",
+    borderColor: theme.border,
     justifyContent: "center",
     alignItems: "center",
     transform: [{ rotate: "-8deg" }],
@@ -611,9 +623,9 @@ const styles = StyleSheet.create({
     width: "88%",
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0D2A22",
+    backgroundColor: theme.inputBackground,
     borderWidth: 1,
-    borderColor: C.primary,
+    borderColor: theme.primary,
     opacity: 0.4,
   },
   dispatchBadge: {
@@ -628,22 +640,22 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: C.primary,
-    shadowColor: C.primary,
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOpacity: 1,
     shadowRadius: 4,
   },
   dispatchText: {
     fontSize: 10,
     fontWeight: "700",
-    color: C.subText,
+    color: theme.textSecondary,
     letterSpacing: 1.2,
   },
   addBtnWrapper: { position: "absolute", bottom: 24, left: 20, right: 20 },
   addBtnOuter: {
     borderRadius: 18,
     overflow: "hidden",
-    shadowColor: C.primary,
+    shadowColor: theme.primary,
     shadowOpacity: 0.35,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
@@ -659,7 +671,8 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 16,
     fontWeight: "900",
-    color: "#031612",
+    color: theme.background,
     letterSpacing: 0.2,
   },
-});
+  });
+};

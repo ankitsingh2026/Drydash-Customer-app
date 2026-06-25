@@ -1,18 +1,8 @@
 import React, { useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-} from "react-native";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  withSpring,
-} from "react-native-reanimated";
+import { View, Text, StyleSheet, TouchableOpacity, Linking } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
 
 type Props = {
   visible: boolean;
@@ -21,12 +11,10 @@ type Props = {
   storeUrl: string | null;
 };
 
-export default function UpdateModal({
-  visible,
-  type,
-  onLater,
-  storeUrl,
-}: Props) {
+export default function UpdateModal({ visible, type, onLater, storeUrl }: Props) {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme);
+
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
 
@@ -50,13 +38,12 @@ export default function UpdateModal({
   return (
     <View style={styles.overlay}>
       <Animated.View style={[styles.container, animatedStyle]}>
-
         {/* 🔥 ICON */}
         <View style={styles.iconWrapper}>
           <Ionicons
             name={type === "force" ? "alert-circle" : "cloud-download"}
             size={42}
-            color={type === "force" ? "#ef4444" : "#22c55e"}
+            color={type === "force" ? "#FF6B6B" : theme.card}
           />
         </View>
 
@@ -95,79 +82,71 @@ export default function UpdateModal({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    position: "absolute",
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0,0,0,0.75)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  container: {
-    width: "85%",
-    backgroundColor: "#0F2A24",
-    borderRadius: 24,
-    padding: 24,
-    alignItems: "center",
-
-    // Shadow
-    shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-
-  iconWrapper: {
-    backgroundColor: "#122620",
-    padding: 14,
-    borderRadius: 50,
-    marginBottom: 12,
-  },
-
-  title: {
-    color: "#ffffff",
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-
-  message: {
-    color: "#cbd5e1",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 22,
-    lineHeight: 20,
-  },
-
-  buttons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
-  laterBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#475569",
-  },
-
-  laterText: {
-    color: "#cbd5e1",
-    fontWeight: "500",
-  },
-
-  updateBtn: {
-    backgroundColor: "#22c55e",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-  },
-
-  updateText: {
-    color: "#000",
-    fontWeight: "700",
-  },
-});
+function makeStyles(theme: any) {
+  return StyleSheet.create({
+    overlay: {
+      position: "absolute",
+      width: "100%",
+      height: "100%",
+      backgroundColor: theme.card,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    container: {
+      width: "85%",
+      backgroundColor: theme.background,
+      borderRadius: 24,
+      padding: 24,
+      alignItems: "center",
+      // Shadow
+      shadowColor: theme.background,
+      shadowOpacity: 0.4,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    iconWrapper: {
+      backgroundColor: theme.background,
+      padding: 14,
+      borderRadius: 50,
+      marginBottom: 12,
+    },
+    title: {
+      color: theme.text,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    message: {
+      color: theme.textSecondary,
+      fontSize: 14,
+      textAlign: "center",
+      marginBottom: 22,
+      lineHeight: 20,
+    },
+    buttons: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    laterBtn: {
+      paddingVertical: 12,
+      paddingHorizontal: 18,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    laterText: {
+      color: theme.textSecondary,
+      fontWeight: "500",
+    },
+    updateBtn: {
+      backgroundColor: theme.card,
+      paddingVertical: 12,
+      paddingHorizontal: 20,
+      borderRadius: 12,
+    },
+    updateText: {
+      color: theme.background,
+      fontWeight: "700",
+    },
+  });
+}

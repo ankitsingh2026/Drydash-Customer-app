@@ -7,7 +7,6 @@ import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-h
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
- 
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -25,8 +24,9 @@ import {
   verifyOtpApi,
 } from "../../features/auth/auth.api";
 import { showAlert } from "@/components/Customalert";
-
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTheme } from "@/theme/useTheme";
+import DryDashLogo from "../../assets/images/logo/drydashLogo.svg";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
 let OtpVerify: any = null;
@@ -35,6 +35,24 @@ if (Platform.OS === "android") {
   OtpVerify = require("react-native-otp-verify").default;
 }
 export default function AuthScreen() {
+  const { theme, colors, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+
+  const activeColors = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    text: colors.text,
+    subText: colors.subText,
+    inputBackground: isDark ? theme.background : "#E6F4F0",
+    inputBorder: isDark ? theme.card : "#C0DFD6",
+    title: isDark ? "#F0FDF4" : theme.primary,
+    dotInactive: isDark ? theme.card : "#D0E7E1",
+    dotInactiveBorder: isDark ? theme.border : "#B2DAD0",
+    buttonText: isDark ? theme.background : theme.background,
+  };
+
   const [step, setStep] = useState<Step>("MOBILE");
 
   const [phone, setPhone] = useState("");
@@ -47,7 +65,7 @@ export default function AuthScreen() {
   const [avatar, setAvatar] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
-//  const [error, setError] = useState<string | null>(null);
+  //  const [error, setError] = useState<string | null>(null);
 
   const [resendTimer, setResendTimer] = useState(0);
 
@@ -58,7 +76,7 @@ export default function AuthScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
-//  const errorShake = useRef(new Animated.Value(0)).current;
+  //  const errorShake = useRef(new Animated.Value(0)).current;
   const userIsTyping = useRef(false);
 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
@@ -142,7 +160,7 @@ export default function AuthScreen() {
         }
         // If userIsTyping, do NOTHING — let them type
       } else {
-       showAlert({ type: 'warning', title: 'Could not read number', message: `Got: "${number}". Please type manually.` });
+        showAlert({ type: 'warning', title: 'Could not read number', message: `Got: "${number}". Please type manually.` });
       }
     } catch (error) {
       // silently fail, user can type manually
@@ -184,13 +202,13 @@ export default function AuthScreen() {
     const hashToUse = hashValue || hash[0];
 
     if (!validatePhone(mobile)) {
-     return showAlert({ type: 'warning', title: 'Invalid number', message: 'Enter a valid 10-digit mobile number' });
+      return showAlert({ type: 'warning', title: 'Invalid number', message: 'Enter a valid 10-digit mobile number' });
 
     }
 
     try {
       setLoading(true);
-   
+
       console.log("sending OTP to ==>>>:", mobile, "with hash:", hashToUse);
       await sendOtpApi(mobile, hashToUse);
       setStep("OTP");
@@ -199,7 +217,7 @@ export default function AuthScreen() {
       const status = e?.response?.status || e?.status;
 
       if (status === 410) {
-       showAlert({ type: 'error', title: 'Account scheduled for deletion', message: 'Contact support@drydash.in to restore access before 10 days.' });
+        showAlert({ type: 'error', title: 'Account scheduled for deletion', message: 'Contact support@drydash.in to restore access before 10 days.' });
       }
     } finally {
       setLoading(false);
@@ -221,12 +239,12 @@ export default function AuthScreen() {
 
     try {
       setLoading(true);
-    //  setError(null);
+      //  setError(null);
 
       const res = await verifyOtpApi(phone, otpToVerify);
 
       if (res?.deleted) {
-      showAlert({ type: 'error', title: 'Account deleted', message: 'Please contact support to recover your account.' });
+        showAlert({ type: 'error', title: 'Account deleted', message: 'Please contact support to recover your account.' });
 
         //  setStep("REGISTER"); // go to register
         return;
@@ -250,10 +268,10 @@ export default function AuthScreen() {
       }
     } catch (e: any) {
       if (e.message?.toLowerCase().includes("otp")) {
-      showAlert({ type: 'error', title: 'Wrong OTP', primaryLabel: 'Try again', onPrimary: () => setOtp('') });
+        showAlert({ type: 'error', title: 'Wrong OTP', primaryLabel: 'Try again', onPrimary: () => setOtp('') });
 
       } else {
-       showAlert({ type: 'error', title: 'OTP verification failed', message: 'Something went wrong. Please try again.' });
+        showAlert({ type: 'error', title: 'OTP verification failed', message: 'Something went wrong. Please try again.' });
 
       }
     } finally {
@@ -276,7 +294,7 @@ export default function AuthScreen() {
 
     try {
       setLoading(true);
-   //   setError(null);
+      //   setError(null);
 
       let details_obj: any = { firstName };
 
@@ -292,9 +310,9 @@ export default function AuthScreen() {
 
       if (!tempToken) {
         console.log("there is an error");
-      //  setError("Token missing!");
+        //  setError("Token missing!");
 
-      showAlert({ type: 'error', title: 'Session expired', message: 'Please go back and verify your number again.' });
+        showAlert({ type: 'error', title: 'Session expired', message: 'Please go back and verify your number again.' });
 
         return;
       }
@@ -309,8 +327,8 @@ export default function AuthScreen() {
 
       router.replace("/(customer)/(tabs)/home");
     } catch (e: any) {
-    //  setError(e.message);
-    showAlert({ type: 'error', title: 'Could not create account', message: e.message });
+      //  setError(e.message);
+      showAlert({ type: 'error', title: 'Could not create account', message: e.message });
 
     } finally {
       setFirstName("");
@@ -338,9 +356,9 @@ export default function AuthScreen() {
   }, [resendTimer]);
 
   return (
-    <SafeAreaView style={styles.outer}>
+    <SafeAreaView style={[styles.outer, { backgroundColor: activeColors.bg }]}>
       {/* Gradient overlay */}
-      <View style={styles.gradientOverlay} />
+      {isDark && <View style={styles.gradientOverlay} />}
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -371,11 +389,12 @@ export default function AuthScreen() {
               transform: [{ scale: scaleAnim }],
             }}
           >
-            <Image
-              source={require("../../assets/images/logo/greenLogo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-            />
+            <View style={styles.logoContainer}>
+              <DryDashLogo
+                width={160}
+                height={100}
+              />
+            </View>
           </Animated.View>
 
           {/* CARD with animation */}
@@ -383,6 +402,8 @@ export default function AuthScreen() {
             style={[
               styles.card,
               {
+                backgroundColor: activeColors.card,
+                borderColor: activeColors.border,
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
               },
@@ -393,34 +414,37 @@ export default function AuthScreen() {
               <View
                 style={[
                   styles.progressDot,
-                  step !== "MOBILE" && styles.progressDotActive,
+                  { backgroundColor: activeColors.dotInactive, borderColor: activeColors.dotInactiveBorder },
+                  step !== "MOBILE" && [styles.progressDotActive, { backgroundColor: activeColors.primary, borderColor: activeColors.primary }],
                 ]}
               />
               <View
                 style={[
                   styles.progressLine,
+                  { backgroundColor: activeColors.dotInactive },
                   step === "REGISTER" || step === "SUCCESS"
-                    ? styles.progressLineActive
+                    ? [styles.progressLineActive, { backgroundColor: activeColors.primary }]
                     : {},
                 ]}
               />
               <View
                 style={[
                   styles.progressDot,
+                  { backgroundColor: activeColors.dotInactive, borderColor: activeColors.dotInactiveBorder },
                   (step === "REGISTER" || step === "SUCCESS") &&
-                  styles.progressDotActive,
+                  [styles.progressDotActive, { backgroundColor: activeColors.primary, borderColor: activeColors.primary }],
                 ]}
               />
             </View>
 
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: activeColors.title }]}>
               {step === "MOBILE" && "Welcome Back"}
               {step === "OTP" && "Verify OTP"}
               {step === "REGISTER" && "Create Your Profile"}
               {step === "SUCCESS" && "All Set! 🎉"}
             </Text>
 
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: activeColors.subText }]}>
               {step === "MOBILE" && "Use your Mobile number to continue."}
               {step === "OTP" && `OTP sent to Mobile • +91 ${phone}`}
               {step === "REGISTER" && "Just a few details to finish setup."}
@@ -431,15 +455,15 @@ export default function AuthScreen() {
             {step === "MOBILE" && (
               <>
                 <View style={styles.phoneRow}>
-                  <View style={styles.countryCodeBox}>
-                    <Text style={styles.countryCode}>+91</Text>
+                  <View style={[styles.countryCodeBox, { backgroundColor: activeColors.inputBackground, borderColor: activeColors.inputBorder }]}>
+                    <Text style={[styles.countryCode, { color: activeColors.text }]}>+91</Text>
                   </View>
-                  <View style={styles.phoneInputWrapper}>
+                  <View style={[styles.phoneInputWrapper, { backgroundColor: activeColors.inputBackground, borderColor: activeColors.inputBorder }]}>
                     <TextInput
                       ref={phoneInputRef}
-                      style={styles.phoneInput}
+                      style={[styles.phoneInput, { color: activeColors.text }]}
                       placeholder="Mobile number"
-                      placeholderTextColor="#6B7280"
+                      placeholderTextColor={colors.placeholderText}
                       value={phone}
                       onChangeText={(text) => {
                         userIsTyping.current = true;
@@ -471,9 +495,9 @@ export default function AuthScreen() {
                     <Ionicons
                       name="phone-portrait-outline"
                       size={16}
-                      color="#34D399"
+                      color={activeColors.primary}
                     />
-                    <Text style={styles.hintButtonText}>Use saved number</Text>
+                    <Text style={[styles.hintButtonText, { color: activeColors.primary }]}>Use saved number</Text>
                   </TouchableOpacity>
                 )}
               </>
@@ -488,7 +512,7 @@ export default function AuthScreen() {
                   onChangeText={(text) => {
                     const digits = text.replace(/\D/g, "").slice(0, 6); // force digits only
                     setOtp(digits);
-                  //  setError(null);
+                    //  setError(null);
                   }}
                   keyboardType="number-pad"
                   maxLength={6}
@@ -500,8 +524,8 @@ export default function AuthScreen() {
 
                 {/* Auto-read indicator */}
                 <View style={styles.autoReadIndicator}>
-                  <Ionicons name="shield-checkmark" size={14} color="#34D399" />
-                  <Text style={styles.autoReadText}>
+                  <Ionicons name="shield-checkmark" size={14} color={activeColors.primary} />
+                  <Text style={[styles.autoReadText, { color: activeColors.primary }]}>
                     {Platform.OS === "ios"
                       ? "OTP will be auto-suggested from Messages"
                       : "OTP will be auto-filled from SMS"}
@@ -513,8 +537,8 @@ export default function AuthScreen() {
                     onPress={() => setStep("MOBILE")}
                     style={styles.linkButton}
                   >
-                    <Ionicons name="chevron-back" size={16} color="#34D399" />
-                    <Text style={styles.linkText}>Change number</Text>
+                    <Ionicons name="chevron-back" size={16} color={activeColors.primary} />
+                    <Text style={[styles.linkText, { color: activeColors.primary }]}>Change number</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -525,12 +549,12 @@ export default function AuthScreen() {
                     <Ionicons
                       name="refresh-outline"
                       size={16}
-                      color={resendTimer > 0 ? "#6B7280" : "#34D399"}
+                      color={resendTimer > 0 ? colors.placeholderText : activeColors.primary}
                     />
                     <Text
                       style={[
                         styles.linkText,
-                        resendTimer > 0 && { color: "#6B7280" },
+                        { color: resendTimer > 0 ? colors.placeholderText : activeColors.primary },
                       ]}
                     >
                       {resendTimer ? `${resendTimer}s` : "Resend"}
@@ -575,35 +599,22 @@ export default function AuthScreen() {
             {step === "SUCCESS" && (
               <View style={styles.successBox}>
                 <View style={styles.successIconWrapper}>
-                  <Ionicons name="checkmark-circle" size={80} color="#34D399" />
+                  <Ionicons name="checkmark-circle" size={80} color={activeColors.primary} />
                 </View>
-                <Text style={styles.successText}>Account Created!</Text>
-                <Text style={styles.successSubtext}>
+                <Text style={[styles.successText, { color: activeColors.title }]}>Account Created!</Text>
+                <Text style={[styles.successSubtext, { color: activeColors.subText }]}>
                   Redirecting you to home...
                 </Text>
               </View>
             )}
 
-            {/* {error && (
-              <Animated.View
-                style={[
-                  styles.errorContainer,
-                  { transform: [{ translateX: errorShake }] },
-                ]}
-              >
-                <Ionicons
-                  name="alert-circle"
-                  size={18}
-                  color="#EF4444"
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.error}>{error}</Text>
-              </Animated.View>
-            )} */}
-
             {step !== "SUCCESS" && (
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonLoading]}
+                style={[
+                  styles.button,
+                  { backgroundColor: activeColors.primary, shadowColor: activeColors.primary },
+                  loading && styles.buttonLoading
+                ]}
                 disabled={loading}
                 onPress={
                   step === "MOBILE"
@@ -616,16 +627,16 @@ export default function AuthScreen() {
               >
                 {loading ? (
                   <View style={styles.loadingContainer}>
-                    <Text style={styles.buttonText}>Processing</Text>
+                    <Text style={[styles.buttonText, { color: activeColors.buttonText }]}>Processing</Text>
                     <View style={styles.loadingDots}>
-                      <View style={[styles.dot, styles.dot1]} />
-                      <View style={[styles.dot, styles.dot2]} />
-                      <View style={[styles.dot, styles.dot3]} />
+                      <View style={[styles.dot, styles.dot1, { backgroundColor: activeColors.buttonText }]} />
+                      <View style={[styles.dot, styles.dot2, { backgroundColor: activeColors.buttonText }]} />
+                      <View style={[styles.dot, styles.dot3, { backgroundColor: activeColors.buttonText }]} />
                     </View>
                   </View>
                 ) : (
                   <>
-                    <Text style={styles.buttonText}>
+                    <Text style={[styles.buttonText, { color: activeColors.buttonText }]}>
                       {step === "MOBILE"
                         ? "Continue"
                         : step === "OTP"
@@ -635,7 +646,7 @@ export default function AuthScreen() {
                     <Ionicons
                       name="arrow-forward"
                       size={20}
-                      color="#03241C"
+                      color={activeColors.buttonText}
                       style={{ marginLeft: 8 }}
                     />
                   </>
@@ -645,17 +656,17 @@ export default function AuthScreen() {
           </Animated.View>
 
           {step !== "SUCCESS" && (
-            <Text style={styles.legalText}>
+            <Text style={[styles.legalText, { color: activeColors.text }]}>
               By continuing, you agree to our {"\n"}
               <Text
-                style={styles.legalLink}
+                style={[styles.legalLink, { color: activeColors.primary }]}
                 onPress={() => router.push("/terms")}
               >
                 Terms & Conditions
               </Text>
               {" & "}
               <Text
-                style={[styles.legalLink, { marginTop: 4 }]}
+                style={[styles.legalLink, { color: activeColors.primary, marginTop: 4 }]}
                 onPress={() => router.push("/privacy-policy")}
               >
                 Privacy Policy
@@ -670,29 +681,32 @@ export default function AuthScreen() {
 
 /* ---------------- INPUT COMPONENT ---------------- */
 
-function Input({
-  icon,
-  style,
-  onFocus: onFocusProp,
-  onBlur: onBlurProp,
-  ...props
-}: any) {
+function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props }: any) {
   const [isFocused, setIsFocused] = useState(false);
+  const { colors, isDark, theme } = useTheme();        // ✅ added 'theme'
+  const styles = makeStyles(theme, isDark);            // ✅ generate styles locally
 
   return (
     <View
-      style={[styles.inputWrapper, isFocused && styles.inputWrapperFocused]}
+      style={[
+        styles.inputWrapper,
+        {
+          backgroundColor: isDark ? theme.background : "#E6F4F0",
+          borderColor: isFocused ? colors.primary : (isDark ? theme.card : "#C0DFD6")
+        },
+        style
+      ]}
     >
       <Ionicons
         name={icon}
         size={20}
-        color={isFocused ? "#34D399" : "#6B7280"}
+        color={isFocused ? colors.primary : colors.placeholderText}
         style={{ marginRight: 12 }}
       />
       <TextInput
         {...props}
-        placeholderTextColor="#6B7280"
-        style={styles.input}
+        placeholderTextColor={colors.placeholderText}
+        style={[styles.input, { color: colors.text }]}
         onFocus={() => {
           setIsFocused(true);
           onFocusProp?.();
@@ -708,10 +722,10 @@ function Input({
 
 /* ---------------- STYLES ---------------- */
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   outer: {
     flex: 1,
-    backgroundColor: "#001714",
+    backgroundColor: theme.background,
   },
 
   gradientOverlay: {
@@ -720,7 +734,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 300,
-    backgroundColor: "rgba(52, 211, 153, 0.05)",
+    backgroundColor: theme.card,
   },
 
   scroll: {
@@ -744,17 +758,17 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: "#0F2620",
+    backgroundColor: theme.background,
     borderRadius: 24,
     padding: 24,
     marginTop: 20,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
     elevation: 8,
     borderWidth: 1,
-    borderColor: "rgba(52, 211, 153, 0.1)",
+    borderColor: theme.card,
   },
 
   progressContainer: {
@@ -768,25 +782,25 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#1F3D33",
+    backgroundColor: theme.card,
     borderWidth: 2,
-    borderColor: "#2D5045",
+    borderColor: theme.border,
   },
 
   progressDotActive: {
-    backgroundColor: "#34D399",
-    borderColor: "#34D399",
+    backgroundColor: theme.border,
+    borderColor: theme.border,
   },
 
   progressLine: {
     width: 40,
     height: 2,
-    backgroundColor: "#1F3D33",
+    backgroundColor: theme.card,
     marginHorizontal: 8,
   },
 
   progressLineActive: {
-    backgroundColor: "#34D399",
+    backgroundColor: theme.border,
   },
 
   title: {
@@ -809,18 +823,18 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0A1F19",
+    backgroundColor: theme.background,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 4,
     marginBottom: 14,
     borderWidth: 2,
-    borderColor: "#1A3529",
+    borderColor: theme.card,
   },
 
   inputWrapperFocused: {
-    borderColor: "#34D399",
-    backgroundColor: "#0D2620",
+    borderColor: theme.border,
+    backgroundColor: theme.background,
   },
 
   input: {
@@ -840,7 +854,7 @@ const styles = StyleSheet.create({
   },
 
   autoFillText: {
-    color: "#34D399",
+    color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,
@@ -855,7 +869,7 @@ const styles = StyleSheet.create({
   },
 
   autoReadText: {
-    color: "#34D399",
+    color: theme.border,
     fontSize: 12,
     marginLeft: 6,
   },
@@ -864,17 +878,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(52, 211, 153, 0.1)",
+    backgroundColor: theme.card,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(52, 211, 153, 0.3)",
+    borderColor: theme.card,
   },
 
   autoFillBannerText: {
-    color: "#34D399",
+    color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 8,
@@ -897,7 +911,7 @@ const styles = StyleSheet.create({
   },
 
   linkText: {
-    color: "#34D399",
+    color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 4,
@@ -913,18 +927,18 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: "#1F3D33",
+    borderColor: theme.card,
     borderStyle: "dashed",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0A1F19",
+    backgroundColor: theme.background,
     marginBottom: 12,
   },
 
   avatarCircleActive: {
-    borderColor: "#34D399",
+    borderColor: theme.border,
     borderStyle: "solid",
-    backgroundColor: "#0D2620",
+    backgroundColor: theme.background,
   },
 
   avatarText: {
@@ -937,31 +951,31 @@ const styles = StyleSheet.create({
   //   flexDirection: "row",
   //   alignItems: "center",
   //   justifyContent: "center",
-  //   backgroundColor: "rgba(239, 68, 68, 0.1)",
+  //   backgroundColor: theme.card,
   //   borderRadius: 12,
   //   paddingVertical: 12,
   //   paddingHorizontal: 16,
   //   marginBottom: 12,
   //   borderWidth: 1,
-  //   borderColor: "rgba(239, 68, 68, 0.3)",
+  //   borderColor: theme.card,
   // },
 
   // error: {
-  //   color: "#EF4444",
+  //   color: "#FF6B6B",
   //   fontSize: 14,
   //   fontWeight: "600",
   //   flex: 1,
   // },
 
   button: {
-    backgroundColor: "#34D399",
+    backgroundColor: theme.border,
     height: 50,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 12,
     flexDirection: "row",
-    shadowColor: "#34D399",
+    shadowColor: theme.border,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -975,7 +989,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontWeight: "800",
     fontSize: 17,
-    color: "#03241C",
+    color: theme.background,
     letterSpacing: 0.5,
   },
 
@@ -993,7 +1007,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#03241C",
+    backgroundColor: theme.background,
     marginHorizontal: 2,
   },
 
@@ -1035,9 +1049,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   countryCodeBox: {
-    backgroundColor: "#0A1F19",
+    backgroundColor: theme.background,
     borderWidth: 2,
-    borderColor: "#1A3529",
+    borderColor: theme.card,
     borderRadius: 16,
     paddingHorizontal: 12,
     justifyContent: "center",
@@ -1050,9 +1064,9 @@ const styles = StyleSheet.create({
   },
   phoneInputWrapper: {
     flex: 1,
-    backgroundColor: "#0A1F19",
+    backgroundColor: theme.background,
     borderWidth: 2,
-    borderColor: "#1A3529",
+    borderColor: theme.card,
     borderRadius: 16,
   },
   phoneInput: {
@@ -1070,21 +1084,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   hintButtonText: {
-    color: "#34D399",
+    color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,
   },
 
   legalText: {
-    color: "#fff",
+    color: theme.text,
     fontSize: 14,
     textAlign: "center",
     marginTop: 28,
     lineHeight: 22,
   },
   legalLink: {
-    color: "#34D399",
+    color: theme.border,
     fontWeight: "600",
+  },
+  logoContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
 });

@@ -105,7 +105,10 @@ const MONTH_NAMES = [
 ];
 
 export default function BookPickup() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  const s = makeStyles(theme);
+  const ms = makeMs(theme);
   const [note, setNote] = useState("");
   const [locLoading, setLocLoading] = useState(false);
   const insets = useSafeAreaInsets();
@@ -257,9 +260,9 @@ export default function BookPickup() {
 
   // Determine display color
   const getServiceColor = () => {
-    if (serviceLoading) return "#2FE6A6";
+    if (serviceLoading) return theme.primary;
     const bestSlot = getBestSlot();
-    if (bestSlot) return "#2FE6A6";
+    if (bestSlot) return theme.primary;
 
     if (serviceData?.message === "Zone not configured" || !serviceData?.data?.zoneInfo) {
       return "#FF6B6B";
@@ -290,16 +293,16 @@ export default function BookPickup() {
 
   const getDynamicDeliveryLabel = (slot: any) => {
     if (!slot || !slot.deliveryLabel) return "11 AM tomorrow";
-    
+
     const parts = slot.deliveryLabel.split(" by ");
     const labelRelative = parts[0];
     const time = parts[1] || "";
-    
+
     let deliveryDate = new Date();
     if (pickupType === "schedule") {
       deliveryDate = new Date(date);
     }
-    
+
     if (labelRelative.toLowerCase() === "tomorrow") {
       deliveryDate.setDate(deliveryDate.getDate() + 1);
     } else if (labelRelative.toLowerCase() !== "today") {
@@ -309,7 +312,7 @@ export default function BookPickup() {
     const today = new Date();
     const tomorrow = new Date();
     tomorrow.setDate(today.getDate() + 1);
-    
+
     let dayLabel = "";
     if (deliveryDate.toDateString() === today.toDateString()) {
       dayLabel = "Today";
@@ -318,7 +321,7 @@ export default function BookPickup() {
     } else {
       dayLabel = deliveryDate.toLocaleDateString("en-IN", { weekday: "short" });
     }
-    
+
     return time ? `${dayLabel} by ${time}` : dayLabel;
   };
 
@@ -436,10 +439,16 @@ export default function BookPickup() {
     else router.replace("/(customer)/(tabs)/home");
   };
 
+  // REMOVE the SuccessModal-based flow entirely — replace openSuccessModal with this:
   const openSuccessModal = (msg: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSuccessMessage(msg);
-    setSuccessOpen(true);
+    const address = selectedPickupAddr
+      ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+      : "";
+    router.replace({
+      pathname: "/(customer)/order-success",
+      params: { address },
+    });
   };
 
   useEffect(() => {
@@ -458,9 +467,9 @@ export default function BookPickup() {
   }, []);
 
   // Extract unique service types from cart items
-const activeServiceTypes = Array.from(
-  new Set(items.map((item: any) => item.type).filter(Boolean))
-);
+  const activeServiceTypes = Array.from(
+    new Set(items.map((item: any) => item.type).filter(Boolean))
+  );
   console.log("Active service types for coupons:", activeServiceTypes);
 
   useEffect(() => {
@@ -921,7 +930,7 @@ const activeServiceTypes = Array.from(
     >
       <Text
         style={{
-          color: strike ? "#6B8F7B" : total ? "#CFFFF1" : "#8CAFA0",
+          color: strike ? theme.textSecondary : total ? theme.text : theme.textSecondary,
           fontSize: total ? 16 : 13,
           fontWeight: total ? "800" : "500",
           textDecorationLine: strike ? "line-through" : "none",
@@ -932,7 +941,7 @@ const activeServiceTypes = Array.from(
 
       <Text
         style={{
-          color: strike ? "#6B8F7B" : total ? "#00E1A2" : "#CFFFF1",
+          color: strike ? theme.textSecondary : total ? theme.primary : theme.text,
           fontSize: total ? 18 : 13,
           fontWeight: total ? "900" : "600",
           textDecorationLine: strike ? "line-through" : "none",
@@ -984,7 +993,7 @@ const activeServiceTypes = Array.from(
                     <TouchableOpacity
                       onPress={() => setQty(item.id, item.qty - 1)}
                     >
-                      <Ionicons name="remove" size={16} color="#CFFFF1" />
+                      <Ionicons name="remove" size={16} color={theme.text} />
                     </TouchableOpacity>
 
                     <Text style={s.qtyText}>{item.qty}</Text>
@@ -992,7 +1001,7 @@ const activeServiceTypes = Array.from(
                     <TouchableOpacity
                       onPress={() => setQty(item.id, item.qty + 1)}
                     >
-                      <Ionicons name="add" size={16} color="#00E1A2" />
+                      <Ionicons name="add" size={16} color={theme.primary} />
                     </TouchableOpacity>
                   </View>
 
@@ -1025,9 +1034,9 @@ const activeServiceTypes = Array.from(
               borderRadius: 14,
               paddingHorizontal: 14,
               paddingVertical: 6,
-              backgroundColor: "#0E1A14", // flat base
+              backgroundColor: theme.card, // flat base
               borderWidth: 1,
-              borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
+              borderColor: appliedCoupon ? theme.primary : theme.border,
             }}
           >
             <View
@@ -1045,7 +1054,7 @@ const activeServiceTypes = Array.from(
                   {/* Coupon Code */}
                   <Text
                     style={{
-                      color: "#E6FFF6",
+                      color: theme.text,
                       fontWeight: "900",
                       fontSize: 15,
                       letterSpacing: 0.5,
@@ -1058,7 +1067,7 @@ const activeServiceTypes = Array.from(
                   {appliedCoupon && (
                     <View
                       style={{
-                        backgroundColor: "#123D2E",
+                        backgroundColor: theme.inputBackground,
                         paddingHorizontal: 6,
                         paddingVertical: 2,
                         borderRadius: 4,
@@ -1067,7 +1076,7 @@ const activeServiceTypes = Array.from(
                       <Text
                         style={{
                           fontSize: 10,
-                          color: "#00E1A2",
+                          color: theme.primary,
                           fontWeight: "800",
                         }}
                       >
@@ -1080,7 +1089,7 @@ const activeServiceTypes = Array.from(
                 {/* Description */}
                 <Text
                   style={{
-                    color: "#7A9B87",
+                    color: theme.textSecondary,
                     fontSize: 12,
                   }}
                 >
@@ -1106,13 +1115,13 @@ const activeServiceTypes = Array.from(
                     paddingVertical: 6,
                     borderRadius: 18,
                     borderWidth: 1,
-                    borderColor: appliedCoupon ? "#00E1A2" : "#2A4A34",
-                    backgroundColor: appliedCoupon ? "#123D2E" : "transparent",
+                    borderColor: appliedCoupon ? theme.primary : theme.border,
+                    backgroundColor: appliedCoupon ? theme.inputBackground : "transparent",
                   }}
                 >
                   <Text
                     style={{
-                      color: appliedCoupon ? "#00E1A2" : "#7A9B87",
+                      color: appliedCoupon ? theme.primary : theme.textSecondary,
                       fontWeight: "800",
                       fontSize: 12,
                     }}
@@ -1130,7 +1139,7 @@ const activeServiceTypes = Array.from(
                       width: 34,
                       height: 34,
                       borderRadius: 17,
-                      backgroundColor: "#2A1414",
+                      backgroundColor: theme.border,
                       justifyContent: "center",
                       alignItems: "center",
 
@@ -1155,7 +1164,7 @@ const activeServiceTypes = Array.from(
           <View
             style={{
               height: 1,
-              backgroundColor: "#1E3327",
+              backgroundColor: theme.border,
               marginVertical: 10,
             }}
           />
@@ -1194,7 +1203,7 @@ const activeServiceTypes = Array.from(
       <Text style={s.sectionLabel}>SPECIAL INSTRUCTIONS</Text>
       <LinearGradient colors={theme.gradient} style={{ borderRadius: 14 }}>
         <TouchableOpacity
-          style={[s.noteBox, { borderColor: "#1E3327" }]}
+          style={[s.noteBox, { borderColor: theme.border }]}
           onPress={() => {
             setTempNote(note);
             setNotesModalOpen(true);
@@ -1204,7 +1213,7 @@ const activeServiceTypes = Array.from(
           <Text
             style={[
               s.notePlaceholder,
-              note ? { color: theme.text } : { color: "#d7dbd7" },
+              note ? { color: theme.text } : { color: theme.textSecondary },
             ]}
           >
             {note ||
@@ -1217,12 +1226,12 @@ const activeServiceTypes = Array.from(
                 style={[
                   s.noteTag,
                   {
-                    backgroundColor: "#1A2C22",
-                    borderColor: "#2A4A34",
+                    backgroundColor: theme.inputBackground,
+                    borderColor: theme.border,
                   },
                 ]}
               >
-                <Text style={[s.noteTagText, { color: "#d7dbd7" }]}>{tag}</Text>
+                <Text style={[s.noteTagText, { color: theme.textSecondary }]}>{tag}</Text>
               </View>
             ))}
           </View>
@@ -1249,8 +1258,8 @@ const activeServiceTypes = Array.from(
         <Switch
           value={deliveryMode === "same"}
           onValueChange={(v) => setDeliveryMode(v ? "same" : "other")}
-          trackColor={{ false: "#1E3327", true: theme.primary }}
-          thumbColor={deliveryMode === "same" ? "#fff" : "#4E7060"}
+          trackColor={{ false: theme.border, true: theme.primary }}
+          thumbColor={deliveryMode === "same" ? theme.text : theme.textSecondary}
         />
       </View>
 
@@ -1313,7 +1322,7 @@ const activeServiceTypes = Array.from(
                 <Text
                   style={{
                     fontSize: 11,
-                    color: "#7A9B87",
+                    color: theme.textSecondary,
                     fontWeight: "700",
                   }}
                 >
@@ -1333,7 +1342,7 @@ const activeServiceTypes = Array.from(
                 </Text>
               </View>
 
-              <Ionicons name="chevron-down" size={18} color="#7A9B87" />
+              <Ionicons name="chevron-down" size={18} color={theme.textSecondary} />
             </TouchableOpacity>
           </LinearGradient>
         </View>
@@ -1372,7 +1381,7 @@ const activeServiceTypes = Array.from(
               hitSlop={10}
               style={s.headerBack}
             >
-              <Ionicons name="chevron-back" size={24} color="#A7F3D0" />
+              <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -1390,12 +1399,12 @@ const activeServiceTypes = Array.from(
                   return (
                     <View>
                       <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <Ionicons name="time-outline" size={14} color="#A7F3D0" />
-                        <Text style={{ color: "#A7F3D0", fontSize: 12, marginLeft: 4 }}>
+                        <Ionicons name="time-outline" size={14} color={theme.primary} />
+                        <Text style={{ color: theme.text, fontSize: 12, marginLeft: 4 }}>
                           Delivery by
                         </Text>
                       </View>
-                      <Text style={{ color: "#2FE6A6", fontSize: 16, fontWeight: "800" }}>
+                      <Text style={{ color: theme.primary, fontSize: 16, fontWeight: "800" }}>
                         {slotInfo.dayLabel}
                         {slotInfo.time ? ` ${slotInfo.time}` : ""}
                       </Text>
@@ -1439,7 +1448,7 @@ const activeServiceTypes = Array.from(
                       ? `${contextSelectedAddress.line1 || contextSelectedAddress.street}, ${contextSelectedAddress.city}`
                       : "Tap to choose pickup location"}
                 </Text>
-                <Ionicons name="chevron-down" size={14} color="#A7F3D0" style={{ marginLeft: 4 }} />
+                <Ionicons name="chevron-down" size={14} color={theme.primary} style={{ marginLeft: 4 }} />
               </View>
             </TouchableOpacity>
 
@@ -1479,7 +1488,7 @@ const activeServiceTypes = Array.from(
                   s.tab,
                   pickupType === "today" && {
                     borderColor: theme.primary,
-                    backgroundColor: "#0A1F14",
+                    backgroundColor: theme.card,
                   },
                   !isServiceAvailable && s.tabDisabled,
                 ]}
@@ -1489,7 +1498,7 @@ const activeServiceTypes = Array.from(
                   style={[
                     s.tabText,
                     {
-                      color: pickupType === "today" ? theme.primary : "#4E7060",
+                      color: pickupType === "today" ? theme.primary : theme.textSecondary,
                       opacity: !isServiceAvailable ? 0.5 : 1,
                     },
                   ]}
@@ -1504,7 +1513,7 @@ const activeServiceTypes = Array.from(
                   s.tab,
                   pickupType === "schedule" && {
                     borderColor: theme.primary,
-                    backgroundColor: "#0A1F14",
+                    backgroundColor: theme.card,
                   },
                 ]}
                 activeOpacity={0.8}
@@ -1514,7 +1523,7 @@ const activeServiceTypes = Array.from(
                     s.tabText,
                     {
                       color:
-                        pickupType === "schedule" ? theme.primary : "#4E7060",
+                        pickupType === "schedule" ? theme.primary : theme.textSecondary,
                     },
                   ]}
                 >
@@ -1590,30 +1599,30 @@ const activeServiceTypes = Array.from(
                     <View style={{
                       borderRadius: 16,
                       padding: 16,
-                      backgroundColor: "#0B1F19",
+                      backgroundColor: theme.card,
                       borderWidth: 1,
-                      borderColor: "#1E3327",
+                      borderColor: theme.border,
                     }}>
                       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
                         <View style={{
                           width: 36,
                           height: 36,
                           borderRadius: 18,
-                          backgroundColor: "#2A2F1C",
+                          backgroundColor: theme.inputBackground,
                           alignItems: "center",
                           justifyContent: "center",
                           marginRight: 10,
                         }}>
-                          <Ionicons name="location" size={18} color="#00E1A2" />
+                          <Ionicons name="location" size={18} color={theme.primary} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{
-                            color: "#CFFFF1",
+                            color: theme.text,
                             fontSize: 14,
                             fontWeight: "700",
                           }}>Location Required</Text>
                           <Text style={{
-                            color: "#7A9B87",
+                            color: theme.textSecondary,
                             fontSize: 12,
                             marginTop: 4,
                             lineHeight: 18,
@@ -1673,7 +1682,7 @@ const activeServiceTypes = Array.from(
                   <Ionicons
                     name={hasHeavyItems ? "checkbox" : "square-outline"}
                     size={20}
-                    color={hasHeavyItems ? theme.primary : "#4E7060"}
+                    color={hasHeavyItems ? theme.primary : theme.textSecondary}
                   />
 
                   <Text
@@ -1689,12 +1698,12 @@ const activeServiceTypes = Array.from(
                 {/* DELIVERY PREFERENCE TOGGLE */}
                 {/* <View style={{ marginTop: 5, marginLeft: 15 }}>
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons name="flash-outline" size={14} color="#9FFFD9" />
+                    <Ionicons name="flash-outline" size={14} color={theme.primary} />
 
                     <Text
                       style={{
                         marginLeft: 6,
-                        color: "#CFFFF1",
+                        color: theme.text,
                         fontSize: 14,
                         fontWeight: "500",
                       }}
@@ -1717,7 +1726,7 @@ const activeServiceTypes = Array.from(
                         marginLeft: 180,
                         marginTop: 2,
                         fontSize: 11,
-                        color: "#7A9B87",
+                        color: theme.textSecondary,
                         textDecorationLine: "underline",
                       }}
                     >
@@ -1790,14 +1799,14 @@ const activeServiceTypes = Array.from(
                               opacity: isSelected ? 1 : 0.75,
                               borderColor: isSelected
                                 ? theme.primary
-                                : "#1E3327",
+                                : theme.border,
                             },
                           ]}
                         >
                           <Text
                             style={[
                               s.dateDayName,
-                              { color: isSelected ? "#fff" : "#fff" },
+                              { color: isSelected ? theme.text : theme.text },
                             ]}
                           >
                             {DAY_NAMES[d.getDay()]}
@@ -1806,7 +1815,7 @@ const activeServiceTypes = Array.from(
                           <Text
                             style={[
                               s.dateNum,
-                              { color: isSelected ? "#fff" : "#fff" },
+                              { color: isSelected ? theme.text : theme.text },
                             ]}
                           >
                             {d.getDate()}
@@ -1856,30 +1865,30 @@ const activeServiceTypes = Array.from(
                     <View style={{
                       borderRadius: 16,
                       padding: 16,
-                      backgroundColor: "#0B1F19",
+                      backgroundColor: theme.card,
                       borderWidth: 1,
-                      borderColor: "#1E3327",
+                      borderColor: theme.border,
                     }}>
                       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
                         <View style={{
                           width: 36,
                           height: 36,
                           borderRadius: 18,
-                          backgroundColor: "#2A2F1C",
+                          backgroundColor: theme.inputBackground,
                           alignItems: "center",
                           justifyContent: "center",
                           marginRight: 10,
                         }}>
-                          <Ionicons name="location" size={18} color="#00E1A2" />
+                          <Ionicons name="location" size={18} color={theme.primary} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text style={{
-                            color: "#CFFFF1",
+                            color: theme.text,
                             fontSize: 14,
                             fontWeight: "700",
                           }}>Location Required</Text>
                           <Text style={{
-                            color: "#7A9B87",
+                            color: theme.textSecondary,
                             fontSize: 12,
                             marginTop: 4,
                             lineHeight: 18,
@@ -1912,13 +1921,13 @@ const activeServiceTypes = Array.from(
                       padding: 14,
                       borderRadius: 14,
                       borderWidth: 1.5,
-                      borderColor: hasHeavyItems ? theme.primary : "#1E3327",
+                      borderColor: hasHeavyItems ? theme.primary : theme.border,
                     }}
                   >
                     <Ionicons
                       name={hasHeavyItems ? "checkbox" : "square-outline"}
                       size={20}
-                      color={hasHeavyItems ? theme.primary : "#4E7060"}
+                      color={hasHeavyItems ? theme.primary : theme.textSecondary}
                     />
 
                     <Text
@@ -1951,7 +1960,7 @@ const activeServiceTypes = Array.from(
           <View style={[s.footer, { backgroundColor: theme.background }]}>
             {pickupType === "schedule" && selectedSlotIndex !== -1 && selectedSlotData?.time && (
               <View style={s.estimatedRow}>
-                <Ionicons name="time-outline" size={14} color="#4E7060" />
+                <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
                 <Text style={s.estimatedText}>
                   ESTIMATED PICKUP: {formatDateLabel(date).toUpperCase()},{" "}
                   {selectedSlotData.time}
@@ -1961,7 +1970,7 @@ const activeServiceTypes = Array.from(
             )}
             {/* {pickupType === "today" && selectedSlotData?.time && (
               <View style={s.estimatedRow}>
-                <Ionicons name="time-outline" size={14} color="#4E7060" />
+                <Ionicons name="time-outline" size={14} color={theme.textSecondary} />
                 <Text style={s.estimatedText}>
                   PICKUP SLOT: {selectedSlotData.time}
                 </Text>
@@ -2036,11 +2045,11 @@ const activeServiceTypes = Array.from(
             <TouchableWithoutFeedback onPress={() => setNotesModalOpen(false)}>
               <View style={ms.backdrop}>
                 <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                  <View style={[ms.notesSheet, { backgroundColor: "#0F2318" }]}>
+                  <View style={[ms.notesSheet, { backgroundColor: theme.card }]}>
                     <View style={ms.sheetHandle} />
                     <View style={ms.sheetHeader}>
                       <View>
-                        <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                        <Text style={[ms.sheetTitle, { color: theme.text }]}>
                           Special Instructions
                         </Text>
                         <Text style={ms.sheetSub}>
@@ -2049,15 +2058,15 @@ const activeServiceTypes = Array.from(
                       </View>
                       <TouchableOpacity
                         onPress={() => setNotesModalOpen(false)}
-                        style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
+                        style={[ms.closeBtn, { backgroundColor: theme.inputBackground }]}
                       >
-                        <Ionicons name="close" size={20} color="#7A9B87" />
+                        <Ionicons name="close" size={20} color={theme.textSecondary} />
                       </TouchableOpacity>
                     </View>
 
                     <TextInput
                       placeholder="e.g., Call before arrival, Ring doorbell twice..."
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={tempNote}
                       onChangeText={setTempNote}
                       multiline
@@ -2065,9 +2074,9 @@ const activeServiceTypes = Array.from(
                       style={[
                         ms.notesInput,
                         {
-                          backgroundColor: "#0A1A10",
-                          color: "#fff",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
@@ -2095,8 +2104,8 @@ const activeServiceTypes = Array.from(
                           style={[
                             ms.suggestChip,
                             {
-                              backgroundColor: "#1A2C22",
-                              borderColor: "#2A4A34",
+                              backgroundColor: theme.inputBackground,
+                              borderColor: theme.border,
                             },
                           ]}
                         >
@@ -2104,7 +2113,7 @@ const activeServiceTypes = Array.from(
                             style={{
                               fontSize: 12,
                               fontWeight: "600",
-                              color: "#7A9B87",
+                              color: theme.textSecondary,
                             }}
                           >
                             {s}
@@ -2125,12 +2134,12 @@ const activeServiceTypes = Array.from(
                         style={[
                           ms.clearBtn,
                           {
-                            backgroundColor: "#1A2C22",
-                            borderColor: "#2A4A34",
+                            backgroundColor: theme.inputBackground,
+                            borderColor: theme.border,
                           },
                         ]}
                       >
-                        <Text style={{ fontWeight: "800", color: "#7A9B87" }}>
+                        <Text style={{ fontWeight: "800", color: theme.textSecondary }}>
                           Clear
                         </Text>
                       </TouchableOpacity>
@@ -2144,13 +2153,13 @@ const activeServiceTypes = Array.from(
                         <Ionicons
                           name="checkmark-circle"
                           size={18}
-                          color="#000"
+                          color={theme.background}
                         />
                         <Text
                           style={{
                             marginLeft: 6,
                             fontWeight: "900",
-                            color: "#000",
+                            color: theme.background,
                           }}
                         >
                           Save Instructions
@@ -2171,7 +2180,7 @@ const activeServiceTypes = Array.from(
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-              <View style={[ms.addSheet, { backgroundColor: "#0F2318" }]}>
+              <View style={[ms.addSheet, { backgroundColor: theme.card }]}>
                 <ScrollView
                   contentContainerStyle={{ paddingBottom: 24 }}
                   keyboardShouldPersistTaps="handled"
@@ -2180,7 +2189,7 @@ const activeServiceTypes = Array.from(
                   <View style={ms.sheetHandle} />
                   <View style={ms.sheetHeader}>
                     <View>
-                      <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                      <Text style={[ms.sheetTitle, { color: theme.text }]}>
                         Add New Address
                       </Text>
                       <Text style={ms.sheetSub}>
@@ -2191,9 +2200,9 @@ const activeServiceTypes = Array.from(
                     </View>
                     <TouchableOpacity
                       onPress={() => setAddModalOpen(false)}
-                      style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
+                      style={[ms.closeBtn, { backgroundColor: theme.inputBackground }]}
                     >
-                      <Ionicons name="close" size={20} color="#7A9B87" />
+                      <Ionicons name="close" size={20} color={theme.textSecondary} />
                     </TouchableOpacity>
                   </View>
 
@@ -2245,7 +2254,7 @@ const activeServiceTypes = Array.from(
                       <Ionicons
                         name={locLoading ? "sync" : "locate"}
                         size={16}
-                        color="#000"
+                        color={theme.background}
                       />
                       <Text style={ms.currentLocText}>
                         {locLoading ? "Fetching..." : "Use Current Location"}
@@ -2278,8 +2287,8 @@ const activeServiceTypes = Array.from(
                             {
                               backgroundColor: active
                                 ? theme.primary
-                                : "#1A2C22",
-                              borderColor: active ? theme.primary : "#2A4A34",
+                                : theme.inputBackground,
+                              borderColor: active ? theme.primary : theme.border,
                             },
                           ]}
                           activeOpacity={0.85}
@@ -2287,14 +2296,14 @@ const activeServiceTypes = Array.from(
                           <Ionicons
                             name={item.icon as any}
                             size={15}
-                            color={active ? "#000" : "#7A9B87"}
+                            color={active ? theme.background : theme.textSecondary}
                           />
                           <Text
                             style={{
                               marginLeft: 5,
                               fontWeight: "800",
                               fontSize: 13,
-                              color: active ? "#000" : "#7A9B87",
+                              color: active ? theme.background : theme.textSecondary,
                             }}
                           >
                             {item.text}
@@ -2325,7 +2334,7 @@ const activeServiceTypes = Array.from(
                     <TextInput
                       key={field.key}
                       placeholder={field.placeholder}
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={(addressForm as any)[field.key]}
                       keyboardType={field.keyboard}
                       onChangeText={(t) =>
@@ -2334,9 +2343,9 @@ const activeServiceTypes = Array.from(
                       style={[
                         ms.formInput,
                         {
-                          backgroundColor: "#0A1A10",
-                          color: "#fff",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
@@ -2345,7 +2354,7 @@ const activeServiceTypes = Array.from(
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <TextInput
                       placeholder="City"
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={addressForm.city}
                       onChangeText={(t) =>
                         setAddressForm((p) => ({ ...p, city: t }))
@@ -2353,15 +2362,15 @@ const activeServiceTypes = Array.from(
                       style={[
                         ms.formInputHalf,
                         {
-                          backgroundColor: "#0A1A10",
-                          color: "#fff",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
                     <TextInput
                       placeholder="State"
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={addressForm.state}
                       onChangeText={(t) =>
                         setAddressForm((p) => ({ ...p, state: t }))
@@ -2369,9 +2378,9 @@ const activeServiceTypes = Array.from(
                       style={[
                         ms.formInputHalf,
                         {
-                          backgroundColor: "#0A1A10",
-                          color: "#fff",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.card,
+                          color: theme.text,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
@@ -2379,7 +2388,7 @@ const activeServiceTypes = Array.from(
 
                   <TextInput
                     placeholder="Pincode"
-                    placeholderTextColor="#3D6050"
+                    placeholderTextColor={theme.placeholderText}
                     value={addressForm.pincode}
                     onChangeText={(t) =>
                       setAddressForm((p) => ({ ...p, pincode: t }))
@@ -2388,9 +2397,9 @@ const activeServiceTypes = Array.from(
                     style={[
                       ms.formInput,
                       {
-                        backgroundColor: "#0A1A10",
-                        color: "#fff",
-                        borderColor: "#1E3327",
+                        backgroundColor: theme.card,
+                        color: theme.text,
+                        borderColor: theme.border,
                       },
                     ]}
                   />
@@ -2398,29 +2407,29 @@ const activeServiceTypes = Array.from(
                   <View style={{ flexDirection: "row", gap: 10 }}>
                     <TextInput
                       placeholder="Latitude"
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={addressForm.latitude}
                       editable={false}
                       style={[
                         ms.formInputHalf,
                         {
-                          backgroundColor: "#071A0E",
-                          color: "#4E7060",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.inputBackground,
+                          color: theme.textSecondary,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
                     <TextInput
                       placeholder="Longitude"
-                      placeholderTextColor="#3D6050"
+                      placeholderTextColor={theme.placeholderText}
                       value={addressForm.longitude}
                       editable={false}
                       style={[
                         ms.formInputHalf,
                         {
-                          backgroundColor: "#071A0E",
-                          color: "#4E7060",
-                          borderColor: "#1E3327",
+                          backgroundColor: theme.inputBackground,
+                          color: theme.textSecondary,
+                          borderColor: theme.border,
                         },
                       ]}
                     />
@@ -2431,13 +2440,13 @@ const activeServiceTypes = Array.from(
                     onPress={saveAddress}
                     activeOpacity={0.9}
                   >
-                    <Ionicons name="checkmark-circle" size={18} color="#000" />
+                    <Ionicons name="checkmark-circle" size={18} color={theme.background} />
                     <Text
                       style={{
                         marginLeft: 8,
                         fontWeight: "900",
                         fontSize: 15,
-                        color: "#000",
+                        color: theme.background,
                       }}
                     >
                       Save Address
@@ -2454,16 +2463,16 @@ const activeServiceTypes = Array.from(
           <TouchableWithoutFeedback onPress={() => setPreviewOpen(false)}>
             <View style={ms.centeredOverlay}>
               <TouchableWithoutFeedback>
-                <View style={[ms.previewCard, { backgroundColor: "#0F2318" }]}>
+                <View style={[ms.previewCard, { backgroundColor: theme.card }]}>
                   <View style={ms.sheetHeader}>
-                    <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                    <Text style={[ms.sheetTitle, { color: theme.text }]}>
                       Address Preview
                     </Text>
                     <TouchableOpacity
                       onPress={() => setPreviewOpen(false)}
-                      style={[ms.closeBtn, { backgroundColor: "#1A2C22" }]}
+                      style={[ms.closeBtn, { backgroundColor: theme.inputBackground }]}
                     >
-                      <Ionicons name="close" size={20} color="#7A9B87" />
+                      <Ionicons name="close" size={20} color={theme.textSecondary} />
                     </TouchableOpacity>
                   </View>
                   {previewAddress ? (
@@ -2472,14 +2481,14 @@ const activeServiceTypes = Array.from(
                         style={{
                           fontWeight: "800",
                           fontSize: 16,
-                          color: "#fff",
+                          color: theme.text,
                           marginTop: 10,
                         }}
                       >
                         {previewAddress.label}
                       </Text>
                       <Text
-                        style={{ marginTop: 8, color: "#7A9B87", fontSize: 14 }}
+                        style={{ marginTop: 8, color: theme.textSecondary, fontSize: 14 }}
                       >
                         {previewAddress.addressLine1 ||
                           previewAddress.line1 ||
@@ -2489,7 +2498,7 @@ const activeServiceTypes = Array.from(
                         <Text
                           style={{
                             marginTop: 4,
-                            color: "#7A9B87",
+                            color: theme.textSecondary,
                             fontSize: 14,
                           }}
                         >
@@ -2497,21 +2506,21 @@ const activeServiceTypes = Array.from(
                         </Text>
                       ) : null}
                       <Text
-                        style={{ marginTop: 4, color: "#7A9B87", fontSize: 14 }}
+                        style={{ marginTop: 4, color: theme.textSecondary, fontSize: 14 }}
                       >
                         {previewAddress.city}, {previewAddress.state} •{" "}
                         {previewAddress.pincode}
                       </Text>
                       {previewAddress.contactName ? (
                         <Text
-                          style={{ marginTop: 10, color: "#fff", fontSize: 14 }}
+                          style={{ marginTop: 10, color: theme.text, fontSize: 14 }}
                         >
                           Contact: {previewAddress.contactName}
                         </Text>
                       ) : null}
                       {previewAddress.contactPhone ? (
                         <Text
-                          style={{ marginTop: 2, color: "#fff", fontSize: 14 }}
+                          style={{ marginTop: 2, color: theme.text, fontSize: 14 }}
                         >
                           Phone: {previewAddress.contactPhone}
                         </Text>
@@ -2523,13 +2532,13 @@ const activeServiceTypes = Array.from(
                           { backgroundColor: theme.primary, marginTop: 16 },
                         ]}
                       >
-                        <Text style={{ fontWeight: "900", color: "#000" }}>
+                        <Text style={{ fontWeight: "900", color: theme.background }}>
                           Close
                         </Text>
                       </TouchableOpacity>
                     </>
                   ) : (
-                    <Text style={{ color: "#7A9B87" }}>
+                    <Text style={{ color: theme.textSecondary }}>
                       No address selected
                     </Text>
                   )}
@@ -2542,15 +2551,15 @@ const activeServiceTypes = Array.from(
         {/* ══════════════════ ADDRESS PICKER MODAL ══════════════════ */}
         <Modal visible={addressPickerOpen} animationType="slide" transparent>
           <View style={ms.backdrop}>
-            <View style={[ms.addSheet, { backgroundColor: "#0F2318" }]}>
+            <View style={[ms.addSheet, { backgroundColor: theme.card }]}>
               <View style={ms.sheetHeader}>
-                <Text style={[ms.sheetTitle, { color: "#fff" }]}>
+                <Text style={[ms.sheetTitle, { color: theme.text }]}>
                   Select {pickerType === "pickup" ? "Pickup" : "Delivery"}{" "}
                   Address
                 </Text>
 
                 <TouchableOpacity onPress={() => setAddressPickerOpen(false)}>
-                  <Ionicons name="close" size={22} color="#7A9B87" />
+                  <Ionicons name="close" size={22} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
 
@@ -2580,10 +2589,10 @@ const activeServiceTypes = Array.from(
                           borderRadius: 14,
                           marginBottom: 10,
                           borderWidth: 1.5,
-                          borderColor: isSelected ? theme.primary : "#1E3327",
+                          borderColor: isSelected ? theme.primary : theme.border,
                           backgroundColor: isSelected
                             ? theme.primary + "15"
-                            : "#0A1A10",
+                            : theme.card,
                         },
                       ]}
                     >
@@ -2594,7 +2603,7 @@ const activeServiceTypes = Array.from(
                             : "briefcase-outline"
                         }
                         size={18}
-                        color={isSelected ? theme.primary : "#4E7060"}
+                        color={isSelected ? theme.primary : theme.textSecondary}
                         style={{ marginRight: 10 }}
                       />
 
@@ -2609,7 +2618,7 @@ const activeServiceTypes = Array.from(
                         </Text>
 
                         <Text
-                          style={{ fontSize: 12, color: "#4E7060" }}
+                          style={{ fontSize: 12, color: theme.textSecondary }}
                           numberOfLines={2}
                         >
                           {addr.line1}, {addr.city}
@@ -2658,11 +2667,8 @@ const activeServiceTypes = Array.from(
               ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
               : undefined
           }
-          orderId="LN-20489"
-          onHome={() => {
-            setSuccessOpen(false);
-            navigateHomeWithSuccess();
-          }}
+          // orderId="LN-20489"
+          onHome={() => { }}
         />
       </KeyboardAvoidingView>
 
@@ -2705,7 +2711,7 @@ const activeServiceTypes = Array.from(
 }
 
 // ─── Main Styles ──────────────────────────────────────────────────────────────
-const s = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   safe: { flex: 1 },
 
   header: {
@@ -2720,7 +2726,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     // paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#0F2318",
+    borderBottomColor: theme.border,
   },
   headerBack: {
     width: 36,
@@ -2737,7 +2743,7 @@ const s = StyleSheet.create({
   sectionLabel: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#4E7060",
+    color: theme.textSecondary,
     letterSpacing: 1.2,
     marginBottom: 10,
   },
@@ -2754,7 +2760,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
     overflow: "hidden",
     marginTop: 10,
   },
@@ -2808,7 +2814,7 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   pickerItemLabel: { fontSize: 14, fontWeight: "700" },
-  pickerItemSub: { fontSize: 12, color: "#4E7060", marginTop: 2 },
+  pickerItemSub: { fontSize: 12, color: theme.textSecondary, marginTop: 2 },
 
   offerCard: {
     flexDirection: "row",
@@ -2851,7 +2857,7 @@ const s = StyleSheet.create({
   bigSubtitle: { fontSize: 15, color: "#babeba" },
   monthLabel: {
     fontSize: 10,
-    color: "#4E7060",
+    color: theme.textSecondary,
     fontWeight: "700",
     letterSpacing: 1,
   },
@@ -2864,7 +2870,7 @@ const s = StyleSheet.create({
     borderRadius: 16,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
   },
   dateDayName: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
   dateNum: { fontSize: 24, fontWeight: "900", marginTop: 4 },
@@ -2891,7 +2897,7 @@ const s = StyleSheet.create({
   routeTag: {
     fontSize: 10,
     fontWeight: "800",
-    color: "#4E7060",
+    color: theme.textSecondary,
     letterSpacing: 1,
     marginBottom: 3,
   },
@@ -2914,7 +2920,7 @@ const s = StyleSheet.create({
   editAddrText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#4E7060",
+    color: theme.textSecondary,
     marginLeft: 5,
   },
 
@@ -2928,7 +2934,7 @@ const s = StyleSheet.create({
   },
   estimatedText: {
     fontSize: 11,
-    color: "#4E7060",
+    color: theme.textSecondary,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -2942,9 +2948,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "rgba(255,184,107,0.12)",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: "rgba(255,184,107,0.25)",
+    borderColor: theme.card,
   },
   bookingBlockedText: {
     flex: 1,
@@ -2960,23 +2966,23 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
-    shadowColor: "#00FF88",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
     elevation: 6,
   },
-  confirmText: { fontSize: 17, fontWeight: "900", color: "#000" },
+  confirmText: { fontSize: 17, fontWeight: "900", color: theme.background },
 
   cartCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0D2B24",
+    backgroundColor: theme.inputBackground,
     borderRadius: 16,
     padding: 12,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
   },
 
   itemImage: {
@@ -2986,13 +2992,13 @@ const s = StyleSheet.create({
   },
 
   itemTitle: {
-    color: "#e0f5ef",
+    color: theme.text,
     fontWeight: "700",
     fontSize: 14,
   },
 
   itemPrice: {
-    color: "#7A9B87",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -3015,21 +3021,21 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12, // spacing between -, qty, +, delete
-    backgroundColor: "#0f4131",
+    backgroundColor: theme.inputBackground,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#327060",
+    borderColor: theme.border,
   },
 
   cartItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#0A1A10",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -3049,10 +3055,10 @@ const s = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     alignSelf: "flex-start",
-    backgroundColor: "#5bc495",
+    backgroundColor: theme.primary,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
@@ -3060,9 +3066,9 @@ const s = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 7,
-    backgroundColor: "#0A1A10",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: "#1E3327",
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -3073,7 +3079,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
     fontSize: 13,
     minWidth: 20,
-    color: "#e6f8f2",
+    color: theme.text,
     textAlign: "center",
   },
   lineTotal: {
@@ -3090,16 +3096,16 @@ const s = StyleSheet.create({
 });
 
 // ─── Modal Styles ─────────────────────────────────────────────────────────────
-const ms = StyleSheet.create({
+const makeMs = (theme: any) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
+    backgroundColor: theme.backdrop,
     justifyContent: "flex-end",
   },
   sheetHandle: {
     width: 40,
     height: 4,
-    backgroundColor: "#2A4A34",
+    backgroundColor: theme.border,
     borderRadius: 2,
     alignSelf: "center",
     marginBottom: 16,
@@ -3111,7 +3117,7 @@ const ms = StyleSheet.create({
     marginBottom: 4,
   },
   sheetTitle: { fontSize: 20, fontWeight: "900" },
-  sheetSub: { fontSize: 12, color: "#4E7060", marginTop: 4 },
+  sheetSub: { fontSize: 12, color: theme.textSecondary, marginTop: 4 },
   closeBtn: {
     width: 34,
     height: 34,
@@ -3141,7 +3147,7 @@ const ms = StyleSheet.create({
   suggestLabel: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#4E7060",
+    color: theme.textSecondary,
     letterSpacing: 0.8,
     marginTop: 16,
   },
@@ -3190,11 +3196,11 @@ const ms = StyleSheet.create({
     zIndex: 20,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.text,
     borderRadius: 16,
     paddingHorizontal: 14,
     height: 42,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
@@ -3205,7 +3211,7 @@ const ms = StyleSheet.create({
     marginHorizontal: 8,
     fontSize: 14,
     fontWeight: "600",
-    color: "#000",
+    color: theme.background,
   },
   currentLocBtn: {
     position: "absolute",
@@ -3216,14 +3222,14 @@ const ms = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 24,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   currentLocText: {
-    color: "#000",
+    color: theme.background,
     fontWeight: "800",
     fontSize: 13,
     marginLeft: 6,
@@ -3264,7 +3270,7 @@ const ms = StyleSheet.create({
 
   centeredOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.75)",
+    backgroundColor: theme.card,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -3276,7 +3282,7 @@ const ms = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     alignItems: "center",
-    shadowColor: "#00FF88",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -3298,7 +3304,7 @@ const ms = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#1E3327",
+    borderTopColor: theme.border,
     zIndex: 1000,
   },
 
@@ -3309,7 +3315,7 @@ const ms = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: "rgba(0, 225, 162, 0.06)",
+    backgroundColor: theme.card,
   },
   bgBottomGlow: {
     position: "absolute",
@@ -3318,13 +3324,13 @@ const ms = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(0, 225, 162, 0.04)",
+    backgroundColor: theme.card,
   },
   pickSelectTab: {
     marginLeft: 20,
     marginTop: 4,
     fontSize: 12,
-    color: "#7A9B87",
+    color: theme.textSecondary,
     lineHeight: 18,
   },
 

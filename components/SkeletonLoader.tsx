@@ -64,10 +64,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       case "title":
         return { width: customWidth || "60%", height: 24, borderRadius: 6 };
       case "circle":
+        const circleWidth = typeof customWidth === 'number' ? customWidth : 50;
         return {
-          width: customWidth || 50,
+          width: circleWidth,
           height: customHeight || 50,
-          borderRadius: (customWidth || 50) / 2,
+          borderRadius: circleWidth / 2,
         };
       case "button":
         return { width: customWidth || "100%", height: 44, borderRadius: 12 };

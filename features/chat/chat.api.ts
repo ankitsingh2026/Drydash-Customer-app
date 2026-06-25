@@ -69,3 +69,7 @@ export const getOrderStatus = async (orderId: string): Promise<OrderInfo> => {
   const response = await oldApiClient.get(`/v1/chat/order-status/${orderId}`);
   return response.data.order;
 };
+
+export const markCustomerMessagesAsRead = async (roomId: string): Promise<void> => {
+  await oldApiClient.put(`/v1/chat/customer/read/${roomId}`);
+};

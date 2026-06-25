@@ -12,6 +12,8 @@ import React, {
 import { io, Socket } from "socket.io-client";
 import { useAuthContext } from "./AuthContext";
 import { BASE_URL } from "@/lib/api/client";
+import messaging from "@react-native-firebase/messaging";
+import { router } from "expo-router";
 
 
 type NotificationData = {
@@ -207,11 +209,34 @@ export const NotificationProvider = ({
       console.log("Socket error:", err.message);
     });
 
+    // Handle notification click when the app is in the background
+    const unsubscribeNotificationOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
+      console.log("Notification caused app to open from background state:", remoteMessage);
+      if (remoteMessage.data?.type === "chat" || remoteMessage.data?.roomId) {
+        router.push("/(customer)/(assistant)/chat");
+      }
+    });
+
+    // Check if app was opened from a quit state by a notification
+    messaging()
+      .getInitialNotification()
+      .then((remoteMessage) => {
+        if (remoteMessage) {
+          console.log("Notification caused app to open from quit state:", remoteMessage);
+          if (remoteMessage.data?.type === "chat" || remoteMessage.data?.roomId) {
+            setTimeout(() => {
+              router.push("/(customer)/(assistant)/chat");
+            }, 1000);
+          }
+        }
+      });
+
     return () => {
       socket.disconnect();
       if (socketRef.current === socket) {
         socketRef.current = null;
       }
+      unsubscribeNotificationOpened();
     };
   }, [customerId, refreshNotifications, upsertNotification]);
 

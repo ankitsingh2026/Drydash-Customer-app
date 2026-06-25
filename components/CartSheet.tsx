@@ -22,7 +22,8 @@ export default function CartSheet({
   onClose: () => void;
 }) {
   const { items, addItem, removeItem, clear, decreaseQty } = useCart();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
   const discount = subtotal >= 1000 ? Math.round(subtotal * 0.1) : 0;
@@ -74,7 +75,7 @@ export default function CartSheet({
                 style={[
                   styles.itemCard,
                   {
-                    backgroundColor: "#0B1220",
+                    backgroundColor: theme.background,
                   },
                 ]}
               >
@@ -87,7 +88,7 @@ export default function CartSheet({
                     onError={() => console.log("Image failed")}
                   />
                 ) : (
-                  <View style={[styles.thumb, { backgroundColor: "#1E293B" }]}>
+                  <View style={[styles.thumb, { backgroundColor: theme.card }]}>
                     <Text style={{ fontSize: 11, color: theme.subText }}>
                       IMG
                     </Text>
@@ -166,7 +167,7 @@ export default function CartSheet({
                 onPress={handleBookPickup}
               >
                 <LinearGradient
-                  colors={["#56BFAB", "#005B47"]}
+                  colors={[theme.primary, theme.primary]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={StyleSheet.absoluteFill}
@@ -199,7 +200,7 @@ function Row({
     <View style={styles.totRow}>
       <Text
         style={{
-          color: "#fff",
+          color: theme.text,
           fontWeight: bold ? "900" : "600",
         }}
       >
@@ -207,7 +208,7 @@ function Row({
       </Text>
       <Text
         style={{
-          color: "#fff",
+          color: theme.text,
           fontWeight: bold ? "900" : "700",
         }}
       >
@@ -218,11 +219,11 @@ function Row({
 }
 
 /* ---------- STYLES ---------- */
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: theme.card,
   },
 
   sheet: {
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#CBD5E1",
+    borderColor: theme.textSecondary,
     overflow: "hidden",
   },
 
@@ -309,6 +310,6 @@ const styles = StyleSheet.create({
   checkoutText: {
     fontWeight: "700",
     fontSize: 16,
-    color: "#fff",
+    color: theme.text,
   },
 });

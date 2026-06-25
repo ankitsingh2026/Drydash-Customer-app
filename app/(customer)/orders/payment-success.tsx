@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect } from "react";
+import { useTheme } from "../../../context/ThemeContext";
 import { StyleSheet, Text, View, Animated, Easing } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function PaymentSuccess() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const params = useLocalSearchParams<{
     orderId?: string;
   }>();
@@ -36,7 +39,7 @@ export default function PaymentSuccess() {
           params: { orderId: params.orderId },
         });
       } else {
-        router.replace("/(customer)/home");
+        router.replace("/(customer)/home" as any);
       }
     }, 3000);
 
@@ -57,7 +60,7 @@ export default function PaymentSuccess() {
         >
           <View style={styles.outerCircle}>
             <View style={styles.innerCircle}>
-              <Ionicons name="checkmark" size={48} color="#FFFFFF" />
+              <Ionicons name="checkmark" size={48} color={theme.text} />
             </View>
           </View>
         </Animated.View>
@@ -84,14 +87,14 @@ export default function PaymentSuccess() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#041C15",
+    backgroundColor: theme.background,
   },
   root: {
     flex: 1,
-    backgroundColor: "#041C15",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
@@ -103,7 +106,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: "rgba(0, 230, 118, 0.15)",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -111,24 +114,24 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#00E676",
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#00E676",
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 8,
   },
   title: {
-    color: "#FFFFFF",
+    color: theme.text,
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 12,
     textAlign: "center",
   },
   subtitle: {
-    color: "#8CA69A",
+    color: theme.textSecondary,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 22,

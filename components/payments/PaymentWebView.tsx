@@ -5,6 +5,7 @@ import React, { useRef } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 // import { socket } from "../../services/socket"; // adjust if path differs
+import { useTheme } from "../../context/ThemeContext";
 
 const PaymentWebView: React.FC<Props> = ({
   paymentData,
@@ -12,6 +13,8 @@ const PaymentWebView: React.FC<Props> = ({
   onSuccess,
   onFailure,
 }) => {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const webviewRef = useRef<any>(null);
 
   //   useEffect(() => {
@@ -98,8 +101,8 @@ const PaymentWebView: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: "#fff" },
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: theme.background },
   loader: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
 

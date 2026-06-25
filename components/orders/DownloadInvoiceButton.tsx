@@ -7,12 +7,15 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Asset } from 'expo-asset';
 import { generateInvoiceApi } from '@/features/orders/orders.api';
+import { useTheme } from '@/context/ThemeContext';
 
 interface DownloadInvoiceButtonProps {
   orderId: string;
 }
 
 export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ orderId }) => {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const downloadInvoicePdf = async () => {
@@ -375,22 +378,22 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F2C24',
+    backgroundColor: theme.background,   // example dynamic
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#163028',
+    borderColor: isDark ? '#163028' : '#D3EBE4',
   },
   icon: {
     marginRight: 6,
   },
   text: {
-    color: '#2FE6A6',
+    color: isDark ? '#2FE6A6' : '#00A374',
     fontSize: 12,
     fontWeight: '700',
   }

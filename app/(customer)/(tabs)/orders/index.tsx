@@ -22,6 +22,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useTheme } from "../../../../context/ThemeContext";
 /* ================= TYPES ================= */
 
 type OrderStatus = "Active" | "Completed";
@@ -29,25 +30,27 @@ type FilterType = "All" | "Active" | "Completed" | "Awaiting";
 
 const getOrderId = (o: any): string | undefined => o?.order_id;
 
-const STATUS_CONFIG = {
-  active: { bg: "#3B82F6", icon: "time-outline" as const, label: "Active" },
-  transit: { bg: "#0EA5A4", icon: "bicycle-outline" as const, label: "Out For Delivery" },
-  delivered: {
-    bg: "#10B981",
-    icon: "checkmark-done-outline" as const,
-    label: "Delivered",
-  },
-  cancelled: {
-    bg: "#EF4444",
-    icon: "close-circle-outline" as const,
-    label: "Cancelled",
-  },
-};
+// STATUS_CONFIG moved inside component
 
 const normalizeStatusKey = (status: string) =>
   String(status ?? "").trim().toLowerCase().replace(/[^a-z]/g, "");
 
-const getStatusConfig = (status: string) => {
+const getStatusConfig = (status: string, theme: any) => {
+  const STATUS_CONFIG = {
+    active: { bg: "#3B82F6", icon: "time-outline" as const, label: "Active" },
+    transit: { bg: theme.background, icon: "bicycle-outline" as const, label: "Out For Delivery" },
+    delivered: {
+      bg: theme.primary,
+      icon: "checkmark-done-outline" as const,
+      label: "Delivered",
+    },
+    cancelled: {
+      bg: "#FF6B6B",
+      icon: "close-circle-outline" as const,
+      label: "Cancelled",
+    },
+  };
+
   const key = normalizeStatusKey(status);
 
   if (key === "delivered") return STATUS_CONFIG.delivered;
@@ -72,18 +75,15 @@ const mapFilterStatus = (status: string): OrderStatus => {
   if (key === "cancelled" || key === "canceled" || key === "deleted") return "Completed";
   return "Active";
 };
-/* ─── Accent palette — matches Home.tsx exactly ─── */
-const ACCENT = "#00C896";
-const SURFACE = "#0D1F1C";
-const BG = "#001714";
-const BORDER = "#1A3330";
-const MUTED = "#6B7280";
+// Colors are dynamically driven by theme context
 
 /* ================= FILTER TAB ================= */
 
 /* ================= STAGE PROGRESS BAR ================= */
 
 function StageProgress({ stage }: { stage?: string }) {
+  const { theme } = useTheme();
+  const progressStyles = makeProgressStyles(theme);
   const stages = ["WASHING", "DRYING & FOLDING", "READY", "OUT FOR DELIVERY"];
   const current = stages.findIndex((s) =>
     (stage ?? "").toUpperCase().includes(s.split(" ")[0]),
@@ -135,10 +135,10 @@ function StageProgress({ stage }: { stage?: string }) {
   );
 }
 
-const progressStyles = StyleSheet.create({
+const makeProgressStyles = (theme: any) => StyleSheet.create({
   track: {
     height: 4,
-    backgroundColor: BORDER,
+    backgroundColor: theme.border,
     borderRadius: 4,
     overflow: "visible",
     position: "relative",
@@ -146,7 +146,7 @@ const progressStyles = StyleSheet.create({
   fill: {
     height: 4,
     borderRadius: 4,
-    backgroundColor: ACCENT,
+    backgroundColor: theme.primary,
   },
   dot: {
     position: "absolute",
@@ -154,10 +154,10 @@ const progressStyles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: ACCENT,
+    backgroundColor: theme.primary,
     borderWidth: 2,
-    borderColor: SURFACE,
-    shadowColor: ACCENT,
+    borderColor: theme.card,
+    shadowColor: theme.primary,
     shadowOpacity: 0.9,
     shadowRadius: 6,
     elevation: 4,
@@ -166,7 +166,7 @@ const progressStyles = StyleSheet.create({
     marginTop: 6,
     fontSize: 10,
     letterSpacing: 1,
-    color: MUTED,
+    color: theme.textSecondary,
     fontWeight: "700",
   },
 });
@@ -212,6 +212,22 @@ const badgeStyles = StyleSheet.create({
 /* ================= MAIN COMPONENT ================= */
 
 export default function Orders() {
+  const { theme } = useTheme();
+  const STATUS_CONFIG = {
+    active: { bg: "#3B82F6", icon: "time-outline" as const, label: "Active" },
+    transit: { bg: theme.background, icon: "bicycle-outline" as const, label: "Out For Delivery" },
+    delivered: {
+      bg: theme.primary,
+      icon: "checkmark-done-outline" as const,
+      label: "Delivered",
+    },
+    cancelled: {
+      bg: "#FF6B6B",
+      icon: "close-circle-outline" as const,
+      label: "Cancelled",
+    },
+  };
+  const styles = makeStyles(theme);
   const { user } = useAuth();
 
   const [orders, setOrders] = useState<any[]>([]);
@@ -371,8 +387,8 @@ export default function Orders() {
       <View style={styles.emptyIcon}>
         <Text style={{ fontSize: 32 }}>📭</Text>
       </View>
-      <Text style={[styles.emptyTitle, { color: "#fff" }]}>Nothing here</Text>
-      <Text style={{ color: MUTED, textAlign: "center", fontSize: 13 }}>
+      <Text style={styles.emptyTitle}>Nothing here</Text>
+      <Text style={{ color: theme.textSecondary, textAlign: "center", fontSize: 13 }}>
         {activeFilter === "Awaiting"
           ? "No scheduled pickups"
           : `No ${activeFilter.toLowerCase()} orders found`}
@@ -497,7 +513,7 @@ export default function Orders() {
           //                 router.push(`/pickups/reschedule/${o._id}`);
           //               }}
           //             >
-          //               <Ionicons name="calendar-outline" size={14} color="#fff" />
+          //               <Ionicons name="calendar-outline" size={14} color={theme.text} />
           //               <Text style={styles.btnText}>Reschedule</Text>
           //             </TouchableOpacity>
 
@@ -509,8 +525,8 @@ export default function Orders() {
           //                 setPickups((prev) => prev.filter((p) => p._id !== o._id));
           //               }}
           //             >
-          //               <Ionicons name="close-circle-outline" size={14} color="#EF4444" />
-          //               <Text style={[styles.btnText, { color: "#EF4444" }]}>Cancel</Text>
+          //               <Ionicons name="close-circle-outline" size={14} color={"#FF6B6B"} />
+          //               <Text style={[styles.btnText, { color: "#FF6B6B" }]}>Cancel</Text>
           //             </TouchableOpacity>
           //           </View>
           //         </View>
@@ -520,7 +536,7 @@ export default function Orders() {
           // }
 
           /* ── ORDER CARD ── */
-          const sc = getStatusConfig(o.status);
+          const sc = getStatusConfig(o.status, theme);
           const orderId = getOrderId(o);
           const isDelivered = o.status === "delivered";
           const isProcessing =
@@ -598,7 +614,7 @@ export default function Orders() {
                         <Ionicons
                           name="shirt-outline"
                           size={12}
-                          color={MUTED}
+                          color={theme.textSecondary}
                         />
                         <Text style={styles.itemPillText}>
                           {o.items?.length || 0} items
@@ -638,7 +654,7 @@ export default function Orders() {
                         <Ionicons
                           name="chevron-forward"
                           size={12}
-                          color={MUTED}
+                          color={theme.textSecondary}
                         />
                       </View>
                     )}
@@ -654,11 +670,8 @@ export default function Orders() {
     </View>
   );
 }
-
-/* ================= STYLES ================= */
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: BG },
+const makeStyles = (theme: any) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.background },
 
   container: { paddingHorizontal: 16, paddingTop: 56, paddingBottom: 16 },
 
@@ -672,10 +685,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#FFFFFF",
+    color: theme.text,
     letterSpacing: -0.5,
   },
-  headerSubtitle: { marginTop: 3, fontSize: 13, color: MUTED },
+  headerSubtitle: { marginTop: 3, fontSize: 13, color: theme.textSecondary },
 
   activeBadge: {
     flexDirection: "row",
@@ -688,8 +701,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: ACCENT,
-    shadowColor: ACCENT,
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOpacity: 1,
     shadowRadius: 6,
     elevation: 4,
@@ -698,20 +711,20 @@ const styles = StyleSheet.create({
   activeBadgeNum: {
     fontSize: 18,
     fontWeight: "600",
-    color: ACCENT,
+    color: theme.primary,
     lineHeight: 20,
   },
-  activeBadgeLabel: { fontSize: 10, color: MUTED, fontWeight: "600" },
+  activeBadgeLabel: { fontSize: 10, color: theme.textSecondary, fontWeight: "600" },
 
   /* Card */
   card: {
-    backgroundColor: '#132820',
+    backgroundColor: theme.card,
     borderRadius: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.border,
     overflow: "hidden",
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOpacity: 0.25,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
@@ -733,9 +746,9 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 10,
-    backgroundColor: BG,
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -743,12 +756,12 @@ const styles = StyleSheet.create({
   cardDate: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: theme.text,
     letterSpacing: -0.3,
   },
   cardTime: {
     fontSize: 12,
-    color: MUTED,
+    color: theme.textSecondary,
     marginTop: 2,
     marginBottom: 10,
     fontWeight: "500",
@@ -761,7 +774,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   addressText: {
-    color: MUTED,
+    color: theme.textSecondary,
     fontSize: 12,
     flex: 1,
     lineHeight: 17,
@@ -772,22 +785,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginTop: 10,
-    backgroundColor: ACCENT + "12",
+    backgroundColor: theme.primary + "12",
     borderWidth: 1,
-    borderColor: ACCENT + "25",
+    borderColor: theme.primary + "25",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
   noteText: {
-    color: ACCENT,
+    color: theme.primary,
     fontWeight: "600",
     fontSize: 12,
   },
 
   dividerLine: {
     height: 1,
-    backgroundColor: BORDER,
+    backgroundColor: theme.border,
     marginVertical: 9,
   },
   /* Pickup action buttons */
@@ -800,9 +813,9 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: 11,
     borderRadius: 12,
-    backgroundColor: ACCENT + "18",
+    backgroundColor: theme.primary + "18",
     borderWidth: 1,
-    borderColor: ACCENT + "40",
+    borderColor: theme.primary + "40",
   },
   btnCancel: {
     flex: 1,
@@ -819,7 +832,7 @@ const styles = StyleSheet.create({
   btnText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#fff",
+    color: theme.text,
     letterSpacing: 0.2,
   },
 
@@ -833,14 +846,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: BG,
+    backgroundColor: theme.background,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.border,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 20,
   },
-  itemPillText: { color: MUTED, fontSize: 12, fontWeight: "600" },
+  itemPillText: { color: theme.textSecondary, fontSize: 12, fontWeight: "600" },
 
   priceWrap: { flexDirection: "row", alignItems: "center", gap: 10 },
   priceText: { fontSize: 16, fontWeight: "900" },
@@ -854,13 +867,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 9,
     borderRadius: 9,
-    backgroundColor: ACCENT + "14",
+    backgroundColor: theme.primary + "14",
     borderWidth: 1,
-    borderColor: ACCENT + "35",
+    borderColor: theme.primary + "35",
   },
 
   reorderText: {
-    color: ACCENT,
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -874,7 +887,7 @@ const styles = StyleSheet.create({
     gap: 2,
     marginTop: 7,
   },
-  tapHintText: { fontSize: 11, color: MUTED },
+  tapHintText: { fontSize: 11, color: theme.textSecondary },
 
   /* Empty */
   emptyContainer: { alignItems: "center", paddingVertical: 64, gap: 12 },
@@ -882,12 +895,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 24,
-    backgroundColor: SURFACE,
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  emptyTitle: { fontSize: 18, fontWeight: "800", color: "#fff" },
-  
+  emptyTitle: { fontSize: 18, fontWeight: "800", color: theme.text },
 });

@@ -9,6 +9,8 @@ import {
   View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../context/ThemeContext";
+import { router } from "expo-router";
 
 export function SuccessModal({
   visible,
@@ -21,6 +23,9 @@ export function SuccessModal({
   orderId?: string;
   onHome: () => void;
 }) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  const s = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
 
   // Animation refs
@@ -109,8 +114,11 @@ useEffect(() => {
   if (!visible) return;
 
   const t = setTimeout(() => {
-    onHome();
-  }, 1500); // 👈 perfect UX timing
+    router.replace({
+      pathname: "/(customer)/(tabs)/home",
+      params: { orderPlaced: "1" },
+    });
+  }, 1200); // enough time for the animation to be seen
 
   return () => clearTimeout(t);
 }, [visible]);
@@ -121,12 +129,12 @@ useEffect(() => {
   });
 
   return (
-    <Modal visible={visible} transparent animationType="fade">
-      <View style={[s.root, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
+    <Modal visible={visible} transparent animationType="none">
+      <View style={[s.root, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24, opacity:1 }]}>
         <View style={s.topContent}>
           <Animated.View style={[s.circle, { transform: [{ scale: circleScale }] }]}>
             <Animated.View style={{ transform: [{ scale: checkScale }, { rotate: checkSpin }] }}>
-              <Ionicons name="checkmark" size={46} color="#ffffff" />
+              <Ionicons name="checkmark" size={46} color={theme.background} />
             </Animated.View>
           </Animated.View>
 
@@ -141,9 +149,9 @@ useEffect(() => {
           <Animated.View
             style={[s.addrRow, { opacity: addrOpacity, transform: [{ translateY: addrY }] }]}
           >
-            <Ionicons name="location-outline" size={16} color="#7FAF9B" style={{ marginTop: 1 }} />
+            <Ionicons name="location-outline" size={16} color={theme.textSecondary} style={{ marginTop: 1 }} />
             <Text style={s.addrText} numberOfLines={2}>
-              {address ?? "742 Evergreen Terrace, Springfield"}
+              {address ?? ""}
             </Text>
           </Animated.View>
 
@@ -157,10 +165,10 @@ useEffect(() => {
 
 }
 
-const s = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#021410",
+    backgroundColor: theme.background,
     justifyContent: "center",   // 🔥 FIX
     alignItems: "center",
     paddingHorizontal: 44,
@@ -178,9 +186,9 @@ const s = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 170,
-    backgroundColor: "rgba(39,226,164,0.07)",
+    backgroundColor: theme.card,
     // layered shadow trick for radial feel
-    shadowColor: "#27E2A4",
+    shadowColor: theme.primary,
     shadowOpacity: 0.45,
     shadowRadius: 80,
     elevation: 0,
@@ -199,24 +207,24 @@ const s = StyleSheet.create({
     height: 126,
     borderRadius: 63,
     borderWidth: 2,
-    borderColor: "rgba(39,226,164,0.18)",
+    borderColor: theme.card,
   },
 
   circle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: "#27E2A4",
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#27E2A4",
+    shadowColor: theme.primary,
     shadowOpacity: 0.65,
     shadowRadius: 28,
     elevation: 14,
   },
 
   title: {
-    color: "#CFFFF1",
+    color: theme.text,
     fontSize: 24,
     fontWeight: "900",
     textAlign: "center",
@@ -235,7 +243,7 @@ const s = StyleSheet.create({
   },
 
   addrText: {
-    color: "#7FAF9B",
+    color: theme.textSecondary,
     fontSize: 18,
     lineHeight: 20,
     textAlign: "center",   // ✅ add this
@@ -244,11 +252,11 @@ const s = StyleSheet.create({
 
 
   btnPrimary: {
-    backgroundColor: "#00E1A2",
+    backgroundColor: theme.primary,
     borderRadius: 50,
     paddingVertical: 16,
     alignItems: "center",
-    shadowColor: "#00E1A2",
+    shadowColor: theme.primary,
     shadowOpacity: 0.5,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 8 },
@@ -258,7 +266,7 @@ const s = StyleSheet.create({
   btnPrimaryText: {
     fontWeight: "900",
     fontSize: 16,
-    color: "#00211B",
+    color: theme.background,
     letterSpacing: 0.4,
   },
 
@@ -267,12 +275,12 @@ const s = StyleSheet.create({
     paddingVertical: 15,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(0,225,162,0.3)",
-    backgroundColor: "rgba(0,225,162,0.05)",
+    borderColor: theme.card,
+    backgroundColor: theme.card,
   },
 
   btnSecondaryText: {
-    color: "#00E1A2",
+    color: theme.primary,
     fontWeight: "800",
     fontSize: 15,
   },
