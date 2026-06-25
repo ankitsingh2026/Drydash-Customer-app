@@ -4,6 +4,7 @@ export const darkTheme = {
   isDark: true,
   colors: {
     ...colors,
+    primary: "#00D9A3",
     background: "#001714",
     gradient: ["#052420", "#003826"] as [string, string, ...string[]],
     card: "#102B25",
