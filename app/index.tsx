@@ -35,6 +35,7 @@ export default function SplashScreen() {
         const location = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
         console.log("Location:", location);
       }
+      
     } catch (error) {
       console.log("Permission error:", error);
     }

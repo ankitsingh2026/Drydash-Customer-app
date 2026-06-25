@@ -122,10 +122,10 @@ export default function ReschedulePickupModal({
                 <DateTimePicker
                   value={selectedDate}
                   mode="date"
-                  display="inline"
+                 display="spinner"
                   minimumDate={minimumDate}
                   onChange={handleDateChange}
-                  textColor="#D4F7EC"
+                  textColor="#fff"
                   accentColor="#29E6B0"
                 />
               </View>

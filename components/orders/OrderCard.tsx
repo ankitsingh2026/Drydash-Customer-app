@@ -3,6 +3,7 @@ import { PickupRecord } from "@/features/pickups/pickup.types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    Alert,
     Animated,
     Easing,
     Modal,
@@ -724,8 +725,10 @@ export default function PickupStatusCard({
           showAlert({ type: tone, title, message });
     };
 
-    const openCancelModal = () => setCancelModalVisible(true);
-    const openRescheduleModal = () => setRescheduleModalVisible(true);
+const openCancelModal = () => {
+  console.log("Opening cancel modal, pickup id:", pickup._id);
+  setCancelModalVisible(true);
+};    const openRescheduleModal = () => setRescheduleModalVisible(true);
 
     const closeCancelModal = () => {
         if (actionLoading) return;
@@ -743,18 +746,40 @@ export default function PickupStatusCard({
 
     const handleCancelPickup = async () => {
         if (!pickup?._id) {
-            showFeedback("Missing pickup", "Unable to cancel this pickup right now.", "error");
+            Alert.alert(
+                "Missing Pickup",
+                "Unable to cancel this pickup right now."
+            );
             return;
         }
 
         try {
             setActionLoading(true);
+
             await cancelPickupApi(pickup._id);
+
             setCancelModalVisible(false);
-            showFeedback("Pickup cancelled", "Your pickup has been cancelled successfully.", "success");
-            onActionComplete?.();
+
+            setTimeout(() => {
+                Alert.alert(
+                    "Pickup Cancelled",
+                    "Your pickup has been cancelled successfully.",
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => {
+                                onActionComplete?.();
+                            },
+                        },
+                    ]
+                );
+            }, 400);
+
         } catch (error: any) {
-            showFeedback("Cancel failed", error?.message || "Unable to cancel pickup.", "error");
+            Alert.alert(
+                "Cancel Failed",
+                error?.message || "Unable to cancel pickup."
+            );
         } finally {
             setActionLoading(false);
         }
@@ -768,12 +793,30 @@ export default function PickupStatusCard({
 
         try {
             setActionLoading(true);
+
             await reschedulePickupApi(pickup._id, newDate);
+
             setRescheduleModalVisible(false);
-            showFeedback("Pickup rescheduled", "Your pickup date has been updated.", "success");
-            onActionComplete?.();
+
+            setTimeout(() => {
+                Alert.alert(
+                    "Pickup Rescheduled",
+                    "Your pickup date has been updated.",
+                    [
+                        {
+                            text: "OK",
+                            onPress: () => {
+                                onActionComplete?.();
+                            },
+                        },
+                    ]
+                );
+            }, 400);
         } catch (error: any) {
-            showFeedback("Reschedule failed", error?.message || "Unable to reschedule pickup.", "error");
+            Alert.alert(
+               "Reschedule Failed",
+                error?.message || "Unable to cancel pickup."
+            );
         } finally {
             setActionLoading(false);
         }
@@ -865,6 +908,11 @@ export default function PickupStatusCard({
                 // message={feedbackMessage}
                 // tone={feedbackTone}
                 // onClose={closeFeedbackModal}
+                visible={feedbackVisible}
+                title={feedbackTitle}
+                message={feedbackMessage}
+                tone={feedbackTone}
+                onClose={closeFeedbackModal}
             /> */}
         </>
     );

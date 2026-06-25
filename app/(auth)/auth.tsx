@@ -27,6 +27,7 @@ import {
 import { showAlert } from "@/components/Customalert";
 
 import { SafeAreaView } from "react-native-safe-area-context";
+import { registerCustomerPushToken } from "@/lib/notifications/pushNotifications";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
 
 let OtpVerify: any = null;
@@ -244,6 +245,10 @@ export default function AuthScreen() {
 
       if (!res.isNewUser) {
         await setAuthUser(res.user);
+
+          await registerCustomerPushToken(res.user.id);
+
+
         router.replace("/(customer)/(tabs)/home");
       } else {
         setStep("REGISTER");
@@ -307,6 +312,9 @@ export default function AuthScreen() {
 
       await setAuthUser(updatedUser);
 
+      await registerCustomerPushToken(updatedUser.id);
+
+      
       router.replace("/(customer)/(tabs)/home");
     } catch (e: any) {
     //  setError(e.message);
