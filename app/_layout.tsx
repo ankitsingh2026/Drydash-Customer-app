@@ -10,8 +10,14 @@ import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
 import { SlotSocketProvider } from "../context/SlotSocketContext";
 import { AlertProvider } from "@/components/Customalert";
+import messaging from "@react-native-firebase/messaging";
+
 
 setupInterceptors();
+
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  console.log("[FCM] Background message received:", remoteMessage);
+});
 
 export default function RootLayout() {
   return (

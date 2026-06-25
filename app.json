@@ -15,7 +15,13 @@
       "config": {
         "googleMapsApiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
       },
-      "bundleIdentifier": "com.drydash.customer"
+      "bundleIdentifier": "com.drydash.customer",
+      "entitlements": {
+        "aps-environment": "production"
+      },
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -75,9 +81,7 @@
       "expo-video",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-
-      "expo-build-properties",
-      "expo-asset"
+      "expo-build-properties"
     ],
     "experiments": {
       "typedRoutes": true,
