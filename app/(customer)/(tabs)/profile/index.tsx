@@ -317,51 +317,51 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
           </LinearGradient>
         </TouchableOpacity>
         <View
-  style={[
-    styles.themeCard,
-    {
-      backgroundColor: activeColors.card,
-      borderColor: activeColors.border,
-    },
-  ]}
->
-  <Text
-    style={[
-      styles.themeTitle,
-      { color: activeColors.text },
-    ]}
-  >
-    Theme
-  </Text>
+          style={[
+            styles.themeCard,
+            {
+              backgroundColor: activeColors.card,
+              borderColor: activeColors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.themeTitle,
+              { color: activeColors.text },
+            ]}
+          >
+            Theme
+          </Text>
 
-  <TouchableOpacity
-    activeOpacity={0.8}
-    onPress={toggleTheme}
-    style={[
-      styles.themeSelector,
-      {
-        borderColor: activeColors.border,
-        backgroundColor: activeColors.bg,
-      },
-    ]}
-  >
-    <Text
-      style={{
-        color: activeColors.text,
-        fontWeight: "600",
-        fontSize: 13,
-      }}
-    >
-      {isDark ? "Light" : "Dark"}
-    </Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={toggleTheme}
+            style={[
+              styles.themeSelector,
+              {
+                borderColor: activeColors.border,
+                backgroundColor: activeColors.bg,
+              },
+            ]}
+          >
+            <Text
+              style={{
+                color: activeColors.text,
+                fontWeight: "600",
+                fontSize: 13,
+              }}
+            >
+              {isDark ? "Light" : "Dark"}
+            </Text>
 
-    {isDark ? (
-      <Sun size={14} color={activeColors.text} />
-    ) : (
-      <Moon size={14} color={activeColors.text} />
-    )}
-  </TouchableOpacity>
-</View>
+            {isDark ? (
+              <Sun size={14} color={activeColors.text} />
+            ) : (
+              <Moon size={14} color={activeColors.text} />
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* ── GRID MENU ── */}
         <View style={styles.grid}>
@@ -595,31 +595,31 @@ const makeStyles = (theme: any, isDark: boolean) => {
     initials: { color: theme.text, fontSize: 28, fontWeight: "bold" },
     logoutText: { fontWeight: "800", fontSize: 15, color: colors.danger },
     themeCard: {
-  height: 52,
-  borderRadius: 14,
-  borderWidth: 1,
-  paddingHorizontal: 14,
-  marginBottom: 14,
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      marginBottom: 14,
 
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-themeTitle: {
-  fontSize: 15,
-  fontWeight: "700",
-},
+    themeTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
 
-themeSelector: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 6,
+    themeSelector: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
 
-  borderWidth: 1,
-  borderRadius: 10,
-  paddingHorizontal: 12,
-  paddingVertical: 6,
-},
+      borderWidth: 1,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
   });
 };

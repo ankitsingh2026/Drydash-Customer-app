@@ -87,7 +87,7 @@ export default function SupportIndex() {
           </Animated.View>
 
           {/* action buttons */}
-         <Animated.View style={styles.actionRow}>
+          <Animated.View style={styles.actionRow}>
             {/* Chat with Us */}
             <TouchableOpacity
               activeOpacity={0.88}
@@ -187,13 +187,13 @@ const makeStyles = (theme: any) => StyleSheet.create({
     height: 50,
     gap: 10,
   },
-actionRow: {
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 12,
-  marginTop: 8,
-},
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 8,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -211,11 +211,14 @@ actionRow: {
     elevation: 6,
   },
   chatBtn: {
-    height: 52,
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderColor: theme.border
   },
   chatBtnText: {
     fontSize: 15,
@@ -230,7 +233,7 @@ actionRow: {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
-    marginLeft: 6,
+    marginLeft: 4,
   },
   chatBadgeText: {
     color: theme.primary,
@@ -250,6 +253,8 @@ actionRow: {
     borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
+    paddingVertical: 11,
+    paddingHorizontal: 16
   },
   callBtnText: {
     fontSize: 15,
