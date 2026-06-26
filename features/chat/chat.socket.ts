@@ -29,13 +29,27 @@ export const joinChatRoom = (roomId: string) => {
 
 export const sendMessageViaSocket = (
   roomId: string,
-  senderType: 'customer' | 'admin',
+  senderType: string,
   senderId: string,
-  message: string
+  message: string,
+  messageType: string = 'text',   // default to 'text'
+  fileUrl: string | null = null
 ) => {
-  if (socket) {
-    socket.emit('sendChatMessage', { roomId, senderType, senderId, message });
-  }
+  if (!socket) return;
+  console.log("this is the sendChatMessage==>>",roomId,
+    senderType,
+    senderId,
+    message,
+    messageType,
+    fileUrl)
+  socket.emit('sendChatMessage', {
+    roomId,
+    senderType,
+    senderId,
+    message,
+    messageType,
+    fileUrl,
+  });
 };
 
 // Listeners

@@ -5,8 +5,13 @@ export interface Message {
   senderType: 'customer' | 'admin' | 'bot';
   senderId: string;
   message: string;
-  createdAt?: string;
+  messageType : string;
+  fileUrl?: string;
+  createdAt: string;
   isRead?: boolean;
+  readAt? :string;
+  delivered? : boolean;
+  isDeleted: boolean;
 }
 
 export interface ChatRoom {
@@ -20,6 +25,7 @@ export interface ChatRoom {
   unreadAdminCount: number;
   status: 'open' | 'closed';
 }
+
 
 export interface Faq {
   _id: string;

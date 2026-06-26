@@ -43,6 +43,8 @@ interface NotificationContextType {
   refreshNotifications: () => Promise<void>;
   paymentUpdate: any;
   setPaymentUpdate: React.Dispatch<React.SetStateAction<any>>;
+  cancelledData: any,
+  setCancelledData: React.Dispatch<React.SetStateAction<any>>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -89,6 +91,7 @@ export const NotificationProvider = ({
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [paymentUpdate, setPaymentUpdate] = useState<any>(null);
+  const [cancelledData, setCancelledData] = useState({});
 
   const customerId = user?.user?.id ?? user?.id;
   const socketRef = useRef<Socket | null>(null);
@@ -205,6 +208,13 @@ export const NotificationProvider = ({
       setUnreadCount(unreadCount);
     });
 
+
+    //for canceeled pickup update
+    socket.on("pickupCancelled", (data) => {
+      console.log("Socket error:", data);
+      setCancelledData(data)
+    });
+
     socket.on("connect_error", (err) => {
       console.log("Socket error:", err.message);
     });
@@ -285,6 +295,8 @@ export const NotificationProvider = ({
         refreshNotifications,
         paymentUpdate,
         setPaymentUpdate,
+        cancelledData,
+        setCancelledData
       }}
     >
       {children}
