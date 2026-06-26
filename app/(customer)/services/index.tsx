@@ -206,7 +206,7 @@ const makeStyles = (theme: any) =>
       aspectRatio: 1.1,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: theme.isDark ? theme.card : "#E6F4F0",
+      backgroundColor: theme.card,
     },
     textContainer: {
       paddingHorizontal: 12,

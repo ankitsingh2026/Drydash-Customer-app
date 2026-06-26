@@ -217,7 +217,7 @@ export default function Home() {
   const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
 
 
-  const { notifications } = useNotifications();
+  const { notifications,cancelledData } = useNotifications();
 
   const styles = makeStyles(theme);
 
@@ -347,7 +347,7 @@ export default function Home() {
     } finally {
       setBookingLoading(false);
     }
-  }, [user]);
+  }, [user, cancelledData]);
 
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -375,7 +375,7 @@ export default function Home() {
 
   useEffect(() => {
     refreshBooking();
-  }, [refreshBooking]);
+  }, [refreshBooking,cancelledData]);
 
   const lastNotificationIdRef = useRef<string | null>(null);
 
