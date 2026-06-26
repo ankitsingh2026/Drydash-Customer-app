@@ -6,10 +6,11 @@ import { oldApiClient } from '@/lib/api/client';
 // ------------------- Room Management -------------------
 export const getOrCreateRoom = async (
   customerId: string,
+  appCustomerId: string,
   orderId?: string,
   chatType: 'global' | 'order' = 'global'
 ): Promise<ChatRoom> => {
-  const response = await oldApiClient.post('/v1/chat/create-room', { customerId, orderId, chatType });
+  const response = await oldApiClient.post('/v1/chat/create-room', { customerId, appCustomerId, orderId, chatType });
   return response.data.room;
 };
 

@@ -17,6 +17,7 @@ import {
   offUserTyping,
 } from "../features/chat/chat.socket";
 import { getOrCreateRoom, fetchMessages, markCustomerMessagesAsRead } from "../features/chat/chat.api";
+import { useTheme } from "@/theme/useTheme";
 
 export interface ChatMessage {
   id: string;
@@ -58,6 +59,7 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const seenMessageIds = useRef<Set<string>>(new Set());
   const typingTimeoutRef = useRef<any>(null);
   const isChatActiveRef = useRef(false);
+  const { theme, isDark } = useTheme();
 
   // Sync ref with live state to avoid stale closures in socket listeners
   useEffect(() => {
@@ -66,6 +68,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
 
   const rawPhone = user?.user?.phone ?? user?.phone;
   const customerId = rawPhone ? "91" + rawPhone : null;
+  const auth_id = user?.user?.id ? user?.user?.id : user?.id;
+  const appCustomerId = String(auth_id);
+  console.log("ChatProvider initialized with customerId:", customerId, "and appCustomerId:", appCustomerId);
+  // 69b280ee317bff1ec3aa6cb9
 
   const playIncomingSound = useCallback(async () => {
     try {
@@ -90,7 +96,8 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const loadChatData = useCallback(async () => {
     if (!customerId) return;
     try {
-      const room = await getOrCreateRoom(customerId, undefined, "global");
+      console.log("Loading chat data for customerId:", customerId, "and appCustomerId:", appCustomerId);
+      const room = await getOrCreateRoom(customerId, appCustomerId, undefined, "global");
       setRoomId(room._id);
       setUnreadCount(room.unreadCustomerCount || 0);
 
@@ -238,6 +245,8 @@ export const useChat = () => {
 const InAppNotificationBanner = ({ message, onDismiss }: { message: ChatMessage; onDismiss: () => void }) => {
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(-150)).current;
+  const { theme, isDark } = useTheme();
+  const bannerStyles = Styles(theme);
 
   useEffect(() => {
     // Slide down
@@ -275,17 +284,17 @@ const InAppNotificationBanner = ({ message, onDismiss }: { message: ChatMessage;
         bannerStyles.container,
         {
           transform: [{ translateY }],
-          top: Math.max(insets.top, 10),
+          top: Math.max(insets.top, 50),
         },
       ]}
     >
       <TouchableOpacity activeOpacity={0.9} onPress={handlePress} style={bannerStyles.content}>
         <View style={bannerStyles.iconContainer}>
           <LinearGradient
-            colors={["#2FE6A6", "#1A9E74"]}
+            colors={theme.gradient}
             style={bannerStyles.iconGradient}
           >
-            <Ionicons name="sparkles" size={18} color="#021410" />
+            <Ionicons name="sparkles" size={18} color= {theme.primary} />
           </LinearGradient>
         </View>
 
@@ -299,23 +308,23 @@ const InAppNotificationBanner = ({ message, onDismiss }: { message: ChatMessage;
         </View>
 
         <TouchableOpacity onPress={dismiss} style={bannerStyles.closeBtn}>
-          <Ionicons name="close" size={18} color="#6B8F84" />
+          <Ionicons name="close" size={18} color= {theme.textSecondary} />
         </TouchableOpacity>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-const bannerStyles = StyleSheet.create({
+const Styles = (theme:any) => StyleSheet.create({
   container: {
     position: "absolute",
     left: 16,
     right: 16,
     zIndex: 9999,
     borderRadius: 16,
-    backgroundColor: "#0B1E1A",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: "#1A3330",
+    borderColor: theme.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -346,11 +355,11 @@ const bannerStyles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#E6FFF7",
+    color: theme.text,
   },
   message: {
     fontSize: 13,
-    color: "#6B8F84",
+    color: theme.textSecondary,
     lineHeight: 18,
   },
   closeBtn: {
