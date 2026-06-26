@@ -219,7 +219,7 @@ export default function Home() {
 
   const { notifications } = useNotifications();
 
-
+  const styles = makeStyles(theme);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -726,13 +726,13 @@ export default function Home() {
                     <View
                       style={[
                         styles.searchBar,
-                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
+                        { backgroundColor: theme.inputBackground, borderColor: theme.border },
                       ]}
                     >
                       <Ionicons
                         name="search-outline"
                         size={18}
-                        color="#6B7280"
+                        color= {theme.textSecondary}
                         style={{ marginRight: 8 }}
                       />
                       <TextInput
@@ -1128,9 +1128,9 @@ export default function Home() {
                 <Animated.View style={{ opacity: fadeAnim }}>
                   <View style={styles.section}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
                       <TouchableOpacity onPress={() => router.push('/services')}>
-                        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
+                        <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
                       </TouchableOpacity>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1143,8 +1143,8 @@ export default function Home() {
                             key={s.key}
                             style={{
                               flex: 1,
-                              backgroundColor: '#052420',
-                              borderColor: '#1A3830',
+                              backgroundColor: theme.card,
+                              borderColor: theme.border,
                               borderWidth: 1,
                               borderRadius: 16,
                               overflow: 'hidden',   // clips icon to card bounds
@@ -1176,7 +1176,7 @@ export default function Home() {
                             <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
                               <Text
                                 style={{
-                                  color: '#C9E9E2',
+                                  color: theme.text,
                                   fontSize: 13,
                                   fontWeight: '800',
                                   letterSpacing: 0.6,
@@ -1188,7 +1188,7 @@ export default function Home() {
                               </Text>
                               <Text
                                 style={{
-                                  color: '#BACBC0',
+                                  color: theme.textSecondary,
                                   fontSize: 9,
                                   fontWeight: '500',
                                   lineHeight: 11,
@@ -1209,7 +1209,7 @@ export default function Home() {
 
               <View style={styles.wrapper}>
                 <LinearGradient
-                  colors={["#001A17", "#00332B", "#004D3F"]}
+                  colors={theme.gradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0.7 }}
                   style={styles.card}
@@ -1289,7 +1289,7 @@ export default function Home() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) =>  StyleSheet.create({
   root: { flex: 1 },
 
   searchResultsContainer: {
@@ -1539,20 +1539,20 @@ const styles = StyleSheet.create({
   tag: {
     fontSize: 10,
     letterSpacing: 2,
-    color: "#6B9E7E",
+    color: theme.subText,
     marginBottom: 10,
     fontWeight: "700",
   },
   title: {
     fontSize: 22,
     fontWeight: "900",
-    color: "#E6FFF4",
+    color: theme.text,
     lineHeight: 28,
     marginBottom: 12,
   },
   desc: {
     fontSize: 13,
-    color: "#9CCFC0",
+    color: theme.textSecondary,
     lineHeight: 18,
     marginBottom: 16,
   },
@@ -1564,6 +1564,6 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 100,
     borderWidth: 18,
-    borderColor: "rgba(51,240,162,0.15)",
+    borderColor: theme.card,
   },
 });
