@@ -492,6 +492,9 @@ console.log(" this is singleOrderDetails=======>>", singleOrderDetails);
   );
 
 
+  console.log("this is the order details===>>>",singleOrderDetails)
+
+
   // const handleRazorpayPayNow = async () => {
   //   try {
   //     setPaymentLoading(true);
@@ -1487,7 +1490,7 @@ const handlePaymentSuccess = async (data: any) => {
                 </View>
               ))}
 
-              {!isPaid && (
+              { !isPaid && singleOrderDetails?.status != "cancelled" && (
                 <View style={s.offersHeader}>
                   <Text style={s.offersLabel}>AVAILABLE OFFERS</Text>
                   <TouchableOpacity onPress={openCouponModal}>
@@ -1498,7 +1501,7 @@ const handlePaymentSuccess = async (data: any) => {
                 </View>
               )}
 
-              {!isPaid && (
+              {!isPaid && singleOrderDetails?.status != "cancelled" && (
                 <View style={[s.couponInputRow, { backgroundColor: theme.inputBackground }]}>
                   <MaterialCommunityIcons
                     name="ticket-percent-outline"

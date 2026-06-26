@@ -471,9 +471,9 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: theme.accent,
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 6,
+    // shadowOpacity: 0.15,
+    // shadowRadius: 10,
+    // elevation: 6,
   },
   badge: {
     position: "absolute",

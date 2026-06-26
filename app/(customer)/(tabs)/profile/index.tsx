@@ -389,11 +389,11 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             label="Saved Addresses"
             onPress={() => router.push("/saved-address")}
           />
-          <GridTile
+          {/* <GridTile
             icon={<Wallet color={isDark ? theme.textSecondary : theme.icon} />}
             label="Wallet"
             onPress={() => router.push("/wallet")}
-          />
+          /> */}
           <GridTile
             icon={<ShieldCheck color={isDark ? theme.textSecondary : theme.icon} />}
             label="Privacy Policy"
