@@ -1,4 +1,4 @@
-
+ 
 import { Tokens } from "@/features/auth/auth.types";
 import { useAuth } from "@/hooks/useAuth";
 import { useSmsUserConsent } from "@eabdullazyanov/react-native-sms-user-consent";
@@ -28,16 +28,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import DryDashLogo from "../../assets/images/logo/drydashLogo.svg";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
-
+ 
 let OtpVerify: any = null;
-
+ 
 if (Platform.OS === "android") {
   OtpVerify = require("react-native-otp-verify").default;
 }
 export default function AuthScreen() {
   const { theme, colors, isDark } = useTheme()
   const styles = makeStyles(theme, isDark);
-
+ 
   const activeColors = {
     bg: colors.background,
     card: colors.card,
@@ -52,42 +52,42 @@ export default function AuthScreen() {
     dotInactiveBorder: isDark ? theme.border : "#B2DAD0",
     buttonText: isDark ? theme.background : theme.background,
   };
-
+ 
   const [step, setStep] = useState<Step>("MOBILE");
-
+ 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-
+ 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [hash, setHash] = useState<string[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
-
+ 
   const [loading, setLoading] = useState(false);
   //  const [error, setError] = useState<string | null>(null);
-
+ 
   const [resendTimer, setResendTimer] = useState(0);
-
+ 
   const [tempToken, setTempToken] = useState<Tokens | null>(null);
   const phoneInputRef = useRef<TextInput>(null);
-
+ 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   //  const errorShake = useRef(new Animated.Value(0)).current;
   const userIsTyping = useRef(false);
-
+ 
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
   const retrievedCode = useSmsUserConsent();
-
+ 
   // Animate on step change
   useEffect(() => {
     fadeAnim.setValue(0);
     slideAnim.setValue(30);
     scaleAnim.setValue(0.95);
-
+ 
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -107,16 +107,16 @@ export default function AuthScreen() {
       }),
     ]).start();
   }, [step]);
-
+ 
   useEffect(() => {
     setHGasing().then((hashes) => {
       handleGetPhoneNumbers(hashes); // pass fresh hash
     });
   }, []);
-
+ 
   const setHGasing = async () => {
     if (Platform.OS !== "android") return [];
-
+ 
     try {
       const hashes = await OtpVerify.getHash();
       setHash(hashes);
@@ -125,17 +125,17 @@ export default function AuthScreen() {
       return [];
     }
   };
-
+ 
   const handleGetPhoneNumbers = async (freshHashes?: string[]) => {
     if (Platform.OS === "ios") return; // not suport
-
+ 
     try {
       const number = await showPhoneNumberHint({ showGuidanceDialog: true });
-
+ 
       if (!number) return; // user cancelled
-
+ 
       const digits = number.replace(/\D/g, "");
-
+ 
       let cleanNumber = "";
       if (digits.length === 12 && digits.startsWith("91")) {
         cleanNumber = digits.slice(2);
@@ -146,7 +146,7 @@ export default function AuthScreen() {
       } else {
         cleanNumber = digits.slice(-10);
       }
-
+ 
       if (cleanNumber.length === 10) {
         if (!userIsTyping.current) {
           // Auto-fill only if user hasn't started typing
@@ -166,7 +166,7 @@ export default function AuthScreen() {
       // silently fail, user can type manually
     }
   };
-
+ 
   // useEffect(() => {
   //   if (error) {
   //     Animated.sequence([
@@ -193,29 +193,29 @@ export default function AuthScreen() {
   //     ]).start();
   //   }
   // }, [error]);
-
+ 
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
     const mobile = phoneValue || phone;
     // console.log("this is the mobileeeee=====>>>>>",mobile)
     // Alert.alert("chcek pyone :::  ",mobile)
     // console.log('sendOtp called with mobile:', mobile);
     const hashToUse = hashValue || hash[0];
-
+ 
     if (!validatePhone(mobile)) {
       return showAlert({ type: 'warning', title: 'Invalid number', message: 'Enter a valid 10-digit mobile number' });
-
+ 
     }
-
+ 
     try {
       setLoading(true);
-
+ 
       console.log("sending OTP to ==>>>:", mobile, "with hash:", hashToUse);
       await sendOtpApi(mobile, hashToUse);
       setStep("OTP");
       setResendTimer(30);
     } catch (e: any) {
       const status = e?.response?.status || e?.status;
-
+ 
       if (status === 410) {
         showAlert({ type: 'error', title: 'Account scheduled for deletion', message: 'Contact support@drydash.in to restore access before 10 days.' });
       }
@@ -223,43 +223,43 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
-
+ 
   // Auto-fill OTP when SMS is intercepted
   useEffect(() => {
     if (retrievedCode && retrievedCode.length === 6) {
       setOtp(retrievedCode);
     }
   }, [retrievedCode]);
-
+ 
   const { saveTokens, setAuthUser } = useAuth();
-
+ 
   const verifyOtp = async (otpValue?: string) => {
     const otpToVerify = otpValue || otp;
     if (otpToVerify.length !== 6) return showAlert({ type: 'warning', title: 'Invalid OTP', message: 'Please enter the 6-digit OTP sent to your number.' });
-
+ 
     try {
       setLoading(true);
       //  setError(null);
-
+ 
       const res = await verifyOtpApi(phone, otpToVerify);
-
+ 
       if (res?.deleted) {
         showAlert({ type: 'error', title: 'Account deleted', message: 'Please contact support to recover your account.' });
-
+ 
         //  setStep("REGISTER"); // go to register
         return;
       }
-
+ 
       if (!res.isNewUser) {
         await saveTokens(res.tokens);
       }
-
+ 
       console.log("this is first token==>>>", res.tokens);
-
+ 
       setTempToken(res.tokens);
-
+ 
       console.log("this is check==>>", res.isNewUser);
-
+ 
       if (!res.isNewUser) {
         await setAuthUser(res.user);
         router.replace("/(customer)/(tabs)/home");
@@ -269,16 +269,16 @@ export default function AuthScreen() {
     } catch (e: any) {
       if (e.message?.toLowerCase().includes("otp")) {
         showAlert({ type: 'error', title: 'Wrong OTP', primaryLabel: 'Try again', onPrimary: () => setOtp('') });
-
+ 
       } else {
         showAlert({ type: 'error', title: 'OTP verification failed', message: 'Something went wrong. Please try again.' });
-
+ 
       }
     } finally {
       setLoading(false);
     }
   };
-
+ 
   // Auto-verify OTP when it reaches 6 digits (for manual entry)
   useEffect(() => {
     if (otp.length === 6 && step === "OTP") {
@@ -288,48 +288,48 @@ export default function AuthScreen() {
       return () => clearTimeout(timer);
     }
   }, [otp]);
-
+ 
   const createAccount = async () => {
     if (!firstName.trim()) return showAlert({ type: 'warning', title: 'First name is required' });
-
+ 
     try {
       setLoading(true);
       //   setError(null);
-
+ 
       let details_obj: any = { firstName };
-
+ 
       if (email) {
         details_obj.email = email;
       }
-
+ 
       if (lastName) {
         details_obj.lastName = lastName;
       }
-
+ 
       console.log("this is detailsssss", details_obj);
-
+ 
       if (!tempToken) {
         console.log("there is an error");
         //  setError("Token missing!");
-
+ 
         showAlert({ type: 'error', title: 'Session expired', message: 'Please go back and verify your number again.' });
-
+ 
         return;
       }
-
+ 
       console.log("this is the tempToken", tempToken);
-
+ 
       await saveTokens(tempToken);
-
+ 
       const updatedUser = await updateUserApi(details_obj);
-
+ 
       await setAuthUser(updatedUser);
-
+ 
       router.replace("/(customer)/(tabs)/home");
     } catch (e: any) {
       //  setError(e.message);
       showAlert({ type: 'error', title: 'Could not create account', message: e.message });
-
+ 
     } finally {
       setFirstName("");
       setLastName("");
@@ -337,7 +337,7 @@ export default function AuthScreen() {
       setLoading(false);
     }
   };
-
+ 
   useEffect(() => {
     if (step === "SUCCESS") {
       const t = setTimeout(() => {
@@ -346,7 +346,7 @@ export default function AuthScreen() {
       return () => clearTimeout(t);
     }
   }, [step]);
-
+ 
   useEffect(() => {
     if (!resendTimer) return;
     const t = setInterval(() => {
@@ -354,12 +354,12 @@ export default function AuthScreen() {
     }, 1000);
     return () => clearInterval(t);
   }, [resendTimer]);
-
+ 
   return (
     <SafeAreaView style={[styles.outer, { backgroundColor: activeColors.bg }]}>
       {/* Gradient overlay */}
       {isDark && <View style={styles.gradientOverlay} />}
-
+ 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -396,7 +396,7 @@ export default function AuthScreen() {
               />
             </View>
           </Animated.View>
-
+ 
           {/* CARD with animation */}
           <Animated.View
             style={[
@@ -436,21 +436,21 @@ export default function AuthScreen() {
                 ]}
               />
             </View>
-
+ 
             <Text style={[styles.title, { color: activeColors.title }]}>
               {step === "MOBILE" && "Welcome Back"}
               {step === "OTP" && "Verify OTP"}
               {step === "REGISTER" && "Create Your Profile"}
               {step === "SUCCESS" && "All Set! 🎉"}
             </Text>
-
+ 
             <Text style={[styles.subtitle, { color: activeColors.subText }]}>
               {step === "MOBILE" && "Use your Mobile number to continue."}
               {step === "OTP" && `OTP sent to Mobile • +91 ${phone}`}
               {step === "REGISTER" && "Just a few details to finish setup."}
               {step === "SUCCESS" && "Your account is ready!"}
             </Text>
-
+ 
             {/* FORM */}
             {step === "MOBILE" && (
               <>
@@ -469,7 +469,7 @@ export default function AuthScreen() {
                         userIsTyping.current = true;
                         const digits = text.replace(/\D/g, "").slice(0, 10);
                         setPhone(digits);
-
+ 
                         // auto sent otp
                         if (
                           digits.length === 10 &&
@@ -486,7 +486,7 @@ export default function AuthScreen() {
                     />
                   </View>
                 </View>
-
+ 
                 {Platform.OS === "android" && (
                   <TouchableOpacity
                     style={styles.hintButton}
@@ -502,7 +502,7 @@ export default function AuthScreen() {
                 )}
               </>
             )}
-
+ 
             {step === "OTP" && (
               <>
                 <Input
@@ -521,7 +521,7 @@ export default function AuthScreen() {
                   editable={!loading} // ← make sure loading state isn't blocking input
                   selectTextOnFocus
                 />
-
+ 
                 {/* Auto-read indicator */}
                 <View style={styles.autoReadIndicator}>
                   <Ionicons name="shield-checkmark" size={14} color={activeColors.primary} />
@@ -531,7 +531,7 @@ export default function AuthScreen() {
                       : "OTP will be auto-filled from SMS"}
                   </Text>
                 </View>
-
+ 
                 <View style={styles.otpActions}>
                   <TouchableOpacity
                     onPress={() => setStep("MOBILE")}
@@ -540,7 +540,7 @@ export default function AuthScreen() {
                     <Ionicons name="chevron-back" size={16} color={activeColors.primary} />
                     <Text style={[styles.linkText, { color: activeColors.primary }]}>Change number</Text>
                   </TouchableOpacity>
-
+ 
                   <TouchableOpacity
                     disabled={resendTimer > 0}
                     onPress={sendOtp}
@@ -563,7 +563,7 @@ export default function AuthScreen() {
                 </View>
               </>
             )}
-
+ 
             {step === "REGISTER" && (
               <>
                 <Input
@@ -574,7 +574,7 @@ export default function AuthScreen() {
                   textContentType="givenName"
                   autoComplete="name-given"
                 />
-
+ 
                 <Input
                   icon="person-outline"
                   placeholder="Last name"
@@ -583,7 +583,7 @@ export default function AuthScreen() {
                   textContentType="familyName"
                   autoComplete="name-family"
                 />
-
+ 
                 <Input
                   icon="mail-outline"
                   placeholder="Email (optional)"
@@ -595,7 +595,7 @@ export default function AuthScreen() {
                 />
               </>
             )}
-
+ 
             {step === "SUCCESS" && (
               <View style={styles.successBox}>
                 <View style={styles.successIconWrapper}>
@@ -607,7 +607,7 @@ export default function AuthScreen() {
                 </Text>
               </View>
             )}
-
+ 
             {step !== "SUCCESS" && (
               <TouchableOpacity
                 style={[
@@ -654,7 +654,7 @@ export default function AuthScreen() {
               </TouchableOpacity>
             )}
           </Animated.View>
-
+ 
           {step !== "SUCCESS" && (
             <Text style={[styles.legalText, { color: activeColors.text }]}>
               By continuing, you agree to our {"\n"}
@@ -678,14 +678,14 @@ export default function AuthScreen() {
     </SafeAreaView>
   );
 }
-
+ 
 /* ---------------- INPUT COMPONENT ---------------- */
-
+ 
 function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props }: any) {
   const [isFocused, setIsFocused] = useState(false);
   const { colors, isDark, theme } = useTheme();        // ✅ added 'theme'
   const styles = makeStyles(theme, isDark);            // ✅ generate styles locally
-
+ 
   return (
     <View
       style={[
@@ -719,15 +719,15 @@ function Input({ icon, style, onFocus: onFocusProp, onBlur: onBlurProp, ...props
     </View>
   );
 }
-
+ 
 /* ---------------- STYLES ---------------- */
-
+ 
 const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   outer: {
     flex: 1,
     backgroundColor: theme.background,
   },
-
+ 
   gradientOverlay: {
     position: "absolute",
     top: 0,
@@ -736,27 +736,27 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     height: 300,
     backgroundColor: theme.card,
   },
-
+ 
   scroll: {
     flexGrow: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 32,
   },
-
+ 
   logoDD: {
     width: 140,
     height: 70,
     alignSelf: "center",
     marginTop: 0,
   },
-
+ 
   logo: {
     width: 160,
     height: 100,
     alignSelf: "center",
   },
-
+ 
   card: {
     backgroundColor: theme.background,
     borderRadius: 24,
@@ -770,14 +770,14 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.card,
   },
-
+ 
   progressContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 24,
   },
-
+ 
   progressDot: {
     width: 10,
     height: 10,
@@ -786,23 +786,23 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.border,
   },
-
+ 
   progressDotActive: {
     backgroundColor: theme.border,
     borderColor: theme.border,
   },
-
+ 
   progressLine: {
     width: 40,
     height: 2,
     backgroundColor: theme.card,
     marginHorizontal: 8,
   },
-
+ 
   progressLineActive: {
     backgroundColor: theme.border,
   },
-
+ 
   title: {
     color: "#F0FDF4",
     fontSize: 26,
@@ -811,7 +811,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     marginBottom: 8,
     letterSpacing: 0.3,
   },
-
+ 
   subtitle: {
     color: "#9CA3AF",
     fontSize: 14,
@@ -819,7 +819,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     marginBottom: 28,
     lineHeight: 20,
   },
-
+ 
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
@@ -831,12 +831,12 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.card,
   },
-
+ 
   inputWrapperFocused: {
     borderColor: theme.border,
     backgroundColor: theme.background,
   },
-
+ 
   input: {
     flex: 1,
     color: "#F0FDF4",
@@ -844,7 +844,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
   },
-
+ 
   autoFillButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -852,14 +852,14 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 12,
   },
-
+ 
   autoFillText: {
     color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 6,
   },
-
+ 
   autoReadIndicator: {
     flexDirection: "row",
     alignItems: "center",
@@ -867,13 +867,13 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 8,
   },
-
+ 
   autoReadText: {
     color: theme.border,
     fontSize: 12,
     marginLeft: 6,
   },
-
+ 
   autoFillBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -886,7 +886,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.card,
   },
-
+ 
   autoFillBannerText: {
     color: theme.border,
     fontSize: 14,
@@ -895,33 +895,33 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     marginRight: 8,
     flex: 1,
   },
-
+ 
   otpActions: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 8,
     marginTop: 4,
   },
-
+ 
   linkButton: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
-
+ 
   linkText: {
     color: theme.border,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 4,
   },
-
+ 
   avatarBox: {
     alignItems: "center",
     marginBottom: 24,
   },
-
+ 
   avatarCircle: {
     width: 100,
     height: 100,
@@ -934,19 +934,19 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: theme.background,
     marginBottom: 12,
   },
-
+ 
   avatarCircleActive: {
     borderColor: theme.border,
     borderStyle: "solid",
     backgroundColor: theme.background,
   },
-
+ 
   avatarText: {
     color: "#9CA3AF",
     fontSize: 14,
     fontWeight: "500",
   },
-
+ 
   // errorContainer: {
   //   flexDirection: "row",
   //   alignItems: "center",
@@ -959,14 +959,14 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   //   borderWidth: 1,
   //   borderColor: theme.card,
   // },
-
+ 
   // error: {
   //   color: "#FF6B6B",
   //   fontSize: 14,
   //   fontWeight: "600",
   //   flex: 1,
   // },
-
+ 
   button: {
     backgroundColor: theme.border,
     height: 50,
@@ -981,28 +981,28 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-
+ 
   buttonLoading: {
     opacity: 0.7,
   },
-
+ 
   buttonText: {
     fontWeight: "800",
     fontSize: 17,
     color: theme.background,
     letterSpacing: 0.5,
   },
-
+ 
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-
+ 
   loadingDots: {
     flexDirection: "row",
     marginLeft: 8,
   },
-
+ 
   dot: {
     width: 6,
     height: 6,
@@ -1010,35 +1010,35 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: theme.background,
     marginHorizontal: 2,
   },
-
+ 
   dot1: {
     opacity: 0.4,
   },
-
+ 
   dot2: {
     opacity: 0.6,
   },
-
+ 
   dot3: {
     opacity: 0.8,
   },
-
+ 
   successBox: {
     alignItems: "center",
     paddingVertical: 20,
   },
-
+ 
   successIconWrapper: {
     marginBottom: 16,
   },
-
+ 
   successText: {
     color: "#F0FDF4",
     fontSize: 22,
     fontWeight: "800",
     marginBottom: 8,
   },
-
+ 
   successSubtext: {
     color: "#9CA3AF",
     fontSize: 14,
@@ -1089,7 +1089,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     fontWeight: "600",
     marginLeft: 6,
   },
-
+ 
   legalText: {
     color: theme.text,
     fontSize: 14,
@@ -1107,3 +1107,4 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     width: "100%",
   },
 });
+ 

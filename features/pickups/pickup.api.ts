@@ -82,8 +82,12 @@ export const getCustomerPickups = async (phone: any, status?: any) => {
 };
 
 export const cancelPickupApi = async (id: string) => {
-  const { data } = await oldApiClient.put(`/v1/rider/deletePickup/${id}`);
+  try {
+    const { data } = await oldApiClient.put(`/v1/rider/deletePickup/${id}`);
   return data;
+  } catch (error) {
+    console.log("this is the error in cancel api==>>",error)
+  }
 };
 
 export const reschedulePickupApi = async (id: string, newDate: string) => {

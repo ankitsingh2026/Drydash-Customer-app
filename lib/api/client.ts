@@ -12,6 +12,13 @@ export const oldApiClient = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+
+export const multipartApiClient = axios.create({
+    baseURL: "https://api.shiptos.com/api", // old backend
+    headers: {
+    "Content-Type": "multipart/form-data",
+  },
+})
 apiClient.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem("accessToken");
   if (token) config.headers.Authorization = `Bearer ${token}`;
