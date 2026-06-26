@@ -3,12 +3,7 @@ import { Tabs } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
-
-const ACTIVE_BG = "#33F0A2";
-const DARK_BAR = "#071F19";
-const INACTIVE_ICON = "#4B7269";
-const LABEL_ACTIVE = "#33F0A2";
-const LABEL_INACTIVE = "#7FA99E";
+import { useChat } from "../../../context/ChatContext";
 
 const TAB_BAR_HEIGHT = 62;
 
@@ -17,29 +12,50 @@ type TabIconProps = {
   iconFocused: any;
   iconOutline: any;
   label: string;
+  badgeCount?: number;
 };
 
-function TabIcon({ focused, iconFocused, iconOutline, label }: TabIconProps) {
+function TabIcon({ focused, iconFocused, iconOutline, label, badgeCount }: TabIconProps) {
+  const { colors, isDark, theme } = useTheme();
+  const styles = makeStyles(theme, isDark);  
+
+  const activeColor = colors.primary;
+  const inactiveColor = isDark ? "#4B7269" : theme.textSecondary;
+  const labelActive = colors.primary;
+  const labelInactive = isDark ? theme.textSecondary : theme.textSecondary;
+  const barBg = isDark ? theme.background : theme.text;
+
   return (
     <View style={styles.tabContent}>
-      <Ionicons
-        name={focused ? iconFocused : iconOutline}
-        size={19}
-        color={focused ? ACTIVE_BG : INACTIVE_ICON}
-      />
-      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+      <View style={styles.iconWrapper}>
+        <Ionicons
+          name={focused ? iconFocused : iconOutline}
+          size={19}
+          color={focused ? activeColor : inactiveColor}
+        />
+        {badgeCount && badgeCount > 0 ? (
+          <View style={[styles.badge, { borderColor: barBg }]}>
+            <Text style={styles.badgeText}>{badgeCount}</Text>
+          </View>
+        ) : null}
+      </View>
+      <Text style={[styles.label, { color: focused ? labelActive : labelInactive }]}>{label}</Text>
     </View>
   );
 }
 
 export default function TabsLayout() {
+  const { colors, theme, isDark } = useTheme();   // ✅ added 'colors'
+  const styles = makeStyles(theme, isDark);
+  
   const insets = useSafeAreaInsets();
-  const { theme } = useTheme();
+  const { unreadCount } = useChat();
 
-  const bottomOffset = Math.max(insets.bottom, 10);
+  const bottomOffset = Math.max(insets.bottom, 10);  // (optional, currently unused)
+  const barBg = isDark ? theme.background : theme.text;
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -47,12 +63,13 @@ export default function TabsLayout() {
           tabBarHideOnKeyboard: true,
           tabBarStyle: {
             height: TAB_BAR_HEIGHT + insets.bottom, // include safe area
-            backgroundColor: DARK_BAR,
-            borderTopWidth: 0,
+            backgroundColor: colors.background,
+            borderTopWidth: isDark ? 0 : 1,
+            borderTopColor: colors.border,
             elevation: 10,
-            shadowColor: "#000",
+            shadowColor: theme.background,
             shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
+            shadowOpacity: isDark ? 0.1 : 0.05,
             shadowRadius: 6,
             paddingBottom: insets.bottom > 0 ? insets.bottom : 8, // safe area fix
             paddingTop: 6,
@@ -95,6 +112,7 @@ export default function TabsLayout() {
                 iconFocused="sparkles"
                 iconOutline="sparkles-outline"
                 label="ASSISTANT"
+                badgeCount={unreadCount}
               />
             ),
           }}
@@ -113,7 +131,7 @@ export default function TabsLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   root: {
     flex: 1,
   },
@@ -122,14 +140,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 3,
   },
+  iconWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  badge: {
+    position: "absolute",
+    right: -10,
+    top: -5,
+    backgroundColor: theme.error,
+    borderRadius: 7.5,
+    minWidth: 15,
+    height: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+    // borderWidth: 1,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: "900",
+    includeFontPadding: false,
+    textAlign: "center",
+  },
   label: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
-    color: LABEL_INACTIVE,
     includeFontPadding: false,
-  },
-  labelActive: {
-    color: LABEL_ACTIVE,
   },
 });

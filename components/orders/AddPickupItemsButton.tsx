@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
 
 export type AddPickupItemsButtonProps = {
   pickupId: string;
@@ -16,6 +17,9 @@ export default function AddPickupItemsButton({
   style,
   compact = false,
 }: AddPickupItemsButtonProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   const handlePress = () => {
     router.push({
       pathname: "/services/[service]",
@@ -33,13 +37,13 @@ export default function AddPickupItemsButton({
       onPress={handlePress}
       style={[styles.row, compact && styles.rowCompact, style]}
     >
-      <Ionicons name="add-circle-outline" size={compact ? 18 : 23} color="#86DCC0" />
+      <Ionicons name="add-circle-outline" size={compact ? 18 : 23} color={theme.textSecondary} />
       <Text style={[styles.text, compact && styles.textCompact]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -52,12 +56,12 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   text: {
-    color: "#86DCC0",
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: "700",
   },
   textCompact: {
-    color: "#86DCC0",
+    color: theme.textSecondary,
     fontSize: 14,
     fontWeight: "600",
   },

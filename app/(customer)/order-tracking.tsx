@@ -16,6 +16,9 @@ import { useNavigation } from "@react-navigation/native";
 import { useLocalSearchParams, router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { useCart } from "@/context/CartContext";
+import { useTheme } from "../../context/ThemeContext";
+const primaryColor = "#000"; // fallback color for static data
+
 import {
   ActivityIndicator,
   Image,
@@ -30,38 +33,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { showAlert } from "@/components/Customalert";
-import { ChevronRight } from 'lucide-react-native';
 
-export const DarkTheme = {
-  background: "#001714",
-  gradient: ["#052420", "#003826"],
-  card: "#102B25",
-  text: "#C9E9E2",
-  subText: "#22EBAB",
-  primary: "#00E1A2",
-  border: "#1E3A34",
-  ordergradient: ["#001A17", "#00332B", "#004D3F"],
-  gray: "#fff",
-  newcard: ["#052420", "#003826"],
-};
-
-type OrderItem = {
+// Define the shape of an order item used in this screen
+export type OrderItem = {
   id: number;
   name: string;
   qty: number;
   price: number;
   icon: "shoe-sandal" | "shoe-heel" | "shoe-formal";
   accent: string;
+  image?: string;
 };
-
-type ScreenMode =
-  | "pickup-scheduled"
-  | "pickup-assigned"
-  | "order-items"
-  | "order-delivered";
-
 const ORDER: {
   storeName: string;
   storeSubtitle: string;
@@ -97,7 +79,7 @@ const ORDER: {
       qty: 1,
       price: 600,
       icon: "shoe-sandal",
-      accent: "#00E1A2",
+      accent: primaryColor,
     },
     {
       id: 2,
@@ -221,6 +203,8 @@ function ItemIcon({
   icon: OrderItem["icon"];
   accent: string;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);   // add this
   return (
     <View style={[styles.itemIconInner, { borderColor: `${accent}55` }]}>
       <MaterialCommunityIcons name={icon as any} size={20} color={accent} />
@@ -239,6 +223,8 @@ function ActionTagButton({
   onPress: () => void;
   tone?: "default" | "danger";
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
       <View
@@ -254,7 +240,7 @@ function ActionTagButton({
           <Ionicons
             name={icon}
             size={13}
-            color={tone === "danger" ? "#FF9FA8" : "#A5F5D7"}
+            color={tone === "danger" ? "#FF9FA8" : theme.primary}
           />
         ) : null}
         <Text
@@ -289,6 +275,9 @@ function Header({
   onCancel?: () => void;
   showMenu?: boolean;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
+
   if (!showMenu)
     return (
       <View style={styles.header}>
@@ -298,12 +287,12 @@ function Header({
           style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
           activeOpacity={0.75}
         >
-          <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
+          <Ionicons name="arrow-back" size={22} color={theme.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <View style={styles.titleRow}>
             <Text style={styles.storeName}>{storeName}</Text>
-            <Ionicons name="chevron-down" size={14} color="#7F948A" />
+            <Ionicons name="chevron-down" size={14} color={theme.textSecondary} />
           </View>
           <Text style={styles.storeSubtitle} numberOfLines={1}>
             {storeSubtitle}
@@ -320,12 +309,12 @@ function Header({
         style={[styles.backBtn, !onBack && { opacity: 0.4 }]}
         activeOpacity={0.75}
       >
-        <Ionicons name="arrow-back" size={22} color={DarkTheme.text} />
+        <Ionicons name="arrow-back" size={22} color={theme.text} />
       </TouchableOpacity>
       <View style={styles.headerCenter}>
         <View style={styles.titleRow}>
           <Text style={styles.storeName}>{storeName}</Text>
-          <Ionicons name="chevron-down" size={14} color="#7F948A" />
+          <Ionicons name="chevron-down" size={14} color={theme.textSecondary} />
         </View>
         <Text style={styles.storeSubtitle} numberOfLines={1}>
           {storeSubtitle}
@@ -334,7 +323,7 @@ function Header({
 
       <View style={styles.menuContainer}>
         <TouchableOpacity onPress={onMenuToggle}>
-          <Ionicons name="ellipsis-vertical" size={20} color="#A5F5D7" />
+          <Ionicons name="ellipsis-vertical" size={20} color={theme.primary} />
         </TouchableOpacity>
         <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={onMenuToggle}>
           <TouchableOpacity 
@@ -342,49 +331,44 @@ function Header({
             activeOpacity={1} 
             onPress={onMenuToggle}
           >
-            <View style={{ backgroundColor: '#0B1F1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 }}>
-              <View style={{ width: 40, height: 4, backgroundColor: '#1E3A34', alignSelf: 'center', borderRadius: 2, marginBottom: 8 }} />
-              <Text style={{ color: '#E6FFF7', fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Order Options</Text>
+            <View style={{ backgroundColor: theme.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40, gap: 16 }}>
+              <View style={{ width: 40, height: 4, backgroundColor: theme.border, alignSelf: 'center', borderRadius: 2, marginBottom: 8 }} />
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '700', marginBottom: 8 }}>Order Options</Text>
               
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => { onMenuToggle(); onReschedule?.(); }}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#102B25', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#1E3A34' }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, padding: 10, borderRadius: 16, borderWidth: 1, borderColor: theme.border }}
               >
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#00E1A222', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
-                  <Ionicons name="calendar-outline" size={20} color="#00E1A2" />
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.primary + '22', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                  <Ionicons name="calendar-outline" size={20} color={theme.primary} />
                 </View>
                 <View>
-                  <Text style={{ color: '#E6FFF7', fontSize: 16, fontWeight: '600' }}>Reschedule</Text>
-                  <Text style={{ color: '#8FB3A8', fontSize: 13, marginTop: 2 }}>Change pickup date and time</Text>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>Reschedule</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 2 }}>Change pickup date and time</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={() => { onMenuToggle(); onCancel?.(); }}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#2A1115', padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#4A1D24' }}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card , padding: 10, borderRadius: 16, borderWidth: 1, borderColor: theme.border }}
               >
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B6B22', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FF6B6B15', alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
                   <Ionicons name="close-outline" size={22} color="#FF6B6B" />
                 </View>
                 <View>
-                  <Text style={{ color: '#FF9FA8', fontSize: 16, fontWeight: '600' }}>Cancel Order</Text>
-                  <Text style={{ color: '#C27A82', fontSize: 13, marginTop: 2 }}>This action cannot be undone</Text>
+                  <Text style={{ color: theme.isDark ? '#FF9FA8' : '#C53030', fontSize: 16, fontWeight: '600' }}>Cancel Pickup</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 2 }}>This action cannot be undone</Text>
                 </View>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
         </Modal>
       </View>
-
-      {/* <TouchableOpacity style={styles.headerIconBtn} activeOpacity={0.75}>
-        <Ionicons name="notifications-outline" size={20} color={DarkTheme.text} />
-      </TouchableOpacity> */}
     </View>
   );
 }
-
 function StatusBanner({
   title,
   subtitle,
@@ -394,12 +378,13 @@ function StatusBanner({
   subtitle: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.statusBanner}>
       <View style={styles.statusIconWrap}>
-        <Ionicons name={icon} size={20} color={DarkTheme.background} />
+        <Ionicons name={icon} size={20} color={theme.background} />
       </View>
-
       <View style={{ flex: 1 }}>
         <Text style={styles.statusTitle}>{title}</Text>
         <Text style={styles.statusSub}>{subtitle}</Text>
@@ -415,13 +400,14 @@ function ItemCard({
   item: OrderItem;
   onDelete?: () => void;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemLeft}>
-        <View style={[styles.itemThumb, { backgroundColor: "#071B18" }]}>
+        <View style={[styles.itemThumb, { backgroundColor: theme.inputBackground }]}>
           <Image source={{ uri: item.image }} style={styles.itemImage} />
         </View>
-
         <View style={styles.itemInfo}>
           <Text style={styles.itemName}>{item.name}</Text>
           <Text style={styles.itemSub}>
@@ -429,27 +415,19 @@ function ItemCard({
           </Text>
         </View>
       </View>
-
       <View style={styles.itemRight}>
         <Text style={styles.itemPrice}>{money(item.price)}</Text>
-        {/* {onDelete ? (
-          <TouchableOpacity
-            onPress={onDelete}
-            activeOpacity={0.8}
-            style={styles.deleteItemBtn}
-          >
-            <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-          </TouchableOpacity>
-        ) : null} */}
       </View>
     </View>
   );
 }
 
 function LocationCard({ value }: { value: string }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.locationCardWrap}>
-      <Ionicons name="location-outline" size={14} color={DarkTheme.primary} />
+      <Ionicons name="location-outline" size={14} color={theme.primary} />
       <Text style={styles.locationCardText} numberOfLines={1}>
         {value || ORDER.storeSubtitle}
       </Text>
@@ -458,6 +436,8 @@ function LocationCard({ value }: { value: string }) {
 }
 
 function TagPill({ label }: { label: string }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.tagPill}>
       <Text style={styles.tagPillText}>{label}</Text>
@@ -466,10 +446,12 @@ function TagPill({ label }: { label: string }) {
 }
 
 function RatingCard() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.ratingCard}>
       <View style={styles.ratingStarWrap}>
-        <Ionicons name="star" size={17} color={DarkTheme.primary} />
+        <Ionicons name="star" size={17} color={theme.primary} />
       </View>
 
       {/* <Text style={styles.ratingText}>How were your ordered items?</Text> */}
@@ -490,11 +472,13 @@ function BillRow({
   value: string;
   highlight?: boolean;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.billRow}>
       <Text style={styles.billLabel}>{label}</Text>
       <Text
-        style={[styles.billValue, highlight && { color: DarkTheme.primary }]}
+        style={[styles.billValue, highlight && { color: theme.primary }]}
       >
         {value}
       </Text>
@@ -509,6 +493,8 @@ function BillCard({
   bill: typeof ORDER.bill;
   showExpanded: boolean;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const [open, setOpen] = useState(false);
 
   const {
@@ -524,51 +510,33 @@ function BillCard({
 
   return (
     <View style={styles.sectionCard}>
-      {/* HEADER CLICKABLE */}
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => setOpen(!open)}
         style={styles.billHeader}
       >
         <Text style={styles.sectionTitle}>Bill Details</Text>
-
         <View style={styles.billHeaderRight}>
           <Ionicons
             name={open ? "chevron-up" : "chevron-down"}
             size={18}
-            color="#8AA39B"
+            color={theme.textSecondary}
           />
         </View>
       </TouchableOpacity>
 
-      {/* COLLAPSIBLE CONTENT */}
       {(open || showExpanded) && (
         <>
           <View style={styles.billDivider} />
-
           <BillRow label="Subtotal" value={money(subtotal)} />
-          {/* <BillRow label="Delivery Handling" value={money(deliveryHandling)} />
-          <BillRow label="Service Charge" value={money(serviceCharge)} />
-          <BillRow
-            label="Item Discount"
-            value={`-${money(itemDiscount)}`}
-            highlight
-          />
-          <BillRow label="Platform fee" value={money(platformFee)} />
-          <BillRow label={`GST (${gstPercent}%)`} value={money(gst)} /> */}
-
-          {/* <View style={styles.billDivider} /> */}
         </>
       )}
-
-      {/* <View style={styles.totalRow}>
-        <Text style={styles.totalLabel}>Total Bill</Text>
-        <Text style={styles.totalValue}>{money(total)}</Text>
-      </View> */}
     </View>
   );
 }
-import { CheckCircle2, Trash2 } from "lucide-react-native"
+import { CheckCircle2, ChevronRight, Trash2 } from "lucide-react-native"
+import { showAlert } from "@/components/Customalert";
+import { SafeAreaView } from "react-native-safe-area-context";
 function CouponSection({
   appliedCoupon,
   onOpen,
@@ -578,13 +546,15 @@ function CouponSection({
   onOpen: () => void;
   onApply: (coupon: any, action: "apply" | "remove") => void;
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.offerHeaderRow}>
         <Text style={styles.offerLabel}>available coupons</Text>
         <TouchableOpacity onPress={onOpen} style={styles.offerViewAllContainer}>
           <Text style={styles.offerViewAllText}>View</Text>
-          <ChevronRight color={DarkTheme.text} size={16} />
+          <ChevronRight color={theme.text} size={16} />
         </TouchableOpacity>
       </View>
 
@@ -595,9 +565,8 @@ function CouponSection({
         style={{
           borderRadius: 14,
           padding: 14,
-          backgroundColor: "#00110E",
-          //   borderWidth: 1,
-          borderColor: appliedCoupon ? "#00E1A2" : "#1E3327",
+          backgroundColor: theme.inputBackground,
+          borderColor: appliedCoupon ? theme.primary : theme.border,
         }}
       >
         <View
@@ -610,7 +579,7 @@ function CouponSection({
           <View style={{ flex: 1 }}>
             <Text
               style={{
-                color: "#E6FFF6",
+                color: theme.text,
                 fontWeight: "900",
                 fontSize: 15,
                 letterSpacing: 0.5,
@@ -618,8 +587,7 @@ function CouponSection({
             >
               {appliedCoupon?.code || "Apply Coupon"}
             </Text>
-
-            <Text style={{ color: "#7A9B87", fontSize: 12, marginTop: 4 }}>
+            <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 4 }}>
               {appliedCoupon
                 ? appliedCoupon.description || "Coupon applied"
                 : "Tap to view available offers"}
@@ -628,12 +596,11 @@ function CouponSection({
 
           {appliedCoupon ? (
             <View style={{ flexDirection: "row", alignItems: "center" }}>
-              {/* Check and Status String Component */}
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <CheckCircle2 color="#00E1A2" size={16} fill="#00110E" />
+                <CheckCircle2 color={theme.primary} size={16} fill={theme.inputBackground} />
                 <Text
                   style={{
-                    color: "#00E1A2",
+                    color: theme.primary,
                     fontWeight: "700",
                     fontSize: 14,
                     marginLeft: 6,
@@ -642,27 +609,22 @@ function CouponSection({
                   Applied
                 </Text>
               </View>
-
-              {/* Vertical Boundary Border Line */}
               <View
                 style={{
                   width: 1,
                   height: 16,
-                  backgroundColor: "#2A4A34",
+                  backgroundColor: theme.border,
                   marginHorizontal: 10,
                 }}
               />
-
-              {/* Action Button Element for Coupon Discarding */}
               <TouchableOpacity
                 onPress={() => onApply(appliedCoupon, "remove")}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Trash2 color="#7A9B87" size={16} />
+                <Trash2 color={theme.textSecondary} size={16} />
               </TouchableOpacity>
             </View>
           ) : (
-            /* Unapplied Fallback Layout State */
             <TouchableOpacity
               onPress={onOpen}
               style={{
@@ -670,13 +632,13 @@ function CouponSection({
                 paddingVertical: 6,
                 borderRadius: 18,
                 borderWidth: 1,
-                borderColor: "#2A4A34",
+                borderColor: theme.border,
                 backgroundColor: "transparent",
               }}
             >
               <Text
                 style={{
-                  color: "#7A9B87",
+                  color: theme.textSecondary,
                   fontWeight: "800",
                   fontSize: 12,
                 }}
@@ -703,13 +665,14 @@ function OrderDetailsCard({
     orderDate: string;
   };
 }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.sectionCard}>
       <View style={styles.sectionTopRow}>
         <Text style={styles.sectionTitle}>ORDER DETAILS</Text>
-
         <TouchableOpacity style={styles.downloadBtn} activeOpacity={0.75}>
-          <Ionicons name="download-outline" size={14} color="#93A39B" />
+          <Ionicons name="download-outline" size={14} color={theme.textSecondary} />
           <Text style={styles.downloadText}>Download Receipt</Text>
         </TouchableOpacity>
       </View>
@@ -722,7 +685,7 @@ function OrderDetailsCard({
           <View style={styles.inlineRow}>
             <Text style={styles.detailValue}>{details.orderId}</Text>
             <TouchableOpacity style={styles.copyBtn} activeOpacity={0.75}>
-              <Ionicons name="copy-outline" size={13} color="#93A39B" />
+              <Ionicons name="copy-outline" size={13} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -769,6 +732,8 @@ function OrderDetailsCard({
 }
 
 function HelpCard() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.helpTitle}>NEED HELP?</Text>
@@ -778,7 +743,7 @@ function HelpCard() {
           <Ionicons
             name="chatbubble-ellipses-outline"
             size={19}
-            color={DarkTheme.primary}
+            color={theme.primary}
           />
         </View>
 
@@ -787,13 +752,15 @@ function HelpCard() {
           <Text style={styles.chatSub}>We&apos;re here to help you 24/7</Text>
         </View>
 
-        <Ionicons name="chevron-forward" size={18} color="#88A098" />
+        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
       </TouchableOpacity>
     </View>
   );
 }
 
 function BottomCTA({ mode }: { mode: ScreenMode }) {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const title = mode === "pickup-scheduled" ? "Reschedule" : "Repeat Order";
   const subtitle =
     mode === "pickup-scheduled"
@@ -811,6 +778,8 @@ function BottomCTA({ mode }: { mode: ScreenMode }) {
 }
 
 export default function OrderTrackingScreen() {
+  const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const navigation = useNavigation();
   const { user } = useAuth();
   const { selectedAddress } = useAddress();
@@ -1158,7 +1127,7 @@ export default function OrderTrackingScreen() {
         price: item.qty * item.price,
         image: item.image,
         icon: inferItemIcon(item.title),
-        accent: "#00E1A2",
+        accent: theme.primary,
       }));
     }
 
@@ -1179,7 +1148,7 @@ export default function OrderTrackingScreen() {
             item?.itemId?.images?.[0]?.url ||
             "https://via.placeholder.com/50",
           icon: inferItemIcon(name),
-          accent: "#00E1A2",
+          accent: theme.primary,
         };
       },
     );
@@ -1273,7 +1242,7 @@ export default function OrderTrackingScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color={DarkTheme.primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       </SafeAreaView>
     );
@@ -1289,7 +1258,7 @@ export default function OrderTrackingScreen() {
     >
       <Text
         style={{
-          color: total ? "#CFFFF1" : "#8CAFA0",
+          color: total ? theme.text : theme.textSecondary,
           fontSize: total ? 16 : 13,
           fontWeight: total ? "800" : "500",
         }}
@@ -1299,7 +1268,7 @@ export default function OrderTrackingScreen() {
 
       <Text
         style={{
-          color: total ? "#C9E9E2" : "#CFFFF1",
+          color: total ? theme.text : theme.text,
           fontSize: total ? 18 : 13,
           fontWeight: total ? "900" : "600",
         }}
@@ -1317,7 +1286,7 @@ export default function OrderTrackingScreen() {
       >
       <StatusBar
         barStyle="light-content"
-        backgroundColor={DarkTheme.background}
+        backgroundColor={theme.background}
       />
 
       <View style={styles.bgTopGlow} />
@@ -1388,7 +1357,7 @@ export default function OrderTrackingScreen() {
                   <Ionicons
                     name="add-circle-outline"
                     size={18}
-                    color={DarkTheme.primary}
+                    color={theme.primary}
                   />
                   <Text style={styles.addItemsText}>Add More Items</Text>
                 </TouchableOpacity>
@@ -1411,7 +1380,7 @@ export default function OrderTrackingScreen() {
                   <Text style={styles.offerLabel}>Cost Summary</Text>
                   {/* <TouchableOpacity style={styles.offerViewAllContainer}>
                     <Text style={styles.offerViewAllText}>View</Text>
-                    <ChevronRight color={DarkTheme.text} size={16} />
+                    <ChevronRight color={theme.text} size={16} />
                   </TouchableOpacity> */}
                 </View>
                 <View
@@ -1420,9 +1389,9 @@ export default function OrderTrackingScreen() {
                     marginBottom: 10,
                     borderRadius: 16,
                     padding: 14,
-                    backgroundColor: "#0E1A14",
+                    backgroundColor: theme.inputBackground,
                     borderWidth: 1,
-                    borderColor: "#1E3327",
+                    borderColor: theme.border,
                   }}
                 >
 
@@ -1435,7 +1404,7 @@ export default function OrderTrackingScreen() {
                   <View
                     style={{
                       height: 1,
-                      backgroundColor: "#1E3327",
+                      backgroundColor: theme.border,
                       marginVertical: 10,
                     }}
                   />
@@ -1461,7 +1430,7 @@ export default function OrderTrackingScreen() {
                 <Ionicons
                   name="add-circle-outline"
                   size={18}
-                  color={DarkTheme.primary}
+                  color={theme.primary}
                 />
                 <Text style={styles.scheduledAddEstimateText}>
                   Add Items for estimate
@@ -1473,7 +1442,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name={sameLocation ? "checkbox" : "square-outline"}
                 size={20}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <Text style={styles.checkLabel}>Delivery Location Same As Pickup Location</Text>
             </TouchableOpacity> */}
@@ -1485,7 +1454,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name={heavyItems ? "checkbox" : "square-outline"}
                 size={20}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <Text style={styles.checkLabel}>
                 Includes Heavy Items (Rugs, Quilts, etc)
@@ -1495,7 +1464,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name="flash-outline"
                 size={16}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <View>
                 <Text style={styles.deliveryText}>
@@ -1518,7 +1487,7 @@ export default function OrderTrackingScreen() {
               value={specialInstructions}
               onChangeText={setSpecialInstructions}
               placeholder="Any specific requirements for your wash?"
-              placeholderTextColor="#4E665F"
+              placeholderTextColor={theme.placeholderText}
               multiline
               textAlignVertical="top"
               style={styles.specialInputScheduled}
@@ -1559,7 +1528,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name="add-circle-outline"
                 size={18}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <Text style={styles.addItemsText}>Add More Items</Text>
             </TouchableOpacity>
@@ -1574,9 +1543,9 @@ export default function OrderTrackingScreen() {
                 marginTop: 12,
                 borderRadius: 16,
                 padding: 14,
-                backgroundColor: "#0E1A14",
+                backgroundColor: theme.inputBackground,
                 borderWidth: 1,
-                borderColor: "#1E3327",
+                borderColor: theme.border,
               }}
             >
               <Text
@@ -1600,7 +1569,7 @@ export default function OrderTrackingScreen() {
               <View
                 style={{
                   height: 1,
-                  backgroundColor: "#1E3327",
+                  backgroundColor: theme.border,
                   marginVertical: 10,
                 }}
               />
@@ -1615,7 +1584,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name={sameLocation ? "checkbox" : "square-outline"}
                 size={18}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <Text style={styles.checkLabel}>
                 Delivery Location Same As Pickup Location
@@ -1629,7 +1598,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name={heavyItems ? "checkbox" : "square-outline"}
                 size={18}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <Text style={styles.checkLabel}>
                 Includes Heavy Items (Rugs, Quilts, etc)
@@ -1640,7 +1609,7 @@ export default function OrderTrackingScreen() {
               <Ionicons
                 name="flash-outline"
                 size={16}
-                color={DarkTheme.primary}
+                color={theme.primary}
               />
               <View>
                 <Text style={styles.deliveryText}>
@@ -1663,7 +1632,7 @@ export default function OrderTrackingScreen() {
               value={specialInstructions}
               onChangeText={setSpecialInstructions}
               placeholder="Any specific requirements for your wash?"
-              placeholderTextColor="#4E665F"
+              placeholderTextColor={theme.placeholderText}
               multiline
               textAlignVertical="top"
               style={styles.specialInput}
@@ -1704,7 +1673,7 @@ export default function OrderTrackingScreen() {
             {screenMode === "order-delivered" ? <HelpCard /> : null}
 
             <View style={styles.secureRow}>
-              <Ionicons name="lock-closed-outline" size={11} color="#64766F" />
+              <Ionicons name="lock-closed-outline" size={11} color={theme.textSecondary} />
               <Text style={styles.secureText}> SECURE PAYMENT</Text>
             </View>
 
@@ -1712,17 +1681,17 @@ export default function OrderTrackingScreen() {
               <MaterialCommunityIcons
                 name="credit-card-outline"
                 size={22}
-                color="#64766F"
+                color={theme.textSecondary}
               />
               <MaterialCommunityIcons
                 name="bank-outline"
                 size={22}
-                color="#64766F"
+                color={theme.textSecondary}
               />
               <MaterialCommunityIcons
                 name="cellphone"
                 size={22}
-                color="#64766F"
+                color={theme.textSecondary}
               />
             </View>
           </>
@@ -1758,7 +1727,7 @@ export default function OrderTrackingScreen() {
             ]}
           >
             {isUpdatingPickup ? (
-              <ActivityIndicator size="small" color="#05352A" />
+              <ActivityIndicator size="small" color={theme.primary} />
             ) : (
               <Text style={styles.totalAmountBarText}>Update Pickup</Text>
             )}
@@ -1801,10 +1770,10 @@ export default function OrderTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: DarkTheme.background,
+    backgroundColor: theme.background,
   },
   menuContainer: {
     position: "relative",
@@ -1815,14 +1784,14 @@ const styles = StyleSheet.create({
     top: 30,
     right: 0,
     minWidth: 140,
-    backgroundColor: "#12372D",
+    backgroundColor: theme.inputBackground,
     borderRadius: 12,
     paddingVertical: 8,
     paddingHorizontal: 12,
     gap: 8,
     borderWidth: 1,
-    borderColor: "#2A715D",
-    shadowColor: "#000",
+    borderColor: theme.border,
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -1832,15 +1801,15 @@ const styles = StyleSheet.create({
     minHeight: 32,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#2A715D",
-    backgroundColor: "#102E27",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
   tagPillText: {
-    color: "#A5F5D7",
+    color: theme.primary,
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1852,7 +1821,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: DarkTheme.background,
+    backgroundColor: theme.background,
   },
 
   bgTopGlow: {
@@ -1862,7 +1831,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 130,
-    backgroundColor: "rgba(0, 225, 162, 0.06)",
+    backgroundColor: theme.card,
   },
   bgBottomGlow: {
     position: "absolute",
@@ -1871,7 +1840,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: "rgba(0, 225, 162, 0.04)",
+    backgroundColor: theme.card,
   },
 
   header: {
@@ -1897,13 +1866,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   storeName: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: 0.2,
   },
   storeSubtitle: {
-    color: "#879892",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -1913,18 +1882,18 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: DarkTheme.card,
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
+    borderColor: theme.border,
   },
 
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 18,
-    backgroundColor: "#0B3326",
+    backgroundColor: theme.inputBackground,
     borderWidth: 1,
-    borderColor: "rgba(0,225,162,0.18)",
+    borderColor: theme.card,
     padding: 14,
     gap: 12,
     marginBottom: 16,
@@ -1933,17 +1902,17 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: DarkTheme.primary,
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   statusTitle: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "800",
   },
   statusSub: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 3,
   },
@@ -1953,7 +1922,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sectionHeader: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.7,
@@ -1967,15 +1936,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   scheduledAddEstimateText: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: "700",
   },
   locationCardWrap: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
-    backgroundColor: DarkTheme.card,
+    borderColor: theme.border,
+    backgroundColor: theme.card,
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -1985,7 +1954,7 @@ const styles = StyleSheet.create({
   },
   locationCardText: {
     flex: 1,
-    color: "#9CCFC0",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -1997,7 +1966,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   addItemsText: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -2008,7 +1977,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   offerLabel: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "600",
     textTransform: "uppercase",
@@ -2019,7 +1988,7 @@ const styles = StyleSheet.create({
   },
   // Style the text itself
   offerViewAllText: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "700",
     textTransform: "uppercase",
@@ -2036,10 +2005,10 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#21453D",
-    backgroundColor: "#061612",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
   },
   applyBtn: {
@@ -2048,19 +2017,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2BDFAF",
+    backgroundColor: theme.primary,
     paddingHorizontal: 12,
   },
   applyBtnText: {
-    color: "#063228",
+    color: theme.isDark ? theme.background : theme.text,
     fontSize: 14,
     fontWeight: "800",
   },
   appliedCard: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(41, 230, 176, 0.2)",
-    backgroundColor: "#09271F",
+    borderColor: theme.card,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
     paddingVertical: 10,
     flexDirection: "row",
@@ -2069,12 +2038,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   appliedCode: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "800",
   },
   appliedDesc: {
-    color: "#9CCFC0",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
@@ -2086,10 +2055,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(41,230,176,0.25)",
+    borderColor: theme.card,
   },
   appliedPillInlineText: {
-    color: DarkTheme.primary,
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -2101,12 +2070,12 @@ const styles = StyleSheet.create({
   },
   checkLabel: {
     flex: 1,
-    color: "#BCD7CE",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "600",
   },
   specialLabel: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.6,
@@ -2117,11 +2086,11 @@ const styles = StyleSheet.create({
     minHeight: 60,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
-    backgroundColor: "#061612",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     marginBottom: 12,
   },
@@ -2129,11 +2098,11 @@ const styles = StyleSheet.create({
     minHeight: 126,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
-    backgroundColor: "#061612",
+    borderColor: theme.border,
+    backgroundColor: theme.inputBackground,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     marginBottom: 12,
   },
@@ -2157,8 +2126,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     flexDirection: "row",
     gap: 8,
-    borderColor: "rgba(41,230,176,0.4)",
-    backgroundColor: "rgba(26, 76, 62, 0.35)",
+    borderColor: theme.card,
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2172,19 +2141,19 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 30,
     borderRadius: 999,
-    backgroundColor: DarkTheme.primary,
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
-    shadowColor: DarkTheme.primary,
+    shadowColor: theme.primary,
     shadowOpacity: 0.32,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 5 },
     elevation: 5,
   },
   scheduledRescheduleText: {
-    color: "#052A22",
+    color: theme.text,
     fontSize: 15,
     fontWeight: "900",
   },
@@ -2197,10 +2166,10 @@ const styles = StyleSheet.create({
   totalAmountBarBtn: {
     height: 40,
     borderRadius: 999,
-    backgroundColor: DarkTheme.primary,
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: DarkTheme.primary,
+    shadowColor: theme.primary,
     shadowOpacity: 0.3,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
@@ -2208,7 +2177,7 @@ const styles = StyleSheet.create({
      marginBottom:30
   },
   totalAmountBarText: {
-    color: "#05352A",
+    color: theme.text,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 0.2,
@@ -2216,13 +2185,13 @@ const styles = StyleSheet.create({
   },
 
   itemCard: {
-    backgroundColor: DarkTheme.card,
+    backgroundColor: theme.card,
     borderRadius: 16,
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
+    borderColor: theme.border,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -2238,7 +2207,7 @@ const styles = StyleSheet.create({
     height: 45,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#071B18",
+    backgroundColor: theme.inputBackground,
   },
 
   itemImage: {
@@ -2253,25 +2222,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    backgroundColor: "#081F1B",
+    backgroundColor: theme.inputBackground,
   },
   itemInfo: {
     flex: 1,
     marginLeft: 12,
   },
   itemName: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 15,
     fontWeight: "800",
   },
   itemSub: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 4,
     fontWeight: "600",
   },
   itemPrice: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -2282,9 +2251,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    backgroundColor: "#0B3326",
+    backgroundColor: theme.inputBackground,
     borderWidth: 1,
-    borderColor: "rgba(0,225,162,0.12)",
+    borderColor: theme.card,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
@@ -2293,41 +2262,41 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "#0A251F",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
   ratingText: {
     flex: 1,
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,
   },
   rateBtn: {
     borderWidth: 1,
-    borderColor: DarkTheme.primary,
+    borderColor: theme.primary,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
-    backgroundColor: "rgba(0,225,162,0.06)",
+    backgroundColor: theme.card,
   },
   rateBtnText: {
-    color: DarkTheme.primary,
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "800",
   },
 
   sectionCard: {
-    backgroundColor: DarkTheme.card,
+    backgroundColor: theme.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
+    borderColor: theme.border,
     padding: 15,
     marginBottom: 14,
   },
   sectionTitle: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: "800",
     marginBottom: 12,
@@ -2345,7 +2314,7 @@ const styles = StyleSheet.create({
   },
 
   billHeaderTotal: {
-    color: DarkTheme.primary,
+    color: theme.primary,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -2356,18 +2325,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   billLabel: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "600",
   },
   billValue: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "700",
   },
   billDivider: {
     height: 1,
-    backgroundColor: DarkTheme.border,
+    backgroundColor: theme.border,
     marginVertical: 12,
   },
   totalRow: {
@@ -2376,12 +2345,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   totalLabel: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 15,
     fontWeight: "800",
   },
   totalValue: {
-    color: DarkTheme.primary,
+    color: theme.primary,
     fontSize: 26,
     fontWeight: "900",
     letterSpacing: 0.2,
@@ -2399,13 +2368,13 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   downloadText: {
-    color: "#93A39B",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
   divider: {
     height: 1,
-    backgroundColor: DarkTheme.border,
+    backgroundColor: theme.border,
     marginBottom: 14,
     opacity: 0.9,
   },
@@ -2423,7 +2392,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   detailLabel: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.8,
@@ -2431,13 +2400,13 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   detailValue: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "700",
     lineHeight: 18,
   },
   addressText: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 19,
@@ -2459,15 +2428,15 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "#0A251F",
+    backgroundColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,
     borderWidth: 1,
-    borderColor: "rgba(0,225,162,0.15)",
+    borderColor: theme.card,
   },
   upiBadgeText: {
-    color: DarkTheme.primary,
+    color: theme.primary,
     fontSize: 10,
     fontWeight: "900",
   },
@@ -2475,19 +2444,19 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: DarkTheme.primary,
+    backgroundColor: theme.primary,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,
   },
   avatarText: {
-    color: DarkTheme.background,
+    color: theme.background,
     fontSize: 11,
     fontWeight: "900",
   },
 
   helpTitle: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -2498,27 +2467,27 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "#0A251F",
+    backgroundColor: theme.card,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: DarkTheme.border,
+    borderColor: theme.border,
     padding: 14,
   },
   chatIconWrap: {
     width: 42,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#06231C",
+    backgroundColor: theme.inputBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   chatTitle: {
-    color: DarkTheme.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: "800",
   },
   chatSub: {
-    color: "#8AA39B",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 3,
   },
@@ -2530,7 +2499,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   secureText: {
-    color: "#64766F",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -2551,29 +2520,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 10,
     paddingBottom: Platform.OS === "ios" ? 30 : 16,
-    backgroundColor: "rgba(0,23,20,0.96)",
+    backgroundColor: theme.card,
     borderTopWidth: 1,
-    borderTopColor: DarkTheme.border,
+    borderTopColor: theme.border,
   },
   repeatBtn: {
-    backgroundColor: DarkTheme.primary,
+    backgroundColor: theme.primary,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
-    shadowColor: "#000",
+    shadowColor: theme.background,
     shadowOpacity: 0.18,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   repeatBtnTitle: {
-    color: DarkTheme.background,
+    color: theme.background,
     fontSize: 16,
     fontWeight: "900",
   },
   repeatBtnSub: {
-    color: "#0B4D3C",
+    color: theme.text,
     fontSize: 11,
     fontWeight: "700",
     marginTop: 2,
@@ -2586,12 +2555,12 @@ const styles = StyleSheet.create({
   },
 
   deliveryText: {
-    color: "#CDECE2",
+    color: theme.text,
     fontSize: 14,
     fontWeight: "500",
   },
   deliveryLink: {
-    color: "#7FA39A",
+    color: theme.textSecondary,
     fontSize: 12,
     marginLeft: 150,
     textDecorationLine: "underline",

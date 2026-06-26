@@ -104,8 +104,10 @@ function SectionCard({
     section: SectionData;
     colors: ReturnType<typeof buildColors>;
 }) {
+      const { theme, isDark } = useTheme();
+        const styles = makeStyles(theme, isDark);
     return (
-        <View style={[styles.sectionCard, { backgroundColor:  "#052B2599", borderColor: colors.border }]}>
+        <View style={[styles.sectionCard, { backgroundColor:  colors.card, borderColor: colors.border }]}>
             {/* Icon + Title row */}
             <View style={styles.sectionHeader}>
                 <View style={[styles.sectionIconWrap, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
@@ -115,13 +117,13 @@ function SectionCard({
             </View>
 
             {section.intro ? (
-                <Text style={[styles.sectionIntro, { color: "#fff" }]}>{section.intro}</Text>
+                <Text style={[styles.sectionIntro, { color: colors.text }]}>{section.intro}</Text>
             ) : null}
 
             {section.bullets?.map((b, i) => (
                 <View key={i} style={styles.bulletRow}>
                     <View style={[styles.bulletDot, { backgroundColor: colors.primary }]} />
-                    <Text style={[styles.bulletText, { color: "#fff" }]}>
+                    <Text style={[styles.bulletText, { color: colors.text }]}>
                         {b.label ? (
                             <>
                                 <Text style={[styles.bulletLabel, { color: colors.text }]}>{b.label}: </Text>
@@ -141,7 +143,7 @@ function buildColors(theme: any) {
     return {
         bg: theme.background,
         card: theme.card,
-        border: theme.border || "#0E3A2F",
+        border: theme.border || theme.background,
         primary: theme.primary,
         primarySoft: `${theme.primary}22`,
         text: theme.text,
@@ -153,13 +155,14 @@ function buildColors(theme: any) {
 }
 
 export default function PrivacyPolicy() {
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
     const router = useRouter();
     const colors = buildColors(theme);
 
     return (
         <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
-            <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
 
             {/* ── Header ── */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
@@ -173,18 +176,18 @@ export default function PrivacyPolicy() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
 
                 {/* ── Last Updated Badge ── */}
-                <View style={[styles.badge, { backgroundColor:  "#052B2599" }]}>
-                    <Ionicons name="time-outline" size={13} color={"#fff"} />
-                    <Text style={[styles.badgeText, { color: "#fff" }]}>Last updated: January 2026</Text>
+                <View style={[styles.badge, { backgroundColor:  colors.card }]}>
+                    <Ionicons name="time-outline" size={13} color={colors.text} />
+                    <Text style={[styles.badgeText, { color: colors.text }]}>Last updated: January 2026</Text>
                 </View>
 
                 {/* ── Hero ── */}
-                <View style={[styles.hero, { borderColor: colors.border, backgroundColor:  "#052B2599" }]} >
+                <View style={[styles.hero, { borderColor: colors.border, backgroundColor:  colors.card }]} >
                     <View style={[styles.heroIconWrap, { backgroundColor: colors.primarySoft }]}>
                         <Ionicons name="shield-checkmark" size={28} color={colors.primary} />
                     </View>
                     <Text style={[styles.heroTitle, { color: colors.text }]}>Your Privacy Matters</Text>
-                    <Text style={[styles.heroText, { color: "#fff" }]}>
+                    <Text style={[styles.heroText, { color: colors.text }]}>
                         We value your trust and are committed to protecting your personal information with artisanal precision.
                     </Text>
                 </View>
@@ -198,14 +201,14 @@ export default function PrivacyPolicy() {
                 </View>
 
                 {/* ── Contact Card ── */}
-                <View style={[styles.contactCard, { backgroundColor:  "#052B2599", borderColor: colors.border }]}>
+                <View style={[styles.contactCard, { backgroundColor:  colors.card, borderColor: colors.border }]}>
                     <View style={styles.sectionHeader}>
-                        <View style={[styles.sectionIconWrap, { backgroundColor: "#052B2599", borderColor: colors.border }]}>
+                        <View style={[styles.sectionIconWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
                             <Ionicons name="mail-outline" size={20} color={colors.primary} />
                         </View>
                         <Text style={[styles.sectionTitle, { color: colors.text }]}>Contact Information</Text>
                     </View>
-                    <Text style={[styles.sectionIntro, { color: "#fff" }]}>
+                    <Text style={[styles.sectionIntro, { color: colors.text }]}>
                         For any privacy-related inquiries, contact our Data Protection Officer:
                     </Text>
                     <TouchableOpacity
@@ -214,17 +217,17 @@ export default function PrivacyPolicy() {
                     >
                         <Text style={[styles.emailLink, { color: colors.primary }]}>support@drydash.in</Text>
                     </TouchableOpacity>
-                    <Text style={[styles.addressText, { color: "#fff" }]}>
+                    <Text style={[styles.addressText, { color: colors.text }]}>
                        Tower 15211 ats le grandiose sector 150 noida , 201310
                     </Text>
                 </View>
 
                 {/* ── Footer ── */}
-                <View style={[styles.footer, { backgroundColor: "#052B2599", borderColor: colors.primary }]}>
+                <View style={[styles.footer, { backgroundColor: colors.card, borderColor: colors.primary }]}>
                     <View style={[styles.footerIconWrap, { backgroundColor: colors.primarySoft }]}>
                         <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
                     </View>
-                    <Text style={[styles.footerText, { color: "#fff" }]}>
+                    <Text style={[styles.footerText, { color: colors.text }]}>
                         Thank you for trusting DryDash with your information. We're committed to keeping your data safe and secure.
                     </Text>
                 </View>
@@ -234,7 +237,7 @@ export default function PrivacyPolicy() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     safe: { flex: 1 },
 
     // header
@@ -252,7 +255,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
-      
+        backgroundColor: theme.card,
     },
     headerTitle: {
         flex: 1,

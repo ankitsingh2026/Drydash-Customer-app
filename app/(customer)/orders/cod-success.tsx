@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useMemo } from "react";
+import { useTheme } from "../../../context/ThemeContext";
 import {
   Platform,
   Pressable,
@@ -23,6 +24,25 @@ type ReceiptItem = {
 };
 
 export default function CodSuccess() {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme);
+
+  function Row({
+    label,
+    value,
+    valueStyle,
+  }: {
+    label: string;
+    value: string;
+    valueStyle?: object;
+  }) {
+    return (
+      <View style={styles.summaryRow}>
+        <Text style={styles.summaryLabel}>{label}</Text>
+        <Text style={[styles.summaryValue, valueStyle]}>{value}</Text>
+      </View>
+    );
+  }
   const params = useLocalSearchParams<{
     orderId?: string;
     amount?: string;
@@ -86,7 +106,7 @@ export default function CodSuccess() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#04150F" />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       <View style={styles.root}>
         {/* Top bar */}
@@ -99,7 +119,7 @@ export default function CodSuccess() {
             ]}
             hitSlop={12}
           >
-            <Ionicons name="home" size={20} color="#DFFFEF" />
+            <Ionicons name="home" size={20} color={theme.text} />
           </Pressable>
 
           <Text style={styles.headerTitle}>Order Confirmed</Text>
@@ -194,7 +214,7 @@ export default function CodSuccess() {
 
           {/* Button */}
           <LinearGradient
-            colors={["#29E6B0", "#38F2B2"]}
+            colors={[theme.primary, theme.border]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.downloadBtn}
@@ -205,7 +225,7 @@ export default function CodSuccess() {
               }}
               style={styles.downloadPressable}
             >
-              <Ionicons name="home-outline" size={18} color="#07261B" />
+              <Ionicons name="home-outline" size={18} color={theme.background} />
               <Text style={styles.downloadText}>Return to Home</Text>
             </Pressable>
           </LinearGradient>
@@ -215,31 +235,16 @@ export default function CodSuccess() {
   );
 }
 
-function Row({
-  label,
-  value,
-  valueStyle,
-}: {
-  label: string;
-  value: string;
-  valueStyle?: object;
-}) {
-  return (
-    <View style={styles.summaryRow}>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={[styles.summaryValue, valueStyle]}>{value}</Text>
-    </View>
-  );
-}
 
-const styles = StyleSheet.create({
+
+const makeStyles = (theme: any) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#04150F",
+    backgroundColor: theme.background,
   },
   root: {
     flex: 1,
-    backgroundColor: "#04150F",
+    backgroundColor: theme.background,
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -261,10 +266,10 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: theme.card,
   },
   headerTitle: {
-    color: "#DFFFEF",
+    color: theme.text,
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: 0.2,
@@ -286,8 +291,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: "rgba(242,201,76,0.25)",
-    backgroundColor: "rgba(61,48,13,0.95)",
+    borderColor: theme.card,
+    backgroundColor: theme.card,
   },
   successPillText: {
     color: "#F2C94C",
@@ -296,7 +301,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   subtext: {
-    color: "#8FA69A",
+    color: theme.textSecondary,
     fontSize: 12,
     marginTop: 8,
     fontWeight: "500",
@@ -307,24 +312,24 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   orderId: {
-    color: "#DFFFEF",
+    color: theme.text,
     fontSize: 32,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   orderDate: {
     marginTop: 4,
-    color: "#8FA69A",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "500",
   },
 
   card: {
-    backgroundColor: "#0A241B",
+    backgroundColor: theme.card,
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.03)",
+    borderColor: theme.border,
     marginBottom: 18,
   },
   cardHeaderRow: {
@@ -336,7 +341,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 12,
-    backgroundColor: "#173228",
+    backgroundColor: theme.inputBackground,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
@@ -345,26 +350,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionLabel: {
-    color: "#5E7A6E",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.1,
     marginBottom: 5,
   },
   addressTitle: {
-    color: "#E6FFF4",
+    color: theme.text,
     fontSize: 17,
     fontWeight: "700",
     marginBottom: 4,
   },
   addressLine: {
-    color: "#8CA69A",
+    color: theme.textSecondary,
     fontSize: 13,
     lineHeight: 19,
   },
 
   groupLabel: {
-    color: "#6E8A7F",
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.2,
@@ -373,11 +378,11 @@ const styles = StyleSheet.create({
   },
 
   itemCard: {
-    backgroundColor: "#0A241B",
+    backgroundColor: theme.card,
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.03)",
+    borderColor: theme.border,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -394,28 +399,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    color: "#E6FFF4",
+    color: theme.text,
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 4,
   },
   itemQty: {
-    color: "#80958B",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "500",
   },
   itemPrice: {
-    color: "#DFFFEF",
+    color: theme.text,
     fontSize: 14,
     fontWeight: "700",
   },
 
   summaryCard: {
-    backgroundColor: "#0A241B",
+    backgroundColor: theme.card,
     borderRadius: 22,
     padding: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.03)",
+    borderColor: theme.border,
     marginTop: 6,
     marginBottom: 18,
   },
@@ -426,21 +431,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   summaryLabel: {
-    color: "#8AA196",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "500",
   },
   summaryValue: {
-    color: "#E6FFF4",
+    color: theme.text,
     fontSize: 13,
     fontWeight: "700",
   },
   discountValue: {
-    color: "#38F2B2",
+    color: theme.border,
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: theme.card,
     marginVertical: 8,
   },
   totalRow: {
@@ -450,20 +455,20 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   totalLabel: {
-    color: "#8AA196",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 1.1,
   },
   totalValue: {
-    color: "#38F2B2",
+    color: theme.border,
     fontSize: 28,
     fontWeight: "900",
   },
 
   downloadBtn: {
     borderRadius: 14,
-    shadowColor: "#38F2B2",
+    shadowColor: theme.border,
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 8 },
@@ -477,7 +482,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   downloadText: {
-    color: "#07261B",
+    color: theme.background,
     fontSize: 15,
     fontWeight: "800",
   },

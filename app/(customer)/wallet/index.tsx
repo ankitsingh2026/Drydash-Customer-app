@@ -22,7 +22,8 @@ import type {
 } from "../../../types/wallet.types";
 
 export default function WalletPage() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
   const router = useRouter();
 
   //  animation
@@ -274,7 +275,7 @@ export default function WalletPage() {
               // onPress={handleTopUpWithPhonePe}
               onPress={handleTopUpWithPayU}
             >
-              <Plus size={16} color="#000" />
+              <Plus size={16} color={theme.background} />
               <Text style={styles.topUpText}>Top Up (PhonePe)</Text>
             </TouchableOpacity>
 
@@ -363,7 +364,7 @@ export default function WalletPage() {
 
 /* ================= STYLES ================= */
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   root: { flex: 1 },
 
   header: {
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
 
   topUpText: {
     fontWeight: "900",
-    color: "#000",
+    color: theme.background,
     fontSize: 14,
   },
 

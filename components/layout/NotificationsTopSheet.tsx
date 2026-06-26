@@ -48,7 +48,7 @@ function withOpacity(color: string, opacity: number): string {
 }
 
 /* ---------- Meta ---------- */
-function getMeta(kind: string | undefined, primary: string) {
+function getMeta(kind: string | undefined, primary: string, theme: any) {
   switch (kind) {
     case "order_created":
     case "order_updated":
@@ -61,20 +61,20 @@ function getMeta(kind: string | undefined, primary: string) {
     case "pickup_updated":
       return {
         icon: "bicycle-outline" as const,
-        color: "#06B6D4",
-        softBg: "rgba(6,182,212,0.14)",
+        color: theme.background,
+        softBg: theme.card,
       };
     case "wallet":
       return {
         icon: "wallet-outline" as const,
-        color: "#8B5CF6",
-        softBg: "rgba(139,92,246,0.14)",
+        color: theme.textSecondary,
+        softBg: theme.card,
       };
     case "offer":
       return {
         icon: "pricetag-outline" as const,
-        color: "#F59E0B",
-        softBg: "rgba(245,158,11,0.14)",
+        color: "#FFD600",
+        softBg: theme.card,
       };
     default:
       return {
@@ -94,7 +94,8 @@ export default function NotificationsTopSheet({
   visible: boolean;
   onClose: () => void;
 }) {
-  const { theme, isDark } = useTheme();
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { notifications, markAllRead, markRead } = useNotifications();
@@ -136,8 +137,8 @@ export default function NotificationsTopSheet({
 
   if (!visible) return null;
 
-  const divider = isDark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.07)";
-  const subtleHl = isDark ? "rgba(255,255,255,0.035)" : "rgba(0,0,0,0.022)";
+  const divider = isDark ? theme.card : theme.card;
+  const subtleHl = isDark ? theme.card : theme.card;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -146,7 +147,7 @@ export default function NotificationsTopSheet({
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            { backgroundColor: "rgba(0,0,0,0.75)", opacity: backdrop },
+            { backgroundColor: theme.backdrop, opacity: backdrop },
           ]}
         />
       </Pressable>
@@ -193,14 +194,14 @@ export default function NotificationsTopSheet({
         {/* List */}
         <ScrollView>
           {notifications.length === 0 ? (
-            <Text style={{color:"#fff", textAlign: "center", marginTop: 40 }}>
+            <Text style={{color:theme.text, textAlign: "center", marginTop: 40 }}>
               No notifications
             </Text>
           ) : (
             notifications
               .filter((n) => n.unread)
               .map((n, idx) => {
-                const meta = getMeta(n.kind, theme.primary);
+                const meta = getMeta(n.kind, theme.primary, theme);
 
                 return (
                   <TouchableOpacity
@@ -224,7 +225,7 @@ export default function NotificationsTopSheet({
                         { backgroundColor: meta.softBg },
                       ]}
                     >
-                      <Ionicons name={meta.icon} size={20} color="#fff" />
+                      <Ionicons name={meta.icon} size={20} color={theme.text} />
                     </View>
 
                     <View style={{ flex: 1 }}>
@@ -232,13 +233,13 @@ export default function NotificationsTopSheet({
                         {n.title}
                       </Text>
                       {!!n.subtitle && (
-                        <Text style={{ color: "#C5D2E8" }}>
+                        <Text style={{ color: theme.gray }}>
                           {n.subtitle}
                         </Text>
                       )}
                       <Text
                         style={{
-                          color: "#C5D2E8",
+                          color: theme.gray,
                           fontSize: 11,
                           marginTop: 2,
                         }}
@@ -258,7 +259,7 @@ export default function NotificationsTopSheet({
 
 /* ---------- Styles ---------- */
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   sheet: {
     position: "absolute",
     height: SHEET_HEIGHT,

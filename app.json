@@ -13,6 +13,7 @@
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
+        // "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
         "googleMapsApiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
       },
       "bundleIdentifier": "com.drydash.customer",
@@ -36,6 +37,7 @@
       ],
       "config": {
         "googleMaps": {
+          // "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
           "apiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
         }
       },

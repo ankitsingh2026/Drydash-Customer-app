@@ -29,7 +29,8 @@ type TabBarProps = {
 let hasAutoLocationFetched = false;
 
 export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
-    const { theme } = useTheme();
+    const { colors, theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
   const { unreadCount, refreshNotifications } = useNotifications();
   const isFetchingRef = useRef(false);
@@ -87,7 +88,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         state: g?.region || "",
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
-      };
+      } as any;
 
       setSelectedAddress(currentLocAddress);
       setLocationText(labelStr || "Current Location");
@@ -214,13 +215,13 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   const getServiceColor = () => {
     if (serviceLoading) return "#2FE6A6";
     const bestSlot = getBestSlot();
-    if (bestSlot) return "#2FE6A6";
+    if (bestSlot) return theme.primary;
     
     if (serviceData?.message === "Zone not configured" || !serviceData?.data?.zoneInfo) {
-      return "#FF6B6B";
+      return theme.error;
     }
 
-    return "#FFA500";          
+    return theme.warning;          
   };
 
   // Get text for non‑slot cases
@@ -396,7 +397,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             onPress={handleBellPress}
             style={styles.iconBtn}
           >
-            <Bell size={18} color="#E6FFF7" />
+            <Bell size={18} style={styles.bellIcon} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>
@@ -425,9 +426,9 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   container: {
-    backgroundColor: "#031612",
+    backgroundColor: theme.background,
     paddingHorizontal: 16,
     paddingBottom: 2,
   },
@@ -447,6 +448,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     letterSpacing: 0.5,
+    color: isDark ? theme.textSecondary : theme.text,
   },
   locationRow: {
     flexDirection: "row",
@@ -455,7 +457,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: "#8FB3A8",
+    color: theme.textSecondary,
     fontWeight: "500",
     maxWidth: 200,
   },
@@ -463,49 +465,52 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#0D1F1C",
+    backgroundColor: theme.surface,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#1A3330",
-    shadowColor: "#2FE6A6",
+    borderColor: theme.border,
+    shadowColor: theme.accent,
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 6,
   },
   badge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 3,
+    right: 4,
     minWidth: 14,
     height: 14,
     borderRadius: 7,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EF4444",
+    backgroundColor: theme.error,
   },
   badgeText: {
-    color: "#fff",
+    color: '#FFFFFF',
     fontSize: 8,
     fontWeight: "800",
   },
   deliveryLabel: {
     fontSize: 12,
-    color: "#8FB3A8",
+    color: theme.textSecondary,
     fontWeight: "500",
   },
   deliveryTime: {
     fontSize: 16,
-    color: "#2FE6A6",
+    color: theme.subText,
     fontWeight: "600",
   },
   deliverySubTime: {
     fontSize: 14,
-    color: "#2FE6A6",
+    color: theme.subText,
     fontWeight: "600",
   },
   deliveryHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
   },
+  bellIcon: {
+    color: theme.text
+  }
 });

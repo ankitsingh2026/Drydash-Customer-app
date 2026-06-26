@@ -1,3 +1,4 @@
+import { useTheme } from "@/theme/useTheme";
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -41,40 +42,16 @@ export function showAlert(config: AlertConfig) {
 
 const VARIANTS = {
   success: {
-    card: '#021F1A',           // matches app bg
-    iconBg: '#00E1A2',         // your primary
-    iconColor: '#001714',      // deep bg on icon
     iconSymbol: '✓',
-    primaryBg: '#0A3D30',
-    primaryText: '#00E1A2',
-    borderLeft: '#00E1A2',
   },
   warning: {
-    card: '#1F1A02',
-    iconBg: '#D4870A',
-    iconColor: '#ffffff',
     iconSymbol: '!',
-    primaryBg: '#2E2205',
-    primaryText: '#F5A623',
-    borderLeft: '#D4870A',
   },
   info: {
-    card: '#071E1A',
-    iconBg: '#1E3A34',         // your border color as bg
-    iconColor: '#22EBAB',      // your subText
     iconSymbol: 'i',
-    primaryBg: '#102B25',      // your card color
-    primaryText: '#22EBAB',
-    borderLeft: '#22EBAB',
   },
   error: {
-    card: '#180808',
-    iconBg: '#B71C1C',
-    iconColor: '#FFB4B4',
     iconSymbol: '!',
-    primaryBg: '#3D0000',
-    primaryText: '#FF6B6B',
-    borderLeft: '#FF3B30',
   },
 } as const;
 
@@ -93,7 +70,55 @@ function AlertCard({
   onDismiss,
   onClose,
 }: AlertCardProps) {
-  const v = VARIANTS[type];
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark); // ✅ FIX
+
+  const v = (() => {
+    switch (type) {
+      case 'success':
+        return {
+          card: theme.background,
+          borderLeft: theme.background,
+          iconBg: theme.background,
+          iconColor: theme.background,
+          primaryBg: theme.background,
+          primaryText: theme.background,
+          iconSymbol: VARIANTS.success.iconSymbol,
+        };
+      case 'warning':
+        return {
+          card: theme.card,
+          borderLeft: theme.border,
+          iconBg: '#D4870A',
+          iconColor: theme.text,
+          primaryBg: theme.border,
+          primaryText: '#F5A623',
+          iconSymbol: VARIANTS.warning.iconSymbol,
+        };
+      case 'info':
+        return {
+          card: theme.background,
+          borderLeft: theme.card,
+          iconBg: theme.card,
+          iconColor: theme.card,
+          primaryBg: theme.background,
+          primaryText: theme.card,
+          iconSymbol: VARIANTS.info.iconSymbol,
+        };
+      case 'error':
+      default:
+        return {
+          card: theme.card,
+          borderLeft: '#FF3B30',
+          iconBg: '#B71C1C',
+          iconColor: '#FFB4B4',
+          primaryBg: '#3D0000',
+          primaryText: '#FF6B6B',
+          iconSymbol: VARIANTS.error.iconSymbol,
+        };
+    }
+  })();
+
   const slideY = useRef(new Animated.Value(-20)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -170,14 +195,18 @@ interface AlertState extends AlertConfig {
 let _idCounter = 0;
 
 export function AlertProvider({ children }: { children: React.ReactNode }) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+
   const [alerts, setAlerts] = useState<AlertState[]>([]);
 
   useEffect(() => {
     _showAlert = (config: AlertConfig) => {
       const id = ++_idCounter;
       setAlerts(prev => [...prev, { ...config, id }]);
+      const isActionable = !!(config.primaryLabel || config.onPrimary);
       const autoDuration = config.duration ?? (
-        config.type === 'error' || config.type === 'warning' ? 3000 : 2000
+        isActionable ? 0 : (config.type === 'error' || config.type === 'warning' ? 3000 : 2000)
       );
       if (autoDuration > 0) {
         setTimeout(() => removeAlert(id), autoDuration);
@@ -206,7 +235,10 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
 }
 // ADD this component at the bottom of CustomAlert.tsx, before the styles:
 export function AlertOverlay() {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [alerts, setAlerts] = useState<AlertState[]>([]);
+
 
   useEffect(() => {
     const prev = _showAlert;
@@ -216,8 +248,9 @@ export function AlertOverlay() {
       const id = ++_idCounter;
       setAlerts(p => [...p, { ...config, id }]);
 
+      const isActionable = !!(config.primaryLabel || config.onPrimary);
       const autoDuration = config.duration ?? (
-        config.type === 'error' || config.type === 'warning' ? 3000 : 0
+        isActionable ? 0 : (config.type === 'error' || config.type === 'warning' ? 3000 : 2000)
       );
       if (autoDuration > 0) {
         setTimeout(() => setAlerts(p => p.filter(a => a.id !== id)), autoDuration);
@@ -238,32 +271,33 @@ export function AlertOverlay() {
 }
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   overlay: {
     position: 'absolute',
-    top: 36,
+    top: 60,
     left: 0,
     right: 0,
     bottom: 0,
-    alignItems: 'center',      
+    // justifyContent: 'center',  
+    alignItems: 'center',
     zIndex: 9999,
     pointerEvents: 'box-none',
     gap: 8,
   },
   card: {
-    width: '90%',            
-    maxWidth: 400,             
+    width: '90%',
+    maxWidth: 400,
     borderRadius: 16,
     borderLeftWidth: 3,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    shadowColor: '#00E1A2',
+    shadowColor: theme.background,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 12,
     borderWidth: 1,
-    borderColor: '#1E3A34',
+    borderColor: theme.card,
   },
   headerRow: {
     flexDirection: 'row',
@@ -284,7 +318,7 @@ const styles = StyleSheet.create({
   },
   titleText: {
     flex: 1,
-    color: '#DEE5FF',          // your theme.text
+    color: theme.text,          // your theme.text
     fontSize: 15,
     fontWeight: '700',
     lineHeight: 21,
@@ -302,7 +336,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   messageText: {
-    color: '#7FA99A',
+    color: theme.textSecondary,
     fontSize: 13,
     marginTop: 6,
     marginLeft: 48,

@@ -52,8 +52,9 @@ export default function ProductServicePopup({
   product,
   onOpenCart,
 }: ProductServicePopupProps) {
-  const { theme } = useTheme();
-  const cart = useCart();
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
+    const cart = useCart();
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const scrollY = useRef(0);
   const onCloseRef = useRef(onClose);
@@ -219,7 +220,7 @@ export default function ProductServicePopup({
          <View style={styles.header}>
             <View style={styles.dragIndicator} />
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <X size={16} color="#eef3f2" strokeWidth={2.5} />
+              <X size={16} color={theme.text} strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         <TouchableWithoutFeedback onPress={onClose}>
@@ -255,11 +256,11 @@ export default function ProductServicePopup({
             />
 
             <TouchableOpacity style={styles.cartIconTop}>
-              <ShoppingBag size={16} color="#8AADA8" />
+              <ShoppingBag size={16} color={theme.textSecondary} />
             </TouchableOpacity>
 
             <View style={styles.premiumBadge}>
-              <Star size={12} color="#4af4d5" fill="#56BFAB" />
+              <Star size={12} color={theme.primary} fill={theme.primary} />
               <Text style={styles.premiumText}>
                 {product.category.toUpperCase()} SERVICE
               </Text>
@@ -299,7 +300,7 @@ export default function ProductServicePopup({
               {/* Section label */}
               <View style={styles.processLabelRow}>
                 <LinearGradient
-                  colors={["#56BFAB", "#00614D"]}
+                  colors={[theme.primary, theme.primary]}
                   style={styles.processAccentBar}
                 />
                 <Text style={styles.processSectionTitle}>The Process</Text>
@@ -341,7 +342,7 @@ export default function ProductServicePopup({
                 activeOpacity={0.85}
               >
                 <LinearGradient
-                  colors={["#56BFAB", "#00A878", "#006B50"]}
+                  colors={[theme.primary, theme.primary, theme.primary]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.addBtn}
@@ -355,14 +356,14 @@ export default function ProductServicePopup({
                   onPress={() => cart.decreaseQty(product.id)}
                   style={styles.qtyBtn}
                 >
-                  <Minus size={15} color="#56BFAB" strokeWidth={2.5} />
+                  <Minus size={15} color={theme.primary} strokeWidth={2.5} />
                 </TouchableOpacity>
                 <Text style={styles.qtyText}>{qty}</Text>
                 <TouchableOpacity
                   onPress={handleIncrement}
                   style={styles.qtyBtn}
                 >
-                  <Plus size={15} color="#56BFAB" strokeWidth={2.5} />
+                  <Plus size={15} color={theme.primary} strokeWidth={2.5} />
                 </TouchableOpacity>
               </View>
             )}
@@ -477,10 +478,12 @@ function ProcessStep({
   title: string;
   description: string;
 }) {
-  return (
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
+      return (
     <View style={styles.stepRow}>
       <LinearGradient
-        colors={["#56BFAB", "#005B47"]}
+        colors={[theme.primary, theme.primary]}
         style={styles.stepNumCircle}
       >
         <Text style={styles.stepNumText}>{num}</Text>
@@ -493,14 +496,14 @@ function ProcessStep({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
+    backgroundColor: theme.card,
     justifyContent: "flex-end",
   },
   container: {
-    backgroundColor: "#0D1F1C",
+    backgroundColor: theme.background,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     maxHeight: SCREEN_HEIGHT * 0.9,
@@ -521,7 +524,7 @@ const styles = StyleSheet.create({
   dragIndicator: {
     width: 40,
     height: 4,
-    backgroundColor: "#2A4040",
+    backgroundColor: theme.border,
     borderRadius: 2,
   },
   closeBtn: {
@@ -531,7 +534,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#1A2F2C",
+    backgroundColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
     transform: [{ translateY: -16 }],
@@ -560,10 +563,10 @@ const styles = StyleSheet.create({
     right: 14,
     width: 36,
     height: 36,
-    backgroundColor: "rgba(13,31,28,0.8)",
+    backgroundColor: theme.card,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(86,191,171,0.2)",
+    borderColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
@@ -582,9 +585,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(86,191,171,0.18)",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: "rgba(99, 239, 213, 0.35)",
+    borderColor: theme.card,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
@@ -592,7 +595,7 @@ const styles = StyleSheet.create({
   premiumText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#55f1d4",
+    color: theme.textSecondary,
     letterSpacing: 1,
   },
   content: {
@@ -601,7 +604,7 @@ const styles = StyleSheet.create({
   productTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: "#E8F5F2",
+    color: theme.text,
     marginBottom: 8,
     lineHeight: 32,
   },
@@ -614,10 +617,10 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#56BFAB",
+    color: theme.primary,
   },
   unitBadge: {
-    backgroundColor: "rgba(86,191,171,0.15)",
+    backgroundColor: theme.card,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
@@ -625,11 +628,11 @@ const styles = StyleSheet.create({
   unitText: {
     fontSize: 11,
     fontWeight: "600",
-    color: "#56BFAB",
+    color: theme.primary,
   },
   productDesc: {
     fontSize: 14,
-    color: "#5E8A84",
+    color: theme.textSecondary,
     lineHeight: 21,
     marginBottom: 22,
   },
@@ -647,7 +650,7 @@ const styles = StyleSheet.create({
   processSectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#E8F5F2",
+    color: theme.text,
   },
   steps: {
     gap: 18,
@@ -665,14 +668,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    shadowColor: "#005B47",
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 6,
   },
   stepNumText: {
-    color: "#fff",
+    color: theme.text,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -683,7 +686,7 @@ const styles = StyleSheet.create({
   stepTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#D4EFEA",
+    color: theme.text,
     marginBottom: 4,
   },
   stepDesc: {
@@ -693,7 +696,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "#1E3D37",
+    backgroundColor: theme.card,
     marginHorizontal: 20,
     marginVertical: 16,
   },
@@ -714,7 +717,7 @@ const styles = StyleSheet.create({
   totalPrice: {
     fontSize: 25,
     fontWeight: "800",
-    color: "#E8F5F2",
+    color: theme.text,
     lineHeight: 36,
   },
   unitHint: {
@@ -725,7 +728,7 @@ const styles = StyleSheet.create({
   addBtnWrapper: {
     borderRadius: 14,
     overflow: "hidden",
-    shadowColor: "#00A878",
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 14,
@@ -738,7 +741,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#fff",
+    color: theme.text,
   },
   qtyContainer: {
     flexDirection: "row",
@@ -750,15 +753,15 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(86,191,171,0.3)",
-    backgroundColor: "#152B27",
+    borderColor: theme.card,
+    backgroundColor: theme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   qtyText: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#E8F5F2",
+    color: theme.text,
     minWidth: 32,
     textAlign: "center",
   },

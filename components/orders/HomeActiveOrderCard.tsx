@@ -1,4 +1,4 @@
-import { DarkTheme } from "@/app/(customer)/order-tracking";
+import { useTheme } from "@/context/ThemeContext";
 import RazorpayWebView from "@/app/(customer)/orders/RazorpayWebView";
 import OrderStatusBadge from "@/components/orders/OrderStatusBadge";
 import { confirmCouponApi } from "@/features/coupons/coupons.api";
@@ -42,10 +42,8 @@ type HomeActiveOrderCardProps = {
   onRefresh?: () => void;
 };
 
-const ACCENT = "#22EBAB";
-const BORDER = "#1A3330";
-const SURFACE = "#00D9A3";
-const MUTED = "#6B7280";
+// Theme values must be derived inside the component (no module-scope `theme`).
+
 
 const normalize = (status?: string) =>
   String(status ?? "").trim().toLowerCase();
@@ -63,13 +61,13 @@ const formatCardTime = (value?: string) => {
   });
 };
 
-const statusMeta = (status?: string, isPaid?: boolean) => {
+const statusMeta = (theme: any, status?: string, isPaid?: boolean) => {
   const s = normalizeKey(status);
 
   if (s === "delivered") {
     return {
       label: "Order Completed",
-      accent: ACCENT,
+      accent: theme.primary,
       icon: "checkmark-done-outline" as const,
       title: "Delivered Successfully",
       subtitle: "Your order has been successfully delivered to your doorstep.",
@@ -81,7 +79,7 @@ const statusMeta = (status?: string, isPaid?: boolean) => {
   if (s === "cancelled" || s === "canceled" || s === "deleted") {
     return {
       label: "Order Cancelled",
-      accent: "#EF4444",
+      accent: "#FF6B6B",
       icon: "close-circle-outline" as const,
       title: "This order was cancelled",
       subtitle: "You can book a new pickup anytime.",
@@ -93,7 +91,7 @@ const statusMeta = (status?: string, isPaid?: boolean) => {
   if (s === "intransit") {
     return {
       label: "In Transit",
-      accent: ACCENT,
+      accent: theme.primary,
       icon: "bicycle-outline" as const,
       title: "Your pickup has been completed",
       subtitle: "Your items are on the way to our facility.",
@@ -109,7 +107,7 @@ const statusMeta = (status?: string, isPaid?: boolean) => {
   ) {
     return {
       label: "Out For Delivery",
-      accent: ACCENT,
+      accent: theme.primary,
       icon: "bicycle-outline" as const,
       title: "Your order is on the way",
       subtitle: isPaid ? "Sit back and relax, your order will reach you shortly." : "Complete payment to continue delivery.",
@@ -120,7 +118,7 @@ const statusMeta = (status?: string, isPaid?: boolean) => {
 
   return {
     label: "Active Order",
-    accent: ACCENT,
+    accent: theme.primary,
     icon: "time-outline" as const,
     title: "Processing your order",
     subtitle: isPaid ? "Your items are being processed." : "Pay now to choose delivery slot.",
@@ -135,6 +133,9 @@ export default function HomeActiveOrderCard({
   onClose,
   onRefresh,
 }: HomeActiveOrderCardProps) {
+  const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
+  
   const { user } = useAuth();
 
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -142,7 +143,7 @@ export default function HomeActiveOrderCard({
   const [razorpayData, setRazorpayData] = useState<any>(null);
   const [archiveLoading, setArchiveLoading] = useState(false);
 
-  const meta = statusMeta(order.status, order.isPaid);
+  const meta = statusMeta(theme, order.status, order.isPaid);
   const amount = order.totalAmount ?? order.price ?? 0;
   const itemCount = Array.isArray(order.items) ? order.items.length : 0;
   const statusKey = normalizeKey(order.status);
@@ -291,9 +292,9 @@ export default function HomeActiveOrderCard({
               style={styles.closeFloatingBtn}
             >
               {archiveLoading ? (
-                <ActivityIndicator size="small" color="#88A79D" />
+                <ActivityIndicator size="small" color={theme.textSecondary} />
               ) : (
-                <Ionicons name="close" size={22} color="#88A79D" />
+                <Ionicons name="close" size={22} color={theme.textSecondary} />
               )}
             </TouchableOpacity>
           ) : null}
@@ -309,7 +310,7 @@ export default function HomeActiveOrderCard({
                 {!isCancelled ? (
                   <OrderStatusBadge
                     label={order.isPaid ? "Paid" : "Payment Pending"}
-                    accent={order.isPaid ? ACCENT : "#F59E0B"}
+                    accent={order.isPaid ? theme.primary : "#FFD600"}
                     icon={order.isPaid ? "checkmark-circle-outline" : "wallet-outline"}
                   />
                 ) : null}
@@ -320,7 +321,7 @@ export default function HomeActiveOrderCard({
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
                     {/* {archiveLoading ? (
-                      <ActivityIndicator size="small" color={ACCENT} />
+                      <ActivityIndicator size="small" color={theme.primary} />
                     ) : (
                       <Text style={styles.dismissText}>DISMISS</Text>
                     )} */}
@@ -330,7 +331,7 @@ export default function HomeActiveOrderCard({
                     style={styles.chatBtnHeader}
                     onPress={() => router.push("/(customer)/(assistant)/chat")}
                   >
-                    <Ionicons name="chatbubble-ellipses" size={22} color={SURFACE} />
+                    <Ionicons name="chatbubble-ellipses" size={22} color={theme.background} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -340,7 +341,7 @@ export default function HomeActiveOrderCard({
 
             {meta.subtitle && !isOutForDelivery && !isInTransit && !isDelivered ? (
               <View style={styles.subtitleAboveRow}>
-                <Ionicons name="flash" size={12} color={ACCENT} />
+                <Ionicons name="flash" size={12} color={theme.primary} />
                 <Text style={styles.subtitleAbove}>
                   {meta.subtitle.toUpperCase()}
                 </Text>
@@ -360,7 +361,7 @@ export default function HomeActiveOrderCard({
             {isOutForDelivery ? (
               <>
                 <View style={styles.riderRow}>
-                  <Ionicons name="bicycle-outline" size={28} color={ACCENT} />
+                  <Ionicons name="bicycle-outline" size={28} color={theme.primary} />
                   <Text style={styles.riderText}>
                     <Text style={styles.riderName}>{riderName}</Text>
                     {" on  the way with\nyour delivery"}
@@ -371,7 +372,7 @@ export default function HomeActiveOrderCard({
               <>
                 {/* <Text style={styles.title}>{meta.title}</Text> */}
                 <View style={[styles.riderRow, { marginTop: 6 }]}>
-                  <Ionicons name="checkmark-circle-outline" size={26} color={ACCENT} />
+                  <Ionicons name="checkmark-circle-outline" size={26} color={theme.primary} />
                   <Text style={styles.riderText}>
                     <Text style={styles.riderName}>{pickupRiderName}</Text>
                     {" has successfully picked up your items."}
@@ -399,11 +400,11 @@ export default function HomeActiveOrderCard({
                 <>
                   <View style={styles.reviewWrap}>
                     <View style={styles.reviewRow}>
-                      <Ionicons name="star" size={22} color={ACCENT} />
-                      <Ionicons name="star" size={22} color={ACCENT} />
-                      <Ionicons name="star" size={22} color={ACCENT} />
-                      <Ionicons name="star" size={22} color={ACCENT} />
-                      <Ionicons name="star-outline" size={22} color={ACCENT} />
+                      <Ionicons name="star" size={22} color={theme.primary} />
+                      <Ionicons name="star" size={22} color={theme.primary} />
+                      <Ionicons name="star" size={22} color={theme.primary} />
+                      <Ionicons name="star" size={22} color={theme.primary} />
+                      <Ionicons name="star-outline" size={22} color={theme.primary} />
                     </View>
                     <Text style={styles.reviewCta}>{meta.actionText}</Text>
                   </View>
@@ -411,7 +412,7 @@ export default function HomeActiveOrderCard({
                     style={styles.chatBtn}
                     onPress={() => router.push("/(customer)/(assistant)/chat")}
                   >
-                    <Ionicons name="chatbubble-ellipses" size={20} color={SURFACE} />
+                    <Ionicons name="chatbubble-ellipses" size={20} color={theme.background} />
                   </TouchableOpacity>
                 </>
               ) : !order.isPaid ? (
@@ -422,11 +423,11 @@ export default function HomeActiveOrderCard({
                   style={[styles.primaryCta, { opacity: paymentLoading ? 0.7 : 1 }]}
                 >
                   {paymentLoading ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={theme.background} />
                   ) : (
                     <>
                       <Text style={styles.primaryCtaText}>{meta.actionText}</Text>
-                      <Ionicons name="arrow-forward" size={16} color="#000" />
+                      <Ionicons name="arrow-forward" size={16} color={theme.background} />
                     </>
                   )}
                 </TouchableOpacity>
@@ -450,7 +451,7 @@ export default function HomeActiveOrderCard({
             email={email}
             phone={phone}
             name={name}
-            themeColor={ACCENT}
+            themeColor={theme.primary}
             onSuccess={handlePaymentSuccess}
             onFailure={handlePaymentFailure}
             onCancel={handlePaymentCancel}
@@ -461,12 +462,12 @@ export default function HomeActiveOrderCard({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   card: {
-    backgroundColor: "#052420",
+    backgroundColor: theme.background,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.card,
     overflow: "hidden",
     position: "relative",
   },
@@ -479,9 +480,9 @@ const styles = StyleSheet.create({
    // borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-  //  backgroundColor: "rgba(10, 35, 30, 0.9)",
+  //  backgroundColor: theme.card,
   //  borderWidth: 1,
-  //  borderColor: "#24463F",
+  //  borderColor: theme.card,
     zIndex: 5,
     elevation: 6,
   },
@@ -518,7 +519,7 @@ const styles = StyleSheet.create({
   },
 
   subtitle: {
-    color: "#6D8F80",
+    color: theme.textSecondary,
     fontSize: 14,
     lineHeight: 20,
     marginTop: -2,
@@ -545,9 +546,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#16332E",
+    backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -555,11 +556,11 @@ const styles = StyleSheet.create({
     minHeight: 22,
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: "#37655B",
+    borderColor: theme.border,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(10, 35, 30, 0.7)",
+    backgroundColor: theme.card,
   },
   countPillText: {
     color: "#9EE8D1",
@@ -572,11 +573,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: theme.card,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: "#071A17",
+    backgroundColor: theme.background,
   },
   pillText: {
     color: "#A7B8B2",
@@ -586,7 +587,7 @@ const styles = StyleSheet.create({
 
 
   primaryCtaText: {
-    color: "#000",
+    color: theme.background,
     fontWeight: "900",
     fontSize: 16,
   },
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: ACCENT,
+    shadowColor: theme.primary,
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 4,
@@ -623,7 +624,7 @@ const styles = StyleSheet.create({
 
   // ADD these new styles:
   dismissText: {
-    color: ACCENT,
+    color: theme.primary,
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 0.5,
@@ -640,27 +641,27 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   subtitleAbove: {
-    color: ACCENT,
+    color: theme.primary,
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 0.4,
   },
   riderName: {
     fontWeight: "600",
-    color: "#FFFFFF",
+    color: theme.text,
     fontSize: 13,
     textTransform: "uppercase"
   },
 
   // CHANGE these existing styles:
   riderText: {
-    color: "#7DA79D",
+    color: theme.textSecondary,
     fontSize: 14,        // was 16
     lineHeight: 16,      // was 20
     flex: 1,
   },
   title: {
-    color: "#FFFFFF",
+    color: theme.text,
     fontSize: 20,        // was 20
     lineHeight: 32,      // was 36
     fontWeight: "600",
@@ -675,7 +676,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 22,
-    backgroundColor: ACCENT,
+    backgroundColor: theme.primary,
     alignSelf: "flex-start",
   },
   midRow: {

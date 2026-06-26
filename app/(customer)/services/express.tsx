@@ -181,7 +181,7 @@ const makeStyles = (theme: any) =>
       width: 40,
       height: 40,
       borderRadius: 12,
-      backgroundColor: theme.card ?? "#1e2e2b",
+      backgroundColor: theme.card ?? theme.card,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -200,7 +200,7 @@ const makeStyles = (theme: any) =>
       letterSpacing: -0.5,
     },
     heroSub: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 13,
       marginTop: 6,
       textAlign: "center",
@@ -236,7 +236,7 @@ const makeStyles = (theme: any) =>
       borderColor: theme.primary + "40",
     },
     timerLabel: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 12,
       fontWeight: "600",
       textTransform: "uppercase",
@@ -252,7 +252,7 @@ const makeStyles = (theme: any) =>
       letterSpacing: -1,
     },
     timerUnit: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 10,
       fontWeight: "600",
       letterSpacing: 0.5,
@@ -266,7 +266,7 @@ const makeStyles = (theme: any) =>
     },
     comingSoonCard: {
       marginHorizontal: 16,
-      backgroundColor: theme.card ?? "#1a2e2a",
+      backgroundColor: theme.card ?? theme.card,
       borderRadius: 20,
       padding: 20,
       marginBottom: 24,
@@ -280,7 +280,7 @@ const makeStyles = (theme: any) =>
       marginBottom: 8,
     },
     cardDesc: {
-      color: theme.textSecondary ?? "#7a9e97",
+      color: theme.textSecondary ?? theme.textSecondary,
       fontSize: 13,
       lineHeight: 20,
       marginBottom: 16,
@@ -291,7 +291,7 @@ const makeStyles = (theme: any) =>
       paddingVertical: 13,
       alignItems: "center",
     },
-    notifyBtnText: { color: "#000", fontWeight: "700", fontSize: 14, letterSpacing: 0.3 },
+    notifyBtnText: { color: theme.background, fontWeight: "700", fontSize: 14, letterSpacing: 0.3 },
     sectionTitle: {
       color: theme.text,
       fontSize: 16,
@@ -327,5 +327,5 @@ const makeStyles = (theme: any) =>
       fontWeight: "700",
       marginBottom: 3,
     },
-    stepDesc: { color: theme.textSecondary ?? "#7a9e97", fontSize: 13 },
+    stepDesc: { color: theme.textSecondary ?? theme.textSecondary, fontSize: 13 },
   });

@@ -76,6 +76,7 @@ export default function ServiceDetail() {
     mode?: string;
   }>();
   const { theme } = useTheme();
+  const styles = makeStyles(theme);
   const cart = useCart();
   const insets = useSafeAreaInsets();
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
@@ -269,7 +270,7 @@ export default function ServiceDetail() {
     }
   }, [service, layoutReady]);
 
-/* ---------- EDIT MODE: FETCH EXISTING ITEMS AND LOAD INTO CART ---------- */
+  /* ---------- EDIT MODE: FETCH EXISTING ITEMS AND LOAD INTO CART ---------- */
   // In edit mode, we fetch existing pickup items and load them into the cart
   // so users can see what was previously selected and modify quantities
   useEffect(() => {
@@ -291,13 +292,13 @@ export default function ServiceDetail() {
         if (details?.items?.length) {
           // Clear cart first to avoid duplicates
           cart.clear();
-          
+
           // Deduplicate items by itemId, summing quantities
           const deduped: Record<string, any> = {};
           details.items.forEach((item: any) => {
             const itemId = item.itemId?._id || item.itemId;
             if (!deduped[itemId]) {
-              deduped[itemId] = { 
+              deduped[itemId] = {
                 id: itemId,
                 title: item.label,
                 price: item.price,
@@ -308,7 +309,7 @@ export default function ServiceDetail() {
             }
             deduped[itemId].qty += item.quantity || 1;
           });
-          
+
           // Add each unique item to cart
           Object.values(deduped).forEach((item: any) => {
             if (item.id && item.qty > 0) {
@@ -372,7 +373,7 @@ export default function ServiceDetail() {
       ? error[activeTab.key]
       : null;
 
-const handleAddToCart = () => {
+  const handleAddToCart = () => {
     if (!pickupId) return;
     // Navigate back to order-tracking with a timestamp to force reload and fetch updated cart items
     router.replace({
@@ -446,7 +447,10 @@ const handleAddToCart = () => {
           pointerEvents="none"
         >
           <LinearGradient
-            colors={["#56BFAB", "#005B47"]}
+            colors={[
+              theme.isDark ? theme.primary : theme.tabColor,
+              theme.isDark ? theme.primary : theme.tabColor,
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
@@ -468,7 +472,7 @@ const handleAddToCart = () => {
                   {
                     color: labelAnims[i].interpolate({
                       inputRange: [0, 1],
-                      outputRange: [theme.subText, "#fff"],
+                      outputRange: [theme.subText, theme.text],
                     }),
                     fontWeight: active ? "800" : "600",
                   },
@@ -521,7 +525,7 @@ const handleAddToCart = () => {
       {/* Loading State */}
       {(isLoading || pickupLoading) && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#56BFAB" />
+          <ActivityIndicator size="large" color={theme.primary} />
           <Text style={[styles.loadingText, { color: theme.subText }]}>
             {pickupLoading
               ? "Loading pickup details..."
@@ -530,10 +534,10 @@ const handleAddToCart = () => {
         </View>
       )}
 
-{/* Error State */}
+      {/* Error State */}
       {(hasError || pickupError) && !(isLoading || pickupLoading) && (
         <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+          <Ionicons name="alert-circle-outline" size={48} color={"#FF6B6B"} />
           <Text style={[styles.errorText, { color: theme.text }]}>
             {pickupError || hasError}
           </Text>
@@ -557,7 +561,7 @@ const handleAddToCart = () => {
                       details.items.forEach((item: any) => {
                         const itemId = item.itemId?._id || item.itemId;
                         if (!deduped[itemId]) {
-                          deduped[itemId] = { 
+                          deduped[itemId] = {
                             id: itemId,
                             title: item.label,
                             price: item.price,
@@ -626,52 +630,52 @@ const handleAddToCart = () => {
                   style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}
                 >
                   {brokenImages.has(item.id) ? (
-                  <View
-                    style={[
-                      styles.imagePlaceholder,
-                      { backgroundColor: theme.card },
-                    ]}
-                  >
-                    <View style={styles.placeholderIconWrap}>
-                      <Text style={styles.placeholderEmoji}>
-                        {item.category === "Shoe Spa"
-                          ? "👟"
-                          : item.category === "Laundry"
-                            ? "👕"
-                            : item.category === "DryClean"
-                              ? "✨"
-                              : "🧺"}
+                    <View
+                      style={[
+                        styles.imagePlaceholder,
+                        { backgroundColor: theme.card },
+                      ]}
+                    >
+                      <View style={styles.placeholderIconWrap}>
+                        <Text style={styles.placeholderEmoji}>
+                          {item.category === "Shoe Spa"
+                            ? "👟"
+                            : item.category === "Laundry"
+                              ? "👕"
+                              : item.category === "DryClean"
+                                ? "✨"
+                                : "🧺"}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.placeholderLabel,
+                          { color: theme.subText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.title.split(" ")[0]}
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.placeholderLabel,
-                        { color: theme.subText },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {item.title.split(" ")[0]}
+                  ) : (
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.image}
+                      resizeMode="cover"
+                      onError={() =>
+                        setBrokenImages((prev) => new Set([...prev, item.id]))
+                      }
+                    />
+                  )}
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.itemTitle, { color: theme.text }]}>
+                      {item.title}
+                    </Text>
+                    <Text style={{ color: theme.subText, marginTop: 2 }}>
+                      ₹{item.price}
                     </Text>
                   </View>
-                ) : (
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.image}
-                    resizeMode="cover"
-                    onError={() =>
-                      setBrokenImages((prev) => new Set([...prev, item.id]))
-                    }
-                  />
-                )}
-
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.itemTitle, { color: theme.text }]}>
-                    {item.title}
-                  </Text>
-                  <Text style={{ color: theme.subText, marginTop: 2 }}>
-                    ₹{item.price}
-                  </Text>
-                </View>
                 </TouchableOpacity>
 
                 {qty === 0 ? (
@@ -687,8 +691,8 @@ const handleAddToCart = () => {
                     }
                     style={[styles.addBtn]}
                   >
-                    <Text style={{ fontWeight: "600", color: "#ffffff" }}>
-                      <Plus size={20} color="#ffffff" />
+                    <Text style={{ fontWeight: "600", color: theme.text }}>
+                      <Plus size={20} color={theme.text} />
                     </Text>
                   </TouchableOpacity>
                 ) : (
@@ -785,236 +789,238 @@ const handleAddToCart = () => {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  tabsWrap: {
-    flexDirection: "row",
-    padding: 6,
-    borderRadius: 22,
-    marginVertical: 12,
-    gap: 8,
-    position: "relative",
-  },
-  slidingPill: {
-    position: "absolute",
-    top: 6,
-    bottom: 6,
-    left: 6,
-    width: `${100 / TABS.length}%` as any,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#56BFAB",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-  },
-  tabOuter: {
-    flex: 1,
-    paddingVertical: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
-  tabLabel: {
-    fontSize: 12,
-    letterSpacing: 0.1,
-  },
-  category: {
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 12,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    elevation: 2,
-  },
-  imagePlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    marginRight: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#1A3330",
-    borderStyle: "dashed",
-    gap: 2,
-  },
-  placeholderIconWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  placeholderEmoji: {
-    fontSize: 20,
-  },
-  placeholderLabel: {
-    fontSize: 8,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-  },
-  itemTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  addBtn: {
-    height: 34,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  qtyBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#CBD5E1",
-    overflow: "hidden",
-  },
-  qtyBtn: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  qtyText: {
-    minWidth: 28,
-    textAlign: "center",
-    fontWeight: "800",
-  },
-  image: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    marginRight: 12,
-    backgroundColor: "#E5E7EB",
-  },
-  searchContainer: {
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-    paddingVertical: 0,
-  },
-  resultsCount: {
-    fontSize: 12,
-    marginTop: 8,
-    marginBottom: 4,
-    paddingLeft: 4,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    paddingHorizontal: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-    gap: 16,
-  },
-  errorText: {
-    fontSize: 16,
-    fontWeight: "500",
-    textAlign: "center",
-  },
-  retryButton: {
-    backgroundColor: "#56BFAB",
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginTop: 8,
-  },
-  retryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  editFooter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "#0D1F1C",
-    borderTopWidth: 1,
-    borderTopColor: "#1A3330",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  editFooterInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  editFooterInfo: {
-    flex: 1,
-  },
-  editFooterQty: {
-    color: "#8AA39B",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  editFooterTotal: {
-    color: "#00E1A2",
-    fontSize: 18,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  updateBtn: {
-    backgroundColor: "#00D9A3",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    minWidth: 120,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  updateBtnText: {
-    color: "#000",
-    fontWeight: "800",
-    fontSize: 14,
-  },
-});
+const makeStyles = (theme: any) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+    tabsWrap: {
+      flexDirection: "row",
+      padding: 6,
+      borderRadius: 22,
+      marginVertical: 12,
+      gap: 8,
+      position: "relative",
+    },
+    slidingPill: {
+      position: "absolute",
+      top: 6,
+      bottom: 6,
+      left: 6,
+      width: `${100 / TABS.length}%` as any,
+      borderRadius: 16,
+      overflow: "hidden",
+      shadowColor: theme.primary,
+      shadowOpacity: 0.4,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 5,
+    },
+    tabOuter: {
+      flex: 1,
+      paddingVertical: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    tabLabel: {
+      fontSize: 12,
+      letterSpacing: 0.1,
+    },
+    category: {
+      fontSize: 17,
+      fontWeight: "800",
+      marginBottom: 12,
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 5,
+      borderRadius: 10,
+      borderWidth: 1,
+      elevation: 2,
+    },
+    imagePlaceholder: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      marginRight: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderStyle: "dashed",
+      gap: 2,
+    },
+    placeholderIconWrap: {
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    placeholderEmoji: {
+      fontSize: 20,
+    },
+    placeholderLabel: {
+      fontSize: 8,
+      fontWeight: "600",
+      letterSpacing: 0.2,
+    },
+    itemTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
+    addBtn: {
+      height: 34,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      // backgroundColor: theme.primary,
+    },
+    qtyBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      overflow: "hidden",
+    },
+    qtyBtn: {
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    qtyText: {
+      minWidth: 28,
+      textAlign: "center",
+      fontWeight: "800",
+    },
+    image: {
+      width: 56,
+      height: 56,
+      borderRadius: 12,
+      marginRight: 12,
+      backgroundColor: theme.isDark ? theme.card : "#E5E7EB",
+    },
+    searchContainer: {
+      marginBottom: 12,
+      marginTop: 4,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      height: 44,
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: "500",
+      paddingVertical: 0,
+    },
+    resultsCount: {
+      fontSize: 12,
+      marginTop: 8,
+      marginBottom: 4,
+      paddingLeft: 4,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+      gap: 12,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      textAlign: "center",
+      paddingHorizontal: 40,
+    },
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+      gap: 16,
+    },
+    loadingText: {
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    errorContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 60,
+      gap: 16,
+    },
+    errorText: {
+      fontSize: 16,
+      fontWeight: "500",
+      textAlign: "center",
+    },
+    retryButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      borderRadius: 12,
+      marginTop: 8,
+    },
+    retryButtonText: {
+      color: theme.text,
+      fontWeight: "600",
+      fontSize: 14,
+    },
+    editFooter: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: theme.card,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    editFooterInner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    editFooterInfo: {
+      flex: 1,
+    },
+    editFooterQty: {
+      color: theme.subText,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    editFooterTotal: {
+      color: theme.primary,
+      fontSize: 18,
+      fontWeight: "900",
+      marginTop: 2,
+    },
+    updateBtn: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+      minWidth: 120,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    updateBtnText: {
+      color: theme.background,
+      fontWeight: "800",
+      fontSize: 14,
+    },
+  });

@@ -11,7 +11,8 @@ interface FAQItem {
 }
 
 export default function Support() {
-    const { theme } = useTheme();
+    const { theme, isDark } = useTheme()
+  const styles = makeStyles(theme, isDark);
     const router = useRouter();
     const [expandedId, setExpandedId] = useState<number | null>(null);
 
@@ -72,7 +73,7 @@ export default function Support() {
     return (
         <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
             <StatusBar
-                barStyle={theme.background === "#FFFFFF" ? "dark-content" : "dark-content"}
+                barStyle={theme.statusBar === "light" ? "light-content" : "dark-content"}
                 backgroundColor={theme.background}
             />
             
@@ -328,7 +329,7 @@ export default function Support() {
     );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     safeArea: {
         flex: 1,
     },
@@ -340,7 +341,7 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         borderBottomWidth: 1,
         elevation: 2,
-        shadowColor: "#000",
+        shadowColor: theme.background,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 3,

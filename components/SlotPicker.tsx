@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { oldApiClient } from "@/lib/api/client";
+import { useTheme } from "../context/ThemeContext";
 
 interface Slot {
     time: string;
@@ -41,6 +42,8 @@ const SlotPicker: React.FC<Props> = ({
     onSelect,
     onSlotsUpdate,
 }) => {
+    const { theme, isDark } = useTheme();
+    const styles = makeSlotStyles(theme, isDark);
     const [slots, setSlots] = useState<Slot[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -211,7 +214,7 @@ const SlotPicker: React.FC<Props> = ({
 
                                     {/* ✅ SHOW TICK WHEN SELECTED */}
                                     {isSelected && (
-                                        <Ionicons name="checkmark-circle" size={16} color="#00E1A2" />
+                                        <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
                                     )}
                                 </View>
 
@@ -240,6 +243,8 @@ const SlotPicker: React.FC<Props> = ({
 };
 
 const SlotSkeleton = () => {
+    const { theme, isDark } = useTheme();
+    const styles = makeSlotStyles(theme, isDark);
     const anim = useRef(new Animated.Value(0.3)).current;
 
     useEffect(() => {
@@ -262,10 +267,10 @@ const SlotSkeleton = () => {
     return (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 12 }}>
             {[1, 2, 3].map((_, i) => (
-                <View key={i} style={[styles.slotChip, { marginRight: 10, borderColor: "#1A2E26", backgroundColor: "#0A1F18" }]}>
+                <View key={i} style={[styles.slotChip, { marginRight: 10, borderColor: theme.border, backgroundColor: theme.card }]}>
                     <View style={{ flex: 1, justifyContent: "space-between" }}>
-                        <Animated.View style={{ opacity: anim, width: 80, height: 16, backgroundColor: "#1A332B", borderRadius: 6 }} />
-                        <Animated.View style={{ opacity: anim, width: 60, height: 12, backgroundColor: "#1A332B", borderRadius: 6 }} />
+                        <Animated.View style={{ opacity: anim, width: 80, height: 16, backgroundColor: theme.border, borderRadius: 6 }} />
+                        <Animated.View style={{ opacity: anim, width: 60, height: 12, backgroundColor: theme.border, borderRadius: 6 }} />
                     </View>
                 </View>
             ))}
@@ -275,15 +280,15 @@ const SlotSkeleton = () => {
 
 export default SlotPicker;
 
-const styles = StyleSheet.create({
+const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     slotChip: {
         width: 150,
         height: 70,
         padding: 12,
         borderRadius: 14,
-        backgroundColor: "#0D2B24",
+        backgroundColor: theme.card,
         borderWidth: 1,
-        borderColor: "#2f3c35",
+        borderColor: theme.border,
         justifyContent: "space-between",
     },
     bottomRow: {
@@ -293,7 +298,7 @@ const styles = StyleSheet.create({
     },
 
     time: {
-        color: "#CFFFF1",
+        color: theme.text,
         fontWeight: "700",
         fontSize: 14,
     },
@@ -306,9 +311,9 @@ const styles = StyleSheet.create({
 
     /* ✅ SELECTED STATE */
     selectedCard: {
-        borderColor: "#00E1A2",
-        backgroundColor: "#061A14",
-        shadowColor: "#00E1A2",
+        borderColor: theme.primary,
+        backgroundColor: theme.inputBackground,
+        shadowColor: theme.primary,
         shadowOpacity: 0.4,
         shadowRadius: 6,
         elevation: 4,
@@ -324,7 +329,7 @@ const styles = StyleSheet.create({
     },
 
     available: {
-        color: "#00E1A2",
+        color: theme.primary,
         fontSize: 12,
     },
 
@@ -339,7 +344,7 @@ const styles = StyleSheet.create({
     },
 
     selected: {
-        borderColor: "#00E1A2",
+        borderColor: theme.primary,
     },
 
     active: {
@@ -350,13 +355,13 @@ const styles = StyleSheet.create({
         width: "48%",
         padding: 14,
         borderRadius: 14,
-        backgroundColor: "#0D2B24",
+        backgroundColor: theme.card,
         borderWidth: 1,
-        borderColor: "#1E3327",
+        borderColor: theme.border,
     },
 
     noSlotBox: {
-        backgroundColor: "#1E3327",
+        backgroundColor: theme.border,
         padding: 14,
         borderRadius: 10,
         marginTop: 10,
@@ -374,9 +379,9 @@ const styles = StyleSheet.create({
     noSlotCard: {
         borderRadius: 16,
         padding: 16,
-        backgroundColor: "#0B1F19",
+        backgroundColor: theme.card,
         borderWidth: 1,
-        borderColor: "#1E3327",
+        borderColor: theme.border,
     },
 
     noSlotRow: {
@@ -388,20 +393,20 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: "#2A2F1C",
+        backgroundColor: isDark ? theme.card : "#F0F5E8",
         alignItems: "center",
         justifyContent: "center",
         marginRight: 10,
     },
 
     noSlotTitle: {
-        color: "#CFFFF1",
+        color: theme.text,
         fontSize: 14,
         fontWeight: "700",
     },
 
     noSlotSubText: {
-        color: "#7A9B87",
+        color: theme.textSecondary,
         fontSize: 12,
         marginTop: 4,
         lineHeight: 18,

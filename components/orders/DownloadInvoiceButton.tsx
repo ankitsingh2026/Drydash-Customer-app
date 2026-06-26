@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { showAlert } from '../Customalert';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { Asset } from 'expo-asset';
 import { generateInvoiceApi } from '@/features/orders/orders.api';
+import { useTheme } from '@/context/ThemeContext';
 
 interface DownloadInvoiceButtonProps {
   orderId: string;
 }
 
 export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ orderId }) => {
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [isDownloading, setIsDownloading] = useState(false);
 
   const downloadInvoicePdf = async () => {
@@ -325,7 +329,11 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
         to: newUri
       });
 
-      Alert.alert('Success', 'Invoice downloaded successfully. Opening share dialog...');
+      showAlert({
+        type: 'success',
+        title: 'Success',
+        message: 'Invoice downloaded successfully.',
+      });
 
       await Sharing.shareAsync(newUri, {
         mimeType: 'application/pdf',
@@ -341,7 +349,11 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
       } else if (error.message) {
         errMsg = error.message;
       }
-      Alert.alert('Download Error', errMsg); 
+      showAlert({
+        type: 'error',
+        title: 'Download Error',
+        message: errMsg,
+      }); 
     } finally {
       setIsDownloading(false);
     }
@@ -366,22 +378,22 @@ export const DownloadInvoiceButton: React.FC<DownloadInvoiceButtonProps> = ({ or
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0F2C24',
+    backgroundColor: theme.background,   // example dynamic
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#163028',
+    borderColor: isDark ? '#163028' : '#D3EBE4',
   },
   icon: {
     marginRight: 6,
   },
   text: {
-    color: '#2FE6A6',
+    color: isDark ? '#2FE6A6' : '#00A374',
     fontSize: 12,
     fontWeight: '700',
   }

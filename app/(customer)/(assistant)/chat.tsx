@@ -5,55 +5,21 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  BackHandler,
   FlatList,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   View,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  getOrCreateRoom,
-  fetchMessages,
-  sendMessage,
-  getBotReply,
-} from "../../../features/chat/chat.api";
-import {
-  connectChatSocket,
-  disconnectChatSocket,
-  joinChatRoom,
-  sendMessageViaSocket,
-  onReceiveMessage,
-  offReceiveMessage,
-  sendTyping,
-  sendStopTyping,
-  onUserTyping,
-  offUserTyping,
-} from "../../../features/chat/chat.socket";
-import { Message as ApiMessage } from "../../../features/chat/chat.types";
-import { useAuth } from "@/hooks/useAuth";
+import { sendTyping, sendStopTyping } from "../../../features/chat/chat.socket";
+import { useChat } from "../../../context/ChatContext";
+import { useTheme } from "../../../context/ThemeContext";
 
-/* ─── palette (unchanged) ─── */
-const C = {
-  bg: "#021410",
-  card: "#0B1E1A",
-  cardInner: "#0D2420",
-  border: "#1A3330",
-  primary: "#2FE6A6",
-  primaryDim: "#1A9E74",
-  text: "#E6FFF7",
-  subText: "#6B8F84",
-  muted: "#3A5E55",
-  userBubble: "#2FE6A6",
-  botBubble: "#0D1F1C",
-};
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -61,6 +27,9 @@ function now() {
 
 /* ─── PricingCard (exactly as in your original) ─── */
 function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpecialist: () => void }) {
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   return (
     <View style={styles.pricingCard}>
       <Text style={styles.pricingIntro}>
@@ -75,7 +44,7 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
         ].map((item, i) => (
           <View
             key={item.label}
-            style={[styles.priceRow, i < 2 && { borderBottomWidth: 1, borderColor: "#1A3330" }]}
+            style={[styles.priceRow, i < 2 && { borderBottomWidth: 1, borderColor: C.border }]}
           >
             <Text style={styles.priceLabel}>{item.label}</Text>
             <View style={styles.priceRight}>
@@ -109,7 +78,7 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
             end={{ x: 1, y: 0 }}
             style={styles.catalogBtn}
           >
-            <Ionicons name="book-outline" size={14} color="#021410" />
+            <Ionicons name="book-outline" size={14} color={C.bg} />
             <Text style={styles.catalogBtnText}>Full Catalog</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -129,6 +98,9 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
 
 /* ─── TypingIndicator (unchanged) ─── */
 function TypingIndicator() {
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
 
   useEffect(() => {
@@ -182,6 +154,9 @@ function Bubble({
   onCatalog: () => void;
   onSpecialist: () => void;
 }) {
+    const { theme, isDark } = useTheme();
+    const C = buildChatColors(theme, isDark);
+    const styles = makeChatStyles(C);
   const fade  = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(msg.senderType === "customer" ? 16 : -16)).current;
 
@@ -223,7 +198,7 @@ function Bubble({
 
         {msg.type === "text" ? (
           <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleBot]}>
-            <Text style={[styles.bubbleText, { color: isUser ? "#021410" : C.text }]}>
+            <Text style={[styles.bubbleText, { color: isUser ? C.bg : C.text }]}>
               {msg.text}
             </Text>
           </View>
@@ -245,20 +220,25 @@ function Bubble({
 }
 
 /* ─── Main Component ─── */
-export default function SupportChat() {
+export default function SupportChat() { 
+  const { theme, isDark } = useTheme();
+  const C = buildChatColors(theme, isDark);
+  const styles = makeChatStyles(C);
   const params = useLocalSearchParams<{ topic?: string }>();
   const flatRef = useRef<FlatList<any>>(null);
   const [input, setInput] = useState("");
   const [botTyping, setBotTyping] = useState(false);
-  const [otherTyping, setOtherTyping] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [customerId, setCustomerId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const seenMessageIds = useRef<Set<string>>(new Set());
-
-  console.log("this is the messages array =>>>", messages);
+  const {
+    messages,
+    roomId,
+    customerId,
+    setIsChatActive,
+    otherTyping,
+    sendMessage: sendMessageContext,
+    loadChatData,
+  } = useChat();
 
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -270,93 +250,14 @@ export default function SupportChat() {
     ).start();
   }, []);
 
-  const { user } = useAuth();
-
-  // 🔁 REPLACE THIS with your actual customer ID retrieval (AsyncStorage, Redux, etc.)
+  // Manage chat screen active status & sync latest messages
   useEffect(() => {
-    const fetchCustomerId = async () => {
-      // Example: const phone = await AsyncStorage.getItem('userPhone');
-      const phone = "91" + (user?.user?.phone ?? user?.phone ?? "");
-      setCustomerId(phone);
-    };
-    fetchCustomerId();
-  }, []);
-
-  // Initialize chat room and socket
-  useEffect(() => {
-    if (!customerId) return;
-
-    const initChat = async () => {
-      try {
-        const room = await getOrCreateRoom(customerId, undefined, 'global');
-        setRoomId(room._id);
-
-        const prevMessages = await fetchMessages(room._id);
-        const formatted = prevMessages.map((m: any) => ({
-          id: m._id,
-          type: 'text',
-          senderType: m.senderType,
-          text: m.message,
-          time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : now(),
-        }));
-        setMessages(formatted);
-
-        connectChatSocket();
-        joinChatRoom(room._id);
-
-onReceiveMessage((newMsg: any) => {
-  if (newMsg.roomId !== room._id) return;
-
-  const msgId = newMsg._id;
-  // Skip if we already have this message ID
-  if (seenMessageIds.current.has(msgId)) return;
-  seenMessageIds.current.add(msgId);
-
-  // Also skip if it's the message we just sent (optimistic already shown)
-  // But the ID check is enough; the optimistic message does not have a real _id yet.
-  // However, after API replaces the optimistic, the real _id will be added,
-  // and the socket will try to add it again – this is caught by the ID set.
-  
-  setMessages((prev) => [
-    ...prev,
-    {
-      id: newMsg._id,
-      type: 'text',
-      senderType: newMsg.senderType,
-      text: newMsg.message,
-      time: newMsg.createdAt ? new Date(newMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : now(),
-    },
-  ]);
-  setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
-});
-
-        // Typing indicator from admin
-        onUserTyping(({ userId }) => {
-          if (userId !== customerId) {
-            setOtherTyping(true);
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => setOtherTyping(false), 2000);
-          }
-        });
-
-        // Optional: stop typing event
-        // const socket = (await import('../../../features/chat/chat.socket')).default; // hack to get raw socket? simpler: just use a ref
-        // Actually we don't have direct socket access, but we can add a listener via the socket instance if needed.
-        // For simplicity, the timeout handles it.
-      } catch (error) {
-        console.error('Chat init error', error);
-        Alert.alert('Error', 'Could not load chat. Please try again.');
-      }
-    };
-
-    initChat();
-
+    setIsChatActive(true);
+    loadChatData();
     return () => {
-      offReceiveMessage();
-      offUserTyping();
-      disconnectChatSocket();
+      setIsChatActive(false);
     };
-  }, [customerId]);
+  }, [setIsChatActive, loadChatData]);
 
   // Auto-send pricing topic
   useEffect(() => {
@@ -367,62 +268,16 @@ onReceiveMessage((newMsg: any) => {
     }
   }, [params.topic, roomId, customerId]);
 
-const sendUserMessage = async (text: string) => {
-  if (!roomId || !customerId) return;
-
-  const tempId = `temp-${Date.now()}-${Math.random()}`;
-  const userMsg = {
-    id: tempId,
-    type: 'text',
-    senderType: 'customer',
-    text,
-    time: now(),
+  const sendUserMessage = (text: string) => {
+    if (!roomId || !customerId) return;
+    flatRef.current?.scrollToEnd({ animated: true });
+    try {
+      sendMessageContext(text);
+    } catch (err) {
+      console.error("Send failed", err);
+      Alert.alert("Error", "Message could not be sent.");
+    }
   };
-  // setMessages((prev) => [...prev, userMsg]); 
-  flatRef.current?.scrollToEnd({ animated: true });
-
-  try {
-    // const savedMsg = await sendMessage(roomId, 'customer', customerId, text);
-    console.log("i am called hereee-----------------------------------------------------------")
-    sendMessageViaSocket(roomId, 'customer', customerId, text);
-
-    // Replace optimistic message with real one
-    // setMessages((prev) =>
-    //   prev.map((m) =>
-    //     m.id === tempId ? { ...m, id: savedMsg._id, _id: savedMsg._id } : m
-    //   )
-    // );
-    // Add the real ID to seen set so socket won't add it again
-    // seenMessageIds.current.add(savedMsg._id);
-  } catch (err) {
-    console.error('Send failed', err);
-    Alert.alert('Error', 'Message could not be sent.');
-    setMessages((prev) => prev.filter((m) => m.id !== tempId));
-    return;
-  }
-
-  // Bot reply (unchanged)
-  // setBotTyping(true);
-  // try {
-  //   const botMsg = await getBotReply(roomId, text);
-  //   setBotTyping(false);
-  //   // Bot messages have their own unique ID; add to set as well
-  //   seenMessageIds.current.add(botMsg._id);
-  //   setMessages((prev) => [
-  //     ...prev,
-  //     {
-  //       id: botMsg._id,
-  //       type: 'text',
-  //       senderType: 'bot',
-  //       text: botMsg.message,
-  //       time: botMsg.createdAt ? new Date(botMsg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : now(),
-  //     },
-  //   ]);
-  // } catch (error) {
-  //   setBotTyping(false);
-  //   console.error('Bot reply error', error);
-  // }
-};
 
 
 
@@ -458,10 +313,6 @@ const sendUserMessage = async (text: string) => {
       onSpecialist={() => send("I want to talk to a specialist")}
     />
   );
-
-  useEffect(() => {
-  seenMessageIds.current.clear();
-}, [roomId]);
 
   return (
     <KeyboardAvoidingView style={styles.root}>
@@ -529,7 +380,7 @@ const sendUserMessage = async (text: string) => {
                   colors={[C.primary, C.primaryDim]}
                   style={styles.sendBtn}
                 >
-                  <Ionicons name="send" size={15} color="#021410" />
+                  <Ionicons name="send" size={15} color={C.bg} />
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -540,8 +391,23 @@ const sendUserMessage = async (text: string) => {
   );
 }
 
-/* ─── Styles (exactly as in your original file) ─── */
-const styles = StyleSheet.create({
+function buildChatColors(theme: any, isDark: boolean) {
+  return {
+    bg: theme.background,
+    card: theme.card,
+    cardInner: theme.inputBackground,
+    border: theme.border,
+    primary: theme.primary,
+    primaryDim: isDark ? theme.card : theme.background,
+    text: theme.text,
+    subText: theme.textSecondary,
+    muted: theme.textSecondary,
+    userBubble: theme.primary,
+    botBubble: isDark ? theme.background : theme.card,
+  };
+}
+
+const makeChatStyles = (C: ReturnType<typeof buildChatColors>) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     height: 56,
@@ -593,7 +459,7 @@ const styles = StyleSheet.create({
   pricingActions: { gap: 8 },
   catalogBtnOuter: { borderRadius: 10, overflow: "hidden" },
   catalogBtn: { height: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
-  catalogBtnText: { fontSize: 13, fontWeight: "800", color: "#021410" },
+  catalogBtnText: { fontSize: 13, fontWeight: "800", color: C.bg },
   specialistBtn: { height: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: C.card, borderRadius: 10, borderWidth: 1, borderColor: C.border },
   specialistBtnText: { fontSize: 13, fontWeight: "700", color: C.text },
   typingRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 14, marginBottom: 10 },

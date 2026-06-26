@@ -1,8 +1,10 @@
 import { useAuthContext } from "@/context/AuthContext";
 import { Redirect, Stack } from "expo-router";
+import { useTheme } from "@/theme/useTheme";
 
 export default function AuthLayout() {
   const { user, loading } = useAuthContext();
+  const { colors } = useTheme();
 
   if (loading) return null;
 
@@ -14,7 +16,7 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: "#0B1F1A" },
+        contentStyle: { backgroundColor: colors.background },
         animation: "fade",
       }}
     />

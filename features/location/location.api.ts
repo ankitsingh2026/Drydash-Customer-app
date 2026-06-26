@@ -69,7 +69,7 @@
 
 import { oldApiClient } from "@/lib/api/client";
 
-export const checkServiceAvailability = async (latitude, longitude) => {
+export const checkServiceAvailability = async (latitude: number, longitude: number) => {
   try {
     console.log("this is the lat and long", latitude, longitude);
 
@@ -140,7 +140,7 @@ export const checkServiceAvailability = async (latitude, longitude) => {
   }
 };
 
-export const getLocationDetails = async (latitude, longitude) => {
+export const getLocationDetails = async (latitude: number, longitude: number) => {
   try {
     const response = await oldApiClient.get(
       `v1/slots/location/resolve?lat=${latitude}&lng=${longitude}`,
