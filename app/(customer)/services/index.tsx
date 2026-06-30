@@ -19,6 +19,7 @@ import LaundryIcon from "../../../assets/homeicons/Laundry-logo.svg";
 import OnsiteIcon from "../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../assets/homeicons/8-hours-delivery.svg";
+import LeatherIcon from "../../../assets/homeicons/leather.svg";
 
 const { width } = Dimensions.get("window");
 
@@ -37,12 +38,19 @@ const SERVICES = [
     subtitle: "Gentle and premium care",
     icon: DrycleanIcon,
   },
+  // {
+  //   key: "Laundry",
+  //   slug: "laundry",
+  //   label: "LAUNDRY",
+  //   subtitle: "Fresh & hygienic",
+  //   icon: LaundryIcon,
+  // },
   {
-    key: "Laundry",
-    slug: "laundry",
-    label: "LAUNDRY",
-    subtitle: "Fresh & hygienic",
-    icon: LaundryIcon,
+    key: "Leather",
+    slug: "leather",
+    label: "LEATHER & SUEDE",
+    subtitle: "Specialized care for leather",
+    icon: LeatherIcon,
   },
   {
     key: "Onsite",
@@ -114,7 +122,7 @@ export default function ServicesPage() {
                   key={s.key}
                   activeOpacity={0.85}
                   onPress={() => {
-                    if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
+                    if (["shoe", "leather", "dryclean"].includes(s.slug)) {
                       router.push({
                         pathname: "/services/[service]",
                         params: { service: s.slug as any },

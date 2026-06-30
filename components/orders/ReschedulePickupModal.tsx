@@ -1,8 +1,4 @@
 import { useTheme } from "@/context/ThemeContext";
-import DateTimePicker, {
-  DateTimePickerAndroid,
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -51,6 +47,12 @@ const formatDateInput = (date: Date) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+const formatFriendlyDate = (date: Date) => {
+  const dayName = DAY_NAMES[date.getDay()];
+  const monthName = MONTH_NAMES[date.getMonth()].slice(0, 3).toUpperCase();
+  return `${dayName}, ${monthName} ${date.getDate()}`;
+};
+
 const DAY_NAMES = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const MONTH_NAMES = [
   "January",
@@ -90,9 +92,6 @@ export default function ReschedulePickupModal({
   const defaultDate = useMemo(() => toDefaultDate(initialDate), [initialDate]);
   const [selectedDate, setSelectedDate] = useState(defaultDate);
 
-  const [showIosPicker, setShowIosPicker] = useState(false);
-  const minimumDate = new Date();
-
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(-1);
   const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
   const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
@@ -114,40 +113,12 @@ export default function ReschedulePickupModal({
     setSelectedSlotIndex(-1);
     setSelectedSlotData(null);
     setHasAvailableSlots(true);
-
-    setShowIosPicker(false);
   }, [visible, initialDate]);
 
   const selectedLat = contextSelectedAddress?.latitude;
   const selectedLng = contextSelectedAddress?.longitude;
 
-  const nextDays = useMemo(() => getNextDays(21), []);
-
-  const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
-    if (event.type === "dismissed") return;
-    if (date) {
-      setSelectedDate(date);
-      setSelectedSlotIndex(-1);
-      setSelectedSlotData(null);
-      setHasAvailableSlots(true);
-    }
-  };
-
-  const openPicker = () => {
-    if (loading) return;
-
-    if (Platform.OS === "android") {
-      DateTimePickerAndroid.open({
-        mode: "date",
-        value: selectedDate,
-        minimumDate,
-        onChange: handleDateChange,
-      });
-      return;
-    }
-
-    setShowIosPicker((prev) => !prev);
-  };
+  const quickDates = useMemo(() => getNextDays(15), []);
 
   const submit = () => {
     // You currently only pass date back per prop signature.
@@ -191,48 +162,20 @@ export default function ReschedulePickupModal({
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Pickup Date</Text>
 
-            <TouchableOpacity
-              style={styles.dateSelector}
-              onPress={openPicker}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <View style={styles.calIcon}>
-                  <Ionicons name="calendar-outline" size={16} color={theme.primary} />
-                </View>
-                <Text style={styles.dateValue}>{formatDateInput(selectedDate)}</Text>
+            <View style={styles.selectedDateCard}>
+              <View style={styles.calIcon}>
+                <Ionicons name="calendar-outline" size={16} color={theme.primary} />
               </View>
-
-              <Ionicons
-                name={showIosPicker ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={theme.textSecondary}
-              />
-            </TouchableOpacity>
-
-            {Platform.OS === "ios" && showIosPicker ? (
-              <View style={styles.iosPickerWrap}>
-                <DateTimePicker
-                  value={selectedDate}
-                  mode="date"
-                  display="inline"
-                  minimumDate={minimumDate}
-                  onChange={handleDateChange}
-                  textColor={theme.text}
-                  accentColor={theme.primary}
-                />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.selectedDateLabel}>Selected date</Text>
+                <Text style={styles.selectedDateValue}>{formatFriendlyDate(selectedDate)}</Text>
               </View>
-            ) : null}
+            </View>
 
             {/* Quick date chips (professional & fast UX) */}
             <View style={styles.quickDaysHeader}>
-              <Text style={styles.quickDaysLabel}>
-                Or choose quickly
-              </Text>
-              <Text style={styles.quickDaysSub}>
-                {MONTH_NAMES[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-              </Text>
+              <Text style={styles.quickDaysLabel}>Choose quickly</Text>
+              <Text style={styles.quickDaysSub}>Next 15 days</Text>
             </View>
 
             <ScrollView
@@ -241,77 +184,48 @@ export default function ReschedulePickupModal({
               style={{ marginTop: 10 }}
               contentContainerStyle={{ paddingRight: 4 }}
             >
-              {Array.from(
-                new Set([
-                  defaultDate.getTime(),
-                  ...nextDays.map((x) => x.getTime()),
-                ]),
-              )
-                .map((t) => new Date(t))
-                // Deduplicate by yyyy-mm-dd to avoid same-day duplicates
-                .filter(
-                  (d, i, arr) =>
-                    arr.findIndex(
-                      (x) => formatDateInput(x) === formatDateInput(d),
-                    ) === i,
-                )
-                // ensure selected date is visible (and first) if present
-                .sort((a, b) => {
-                  const aSel = formatDateInput(a) === formatDateInput(selectedDate);
-                  const bSel = formatDateInput(b) === formatDateInput(selectedDate);
-                  if (aSel === bSel) return 0;
-                  return aSel ? -1 : 1;
-                })
-                .slice(0, 7)
-                .map((d) => {
-                  const isSelected = formatDateInput(d) === formatDateInput(selectedDate);
-                  return (
-                    <TouchableOpacity
-                      key={formatDateInput(d)}
-                      onPress={() => {
-                        setSelectedDate(d);
-                        setSelectedSlotIndex(-1);
-                        setSelectedSlotData(null);
-                        setHasAvailableSlots(true);
-                      }}
-                      activeOpacity={0.85}
-                      style={{ marginRight: 10 }}
+              {quickDates.map((d) => {
+                const isSelected = formatDateInput(d) === formatDateInput(selectedDate);
+                return (
+                  <TouchableOpacity
+                    key={formatDateInput(d)}
+                    onPress={() => {
+                      setSelectedDate(d);
+                      setSelectedSlotIndex(-1);
+                      setSelectedSlotData(null);
+                      setHasAvailableSlots(true);
+                    }}
+                    activeOpacity={0.85}
+                    style={{ marginRight: 10 }}
+                  >
+                    <View
+                      style={[
+                        styles.dateChip,
+                        {
+                          borderColor: isSelected ? theme.primary : theme.border,
+                          backgroundColor: isSelected
+                            ? theme.inputBackground
+                            : theme.card,
+                        },
+                      ]}
                     >
-                      <View
+                      <Text
                         style={[
-                          styles.dateChip,
+                          styles.dateChipDay,
                           {
-                            borderColor: isSelected ? theme.primary : theme.border,
-                            backgroundColor: isSelected
-                              ? theme.inputBackground
-                              : theme.card,
+                            color: isSelected ? theme.primary : theme.textSecondary,
                           },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.dateChipDay,
-                            {
-                              color: isSelected
-                                ? theme.primary
-                                : theme.textSecondary,
-                            },
-                          ]}
-                        >
-                          {DAY_NAMES[d.getDay()]}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.dateChipNum,
-                            { color: theme.text },
-                          ]}
-                        >
-                          {d.getDate()}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                        {DAY_NAMES[d.getDay()]}
+                      </Text>
+                      <Text style={[styles.dateChipNum, { color: theme.text }]}>
+                        {d.getDate()}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
 
@@ -449,17 +363,6 @@ const makeStyles = (theme: any, isDark: boolean) =>
       letterSpacing: 0.5,
     },
 
-    dateSelector: {
-      height: 48,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      backgroundColor: theme.card,
-      paddingHorizontal: 12,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
     calIcon: {
       width: 30,
       height: 30,
@@ -470,18 +373,29 @@ const makeStyles = (theme: any, isDark: boolean) =>
       borderWidth: 1,
       borderColor: theme.border,
     },
-    dateValue: {
-      color: theme.text,
-      fontSize: 14,
-      fontWeight: "900",
-    },
-    iosPickerWrap: {
-      marginTop: 8,
-      borderRadius: 12,
+    selectedDateCard: {
+      borderRadius: 16,
       borderWidth: 1,
-      borderColor: theme.card,
-      overflow: "hidden",
-      backgroundColor: theme.background,
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    selectedDateLabel: {
+      color: theme.textSecondary,
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.4,
+      textTransform: "uppercase",
+    },
+    selectedDateValue: {
+      color: theme.text,
+      fontSize: 15,
+      fontWeight: "900",
+      marginTop: 2,
     },
 
     quickDaysHeader: {
