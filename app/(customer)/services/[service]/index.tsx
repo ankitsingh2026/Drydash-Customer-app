@@ -37,7 +37,8 @@ import { useTheme } from "../../../../context/ThemeContext";
 /* ---------- TABS ---------- */
 const TABS = [
   { key: "shoe", label: "Shoe Spa", icon: LucideShovel },
-  { key: "laundry", label: "Laundry", icon: Shirt },
+  // { key: "laundry", label: "Laundry", icon: Shirt },
+  { key: "leather", label: "Leather", icon: Shirt },
   { key: "dryclean", label: "Dry Clean", icon: Sparkles },
 ];
 
@@ -87,17 +88,20 @@ export default function ServiceDetail() {
   // API data states
   const [apiData, setApiData] = useState<Record<string, Item[]>>({
     shoe: [],
-    laundry: [],
+    // laundry: [],
+    leather: [],
     dryclean: [],
   });
   const [loading, setLoading] = useState<Record<string, boolean>>({
     shoe: false,
-    laundry: false,
+    // laundry: false,
+    leather: false,
     dryclean: false,
   });
   const [error, setError] = useState<Record<string, string | null>>({
     shoe: null,
-    laundry: null,
+    // laundry: null,
+    leather: null,
     dryclean: null,
   });
 
@@ -162,7 +166,7 @@ export default function ServiceDetail() {
 
   // Update the transform function in fetchCatalogData
   const fetchCatalogData = async (serviceType: string, slug: string) => {
-    const serviceKeys = ["shoe", "laundry", "dryclean"];
+    const serviceKeys = ["shoe", "leather", "dryclean"];
     if (!serviceKeys.includes(serviceType)) return;
 
     setLoading((prev) => ({ ...prev, [serviceType]: true }));
@@ -202,8 +206,8 @@ export default function ServiceDetail() {
   // Helper function for default descriptions
   const getDefaultDescription = (serviceType: string): string => {
     const descriptions = {
-      laundry:
-        "Professional laundry service with careful handling of your garments.",
+      leather:
+        "Specialized leather care with gentle cleaning and conditioning.",
       dryclean: "Premium dry cleaning service using eco-friendly solvents.",
       shoe: "Expert shoe cleaning and restoration service.",
     };
@@ -233,8 +237,8 @@ export default function ServiceDetail() {
     switch (serviceType) {
       case "shoe":
         return `${S3_BASE}/sheo-spa/shoe_1.jpg`;
-      case "laundry":
-        return `${S3_BASE}/laundry/laundry_1.jpg`;
+      case "leather":
+        return `${S3_BASE}/leather/leather.jpg`;
       case "dryclean":
         return `${S3_BASE}/dryclean/dryclean_1.png`;
       default:
@@ -248,7 +252,7 @@ export default function ServiceDetail() {
       const currentTabKey = TABS[tab]?.key;
       if (
         currentTabKey &&
-        ["shoe", "laundry", "dryclean"].includes(currentTabKey)
+        ["shoe", "leather", "dryclean"].includes(currentTabKey)
       ) {
         const slug = currentTabKey === "shoe" ? "shoespa" : currentTabKey;
         fetchCatalogData(currentTabKey, slug);
@@ -263,7 +267,7 @@ export default function ServiceDetail() {
     const index = TABS.findIndex((t) => t.key === service);
     if (index !== -1) {
       switchTab(index);
-      if (service && ["shoe", "laundry", "dryclean"].includes(service)) {
+      if (service && ["shoe", "leather", "dryclean"].includes(service)) {
         const slug = service === "shoe" ? "shoespa" : service;
         fetchCatalogData(service, slug);
       }
@@ -337,7 +341,8 @@ export default function ServiceDetail() {
   const staticData = useMemo<Record<string, Item[]>>(
     () => ({
       shoe: [], // Will be populated by API
-      laundry: [], // Will be populated by API
+      // laundry: [], // Will be populated by API
+      leather: [], // Will be populated by API
       dryclean: [], // Will be populated by API
       // Add other services here if needed
     }),
@@ -347,7 +352,7 @@ export default function ServiceDetail() {
   // Get current items (API data for shoe/laundry/dryclean, static for others)
   const activeTab = TABS[tab];
   const currentItems =
-    activeTab?.key && ["shoe", "laundry", "dryclean"].includes(activeTab.key)
+    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
       ? apiData[activeTab.key]
       : catalogData[activeTab?.key] || [];
 
@@ -364,12 +369,12 @@ export default function ServiceDetail() {
   }, [searchQuery, currentItems]);
 
   const isLoading =
-    activeTab?.key && ["shoe", "laundry", "dryclean"].includes(activeTab.key)
+    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
       ? loading[activeTab.key]
       : false;
 
   const hasError =
-    activeTab?.key && ["shoe", "laundry", "dryclean"].includes(activeTab.key)
+    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
       ? error[activeTab.key]
       : null;
 
@@ -640,8 +645,8 @@ export default function ServiceDetail() {
                         <Text style={styles.placeholderEmoji}>
                           {item.category === "Shoe Spa"
                             ? "👟"
-                            : item.category === "Laundry"
-                              ? "👕"
+                            : item.category === "Leather"
+                              ? "👜"
                               : item.category === "DryClean"
                                 ? "✨"
                                 : "🧺"}

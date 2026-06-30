@@ -46,6 +46,7 @@ import SwipeToAction from "@/components/SwipeToAction";
 import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
 import LaundryIcon from "../../../../assets/homeicons/Laundry-logo.svg";
+import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
@@ -102,16 +103,23 @@ const QUICK_SERVICES = [
   {
     key: "Dry Clean",
     slug: "dryclean",
-    label: "DRY CLEAN",
+    label: "APPAREL DRY CLEAN",
     subtitle: "Gentle and premium care",
     icon: DrycleanIcon,
   },
+  // {
+  //   key: "Laundry",
+  //   slug: "laundry",
+  //   label: "LAUNDRY",
+  //   subtitle: "Fresh & hygienic",
+  //   icon: LaundryIcon,
+  // },
   {
-    key: "Laundry",
-    slug: "laundry",
-    label: "LAUNDRY",
-    subtitle: "Fresh & hygienic",
-    icon: LaundryIcon,
+    key: "Leather",
+    slug: "leather",
+    label: "LEATHER & SUEDE",
+    subtitle: "Specialized care for leather",
+    icon: LeatherIcon,
   },
   {
     key: "Onsite",
@@ -1151,8 +1159,8 @@ export default function Home() {
                             }}
                             activeOpacity={0.85}
                             onPress={() => {
-                              if (["shoe", "laundry", "dryclean"].includes(s.slug)) {
-                                router.push({ pathname: "/services/[service]", params: { service: s.slug as "shoe" | "laundry" | "dryclean" } });
+if (["shoe", "leather", "dryclean"].includes(s.slug)) {
+                                router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
                               } else {
                                 router.push(`/services/${s.slug}`);
                               }

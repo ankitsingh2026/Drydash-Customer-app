@@ -27,6 +27,7 @@ import {
   sendMessage,
   getBotReply,
   uploadChatImage,
+  markCustomerMessagesAsRead,
 } from "../../../features/chat/chat.api";
 import {
   connectChatSocket,
@@ -44,6 +45,7 @@ import { Message as ApiMessage } from "../../../features/chat/chat.types";
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "../../../context/ThemeContext";
+import { useChat } from "@/context/ChatContext";
 /* ─── palette (unchanged) ─── */
 // const C = {
 //   bg: "#021410",
@@ -408,13 +410,29 @@ export default function SupportChat() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+   const { setUnreadCount, setIsChatActive } = useChat();
 
   const { user } = useAuth();
 
   const auth_id = user?.user?.id ? user?.user?.id : user?.id;
   const appCustomerId = String(auth_id);
  
+ useEffect(() => {
+    setIsChatActive(true);
+    return () => setIsChatActive(false);
+  }, []);
 
+  useEffect(() => {
+    if (!roomId) return;
+
+    // Mark all messages as read for this room
+    markCustomerMessagesAsRead(roomId)
+      .then(() => {
+        setUnreadCount(0);                     // clear the badge
+      })
+      .catch((err) => console.error("Mark read failed:", err));
+
+  }, [roomId]);
 
 
 

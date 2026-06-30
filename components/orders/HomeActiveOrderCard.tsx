@@ -470,6 +470,11 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderColor: theme.card,
     overflow: "hidden",
     position: "relative",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 4,
   },
   closeFloatingBtn: {
     position: "absolute",
@@ -554,7 +559,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   countPill: {
     minHeight: 22,
-    paddingHorizontal: 18,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: theme.border,
     borderRadius: 999,
@@ -563,7 +568,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: theme.card,
   },
   countPillText: {
-    color: "#9EE8D1",
+    color: theme.textSecondary,
     fontSize: 13,
     fontWeight: "400",
     letterSpacing: 0.3,
