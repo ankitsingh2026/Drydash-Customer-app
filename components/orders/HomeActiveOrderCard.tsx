@@ -398,7 +398,7 @@ export default function HomeActiveOrderCard({
            <View style={styles.footerRow}>
               {isDelivered ? (
                 <>
-                  <View style={styles.reviewWrap}>
+                  {/* <View style={styles.reviewWrap}>
                     <View style={styles.reviewRow}>
                       <Ionicons name="star" size={22} color={theme.primary} />
                       <Ionicons name="star" size={22} color={theme.primary} />
@@ -407,13 +407,13 @@ export default function HomeActiveOrderCard({
                       <Ionicons name="star-outline" size={22} color={theme.primary} />
                     </View>
                     <Text style={styles.reviewCta}>{meta.actionText}</Text>
-                  </View>
-                  <TouchableOpacity
+                  </View> */}
+                  {/* <TouchableOpacity
                     style={styles.chatBtn}
                     onPress={() => router.push("/(customer)/(assistant)/chat")}
                   >
                     <Ionicons name="chatbubble-ellipses" size={20} color={theme.background} />
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
                 </>
               ) : !order.isPaid ? (
                 <TouchableOpacity
@@ -464,7 +464,7 @@ export default function HomeActiveOrderCard({
 
 const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   card: {
-    backgroundColor: theme.background,
+    backgroundColor: theme.card,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.card,
@@ -478,14 +478,14 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   closeFloatingBtn: {
     position: "absolute",
-    top: 0,
-    right: 1,
-    width: 34,
-    height: 34,
-   // borderRadius: 17,
+    top: 2,
+    right: 2,
+    width: 25,
+    height: 25,
+   borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-  //  backgroundColor: theme.card,
+   backgroundColor: theme.background,
   //  borderWidth: 1,
   //  borderColor: theme.card,
     zIndex: 5,
@@ -565,7 +565,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.card,
+    backgroundColor: theme.background,
   },
   countPillText: {
     color: theme.textSecondary,

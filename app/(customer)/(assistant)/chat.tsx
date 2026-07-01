@@ -40,6 +40,8 @@ import {
   sendStopTyping,
   onUserTyping,
   offUserTyping,
+  onUserStoppedTyping,
+  offUserStoppedTyping
 } from "../../../features/chat/chat.socket";
 import { Message as ApiMessage } from "../../../features/chat/chat.types";
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -152,11 +154,15 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
 }
 
 /* ─── TypingIndicator (unchanged) ─── */
-function TypingIndicator() {
+function TypingIndicator({ label = "SPARK IS TYPING", icon = "✨" }) {
   const { theme, isDark } = useTheme();
   const C = buildChatColors(theme, isDark);
   const styles = makeChatStyles(C);
-  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  const dots = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ];
 
   useEffect(() => {
     const anims = dots.map((dot, i) =>
@@ -176,7 +182,7 @@ function TypingIndicator() {
   return (
     <View style={styles.typingRow}>
       <View style={styles.botAvatar}>
-        <Text style={{ fontSize: 12 }}>✨</Text>
+        <Text style={{ fontSize: 12 }}>{icon}</Text>
       </View>
       <View style={styles.typingBubble}>
         <View style={styles.typingDots}>
@@ -193,7 +199,7 @@ function TypingIndicator() {
             />
           ))}
         </View>
-        <Text style={styles.typingLabel}>SPARK IS TYPING</Text>
+        <Text style={styles.typingLabel}>{label}</Text>
       </View>
     </View>
   );
@@ -602,6 +608,15 @@ export default function SupportChat() {
           }
         });
 
+        // Typing indicator – admin stopped typing
+        onUserStoppedTyping(() => {
+          setOtherTyping(false);
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+          }
+        });
+
         // Optional: stop typing event
         // const socket = (await import('../../../features/chat/chat.socket')).default; // hack to get raw socket? simpler: just use a ref
         // Actually we don't have direct socket access, but we can add a listener via the socket instance if needed.
@@ -617,6 +632,7 @@ export default function SupportChat() {
     return () => {
       offReceiveMessage();
       offUserTyping();
+      offUserStoppedTyping();
       disconnectChatSocket();
     };
   }, [customerId]);
@@ -906,12 +922,8 @@ const closeImagePreview = () => {
   </View>
 </Modal>
 
-            {botTyping && <TypingIndicator />}
-            {otherTyping && (
-              <View style={styles.otherTypingContainer}>
-                <Text style={styles.otherTypingText}>Admin is typing...</Text>
-              </View>
-            )}
+{botTyping && <TypingIndicator label="SPARK IS TYPING" icon="✨" />}
+{otherTyping && <TypingIndicator label="ADMIN IS TYPING" icon="👤" />}
 
             {/* Input row */}
             <View style={styles.inputRow}>
