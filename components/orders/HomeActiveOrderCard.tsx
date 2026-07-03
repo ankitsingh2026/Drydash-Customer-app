@@ -331,7 +331,7 @@ export default function HomeActiveOrderCard({
                     style={styles.chatBtnHeader}
                     onPress={() => router.push("/(customer)/(assistant)/chat")}
                   >
-                    <Ionicons name="chatbubble-ellipses" size={22} color={theme.background} />
+                    <Ionicons name="chatbubble-ellipses" size={22} color={theme.primary} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -597,7 +597,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     fontSize: 16,
   },
   successText: {
-    color: "#9EE8D1",
+    color: theme.primary,
     fontSize: 15,
     fontWeight: "500",
     flex: 1,

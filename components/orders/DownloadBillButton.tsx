@@ -334,9 +334,9 @@ export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId 
       activeOpacity={0.7}
     >
       {isDownloading ? (
-        <ActivityIndicator size="small" color="#2FE6A6" style={styles.icon} />
+        <ActivityIndicator size="small" style={styles.icon} />
       ) : (
-        <Ionicons name="download-outline" size={16} color="#2FE6A6" style={styles.icon} />
+        <Ionicons name="download-outline" size={16}  style={styles.icon} />
       )}
       <Text style={styles.text}>
         {isDownloading ? "Downloading Bill..." : "Download Bill"}
@@ -358,9 +358,10 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   icon: {
     marginRight: 6,
+    color : theme.primary,   
   },
   text: {
-    color: '#2FE6A6',
+    color: theme.primary,
     fontSize: 12,
     fontWeight: '700',
   }

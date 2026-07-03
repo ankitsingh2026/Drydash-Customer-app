@@ -60,7 +60,7 @@ export default function PaymentSuccess() {
         >
           <View style={styles.outerCircle}>
             <View style={styles.innerCircle}>
-              <Ionicons name="checkmark" size={48} color={theme.text} />
+              <Ionicons name="checkmark" size={48} color={theme.primary} />
             </View>
           </View>
         </Animated.View>
@@ -131,7 +131,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     textAlign: "center",
   },
   subtitle: {
-    color: theme.textSecondary,
+    color: theme.primary,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 22,

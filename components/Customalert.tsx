@@ -78,7 +78,7 @@ function AlertCard({
       case 'success':
         return {
           card: theme.background,
-          borderLeft: theme.background,
+          // borderLeft: theme.background,
           iconBg: theme.background,
           iconColor: theme.background,
           primaryBg: theme.background,
@@ -288,7 +288,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     width: '90%',
     maxWidth: 400,
     borderRadius: 16,
-    borderLeftWidth: 3,
+    // borderLeftWidth: 3,
     paddingHorizontal: 16,
     paddingVertical: 14,
     shadowColor: theme.background,
@@ -297,7 +297,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     borderWidth: 1,
-    borderColor: theme.card,
+    borderColor: theme.lightborder,
   },
   headerRow: {
     flexDirection: 'row',

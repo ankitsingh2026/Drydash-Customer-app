@@ -48,7 +48,11 @@ const SUPPORTED_UPI_APPS = [
   { package_name: 'net.one97.paytm', name: 'Paytm', localIcon: require('@/assets/images/icons/paytm.png') },
   { package_name: 'in.amazon.mShop.android.shopping', name: 'Amazon Pay', localIcon: require('@/assets/images/icons/amazon-pay.png') },
 ];
-
+const ONLINE_OPTION = {
+  id: 'online',
+  name: 'Pay Online',
+  isCod: false,
+};
 const COD_OPTION = {
   id: 'cod',
   name: 'Cash/UPI on Delivery',
@@ -115,8 +119,17 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     modalBtnConfirm: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8 },
     modalBtnConfirmText: { color: theme.background, fontWeight: '700' as const, fontSize: 14 },
   }), [theme, isDark]);
-  const [installedApps, setInstalledApps] = useState<any[]>([]);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  // const [installedApps, setInstalledApps] = useState<any[]>([]);
+  // const [selectedApp, setSelectedApp] = useState<any>(null);
+
+  const [installedApps] = useState<any[]>([
+  ONLINE_OPTION,
+  COD_OPTION,
+]);
+
+const [selectedApp, setSelectedApp] = useState<any>(
+  defaultCod ? COD_OPTION : ONLINE_OPTION
+);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showCodConfirm, setShowCodConfirm] = useState(false);
@@ -127,76 +140,76 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     }
   }, [selectedApp]);
 
-  useEffect(() => {
-    const detectApps = () => {
-      try {
-        if (RazorpayCustomUI.getAppsWhichSupportUPI && typeof RazorpayCustomUI.getAppsWhichSupportUPI === 'function') {
-          RazorpayCustomUI.getAppsWhichSupportUPI((result: any) => {
-            let appsArray = result?.data || [];
-            if (appsArray.length === 0) {
-              const fallback = SUPPORTED_UPI_APPS.map(app => ({
-                id: app.package_name,
-                package_name: app.package_name,
-                name: app.name,
-                icon: app.localIcon,
-                isCod: false,
-              }));
-              setInstalledApps(fallback);
-              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-              return;
-            }
-            const filtered = appsArray
-              .filter((app: any) =>
-                SUPPORTED_UPI_APPS.some(s => s.package_name === (app.packageName || app.package_name))
-              )
-              .map((app: any) => ({
-                id: app.packageName || app.package_name,
-                package_name: app.packageName || app.package_name,
-                name: app.appName || app.name,
-                icon: app.appLogo ? { uri: app.appLogo } : null,
-                isCod: false,
-              }));
-            if (filtered.length === 0) {
-              const fallback = SUPPORTED_UPI_APPS.map(app => ({
-                id: app.package_name,
-                package_name: app.package_name,
-                name: app.name,
-                icon: null,
-                isCod: false,
-              }));
-              setInstalledApps(fallback);
-              setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-            } else {
-              setInstalledApps(filtered);
-              setSelectedApp(defaultCod ? COD_OPTION : filtered[0]);
-            }
-          });
-        } else {
-          const fallback = SUPPORTED_UPI_APPS.map(app => ({
-            id: app.package_name,
-            package_name: app.package_name,
-            name: app.name,
-            icon: null,
-            isCod: false,
-          }));
-          setInstalledApps(fallback);
-          setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-        }
-      } catch (error) {
-        console.error('UPI detection error:', error);
-        const fallback = SUPPORTED_UPI_APPS.map(app => ({
-          id: app.package_name,
-          package_name: app.package_name,
-          name: app.name,
-          icon: null,
-          isCod: false,
-        }));
-        setInstalledApps(fallback);
-        setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
-      }
-    };
-    detectApps();
-  }, [defaultCod]);
+  // useEffect(() => {
+  //   const detectApps = () => {
+  //     try {
+  //       if (RazorpayCustomUI.getAppsWhichSupportUPI && typeof RazorpayCustomUI.getAppsWhichSupportUPI === 'function') {
+  //         RazorpayCustomUI.getAppsWhichSupportUPI((result: any) => {
+  //           let appsArray = result?.data || [];
+  //           if (appsArray.length === 0) {
+  //             const fallback = SUPPORTED_UPI_APPS.map(app => ({
+  //               id: app.package_name,
+  //               package_name: app.package_name,
+  //               name: app.name,
+  //               icon: app.localIcon,
+  //               isCod: false,
+  //             }));
+  //             setInstalledApps(fallback);
+  //             setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+  //             return;
+  //           }
+  //           const filtered = appsArray
+  //             .filter((app: any) =>
+  //               SUPPORTED_UPI_APPS.some(s => s.package_name === (app.packageName || app.package_name))
+  //             )
+  //             .map((app: any) => ({
+  //               id: app.packageName || app.package_name,
+  //               package_name: app.packageName || app.package_name,
+  //               name: app.appName || app.name,
+  //               icon: app.appLogo ? { uri: app.appLogo } : null,
+  //               isCod: false,
+  //             }));
+  //           if (filtered.length === 0) {
+  //             const fallback = SUPPORTED_UPI_APPS.map(app => ({
+  //               id: app.package_name,
+  //               package_name: app.package_name,
+  //               name: app.name,
+  //               icon: null,
+  //               isCod: false,
+  //             }));
+  //             setInstalledApps(fallback);
+  //             setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+  //           } else {
+  //             setInstalledApps(filtered);
+  //             setSelectedApp(defaultCod ? COD_OPTION : filtered[0]);
+  //           }
+  //         });
+  //       } else {
+  //         const fallback = SUPPORTED_UPI_APPS.map(app => ({
+  //           id: app.package_name,
+  //           package_name: app.package_name,
+  //           name: app.name,
+  //           icon: null,
+  //           isCod: false,
+  //         }));
+  //         setInstalledApps(fallback);
+  //         setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+  //       }
+  //     } catch (error) {
+  //       console.error('UPI detection error:', error);
+  //       const fallback = SUPPORTED_UPI_APPS.map(app => ({
+  //         id: app.package_name,
+  //         package_name: app.package_name,
+  //         name: app.name,
+  //         icon: null,
+  //         isCod: false,
+  //       }));
+  //       setInstalledApps(fallback);
+  //       setSelectedApp(defaultCod ? COD_OPTION : fallback[0]);
+  //     }
+  //   };
+  //   detectApps();
+  // }, [defaultCod]);
 
   const toggleExpand = () => {
     if (getAllOptions().length <= 1) return;

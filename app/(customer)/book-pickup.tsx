@@ -1219,7 +1219,7 @@ export default function BookPickup() {
             {note ||
               "E.g. Code 1234, leave with concierge, use scent-free detergent"}
           </Text>
-          <View style={s.noteTagRow}>
+          {/* <View style={s.noteTagRow}>
             {["FRAGILE", "ECO-WASH"].map((tag) => (
               <View
                 key={tag}
@@ -1234,7 +1234,7 @@ export default function BookPickup() {
                 <Text style={[s.noteTagText, { color: theme.textSecondary }]}>{tag}</Text>
               </View>
             ))}
-          </View>
+          </View> */}
         </TouchableOpacity>
       </LinearGradient>
     </View>

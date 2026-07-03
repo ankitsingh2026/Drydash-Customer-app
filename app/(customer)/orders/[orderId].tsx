@@ -1008,7 +1008,7 @@ const handlePaymentSuccess = async (data: any) => {
             {(singleOrderDetails.items || []).map((item, index) => (
               <View
                 key={index}
-                style={{ backgroundColor: 'transparent', borderWidth: 1, borderColor: theme.background, marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
+                style={{ backgroundColor: theme.card, borderWidth: 1, borderColor: theme.background, marginBottom: 12, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center' }}
               >
                 <View style={{ backgroundColor: theme.card, width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
                   {item.imageUrl ? (
@@ -1048,7 +1048,7 @@ const handlePaymentSuccess = async (data: any) => {
                 <DownloadBillButton orderId={orderId as string} />
               </View>
             )}
-
+            <View style={{  borderColor: theme.border, borderWidth: 1, paddingHorizontal : 10, borderRadius:10, marginBottom: 10, paddingTop:10}} >
             <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, marginTop: isPaid ? 0 : 16 }}>
               <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
               <Ionicons name={showBillBreakup ? "chevron-down" : "chevron-forward"} size={18} color={theme.text} />
@@ -1066,14 +1066,14 @@ const handlePaymentSuccess = async (data: any) => {
                       <Text style={{ color: theme.primary, fontSize: 14 }}>-₹{totalDiscount.toFixed(0)}</Text>
                     </View>
                   )}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between'}}>
                     <Text style={{ color: theme.textSecondary, fontSize: 14 }}>GST (18%)</Text>
                     <Text style={{ color: theme.textSecondary, fontSize: 14 }}>₹{(cgst + sgst).toFixed(0)}</Text>
                   </View>
                </View>
             )}
-            
-            <View style={{ marginBottom: 24 }}>
+           
+            <View style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                 <View>
                   <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700' }}>Total Bill</Text>
@@ -1081,6 +1081,7 @@ const handlePaymentSuccess = async (data: any) => {
                 </View>
                 <Text style={{ color: theme.primary, fontSize: 20, fontWeight: '800' }}>₹{finalTotal?.toFixed(0)}</Text>
               </View>
+            </View>
             </View>
 
             {!isPaid && !isCodSelected && (
