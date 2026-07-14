@@ -96,6 +96,7 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "SHOE SPA",
     subtitle: "Deep Clean and restore",
+    timelineText: "Up to 24 hours",
     icon: ShoesIcon,
     featured: true,
   },
@@ -104,6 +105,7 @@ const QUICK_SERVICES = [
     slug: "dryclean",
     label: "APPAREL DRY CLEAN",
     subtitle: "Gentle and premium care",
+    timelineText: "Up to 8 hours",
     icon: DrycleanIcon,
   },
   // {
@@ -111,13 +113,15 @@ const QUICK_SERVICES = [
   //   slug: "laundry",
   //   label: "LAUNDRY",
   //   subtitle: "Fresh & hygienic",
+  //   timelineText: "Up to 24 hours",
   //   icon: LaundryIcon,
   // },
   {
     key: "Leather",
     slug: "leather",
-    label: "LEATHER & SUEDE",
+    label: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
+    timelineText: "Up to 48 hours",
     icon: LeatherIcon,
   },
   {
@@ -1191,17 +1195,45 @@ if (["shoe", "leather", "dryclean"].includes(s.slug)) {
                               >
                                 {s.label}
                               </Text>
-                              <Text
-                                style={{
-                                  color: theme.textSecondary,
-                                  fontSize: 9,
-                                  fontWeight: '500',
-                                  lineHeight: 11,
-                                }}
-                                numberOfLines={2}
-                              >
-                                {s.subtitle}
-                              </Text>
+                              {s.timelineText ? (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    marginTop: 0,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="time-outline"
+                                    size={12}
+                                    color={theme.textSecondary}
+                                  />
+                                  <Text
+                                    style={{
+                                      color: theme.textSecondary,
+                                      fontSize: 9,
+                                      fontWeight: "600",
+                                      lineHeight: 11,
+                                    }}
+                                    numberOfLines={1}
+                                  >
+                                    {s.timelineText}
+                                  </Text>
+                                </View>
+                              ) : (
+                                <Text
+                                  style={{
+                                    color: theme.textSecondary,
+                                    fontSize: 9,
+                                    fontWeight: "500",
+                                    lineHeight: 11,
+                                  }}
+                                  numberOfLines={2}
+                                >
+                                  {s.subtitle}
+                                </Text>
+                              )}
                             </View>
                           </TouchableOpacity>
                         );

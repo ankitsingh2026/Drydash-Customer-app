@@ -48,7 +48,7 @@ const SERVICES = [
   {
     key: "Leather",
     slug: "leather",
-    label: "LEATHER & SUEDE",
+    label: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
     icon: LeatherIcon,
   },

@@ -20,7 +20,10 @@ interface Slot {
     isActive: boolean;
     status: string;
     startTime: string;
+    bookingPercentage?: number;
+    deliveryLabel?: string;
 }
+
 
 interface Props {
     lat?: number;
@@ -119,10 +122,9 @@ const SlotPicker: React.FC<Props> = ({
         }
     };
 
-    // ✅ FIX 3: correct filtering
+    // ✅ Build full UI list (including expired) and grey-out the unselectable slots
     const visibleSlots = slots
-        .filter((s) => s.enabled && s.status !== "expired")
-        // ✅ FIX 4: sort by time
+        // ✅ FIX 3: show ALL statuses (expired/upcoming/disabled), but keep sorting
         .sort((a, b) => {
             const getHour = (time: string) => {
                 const num = parseInt(time);
@@ -187,13 +189,18 @@ const SlotPicker: React.FC<Props> = ({
         >
             {visibleSlots.map((slot, index) => {
                 const isSelected = selectedSlot === index;
-                const isFull = slot.availableCapacity === 0;
-                const isDisabled = !slot.enabled;
+
+                const status = slot.status?.toLowerCase?.() || "";
+                const isExpired = status === "expired";
+                const isDisabledByApi = !slot.enabled || status === "disabled";
+                const isFullyBooked = (slot.availableCapacity ?? 0) === 0 || (slot.bookingPercentage ?? 0) === 100;
+
+                const isUnavailable = isExpired || isFullyBooked || isDisabledByApi;
 
                 return (
                     <TouchableOpacity
                         key={index}
-                        disabled={isDisabled}
+                        disabled={isUnavailable}
                         onPress={() => onSelect(index, slot)}
                         style={{ marginRight: 10 }}
                         activeOpacity={0.85}
@@ -202,26 +209,47 @@ const SlotPicker: React.FC<Props> = ({
                             style={[
                                 styles.slotChip,
                                 isSelected && styles.selectedCard,
-                                slot.isActive && !isSelected && styles.activeCard,
-                                isDisabled && styles.disabled,
+                                slot.isActive && !isSelected && !isUnavailable && styles.activeCard,
+                                isUnavailable && styles.disabled,
                             ]}
                         >
                             <View style={{ flex: 1, justifyContent: "space-between" }}>
-
                                 {/* TOP ROW */}
                                 <View style={styles.topRow}>
-                                    <Text style={styles.time}>{slot.time}</Text>
+                                    <Text
+                                        style={[
+                                            styles.time,
+                                            isUnavailable && { color: theme.textSecondary },
+                                            isSelected && { color: theme.primary },
+                                        ]}
+                                    >
+                                        {slot.time}
+                                    </Text>
 
-                                    {/* ✅ SHOW TICK WHEN SELECTED */}
                                     {isSelected && (
                                         <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
                                     )}
                                 </View>
 
-                                {/* BOTTOM ROW */}
+                                {/* STATUS / SECOND LINE (always show text like previous UI) */}
                                 <View style={styles.bottomRow}>
-                                    {isFull ? (
-                                        <Text style={styles.full}>Fully booked</Text>
+                                    {isUnavailable ? (
+                                        <>
+                                            <Ionicons
+                                                name={isExpired ? "time-outline" : "lock-closed-outline"}
+                                                size={12}
+                                                color={isExpired ? "#FF6B6B" : theme.textSecondary}
+                                            />
+                                            <Text style={styles.unavailableHint}>
+                                                {isExpired
+                                                    ? "Expired"
+                                                    : isFullyBooked
+                                                      ? "Fully booked"
+                                                      : status === "disabled"
+                                                        ? "Unavailable"
+                                                        : "Not available"}
+                                            </Text>
+                                        </>
                                     ) : slot.isActive ? (
                                         <>
                                             <Ionicons name="flash" size={12} color="#FFD600" />
@@ -233,6 +261,7 @@ const SlotPicker: React.FC<Props> = ({
                                         </Text>
                                     )}
                                 </View>
+
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -398,6 +427,57 @@ const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         justifyContent: "center",
         marginRight: 10,
     },
+
+    badgeRow: {
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        alignItems: "center",
+        marginTop: 6,
+        minHeight: 18,
+    },
+    badge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
+        borderWidth: 1,
+        alignSelf: "flex-start",
+    },
+    badgeText: {
+        fontSize: 10.5,
+        fontWeight: "800",
+        letterSpacing: 0.2,
+    },
+
+    badgeExpired: {
+        backgroundColor: theme.inputBackground,
+        borderColor: "#FEE2E2",
+    },
+    badgeExpiredText: {
+        color: "#FF6B6B",
+    },
+
+    badgeFull: {
+        backgroundColor: "#FFE5E5",
+        borderColor: "#FF6B6B33",
+    },
+    badgeFullText: {
+        color: "#FF6B6B",
+    },
+
+    badgeDisabled: {
+        backgroundColor: theme.inputBackground,
+        borderColor: theme.border,
+    },
+    badgeDisabledText: {
+        color: theme.textSecondary,
+    },
+
+    unavailableHint: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: theme.textSecondary,
+    },
+
 
     noSlotTitle: {
         color: theme.text,

@@ -344,7 +344,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                     <Ionicons
                       name="time-outline"
                       size={14}
-                      color="#A7F3D0"
+                      color={getServiceColor()}
                       style={{ marginRight: 4 }}
                     />
                     <Text style={styles.deliveryLabel}>Delivery by</Text>
