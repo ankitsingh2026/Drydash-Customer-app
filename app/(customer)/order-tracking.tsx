@@ -1194,7 +1194,7 @@ export default function OrderTrackingScreen() {
     };
   }, [selectedPickup]);
 
-  const storeName = selectedPickup?.plantName || "Green Park";
+  const storeName = selectedPickup?.Address?.trim().split(" ")[0];
   const storeSubtitle = selectedPickup?.Address || null; 
 
   const deliveredAt = ORDER.deliveredAt;

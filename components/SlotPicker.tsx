@@ -34,6 +34,7 @@ interface Props {
     onSelect: (index: number, slot: Slot) => void;
      onSlotsUpdate?: (slots: Slot[]) => void;  
      renderSlots?: (slots: any[]) => React.ReactNode;
+    autoScroll?: boolean;
 }
 
 const SlotPicker: React.FC<Props> = ({
@@ -44,6 +45,7 @@ const SlotPicker: React.FC<Props> = ({
     selectedSlot,
     onSelect,
     onSlotsUpdate,
+    autoScroll = false,
 }) => {
     const { theme, isDark } = useTheme();
     const styles = makeSlotStyles(theme, isDark);
@@ -139,6 +141,98 @@ const SlotPicker: React.FC<Props> = ({
 
     const scrollRef = useRef<ScrollView>(null);
     const lastScrolledSlot = useRef<number | null>(null);
+    const scrollOffsetRef = useRef(0);
+    const containerWidthRef = useRef(0);
+    const contentWidthRef = useRef(0);
+    const frameRef = useRef<number | null>(null);
+    const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isDraggingRef = useRef(false);
+    const lastFrameTimeRef = useRef<number | null>(null);
+    const slotStepWidth = 160;
+
+    const clearAutoScrollFrame = () => {
+        if (frameRef.current != null) {
+            cancelAnimationFrame(frameRef.current);
+            frameRef.current = null;
+        }
+    };
+
+    const stopAutoScroll = () => {
+        clearAutoScrollFrame();
+        lastFrameTimeRef.current = null;
+        if (resumeTimeoutRef.current) {
+            clearTimeout(resumeTimeoutRef.current);
+            resumeTimeoutRef.current = null;
+        }
+    };
+
+    const startAutoScroll = () => {
+        if (!autoScroll || selectedSlot >= 0 || visibleSlots.length < 2) {
+            return;
+        }
+
+        if (containerWidthRef.current <= 0 || contentWidthRef.current <= containerWidthRef.current) {
+            return;
+        }
+
+        if (frameRef.current != null) {
+            return;
+        }
+
+        const maxOffset = Math.max(0, contentWidthRef.current - containerWidthRef.current);
+        const speedPerSecond = 42;
+
+        const step = (timestamp: number) => {
+            if (!autoScroll || selectedSlot >= 0 || isDraggingRef.current) {
+                stopAutoScroll();
+                return;
+            }
+
+            const previousTime = lastFrameTimeRef.current ?? timestamp;
+            const deltaTime = Math.min(32, timestamp - previousTime) / 1000;
+            lastFrameTimeRef.current = timestamp;
+
+            const currentOffset = Math.round(scrollOffsetRef.current);
+            let nextOffset = currentOffset + Math.max(1, Math.round(speedPerSecond * deltaTime));
+
+            if (nextOffset >= maxOffset) {
+                nextOffset = 0;
+            }
+
+            scrollOffsetRef.current = nextOffset;
+            scrollRef.current?.scrollTo({ x: nextOffset, animated: false });
+            frameRef.current = requestAnimationFrame(step);
+        };
+
+        frameRef.current = requestAnimationFrame(step);
+    };
+
+    useEffect(() => {
+        if (selectedSlot >= 0 || !autoScroll) {
+            stopAutoScroll();
+            return;
+        }
+
+        if (!visibleSlots.length) {
+            stopAutoScroll();
+            return;
+        }
+
+        const startDelay = setTimeout(() => {
+            startAutoScroll();
+        }, 700);
+
+        return () => {
+            clearTimeout(startDelay);
+            stopAutoScroll();
+        };
+    }, [autoScroll, selectedSlot, visibleSlots.length]);
+
+    useEffect(() => {
+        return () => {
+            stopAutoScroll();
+        };
+    }, []);
 
     useEffect(() => {
         if (visibleSlots.length > 0 && selectedSlot >= 0 && scrollRef.current) {
@@ -150,6 +244,12 @@ const SlotPicker: React.FC<Props> = ({
             }
         }
     }, [visibleSlots.length, selectedSlot]);
+
+    useEffect(() => {
+        if (selectedSlot >= 0) {
+            stopAutoScroll();
+        }
+    }, [selectedSlot]);
 
     if (loading) {
         return <SlotSkeleton />;
@@ -186,6 +286,52 @@ const SlotPicker: React.FC<Props> = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginTop: 12 }}
+            onLayout={(event) => {
+                containerWidthRef.current = event.nativeEvent.layout.width;
+                startAutoScroll();
+            }}
+            onContentSizeChange={(width) => {
+                contentWidthRef.current = width;
+                startAutoScroll();
+            }}
+            onScroll={(event) => {
+                scrollOffsetRef.current = event.nativeEvent.contentOffset.x;
+            }}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={() => {
+                isDraggingRef.current = true;
+                if (resumeTimeoutRef.current) {
+                    clearTimeout(resumeTimeoutRef.current);
+                    resumeTimeoutRef.current = null;
+                }
+                clearAutoScrollFrame();
+            }}
+            onScrollEndDrag={() => {
+                isDraggingRef.current = false;
+                if (!autoScroll || selectedSlot >= 0) {
+                    return;
+                }
+
+                resumeTimeoutRef.current = setTimeout(() => {
+                    if (!isDraggingRef.current) {
+                        startAutoScroll();
+                    }
+                }, 900);
+            }}
+            onMomentumScrollEnd={() => {
+                isDraggingRef.current = false;
+                if (!autoScroll || selectedSlot >= 0) {
+                    return;
+                }
+
+                if (!frameRef.current) {
+                    resumeTimeoutRef.current = setTimeout(() => {
+                        if (!isDraggingRef.current) {
+                            startAutoScroll();
+                        }
+                    }, 900);
+                }
+            }}
         >
             {visibleSlots.map((slot, index) => {
                 const isSelected = selectedSlot === index;
@@ -354,7 +500,6 @@ const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
 
     disabled: {
-        opacity: 0.4,
     },
 
     available: {
