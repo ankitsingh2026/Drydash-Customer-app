@@ -206,7 +206,11 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     if (!serviceData?.data || !serviceData.serviceAvailable) return null;
     if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
     if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
-      return serviceData.data.allSlots.find((s: any) => s.enabled) || serviceData.data.allSlots[0];
+      return (
+        serviceData.data.allSlots.find((s: any) => s.enabled && s.status === 'upcoming') ||
+        serviceData.data.allSlots.find((s: any) => s.enabled) ||
+        serviceData.data.allSlots[0]
+      );
     }
     return null;
   };

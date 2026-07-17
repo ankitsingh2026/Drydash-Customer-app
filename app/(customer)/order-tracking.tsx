@@ -1025,10 +1025,16 @@ export default function OrderTrackingScreen() {
       return;
     }
 
+    // Extract unique service types from items
+    const activeServiceTypes = Array.from(
+      new Set(items.map((item: any) => item.type).filter(Boolean))
+    );
+    console.log("Active service types for coupons:", activeServiceTypes);
+
     try {
       setCouponLoading(true);
       
-      const res = await fetchAllValidCoupons(bill.subtotal, selectedPickup?._id)
+      const res = await fetchAllValidCoupons(bill.subtotal, undefined, activeServiceTypes)
       console.log("COUPONS API RES ===>", res);
       setCoupons(res?.data || res || []);
     } catch (err) {
@@ -1128,6 +1134,7 @@ export default function OrderTrackingScreen() {
         image: item.image,
         icon: inferItemIcon(item.title),
         accent: theme.primary,
+        type: item.type,
       }));
     }
 
@@ -1149,6 +1156,7 @@ export default function OrderTrackingScreen() {
             "https://via.placeholder.com/50",
           icon: inferItemIcon(name),
           accent: theme.primary,
+          type: item?.type || item?.itemId?.serviceType || item?.itemId?.type,
         };
       },
     );
@@ -1323,7 +1331,7 @@ export default function OrderTrackingScreen() {
             {hasOrderItems || (isEditableMode && cart.items.length > 0) ? (
               <>
                 <View style={styles.sectionHeaderWrap}>
-                  <Text style={styles.sectionHeader}>Cart Items ({(ItemCard.length + 1)}) </Text>
+                  <Text style={styles.sectionHeader}>Cart Items ({items.reduce((total: number, item: any) => total + item.qty, 0)}) </Text>
                 </View>
 
                 {items.map((item: any) => {
@@ -1504,7 +1512,7 @@ export default function OrderTrackingScreen() {
             <LocationCard value={locationText} />
 
             <View style={styles.sectionHeaderWrap}>
-              <Text style={styles.sectionHeader}>Cart Items</Text>
+              <Text style={styles.sectionHeader}>Cart Items ({items.reduce((total: number, item: any) => total + item.qty, 0)})</Text>
             </View>
 
             {items.map((item: any) => (

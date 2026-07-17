@@ -413,6 +413,41 @@ export default function SupportChat() {
   const [botTyping, setBotTyping] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
+
+  const messagesWithDateLabels = React.useMemo(() => {
+    const formatDateLabel = (d: Date) =>
+      d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+
+    let lastLabel: string | null = null;
+    const out: any[] = [];
+
+    for (const m of messages) {
+      // createdAt from API is used for proper day separation.
+      // If missing/invalid, do NOT force "today"; just skip date label insertion for that item.
+      const createdAt = m.createdAt ? new Date(m.createdAt) : null;
+      if (!createdAt || isNaN(createdAt.getTime())) {
+        out.push(m);
+        continue;
+      }
+
+      const label = formatDateLabel(createdAt);
+
+      if (label !== lastLabel) {
+        lastLabel = label;
+        out.push({
+          id: `date-${label}-${out.length}`,
+          type: "date_label",
+          senderType: "system",
+          text: label,
+        });
+      }
+
+      out.push(m);
+    }
+
+    return out;
+  }, [messages]);
+
   const [roomId, setRoomId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -487,12 +522,18 @@ export default function SupportChat() {
           type: m.messageType,
           senderType: m.senderType,
           text: m.message,
-          time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : now(),
-          delivered : m.delivered,
+          createdAt: m.createdAt,
+          time: m.createdAt
+            ? new Date(m.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : now(),
+          delivered: m.delivered,
           fileUrl: m.fileUrl,
-          isDeleted:m.isDeleted,
-          isRead:m.isRead,
-          readAt:m.readAt,
+          isDeleted: m.isDeleted,
+          isRead: m.isRead,
+          readAt: m.readAt,
         }));
         setMessages(formatted);
 
@@ -846,14 +887,16 @@ const closeImagePreview = () => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 80);
 
   const renderItem = ({ item }: { item: any }) => {
-   console.log("this is the valuee of item",item)
-   return  <Bubble
-      msg={item}
-      onCatalog={() => send("Show me the full catalog")}
-      onSpecialist={() => send("I want to talk to a specialist")}
-      onPressImage={openImagePreview} 
-    />
+   return (
+     <Bubble
+       msg={item}
+       onCatalog={() => send("Show me the full catalog")}
+       onSpecialist={() => send("I want to talk to a specialist")}
+       onPressImage={openImagePreview} 
+     />
+   );
   }
+
 
   useEffect(() => {
   seenMessageIds.current.clear();
@@ -886,8 +929,12 @@ const closeImagePreview = () => {
         >
           <View style={{ flex: 1 }}>
             <FlatList
-              ref={(r) => (flatRef.current = r)}
-              data={messages}
+              ref={(r) => {
+                flatRef.current = r as any;
+              }}
+
+              data={messagesWithDateLabels}
+
               keyExtractor={(item) => item.id}
               renderItem={renderItem}
               contentContainerStyle={styles.chatContent}
