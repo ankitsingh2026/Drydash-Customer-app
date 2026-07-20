@@ -60,9 +60,11 @@ export const cancelPickupApi = async (id: string) => {
   }
 };
 
-export const reschedulePickupApi = async (id: string, newDate: string) => {
+export const reschedulePickupApi = async (id: string, newDate: string, slot: any) => {
+  console.log("Rescheduling pickup with id:", id, "to new date:", newDate, "and slot:", slot.time);
   const { data } = await oldApiClient.put(`/v1/rider/reschedulePickup/${id}`, {
     newDate,
+    slot: slot.time,
   });
   return data;
 };

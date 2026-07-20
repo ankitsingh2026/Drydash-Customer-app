@@ -901,7 +901,7 @@ export default function OrderTrackingScreen() {
     }
   };
 
-  const handleReschedulePickup = async (newDate: string) => {
+  const handleReschedulePickup = async (newDate: string, slot: any) => {
     if (!selectedPickup?._id) {
       showAlert({ type: 'error', title: 'Missing pickup', message: 'Unable to reschedule this pickup right now.' });
 
@@ -910,7 +910,7 @@ export default function OrderTrackingScreen() {
 
     try {
       setActionLoading(true);
-      await reschedulePickupApi(selectedPickup._id, newDate);
+      await reschedulePickupApi(selectedPickup._id, newDate, slot);
       setRescheduleModalVisible(false);
       showAlert({ type: 'success', title: 'Pickup rescheduled', message: 'Your pickup date has been updated.', duration: 4000 });
       router.replace({

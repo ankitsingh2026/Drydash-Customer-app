@@ -51,6 +51,7 @@ import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
+import Banner from "../../../../assets/homeicons/Banner1.svg";
 import LottieView from "lottie-react-native";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 
@@ -232,7 +233,7 @@ export default function Home() {
   const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
   const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
 
-  const { notifications,cancelledData } = useNotifications();
+  const { notifications, cancelledData } = useNotifications();
 
 
 
@@ -390,7 +391,7 @@ export default function Home() {
 
   useEffect(() => {
     refreshBooking();
-  }, [refreshBooking,cancelledData]);
+  }, [refreshBooking, cancelledData]);
 
   const lastNotificationIdRef = useRef<string | null>(null);
 
@@ -736,7 +737,7 @@ export default function Home() {
             // overScrollMode="never"        
             >
               <View>
-             
+
                 {/* ── SEARCH BAR ── */}
                 <View style={{ position: "relative", zIndex: 1000 }}>
                   <Animated.View
@@ -882,25 +883,30 @@ export default function Home() {
                   )}
                 </View>
 
-   {delayInfo?.isDelay && (
+                {delayInfo?.isDelay && (
                   <DelayBanner delayInfo={delayInfo} />
                 )}
 
                 <TouchableOpacity
-  activeOpacity={0.92}
-  style={{
-    height: 130,
-    width: "100%",
-    paddingHorizontal: 16,
-  }}
->
-  <DotLottie
-    source={require("../../../../assets/Anim_Banner.lottie")}
-    autoPlay
-    loop
-    style={{ width: "100%", height: "100%" }}
-  />
-</TouchableOpacity>
+                  activeOpacity={0.92}
+                  style={{
+                    height: 130,
+                    width: "100%",
+                    paddingHorizontal: 16,
+                  }}
+                >
+                  {/* <DotLottie
+                    source={require("../../../../assets/Anim_Banner.lottie")}
+                    autoPlay
+                    loop
+                    style={{ width: "100%", height: "100%" }}
+                  /> */}
+                    <Banner
+                    width="100%"
+                    height={130}
+                    preserveAspectRatio="xMidYMid meet"
+                  />
+                </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
                   <View style={{ marginHorizontal: 12 }}>
@@ -1173,7 +1179,7 @@ export default function Home() {
                             }}
                             activeOpacity={0.85}
                             onPress={() => {
-if (["shoe", "leather", "dryclean"].includes(s.slug)) {
+                              if (["shoe", "leather", "dryclean"].includes(s.slug)) {
                                 router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
                               } else {
                                 router.push(`/services/${s.slug}`);

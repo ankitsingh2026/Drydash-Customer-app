@@ -703,6 +703,7 @@ export default function BookPickup() {
               const bookingPayload = {
                 zoneId: locationDetails.zoneId,
                 slotTime: convertedSlotTime,
+                deliveryLabel: selectedSlotData.deliveryLabel || "",
                 customerDetails: {
                   appCustomerId: String(auth_id),
                   name: `${firstName || ""} ${lastName || ""}`.trim(),

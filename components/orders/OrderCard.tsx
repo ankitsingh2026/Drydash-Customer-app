@@ -745,7 +745,7 @@ export default function PickupStatusCard({
         }
     };
 
-    const handleReschedulePickup = async (newDate: string) => {
+    const handleReschedulePickup = async (newDate: string, slot: any) => {
         if (!pickup?._id) {
             showFeedback("Missing pickup", "Unable to reschedule this pickup right now.", "error");
             return;
@@ -753,7 +753,7 @@ export default function PickupStatusCard({
 
         try {
             setActionLoading(true);
-            await reschedulePickupApi(pickup._id, newDate);
+            await reschedulePickupApi(pickup._id, newDate, slot );
             setRescheduleModalVisible(false);
             showFeedback("Pickup rescheduled", "Your pickup date has been updated.", "success");
             onActionComplete?.();
