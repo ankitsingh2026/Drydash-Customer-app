@@ -78,7 +78,8 @@
       "expo-video",
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
-      "expo-build-properties"
+      "expo-build-properties",
+      "@lottiefiles/dotlottie-react-native/plugin"
     ],
     "experiments": {
       "typedRoutes": true,

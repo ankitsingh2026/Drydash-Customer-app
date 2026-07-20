@@ -9,6 +9,8 @@ import { TabBar } from "@/components/layout/TabBar";
 import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
 import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
+import DelayBanner from "@/components/home/DelayBanner";
+import RainBackground from "@/components/home/RainBackground";
 import { getMeApi } from "@/features/auth/auth.api";
 import { getAllSearchedActiveItems } from "@/features/catalog/catalog.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
@@ -49,7 +51,8 @@ import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
-import Banner from "../../../../assets/homeicons/Banner1.svg";
+import LottieView from "lottie-react-native";
+import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -227,7 +230,7 @@ export default function Home() {
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
   const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
-
+  const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
 
   const { notifications,cancelledData } = useNotifications();
 
@@ -702,7 +705,7 @@ export default function Home() {
   const PRIMARY = theme.primary;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <SafeAreaProvider>
         <TabBar
           onOpenNotifications={() => setOpen(true)}
@@ -722,7 +725,10 @@ export default function Home() {
           <UnserviceableArea />
         ) : (
           <>
-            <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
+            {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
+              <RainBackground />
+            )}
+            <ScrollView style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
             // showsVerticalScrollIndicator={false}
             // keyboardShouldPersistTaps="handled"
             // nestedScrollEnabled={true}
@@ -730,6 +736,7 @@ export default function Home() {
             // overScrollMode="never"        
             >
               <View>
+             
                 {/* ── SEARCH BAR ── */}
                 <View style={{ position: "relative", zIndex: 1000 }}>
                   <Animated.View
@@ -875,22 +882,25 @@ export default function Home() {
                   )}
                 </View>
 
+   {delayInfo?.isDelay && (
+                  <DelayBanner delayInfo={delayInfo} />
+                )}
 
                 <TouchableOpacity
-                  activeOpacity={0.92}
-                  style={{
-                    height: 130,
-                    width: "100%",
-                    paddingHorizontal: 16,
-                  }}
-                >
-                  <Banner
-                    width="100%"
-                    height={130}
-                    preserveAspectRatio="xMidYMid meet"
-                  />
-                </TouchableOpacity>
-
+  activeOpacity={0.92}
+  style={{
+    height: 130,
+    width: "100%",
+    paddingHorizontal: 16,
+  }}
+>
+  <DotLottie
+    source={require("../../../../assets/Anim_Banner.lottie")}
+    autoPlay
+    loop
+    style={{ width: "100%", height: "100%" }}
+  />
+</TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
                   <View style={{ marginHorizontal: 12 }}>
