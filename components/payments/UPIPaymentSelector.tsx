@@ -40,6 +40,15 @@ interface UPIPaymentSelectorProps {
   onSuccess: (data: any) => void;
   onFailure: (error: string) => void;
   onPaymentMethodChange?: (isCod: boolean) => void;
+  deliveryInfo?: {
+    rawLabel: string;
+    isTodayLabel: boolean;
+    isTomorrowLabel: boolean;
+    actualDeliveryText: string;
+    canGetFasterDelivery: boolean;
+    fasterDeliveryText: string;
+    codDeliveryText: string;
+  };
 }
 
 const SUPPORTED_UPI_APPS = [
@@ -72,6 +81,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   onSuccess,
   onFailure,
   onPaymentMethodChange,
+  deliveryInfo,
 }) => {
   const insets = useSafeAreaInsets();
   const { theme, isDark } = useTheme();
@@ -340,11 +350,13 @@ const [selectedApp, setSelectedApp] = useState<any>(
               <Text style={styles.modalTitle}>Delivery Time Update</Text>
             </View>
             <Text style={styles.modalText}>
-              If you confirm Cash on Delivery (COD), your order will be delivered during the day time.
+              If you confirm Cash on Delivery (COD), your order will be delivered {deliveryInfo?.codDeliveryText ? deliveryInfo.codDeliveryText.toLowerCase() : "during the day time"}.
               {'\n\n'}
               <Text style={{ color: '#bcb121', fontWeight: 'bold' }}>Note: If you confirm COD, then coupon is not applicable.</Text>
               {'\n\n'}
-              If you make an online payment now, we can deliver your item early in the morning.
+              {deliveryInfo?.canGetFasterDelivery 
+                ? `If you make an online payment now, we can deliver your item by ${deliveryInfo.fasterDeliveryText.toLowerCase()}.` 
+                : "If you make an online payment now, we can deliver your item early in the morning."}
             </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity

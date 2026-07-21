@@ -86,6 +86,16 @@ interface OrderDetails {
   };
   morningDelivery?: boolean;
   isCODConfirmed?: boolean;
+  deliveryLabel?: string;
+  deliveryInfo?: {
+    rawLabel: string;
+    isTodayLabel: boolean;
+    isTomorrowLabel: boolean;
+    actualDeliveryText: string;
+    canGetFasterDelivery: boolean;
+    fasterDeliveryText: string;
+    codDeliveryText: string;
+  };
 }
 
 function ItemIcon({ heading, color }: { heading: string; color: string }) {
@@ -182,6 +192,8 @@ function normalizeOrderDetails(raw: any): OrderDetails | null {
     assignedRider: raw.assignedRider,
     morningDelivery: Boolean(raw.morningDelivery),
     isCODConfirmed: Boolean(raw.isCODConfirmed),
+    deliveryLabel: toSafeText(raw.deliveryLabel),
+    deliveryInfo: raw.deliveryInfo,
   };
 }
 
@@ -656,7 +668,7 @@ const handlePaymentSuccess = async (data: any) => {
 
       // ✅ REFRESH ORDER
       const updatedOrder = await getSingleOrderDetails();
-      setSingleOrderDetails({ ...updatedOrder });
+      setSingleOrderDetails(updatedOrder);
 
 
        await refreshRazorpayOrder();
@@ -782,6 +794,28 @@ const handlePaymentSuccess = async (data: any) => {
   const isActive = ["processing", "active", "intransit", "readyfordelivery"].includes(
     normalizedStatus,
   );
+
+  // Delivery label logic
+  const deliveryLabel = singleOrderDetails?.deliveryLabel || "";
+  const deliveryInfo = singleOrderDetails?.deliveryInfo;
+
+  // Smart delivered date text
+  const getDeliveredDateText = () => {
+    const deliveredDateStr = singleOrderDetails?.statusHistory?.delivered;
+    if (!deliveredDateStr) return "Delivered";
+    const deliveredDate = new Date(deliveredDateStr);
+    if (isNaN(deliveredDate.getTime())) return "Delivered";
+    const now = new Date();
+    const isToday = deliveredDate.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = deliveredDate.toDateString() === yesterday.toDateString();
+    const time = deliveredDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    if (isToday) return `Delivered today at ${time}`;
+    if (isYesterday) return `Delivered yesterday at ${time}`;
+    const dateStr = deliveredDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return `Delivered on ${dateStr} at ${time}`;
+  };
 
   const statusLabel = isActive
     ? "Active"
@@ -1131,30 +1165,75 @@ const handlePaymentSuccess = async (data: any) => {
               </>
             )}
 
-            {!isPaid && (
+            { (
               <>
                 <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>DELIVERY OPTIONS</Text>
-                <View style={{ borderWidth: 1, borderColor: theme.background, borderRadius: 16, overflow: 'hidden', marginBottom: 24 }}>
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => {
-                      if (singleOrderDetails.isCODConfirmed) return;
-                      setSelectedDeliveryOption(true);
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.background, backgroundColor: selectedDeliveryOption === true ? theme.background : 'transparent', opacity: singleOrderDetails.isCODConfirmed ? 0.5 : 1 }}
-                  >
-                    <Ionicons name={selectedDeliveryOption === true ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === true ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === true ? theme.text : theme.textSecondary, fontSize: 14, fontWeight: '500' }}>Delivered by 11 A.M Tomorrow Morning</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    activeOpacity={0.85}
-                    onPress={() => setSelectedDeliveryOption(false)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: selectedDeliveryOption === false ? theme.background : 'transparent' }}
-                  >
-                    <Ionicons name={selectedDeliveryOption === false ? "radio-button-on" : "radio-button-off"} size={20} color={selectedDeliveryOption === false ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
-                    <Text style={{ color: selectedDeliveryOption === false ? theme.text : theme.textSecondary, fontSize: 14, fontWeight: '500' }}>Delivered by Tomorrow Day Time</Text>
-                  </TouchableOpacity>
-                </View>
+                {isPaid ? (
+                  /* Online Payment Done — show single green card */
+                  <View style={{ borderWidth: 1, borderColor: '#22c55e30', borderRadius: 16, overflow: 'hidden', marginBottom: 24, backgroundColor: '#22c55e10' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: '#22c55e20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                        <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{deliveryInfo?.actualDeliveryText || deliveryLabel}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '500' }}>Paid online via UPI/Card</Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : singleOrderDetails?.isCODConfirmed ? (
+                  /* COD Confirmed — show single card */
+                  <View style={{ borderWidth: 1, borderColor: theme.primary + '30', borderRadius: 16, overflow: 'hidden', marginBottom: 24, backgroundColor: theme.primary + '10' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                        <MaterialCommunityIcons name="truck-fast-outline" size={22} color={theme.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{deliveryInfo?.actualDeliveryText || deliveryLabel}</Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '500' }}>Cash on Delivery chosen</Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : deliveryInfo?.canGetFasterDelivery ? (
+                  /* Unpaid, Faster delivery possible - Show incentive banner + both options */
+                  <View style={{ marginBottom: 24 }}>
+                    <View style={{ backgroundColor: '#fff7ed', borderWidth: 1, borderColor: '#fdba74', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialCommunityIcons name="lightning-bolt" size={20} color="#ea580c" style={{ marginRight: 8 }} />
+                      <Text style={{ color: '#9a3412', fontSize: 13, fontWeight: '600', flex: 1 }}>
+                        Pay online now to get your delivery by {deliveryInfo.fasterDeliveryText.toLowerCase()}!
+                      </Text>
+                    </View>
+
+                    <View style={{ borderWidth: 1, borderColor: theme.background, borderRadius: 16, overflow: 'hidden' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: theme.background, backgroundColor: !isCodSelected ? theme.primary + '10' : 'transparent' }}>
+                        <Ionicons name="flash" size={20} color={!isCodSelected ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: !isCodSelected ? theme.primary : theme.textSecondary, fontSize: 14, fontWeight: '700' }}>{deliveryInfo.fasterDeliveryText}</Text>
+                          <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>With online payment</Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: isCodSelected ? theme.primary + '10' : 'transparent' }}>
+                        <Ionicons name="cash-outline" size={20} color={isCodSelected ? theme.primary : theme.textSecondary} style={{ marginRight: 12 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: isCodSelected ? theme.primary : theme.textSecondary, fontSize: 14, fontWeight: '700' }}>{deliveryInfo.codDeliveryText}</Text>
+                          <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>With cash on delivery</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  /* Fallback for other cases */
+                  <View style={{ borderWidth: 1, borderColor: theme.primary + '30', borderRadius: 16, overflow: 'hidden', marginBottom: 24, backgroundColor: theme.primary + '10' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: theme.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                        <MaterialCommunityIcons name="truck-fast-outline" size={22} color={theme.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700', marginBottom: 2 }}>{deliveryInfo?.actualDeliveryText || deliveryLabel}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
               </>
             )}
 
@@ -1221,6 +1300,7 @@ const handlePaymentSuccess = async (data: any) => {
     onFailure={handlePaymentFailure}
     defaultCod={singleOrderDetails?.isCODConfirmed}
     onPaymentMethodChange={setIsCodSelected}
+    deliveryInfo={singleOrderDetails?.deliveryInfo}
   />
 )}
 
@@ -1271,6 +1351,26 @@ const handlePaymentSuccess = async (data: any) => {
               { backgroundColor: theme.background, paddingBottom: 120, paddingTop: 14, paddingHorizontal: 20 },
             ]}
           >
+            {/* ===== Professional Delivered Success Banner ===== */}
+            <View style={{ alignItems: 'center', paddingVertical: 28, marginBottom: 20, borderRadius: 20, backgroundColor: theme.card, borderWidth: 0.5, borderColor: theme.lightborder }}>
+              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#22c55e20', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#22c55e30', justifyContent: 'center', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={40} color="#22c55e" />
+                </View>
+              </View>
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800', letterSpacing: 0.2, marginBottom: 6 }}>Order Delivered!</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13, fontWeight: '500', marginBottom: 4 }}>{getDeliveredDateText()}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '500' }}>Order {displayOrderId}</Text>
+              {isPaid && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: '#22c55e15', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 }}>
+                  <Ionicons name="checkmark-circle" size={14} color="#22c55e" style={{ marginRight: 6 }} />
+                  <Text style={{ color: '#22c55e', fontSize: 12, fontWeight: '700' }}>
+                    {singleOrderDetails.payment?.paymentMode ? `Paid via ${singleOrderDetails.payment.paymentMode.toUpperCase()}` : "Paid"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '700' }}>Items</Text>
               {isPaid ? (
@@ -1309,14 +1409,6 @@ const handlePaymentSuccess = async (data: any) => {
                 <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>₹{(item.price * item.quantity).toFixed(0)}</Text>
               </View>
             ))}
-
-            {/* <View style={{ backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginTop: 4, marginBottom: 24 }}>
-              <Ionicons name="star" size={20} color="#FBBF24" style={{ marginRight: 12 }} />
-              <Text style={{ color: theme.text, flex: 1, fontSize: 14, fontWeight: '600' }}>How Were Your Ordered Items?</Text>
-              <TouchableOpacity style={{ borderWidth: 1, borderColor: theme.primary, paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
-                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '600' }}>Rate Now</Text>
-              </TouchableOpacity>
-            </View> */}
 
             <TouchableOpacity activeOpacity={0.8} onPress={() => setShowBillBreakup(!showBillBreakup)} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>Bill Details</Text>
