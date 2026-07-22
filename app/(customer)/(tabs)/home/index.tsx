@@ -235,6 +235,14 @@ export default function Home() {
 
   const { notifications, cancelledData } = useNotifications();
 
+  // Force DotLottie to re-mount every time this screen gains focus
+  const [lottieKey, setLottieKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setLottieKey((prev) => prev + 1);
+    }, [])
+  );
+
 
 
   useEffect(() => {
@@ -895,17 +903,18 @@ export default function Home() {
                     paddingHorizontal: 16,
                   }}
                 >
-                  {/* <DotLottie
+                  <DotLottie
+                    key={lottieKey}
                     source={require("../../../../assets/Anim_Banner.lottie")}
                     autoPlay
                     loop
                     style={{ width: "100%", height: "100%" }}
-                  /> */}
-                    <Banner
+                  />
+                    {/* <Banner
                     width="100%"
                     height={130}
                     preserveAspectRatio="xMidYMid meet"
-                  />
+                  /> */}
                 </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (

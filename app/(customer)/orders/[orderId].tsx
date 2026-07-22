@@ -261,10 +261,12 @@ useEffect(() => {
     if (orderId) {
       confirmCouponApi({ orderId }).catch(console.error);
     }
-    router.replace({
-      pathname: "/(customer)/orders/payment-success",
-      params: { orderId },
-    });
+    //  Payment success page skipped
+    // router.replace({
+    //   pathname: "/(customer)/orders/payment-success",
+    //   params: { orderId },
+    // });
+    getSingleOrderDetails();
     setPaymentUpdate(null);
     setSocketVerified(false);
     setRazorpaySuccessData(null);
