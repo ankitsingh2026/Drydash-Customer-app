@@ -1,7 +1,8 @@
 import { useTheme } from "@/context/ThemeContext";
 import { Stack, router } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Clock, MapPin, ShieldCheck, Sparkles } from "lucide-react-native";
 import { useEffect, useRef } from "react";
+import OnsiteIcon from "../../../assets/homeicons/on-site.svg";
 import {
   Animated,
   Dimensions,
@@ -127,11 +128,10 @@ export default function Onsite() {
               ]}
             />
             <View style={[styles.ring, styles.ringMid]} />
-            <Animated.View
-              style={[styles.heroIconCircle, { transform: [{ translateY: floatAnim }] }]}
-            >
-              <Text style={styles.heroIcon}>🚪</Text>
-            </Animated.View>
+           
+           
+              <OnsiteIcon width={100} height={100} />
+           
           </View>
 
           <Text style={styles.heroTitle}>Onsite Service</Text>

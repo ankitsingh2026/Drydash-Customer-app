@@ -71,9 +71,19 @@ export const sendStopTyping = (roomId: string) => {
 };
 
 export const onUserTyping = (callback: (data: { userId: string; userName: string }) => void) => {
+  console.log("User typing event recieved from admin======>>")
   if (socket) socket.on('userTyping', callback);
 };
 
 export const offUserTyping = () => {
   if (socket) socket.off('userTyping');
+};
+
+// Add these exports
+export const onUserStoppedTyping = (callback: () => void) => {
+  if (socket) socket.on('userStoppedTyping', callback);
+};
+
+export const offUserStoppedTyping = () => {
+  if (socket) socket.off('userStoppedTyping');
 };

@@ -21,8 +21,8 @@ type ReschedulePickupModalProps = {
   initialDate?: string | null;
   loading?: boolean;
   onClose: () => void;
-  /** callback must receive new date (yyyy-mm-dd). If you also want slot, update signature in parent. */
-  onConfirm: (newDate: string) => void;
+  /** callback must receive new date (yyyy-mm-dd) and slot data. If you also want slot, update signature in parent. */
+  onConfirm: (newDate: string, slot: any) => void;
 };
 
 const toDefaultDate = (source?: string | null) => {
@@ -123,7 +123,7 @@ export default function ReschedulePickupModal({
   const submit = () => {
     // You currently only pass date back per prop signature.
     // Parent can optionally re-fetch the slot by calling slot time from API.
-    onConfirm(formatDateInput(selectedDate));
+    onConfirm(formatDateInput(selectedDate), selectedSlotData );
   };
 
   const canSubmit =

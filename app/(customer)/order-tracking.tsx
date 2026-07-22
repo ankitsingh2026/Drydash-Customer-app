@@ -901,7 +901,7 @@ export default function OrderTrackingScreen() {
     }
   };
 
-  const handleReschedulePickup = async (newDate: string) => {
+  const handleReschedulePickup = async (newDate: string, slot: any) => {
     if (!selectedPickup?._id) {
       showAlert({ type: 'error', title: 'Missing pickup', message: 'Unable to reschedule this pickup right now.' });
 
@@ -910,7 +910,7 @@ export default function OrderTrackingScreen() {
 
     try {
       setActionLoading(true);
-      await reschedulePickupApi(selectedPickup._id, newDate);
+      await reschedulePickupApi(selectedPickup._id, newDate, slot);
       setRescheduleModalVisible(false);
       showAlert({ type: 'success', title: 'Pickup rescheduled', message: 'Your pickup date has been updated.', duration: 4000 });
       router.replace({
@@ -1025,10 +1025,16 @@ export default function OrderTrackingScreen() {
       return;
     }
 
+    // Extract unique service types from items
+    const activeServiceTypes = Array.from(
+      new Set(items.map((item: any) => item.type).filter(Boolean))
+    );
+    console.log("Active service types for coupons:", activeServiceTypes);
+
     try {
       setCouponLoading(true);
       
-      const res = await fetchAllValidCoupons(bill.subtotal, selectedPickup?._id)
+      const res = await fetchAllValidCoupons(bill.subtotal, undefined, activeServiceTypes)
       console.log("COUPONS API RES ===>", res);
       setCoupons(res?.data || res || []);
     } catch (err) {
@@ -1128,6 +1134,7 @@ export default function OrderTrackingScreen() {
         image: item.image,
         icon: inferItemIcon(item.title),
         accent: theme.primary,
+        type: item.type,
       }));
     }
 
@@ -1149,6 +1156,7 @@ export default function OrderTrackingScreen() {
             "https://via.placeholder.com/50",
           icon: inferItemIcon(name),
           accent: theme.primary,
+          type: item?.type || item?.itemId?.serviceType || item?.itemId?.type,
         };
       },
     );
@@ -1194,7 +1202,7 @@ export default function OrderTrackingScreen() {
     };
   }, [selectedPickup]);
 
-  const storeName = selectedPickup?.plantName || "Green Park";
+  const storeName = selectedPickup?.Address?.trim().split(" ")[0];
   const storeSubtitle = selectedPickup?.Address || null; 
 
   const deliveredAt = ORDER.deliveredAt;
@@ -1323,7 +1331,7 @@ export default function OrderTrackingScreen() {
             {hasOrderItems || (isEditableMode && cart.items.length > 0) ? (
               <>
                 <View style={styles.sectionHeaderWrap}>
-                  <Text style={styles.sectionHeader}>Cart Items ({(ItemCard.length + 1)}) </Text>
+                  <Text style={styles.sectionHeader}>Cart Items ({items.reduce((total: number, item: any) => total + item.qty, 0)}) </Text>
                 </View>
 
                 {items.map((item: any) => {
@@ -1504,7 +1512,7 @@ export default function OrderTrackingScreen() {
             <LocationCard value={locationText} />
 
             <View style={styles.sectionHeaderWrap}>
-              <Text style={styles.sectionHeader}>Cart Items</Text>
+              <Text style={styles.sectionHeader}>Cart Items ({items.reduce((total: number, item: any) => total + item.qty, 0)})</Text>
             </View>
 
             {items.map((item: any) => (

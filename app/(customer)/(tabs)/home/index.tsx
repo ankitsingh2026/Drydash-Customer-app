@@ -9,6 +9,8 @@ import { TabBar } from "@/components/layout/TabBar";
 import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
 import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
+import DelayBanner from "@/components/home/DelayBanner";
+import RainBackground from "@/components/home/RainBackground";
 import { getMeApi } from "@/features/auth/auth.api";
 import { getAllSearchedActiveItems } from "@/features/catalog/catalog.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
@@ -51,6 +53,8 @@ import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
 import Banner from "../../../../assets/homeicons/Banner1.svg";
+import LottieView from "lottie-react-native";
+import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -97,6 +101,7 @@ const QUICK_SERVICES = [
     slug: "shoe",
     label: "SHOE SPA",
     subtitle: "Deep Clean and restore",
+    timelineText: "Up to 24 hours",
     icon: ShoesIcon,
     featured: true,
   },
@@ -105,6 +110,7 @@ const QUICK_SERVICES = [
     slug: "dryclean",
     label: "APPAREL DRY CLEAN",
     subtitle: "Gentle and premium care",
+    timelineText: "Up to 8 hours",
     icon: DrycleanIcon,
   },
   // {
@@ -112,13 +118,15 @@ const QUICK_SERVICES = [
   //   slug: "laundry",
   //   label: "LAUNDRY",
   //   subtitle: "Fresh & hygienic",
+  //   timelineText: "Up to 24 hours",
   //   icon: LaundryIcon,
   // },
   {
     key: "Leather",
     slug: "leather",
-    label: "LEATHER & SUEDE",
+    label: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
+    timelineText: "Up to 48 hours",
     icon: LeatherIcon,
   },
   {
@@ -223,9 +231,17 @@ export default function Home() {
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
   const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
+  const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
 
+  const { notifications, cancelledData } = useNotifications();
 
-  const { notifications,cancelledData } = useNotifications();
+  // Force DotLottie to re-mount every time this screen gains focus
+  const [lottieKey, setLottieKey] = useState(0);
+  useFocusEffect(
+    useCallback(() => {
+      setLottieKey((prev) => prev + 1);
+    }, [])
+  );
 
   const styles = makeStyles(theme);
 
@@ -383,7 +399,7 @@ export default function Home() {
 
   useEffect(() => {
     refreshBooking();
-  }, [refreshBooking,cancelledData]);
+  }, [refreshBooking, cancelledData]);
 
   const lastNotificationIdRef = useRef<string | null>(null);
 
@@ -698,7 +714,7 @@ export default function Home() {
   const PRIMARY = theme.primary;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <SafeAreaProvider>
         <TabBar
           onOpenNotifications={() => setOpen(true)}
@@ -718,7 +734,10 @@ export default function Home() {
           <UnserviceableArea />
         ) : (
           <>
-            <ScrollView style={[styles.root, { backgroundColor: theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
+            {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
+              <RainBackground />
+            )}
+            <ScrollView style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
             // showsVerticalScrollIndicator={false}
             // keyboardShouldPersistTaps="handled"
             // nestedScrollEnabled={true}
@@ -726,6 +745,7 @@ export default function Home() {
             // overScrollMode="never"        
             >
               <View>
+
                 {/* ── SEARCH BAR ── */}
                 <View style={{ position: "relative", zIndex: 1000 }}>
                   <Animated.View
@@ -871,6 +891,9 @@ export default function Home() {
                   )}
                 </View>
 
+                {delayInfo?.isDelay && (
+                  <DelayBanner delayInfo={delayInfo} />
+                )}
 
                  <TouchableOpacity
                   activeOpacity={0.92}
@@ -880,13 +903,19 @@ export default function Home() {
                     paddingHorizontal: 16,
                   }}
                 >
-                  <Banner
+                  <DotLottie
+                    key={lottieKey}
+                    source={require("../../../../assets/Anim_Banner.lottie")}
+                    autoPlay
+                    loop
+                    style={{ width: "100%", height: "100%" }}
+                  />
+                    {/* <Banner
                     width="100%"
                     height={130}
                     preserveAspectRatio="xMidYMid meet"
-                  />
+                  /> */}
                 </TouchableOpacity>
-
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
                   <View style={{ marginHorizontal: 12 }}>
@@ -908,6 +937,7 @@ export default function Home() {
                         lng={contextSelectedAddress.longitude}
                         zoneId={zoneData?.zoneId}
                         selectedSlot={selectedSlotIndex}
+                        autoScroll={selectedSlotIndex < 0}
                         onSelect={(index: number, slot: any) => {
                           setSelectedSlotIndex(index);
                           setSelectedSlotData(slot);
@@ -1159,7 +1189,7 @@ export default function Home() {
                             }}
                             activeOpacity={0.85}
                             onPress={() => {
-if (["shoe", "leather", "dryclean"].includes(s.slug)) {
+                              if (["shoe", "leather", "dryclean"].includes(s.slug)) {
                                 router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
                               } else {
                                 router.push(`/services/${s.slug}`);
@@ -1194,17 +1224,45 @@ if (["shoe", "leather", "dryclean"].includes(s.slug)) {
                               >
                                 {s.label}
                               </Text>
-                              <Text
-                                style={{
-                                  color: theme.textSecondary,
-                                  fontSize: 9,
-                                  fontWeight: '500',
-                                  lineHeight: 11,
-                                }}
-                                numberOfLines={2}
-                              >
-                                {s.subtitle}
-                              </Text>
+                              {s.timelineText ? (
+                                <View
+                                  style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 5,
+                                    marginTop: 0,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="time-outline"
+                                    size={12}
+                                    color={theme.textSecondary}
+                                  />
+                                  <Text
+                                    style={{
+                                      color: theme.textSecondary,
+                                      fontSize: 9,
+                                      fontWeight: "600",
+                                      lineHeight: 11,
+                                    }}
+                                    numberOfLines={1}
+                                  >
+                                    {s.timelineText}
+                                  </Text>
+                                </View>
+                              ) : (
+                                <Text
+                                  style={{
+                                    color: theme.textSecondary,
+                                    fontSize: 9,
+                                    fontWeight: "500",
+                                    lineHeight: 11,
+                                  }}
+                                  numberOfLines={2}
+                                >
+                                  {s.subtitle}
+                                </Text>
+                              )}
                             </View>
                           </TouchableOpacity>
                         );

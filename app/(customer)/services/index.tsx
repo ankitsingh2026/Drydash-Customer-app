@@ -20,6 +20,7 @@ import OnsiteIcon from "../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../assets/homeicons/8-hours-delivery.svg";
 import LeatherIcon from "../../../assets/homeicons/leather.svg";
+import BtoBIcon from "../../../assets/homeicons/B2B.svg";
 
 const { width } = Dimensions.get("window");
 
@@ -48,7 +49,7 @@ const SERVICES = [
   {
     key: "Leather",
     slug: "leather",
-    label: "LEATHER & SUEDE",
+    label: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
     icon: LeatherIcon,
   },
@@ -67,11 +68,11 @@ const SERVICES = [
     icon: CarwashIcon,
   },
   {
-    key: "Express",
-    slug: "express",
-    label: "8-HOURS DELIVERY",
-    subtitle: "Fast service, delivered same day",
-    icon: ExpressIcon,
+    key: "B2B",
+    slug: "b2b",
+    label: "B2B SERVICES",
+    subtitle: "Tailored solutions for organizations",
+    icon: BtoBIcon,
   },
 ];
 export default function ServicesPage() {

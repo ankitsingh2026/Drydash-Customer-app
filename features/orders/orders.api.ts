@@ -1,5 +1,5 @@
 import { apiClient, oldApiClient } from "@/lib/api/client";
-import { buildPhoneCandidates } from "@/utils/phone";
+
 import { CreatePickupRequest } from "./orders.types";
 
 export const convertSlotTimeFormat = (slotTime: string): string => {
@@ -96,21 +96,18 @@ export const deleteAddressApi = async (id: any) => {
 }
 
 export const getOrdersApi = async (phoneNumber: any) => {
-  console.log("phoneNumber", phoneNumber);
-  const candidates = isCustomerId(phoneNumber)
-    ? [String(phoneNumber)]
-    : buildPhoneCandidates(phoneNumber);
+  // Only send phone number with +91 prefix (nothing else).
+  const normalized = String(phoneNumber ?? "").trim();
+  const digitsOnly = normalized.replace(/\D/g, "");
 
-  let data: any = null;
+  // If user already provided 91xxxx..., keep last 10 digits; otherwise use as-is.
+  const phoneWith91 = digitsOnly.length > 10 ? `91${digitsOnly.slice(-10)}` : `91${digitsOnly}`;
+  // Backend expects phone in format: 91XXXXXXXXXX (NO leading +)
+  const candidate = `91${digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly}`;
 
-  for (const candidate of candidates) {
-    const response = await oldApiClient.get(`/app/getCustomerOrders/${candidate}`);
-    data = response.data;
-    if (Array.isArray(data?.orders) && data.orders.length > 0) break;
-  }
-
-  console.log("thi is the all data: : : ", data);
-  return data;
+  console.log("getOrdersApi phone candidate:", candidate);
+  const response = await oldApiClient.get(`/app/getCustomerOrders/${candidate}`);
+  return response.data;
 };
 
 export const getSingleOrderDetailsApi = async (orderId: any) => {

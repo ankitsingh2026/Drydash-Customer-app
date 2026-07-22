@@ -40,6 +40,8 @@ import {
   sendStopTyping,
   onUserTyping,
   offUserTyping,
+  onUserStoppedTyping,
+  offUserStoppedTyping
 } from "../../../features/chat/chat.socket";
 import { Message as ApiMessage } from "../../../features/chat/chat.types";
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -152,11 +154,15 @@ function PricingCard({ onCatalog, onSpecialist }: { onCatalog: () => void; onSpe
 }
 
 /* ─── TypingIndicator (unchanged) ─── */
-function TypingIndicator() {
+function TypingIndicator({ label = "SPARK IS TYPING", icon = "✨" }) {
   const { theme, isDark } = useTheme();
   const C = buildChatColors(theme, isDark);
   const styles = makeChatStyles(C);
-  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  const dots = [
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+    useRef(new Animated.Value(0)).current,
+  ];
 
   useEffect(() => {
     const anims = dots.map((dot, i) =>
@@ -176,7 +182,7 @@ function TypingIndicator() {
   return (
     <View style={styles.typingRow}>
       <View style={styles.botAvatar}>
-        <Text style={{ fontSize: 12 }}>✨</Text>
+        <Text style={{ fontSize: 12 }}>{icon}</Text>
       </View>
       <View style={styles.typingBubble}>
         <View style={styles.typingDots}>
@@ -193,7 +199,7 @@ function TypingIndicator() {
             />
           ))}
         </View>
-        <Text style={styles.typingLabel}>SPARK IS TYPING</Text>
+        <Text style={styles.typingLabel}>{label}</Text>
       </View>
     </View>
   );
@@ -407,6 +413,41 @@ export default function SupportChat() {
   const [botTyping, setBotTyping] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const [messages, setMessages] = useState<any[]>([]);
+
+  const messagesWithDateLabels = React.useMemo(() => {
+    const formatDateLabel = (d: Date) =>
+      d.toLocaleDateString([], { year: "numeric", month: "short", day: "numeric" });
+
+    let lastLabel: string | null = null;
+    const out: any[] = [];
+
+    for (const m of messages) {
+      // createdAt from API is used for proper day separation.
+      // If missing/invalid, do NOT force "today"; just skip date label insertion for that item.
+      const createdAt = m.createdAt ? new Date(m.createdAt) : null;
+      if (!createdAt || isNaN(createdAt.getTime())) {
+        out.push(m);
+        continue;
+      }
+
+      const label = formatDateLabel(createdAt);
+
+      if (label !== lastLabel) {
+        lastLabel = label;
+        out.push({
+          id: `date-${label}-${out.length}`,
+          type: "date_label",
+          senderType: "system",
+          text: label,
+        });
+      }
+
+      out.push(m);
+    }
+
+    return out;
+  }, [messages]);
+
   const [roomId, setRoomId] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -481,12 +522,18 @@ export default function SupportChat() {
           type: m.messageType,
           senderType: m.senderType,
           text: m.message,
-          time: m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : now(),
-          delivered : m.delivered,
+          createdAt: m.createdAt,
+          time: m.createdAt
+            ? new Date(m.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : now(),
+          delivered: m.delivered,
           fileUrl: m.fileUrl,
-          isDeleted:m.isDeleted,
-          isRead:m.isRead,
-          readAt:m.readAt,
+          isDeleted: m.isDeleted,
+          isRead: m.isRead,
+          readAt: m.readAt,
         }));
         setMessages(formatted);
 
@@ -602,6 +649,15 @@ export default function SupportChat() {
           }
         });
 
+        // Typing indicator – admin stopped typing
+        onUserStoppedTyping(() => {
+          setOtherTyping(false);
+          if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = null;
+          }
+        });
+
         // Optional: stop typing event
         // const socket = (await import('../../../features/chat/chat.socket')).default; // hack to get raw socket? simpler: just use a ref
         // Actually we don't have direct socket access, but we can add a listener via the socket instance if needed.
@@ -617,6 +673,7 @@ export default function SupportChat() {
     return () => {
       offReceiveMessage();
       offUserTyping();
+      offUserStoppedTyping();
       disconnectChatSocket();
     };
   }, [customerId]);
@@ -830,14 +887,16 @@ const closeImagePreview = () => {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 80);
 
   const renderItem = ({ item }: { item: any }) => {
-   console.log("this is the valuee of item",item)
-   return  <Bubble
-      msg={item}
-      onCatalog={() => send("Show me the full catalog")}
-      onSpecialist={() => send("I want to talk to a specialist")}
-      onPressImage={openImagePreview} 
-    />
+   return (
+     <Bubble
+       msg={item}
+       onCatalog={() => send("Show me the full catalog")}
+       onSpecialist={() => send("I want to talk to a specialist")}
+       onPressImage={openImagePreview} 
+     />
+   );
   }
+
 
   useEffect(() => {
   seenMessageIds.current.clear();
@@ -870,8 +929,12 @@ const closeImagePreview = () => {
         >
           <View style={{ flex: 1 }}>
             <FlatList
-              ref={(r) => (flatRef.current = r)}
-              data={messages}
+              ref={(r) => {
+                flatRef.current = r as any;
+              }}
+
+              data={messagesWithDateLabels}
+
               keyExtractor={(item) => item.id}
               renderItem={renderItem}
               contentContainerStyle={styles.chatContent}
@@ -906,12 +969,8 @@ const closeImagePreview = () => {
   </View>
 </Modal>
 
-            {botTyping && <TypingIndicator />}
-            {otherTyping && (
-              <View style={styles.otherTypingContainer}>
-                <Text style={styles.otherTypingText}>Admin is typing...</Text>
-              </View>
-            )}
+{botTyping && <TypingIndicator label="SPARK IS TYPING" icon="✨" />}
+{otherTyping && <TypingIndicator label="ADMIN IS TYPING" icon="👤" />}
 
             {/* Input row */}
             <View style={styles.inputRow}>

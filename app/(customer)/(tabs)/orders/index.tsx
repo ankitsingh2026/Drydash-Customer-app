@@ -37,15 +37,33 @@ const normalizeStatusKey = (status: string) =>
 
 const getStatusConfig = (status: string, theme: any) => {
   const STATUS_CONFIG = {
-    active: { bg: "#3B82F6", icon: "time-outline" as const, label: "Active" },
-    transit: { bg: theme.background, icon: "bicycle-outline" as const, label: "Out For Delivery" },
+    active: {
+      bg: "#3B82F6", // Blue
+      icon: "time-outline" as const,
+      label: "Active",
+    },
+    intransit: {
+      bg: "#F59E0B", // Amber
+      icon: "bicycle-outline" as const,
+      label: "In Transit",
+    },
+    readyForDelivery: {
+      bg: "#8B5CF6", // Purple
+      icon: "cube-outline" as const,
+      label: "Ready for Delivery",
+    },
+    deliveryriderassigned: {
+      bg: "#06B6D4", // Cyan
+      icon: "person-outline" as const,
+      label: "Delivery Rider Assigned",
+    },
     delivered: {
-      bg: theme.primary,
+      bg: "#10B981", // Green
       icon: "checkmark-done-outline" as const,
       label: "Delivered",
     },
     cancelled: {
-      bg: "#FF6B6B",
+      bg: "#EF4444", // Red
       icon: "close-circle-outline" as const,
       label: "Cancelled",
     },
@@ -53,20 +71,28 @@ const getStatusConfig = (status: string, theme: any) => {
 
   const key = normalizeStatusKey(status);
 
-  if (key === "delivered") return STATUS_CONFIG.delivered;
-  if (key === "cancelled" || key === "canceled" || key === "deleted") {
-    return STATUS_CONFIG.cancelled;
-  }
-  if (
-    key === "intransit" ||
-    key === "readyfordelivery" ||
-    key === "deliveryriderassigned" ||
-    key === "outfordelivery"
-  ) {
-    return STATUS_CONFIG.transit;
-  }
+  switch (key) {
+    case "delivered":
+      return STATUS_CONFIG.delivered;
 
-  return STATUS_CONFIG.active;
+    case "cancelled":
+    case "canceled":
+    case "deleted":
+      return STATUS_CONFIG.cancelled;
+
+    case "intransit":
+    case "outfordelivery":
+      return STATUS_CONFIG.intransit;
+
+    case "readyfordelivery":
+      return STATUS_CONFIG.readyForDelivery;
+
+    case "deliveryriderassigned":
+      return STATUS_CONFIG.deliveryriderassigned;
+
+    default:
+      return STATUS_CONFIG.active;
+  }
 };
 
 const mapFilterStatus = (status: string): OrderStatus => {

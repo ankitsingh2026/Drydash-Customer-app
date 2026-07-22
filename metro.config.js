@@ -14,10 +14,16 @@ config.transformer = {
 config.resolver = {
   ...config.resolver,
   unstable_enablePackageExports: false,
-  assetExts: config.resolver.assetExts.filter(
-    (ext) => ext !== "svg"
-  ),
-  sourceExts: [...config.resolver.sourceExts, "svg"],
+  assetExts: [
+    ...config.resolver.assetExts.filter(ext => ext !== "svg"),
+    'lottie',
+    'json',
+  ],
+  sourceExts: [
+    ...config.resolver.sourceExts.filter(ext => ext !== "svg"),
+    'svg',
+    'lottie',
+  ],
 };
 
 module.exports = config;

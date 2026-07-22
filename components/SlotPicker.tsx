@@ -20,7 +20,10 @@ interface Slot {
     isActive: boolean;
     status: string;
     startTime: string;
+    bookingPercentage?: number;
+    deliveryLabel?: string;
 }
+
 
 interface Props {
     lat?: number;
@@ -31,6 +34,7 @@ interface Props {
     onSelect: (index: number, slot: Slot) => void;
      onSlotsUpdate?: (slots: Slot[]) => void;  
      renderSlots?: (slots: any[]) => React.ReactNode;
+    autoScroll?: boolean;
 }
 
 const SlotPicker: React.FC<Props> = ({
@@ -41,6 +45,7 @@ const SlotPicker: React.FC<Props> = ({
     selectedSlot,
     onSelect,
     onSlotsUpdate,
+    autoScroll = false,
 }) => {
     const { theme, isDark } = useTheme();
     const styles = makeSlotStyles(theme, isDark);
@@ -119,10 +124,9 @@ const SlotPicker: React.FC<Props> = ({
         }
     };
 
-    // ✅ FIX 3: correct filtering
+    // ✅ Build full UI list (including expired) and grey-out the unselectable slots
     const visibleSlots = slots
-        .filter((s) => s.enabled && s.status !== "expired")
-        // ✅ FIX 4: sort by time
+        // ✅ FIX 3: show ALL statuses (expired/upcoming/disabled), but keep sorting
         .sort((a, b) => {
             const getHour = (time: string) => {
                 const num = parseInt(time);
@@ -137,6 +141,98 @@ const SlotPicker: React.FC<Props> = ({
 
     const scrollRef = useRef<ScrollView>(null);
     const lastScrolledSlot = useRef<number | null>(null);
+    const scrollOffsetRef = useRef(0);
+    const containerWidthRef = useRef(0);
+    const contentWidthRef = useRef(0);
+    const frameRef = useRef<number | null>(null);
+    const resumeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isDraggingRef = useRef(false);
+    const lastFrameTimeRef = useRef<number | null>(null);
+    const slotStepWidth = 160;
+
+    const clearAutoScrollFrame = () => {
+        if (frameRef.current != null) {
+            cancelAnimationFrame(frameRef.current);
+            frameRef.current = null;
+        }
+    };
+
+    const stopAutoScroll = () => {
+        clearAutoScrollFrame();
+        lastFrameTimeRef.current = null;
+        if (resumeTimeoutRef.current) {
+            clearTimeout(resumeTimeoutRef.current);
+            resumeTimeoutRef.current = null;
+        }
+    };
+
+    const startAutoScroll = () => {
+        if (!autoScroll || selectedSlot >= 0 || visibleSlots.length < 2) {
+            return;
+        }
+
+        if (containerWidthRef.current <= 0 || contentWidthRef.current <= containerWidthRef.current) {
+            return;
+        }
+
+        if (frameRef.current != null) {
+            return;
+        }
+
+        const maxOffset = Math.max(0, contentWidthRef.current - containerWidthRef.current);
+        const speedPerSecond = 42;
+
+        const step = (timestamp: number) => {
+            if (!autoScroll || selectedSlot >= 0 || isDraggingRef.current) {
+                stopAutoScroll();
+                return;
+            }
+
+            const previousTime = lastFrameTimeRef.current ?? timestamp;
+            const deltaTime = Math.min(32, timestamp - previousTime) / 1000;
+            lastFrameTimeRef.current = timestamp;
+
+            const currentOffset = Math.round(scrollOffsetRef.current);
+            let nextOffset = currentOffset + Math.max(1, Math.round(speedPerSecond * deltaTime));
+
+            if (nextOffset >= maxOffset) {
+                nextOffset = 0;
+            }
+
+            scrollOffsetRef.current = nextOffset;
+            scrollRef.current?.scrollTo({ x: nextOffset, animated: false });
+            frameRef.current = requestAnimationFrame(step);
+        };
+
+        frameRef.current = requestAnimationFrame(step);
+    };
+
+    useEffect(() => {
+        if (selectedSlot >= 0 || !autoScroll) {
+            stopAutoScroll();
+            return;
+        }
+
+        if (!visibleSlots.length) {
+            stopAutoScroll();
+            return;
+        }
+
+        const startDelay = setTimeout(() => {
+            startAutoScroll();
+        }, 700);
+
+        return () => {
+            clearTimeout(startDelay);
+            stopAutoScroll();
+        };
+    }, [autoScroll, selectedSlot, visibleSlots.length]);
+
+    useEffect(() => {
+        return () => {
+            stopAutoScroll();
+        };
+    }, []);
 
     useEffect(() => {
         if (visibleSlots.length > 0 && selectedSlot >= 0 && scrollRef.current) {
@@ -148,6 +244,12 @@ const SlotPicker: React.FC<Props> = ({
             }
         }
     }, [visibleSlots.length, selectedSlot]);
+
+    useEffect(() => {
+        if (selectedSlot >= 0) {
+            stopAutoScroll();
+        }
+    }, [selectedSlot]);
 
     if (loading) {
         return <SlotSkeleton />;
@@ -184,16 +286,67 @@ const SlotPicker: React.FC<Props> = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             style={{ marginTop: 12 }}
+            onLayout={(event) => {
+                containerWidthRef.current = event.nativeEvent.layout.width;
+                startAutoScroll();
+            }}
+            onContentSizeChange={(width) => {
+                contentWidthRef.current = width;
+                startAutoScroll();
+            }}
+            onScroll={(event) => {
+                scrollOffsetRef.current = event.nativeEvent.contentOffset.x;
+            }}
+            scrollEventThrottle={16}
+            onScrollBeginDrag={() => {
+                isDraggingRef.current = true;
+                if (resumeTimeoutRef.current) {
+                    clearTimeout(resumeTimeoutRef.current);
+                    resumeTimeoutRef.current = null;
+                }
+                clearAutoScrollFrame();
+            }}
+            onScrollEndDrag={() => {
+                isDraggingRef.current = false;
+                if (!autoScroll || selectedSlot >= 0) {
+                    return;
+                }
+
+                resumeTimeoutRef.current = setTimeout(() => {
+                    if (!isDraggingRef.current) {
+                        startAutoScroll();
+                    }
+                }, 900);
+            }}
+            onMomentumScrollEnd={() => {
+                isDraggingRef.current = false;
+                if (!autoScroll || selectedSlot >= 0) {
+                    return;
+                }
+
+                if (!frameRef.current) {
+                    resumeTimeoutRef.current = setTimeout(() => {
+                        if (!isDraggingRef.current) {
+                            startAutoScroll();
+                        }
+                    }, 900);
+                }
+            }}
         >
             {visibleSlots.map((slot, index) => {
                 const isSelected = selectedSlot === index;
-                const isFull = slot.availableCapacity === 0;
-                const isDisabled = !slot.enabled;
+
+                const status = slot.status?.toLowerCase?.() || "";
+                const isExpired = status === "expired";
+                const isDisabledByApi = !slot.enabled || status === "disabled";
+                const isFullyBooked = (slot.availableCapacity ?? 0) === 0 || (slot.bookingPercentage ?? 0) === 100;
+
+                const isUnavailable = isExpired || isFullyBooked || isDisabledByApi;
 
                 return (
                     <TouchableOpacity
                         key={index}
-                        disabled={isDisabled}
+                        disabled={isUnavailable}
                         onPress={() => onSelect(index, slot)}
                         style={{ marginRight: 10 }}
                         activeOpacity={0.85}
@@ -202,26 +355,47 @@ const SlotPicker: React.FC<Props> = ({
                             style={[
                                 styles.slotChip,
                                 isSelected && styles.selectedCard,
-                                slot.isActive && !isSelected && styles.activeCard,
-                                isDisabled && styles.disabled,
+                                slot.isActive && !isSelected && !isUnavailable && styles.activeCard,
+                                isUnavailable && styles.disabled,
                             ]}
                         >
                             <View style={{ flex: 1, justifyContent: "space-between" }}>
-
                                 {/* TOP ROW */}
                                 <View style={styles.topRow}>
-                                    <Text style={styles.time}>{slot.time}</Text>
+                                    <Text
+                                        style={[
+                                            styles.time,
+                                            isUnavailable && { color: theme.textSecondary },
+                                            isSelected && { color: theme.primary },
+                                        ]}
+                                    >
+                                        {slot.time}
+                                    </Text>
 
-                                    {/* ✅ SHOW TICK WHEN SELECTED */}
                                     {isSelected && (
                                         <Ionicons name="checkmark-circle" size={16} color={theme.primary} />
                                     )}
                                 </View>
 
-                                {/* BOTTOM ROW */}
+                                {/* STATUS / SECOND LINE (always show text like previous UI) */}
                                 <View style={styles.bottomRow}>
-                                    {isFull ? (
-                                        <Text style={styles.full}>Fully booked</Text>
+                                    {isUnavailable ? (
+                                        <>
+                                            <Ionicons
+                                                name={isExpired ? "time-outline" : "lock-closed-outline"}
+                                                size={12}
+                                                color={isExpired ? "#FF6B6B" : theme.textSecondary}
+                                            />
+                                            <Text style={styles.unavailableHint}>
+                                                {isExpired
+                                                    ? "Expired"
+                                                    : isFullyBooked
+                                                      ? "Fully booked"
+                                                      : status === "disabled"
+                                                        ? "Unavailable"
+                                                        : "Not available"}
+                                            </Text>
+                                        </>
                                     ) : slot.isActive ? (
                                         <>
                                             <Ionicons name="flash" size={12} color="#FFD600" />
@@ -233,6 +407,7 @@ const SlotPicker: React.FC<Props> = ({
                                         </Text>
                                     )}
                                 </View>
+
                             </View>
                         </View>
                     </TouchableOpacity>
@@ -325,7 +500,6 @@ const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
 
     disabled: {
-        opacity: 0.4,
     },
 
     available: {
@@ -398,6 +572,57 @@ const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         justifyContent: "center",
         marginRight: 10,
     },
+
+    badgeRow: {
+        flexDirection: "row",
+        justifyContent: "flex-start",
+        alignItems: "center",
+        marginTop: 6,
+        minHeight: 18,
+    },
+    badge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
+        borderWidth: 1,
+        alignSelf: "flex-start",
+    },
+    badgeText: {
+        fontSize: 10.5,
+        fontWeight: "800",
+        letterSpacing: 0.2,
+    },
+
+    badgeExpired: {
+        backgroundColor: theme.inputBackground,
+        borderColor: "#FEE2E2",
+    },
+    badgeExpiredText: {
+        color: "#FF6B6B",
+    },
+
+    badgeFull: {
+        backgroundColor: "#FFE5E5",
+        borderColor: "#FF6B6B33",
+    },
+    badgeFullText: {
+        color: "#FF6B6B",
+    },
+
+    badgeDisabled: {
+        backgroundColor: theme.inputBackground,
+        borderColor: theme.border,
+    },
+    badgeDisabledText: {
+        color: theme.textSecondary,
+    },
+
+    unavailableHint: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: theme.textSecondary,
+    },
+
 
     noSlotTitle: {
         color: theme.text,

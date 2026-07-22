@@ -206,7 +206,11 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     if (!serviceData?.data || !serviceData.serviceAvailable) return null;
     if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
     if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
-      return serviceData.data.allSlots.find((s: any) => s.enabled) || serviceData.data.allSlots[0];
+      return (
+        serviceData.data.allSlots.find((s: any) => s.enabled && s.status === 'upcoming') ||
+        serviceData.data.allSlots.find((s: any) => s.enabled) ||
+        serviceData.data.allSlots[0]
+      );
     }
     return null;
   };
@@ -344,7 +348,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
                     <Ionicons
                       name="time-outline"
                       size={14}
-                      color="#A7F3D0"
+                      color={getServiceColor()}
                       style={{ marginRight: 4 }}
                     />
                     <Text style={styles.deliveryLabel}>Delivery by</Text>

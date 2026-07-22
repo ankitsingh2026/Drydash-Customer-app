@@ -2,6 +2,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { Stack, router } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useRef } from "react";
+import CarwashIcon from "../../../assets/homeicons/car-wash.svg";
 import {
   Animated,
   Dimensions,
@@ -111,7 +112,7 @@ export default function CarWash() {
           style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
           <View style={styles.heroIconCircle}>
-            <Text style={styles.heroIcon}>🚗</Text>
+            <CarwashIcon width={100} height={100} />
           </View>
           <Text style={styles.heroTitle}>Car Wash</Text>
           <Text style={styles.heroSub}>At-home service • Doorstep convenience</Text>

@@ -27,45 +27,15 @@ const buildPickupPhoneParams = (phone: any) => {
 };
 
 export const getCustomerPickups = async (phone: any, status?: any) => {
+  // Only call using phone number in format: 91XXXXXXXXXX (NO leading +)
+  // and call this API only ONCE.
+  const normalized = String(phone ?? "").trim();
+  const digitsOnly = normalized.replace(/\D/g, "");
+
+  const phoneWith91 = digitsOnly.length > 10 ? `91${digitsOnly.slice(-10)}` : `91${digitsOnly}`;
+
   const params = new URLSearchParams();
-
-  if (isCustomerId(phone)) {
-    params.set("customerid", String(phone));
-  } else {
-    const phoneCandidates = buildPickupPhoneParams(phone);
-    let responseData: any = null;
-
-    for (const candidate of phoneCandidates) {
-      params.set("phone", candidate);
-
-      if (status) {
-        params.set(
-          "status",
-          Array.isArray(status) ? status.join(",") : String(status),
-        );
-      }
-
-      console.log("Normalized Phone =>>>:", candidate);
-
-      const { data } = await oldApiClient.get(
-        `/app/getCustomerPickups?${params.toString()}`,
-      );
-
-      responseData = data;
-      if (Array.isArray(responseData?.pickups) && responseData.pickups.length > 0) {
-        return responseData;
-      }
-
-      params.delete("phone");
-      params.delete("status");
-    }
-
-    return responseData ?? { pickups: [] };
-  }
-
-  if (isCustomerId(phone)) {
-    console.log("Customer ID =>>>:", String(phone));
-  }
+  params.set("phone", phoneWith91);
 
   if (status) {
     params.set(
@@ -90,9 +60,11 @@ export const cancelPickupApi = async (id: string) => {
   }
 };
 
-export const reschedulePickupApi = async (id: string, newDate: string) => {
+export const reschedulePickupApi = async (id: string, newDate: string, slot: any) => {
+  console.log("Rescheduling pickup with id:", id, "to new date:", newDate, "and slot:", slot.time);
   const { data } = await oldApiClient.put(`/v1/rider/reschedulePickup/${id}`, {
     newDate,
+    slot: slot.time,
   });
   return data;
 };
