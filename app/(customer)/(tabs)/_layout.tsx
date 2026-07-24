@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../context/ThemeContext";
 import { useChat } from "../../../context/ChatContext";
@@ -76,13 +76,19 @@ export default function TabsLayout() {
           },
           tabBarItemStyle: {
             height: TAB_BAR_HEIGHT,
-            justifyContent: "center",
-            alignItems: "center",
           },
           tabBarIconStyle: {
+            flex: 1,
             width: "100%",
             height: "100%",
           },
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...props}
+              activeOpacity={0.75}
+              style={[props.style, { flex: 1, height: "100%" }]}
+            />
+          ),
         }}
       >
         <Tabs.Screen
@@ -136,6 +142,8 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     flex: 1,
   },
   tabContent: {
+    width: "100%",
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
     gap: 3,

@@ -27,6 +27,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -100,7 +102,9 @@ export default function Profile() {
         });
       } catch {
         await logout();
-        router.replace("/(auth)/auth");
+        setTimeout(() => {
+          router.replace("/(auth)/auth");
+        }, 0);
       }
     };
     loadProfile();
@@ -201,9 +205,60 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
     );
   }
 
+  function CustomThemeToggle() {
+    const [anim] = useState(new Animated.Value(isDark ? 1 : 0));
+
+    useEffect(() => {
+      Animated.spring(anim, {
+        toValue: isDark ? 1 : 0,
+        useNativeDriver: false,
+        bounciness: 4,
+        speed: 12,
+      }).start();
+    }, [isDark]);
+
+    const backgroundColor = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ["#F1F5F9", "#001714"]
+    });
+
+    const thumbTranslateX = anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [4, 78]
+    });
+
+    return (
+      <TouchableWithoutFeedback onPress={toggleTheme}>
+        <Animated.View style={[styles.customToggleContainer, { backgroundColor, borderColor: isDark ? "#001714" : "#E2E8F0" }]}>
+          <Animated.View 
+            style={[
+              styles.customToggleThumb, 
+              { 
+                transform: [{ translateX: thumbTranslateX }],
+                backgroundColor: isDark ? "#102B25" : "#FFFFFF",
+                borderColor: isDark ? "#318f77" : "#94A3B8",
+                borderWidth: 1
+              }
+            ]} 
+          />
+          <View style={styles.customToggleLabels}>
+            <View style={styles.customToggleSideLabel}>
+              <Sun size={13} color={!isDark ? activeColors.primary : "#94A3B8"} />
+              <Text style={[styles.customToggleText, { color: !isDark ? activeColors.primary : "#94A3B8" }]}>Light</Text>
+            </View>
+            <View style={styles.customToggleSideLabel}>
+              <Moon size={13} color={isDark ? activeColors.primary : "#64748B"} />
+              <Text style={[styles.customToggleText, { color: isDark ? activeColors.primary : "#64748B" }]}>Dark</Text>
+            </View>
+          </View>
+        </Animated.View>
+      </TouchableWithoutFeedback>
+    );
+  }
+
   // ─── Render ───
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: activeColors.bg }]}>
+    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: activeColors.bg }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
@@ -334,33 +389,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
     Theme
   </Text>
 
-  <TouchableOpacity
-    activeOpacity={0.8}
-    onPress={toggleTheme}
-    style={[
-      styles.themeSelector,
-      {
-        borderColor: activeColors.border,
-        backgroundColor: activeColors.bg,
-      },
-    ]}
-  >
-    <Text
-      style={{
-        color: activeColors.text,
-        fontWeight: "600",
-        fontSize: 13,
-      }}
-    >
-      {isDark ? "Light" : "Dark"}
-    </Text>
-
-    {isDark ? (
-      <Sun size={14} color={activeColors.text} />
-    ) : (
-      <Moon size={14} color={activeColors.text} />
-    )}
-  </TouchableOpacity>
+  <CustomThemeToggle />
 </View>
 
         {/* ── GRID MENU ── */}
@@ -449,7 +478,7 @@ const makeStyles = (theme: any, isDark: boolean) => {
     scroll: {
       paddingHorizontal: 16,
       paddingTop: 16,
-      paddingBottom: 120,
+      paddingBottom: 24,
     },
     pageTitle: {
       fontSize: 17,
@@ -611,15 +640,44 @@ themeTitle: {
   fontWeight: "700",
 },
 
-themeSelector: {
+customToggleContainer: {
+  width: 156,
+  height: 38,
+  borderRadius: 19,
+  justifyContent: "center",
+  borderWidth: 1,
+},
+customToggleThumb: {
+  position: "absolute",
+  width: 74,
+  height: 30,
+  borderRadius: 15,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 3,
+  elevation: 2,
+},
+customToggleLabels: {
+  position: "absolute",
+  flexDirection: "row",
+  width: 156,
+  height: 38,
+  alignItems: "center",
+  justifyContent: "space-between",
+  paddingHorizontal: 8,
+  zIndex: 10,
+},
+customToggleSideLabel: {
   flexDirection: "row",
   alignItems: "center",
-  gap: 6,
-
-  borderWidth: 1,
-  borderRadius: 10,
-  paddingHorizontal: 12,
-  paddingVertical: 6,
+  gap: 4,
+  width: 62,
+  justifyContent: "center",
+},
+customToggleText: {
+  fontSize: 12,
+  fontWeight: "700",
 },
   });
 };
