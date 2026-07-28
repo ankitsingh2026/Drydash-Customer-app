@@ -39,8 +39,8 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <ThemeProvider>                             // ✅ Theme first
-        <AlertProvider>                           // ✅ Now inside ThemeProvider
+      <ThemeProvider>                        
+        <AlertProvider>                          
           <AuthProvider>
             <NotificationProvider>
               <ChatProvider>

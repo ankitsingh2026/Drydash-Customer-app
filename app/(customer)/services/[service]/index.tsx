@@ -48,6 +48,10 @@ type Item = {
   price: number;
   category: string;
   image: string;
+  description?: string;
+  process?: ProcessStep[];
+  displayPrice?: string;
+  unit?: string;
   type?: string;
 };
 
@@ -78,7 +82,7 @@ export default function ServiceDetail() {
     pickupId?: string;
     mode?: string;
   }>();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme);
   const cart = useCart();
   const insets = useSafeAreaInsets();
@@ -183,6 +187,7 @@ export default function ServiceDetail() {
           id: item._id,
           title: item.label,
           price: item.price,
+          mainHeading: item.mainHeading || item.label,
           category:
             TABS.find((tab) => tab.key === serviceType)?.label || serviceType,
           image: item.images?.[0]?.url || getFallbackImage(serviceType),
@@ -220,18 +225,7 @@ export default function ServiceDetail() {
     );
   };
 
-  type Item = {
-    id: string;
-    title: string;
-    price: number;
-    category: string;
-    image: string;
-    description?: string;
-    process?: ProcessStep[];
-    displayPrice?: string;
-    unit?: string;
-    type?: string;
-  };
+
 
   // Get fallback image based on service type
   const getFallbackImage = (serviceType: string): string => {
@@ -249,6 +243,16 @@ export default function ServiceDetail() {
       default:
         return "";
     }
+  };
+
+  const formatDisplayPrice = (item: Item) => {
+    if (item.displayPrice) {
+      const trimmed = item.displayPrice.trim();
+      if (trimmed.startsWith("₹")) return trimmed;
+      if (trimmed.startsWith("/")) return `₹${item.price}${trimmed}`;
+      return `₹${trimmed}`;
+    }
+    return `₹${item.price}`;
   };
 
   // Fetch data when tab changes or on initial load
@@ -458,8 +462,8 @@ export default function ServiceDetail() {
         >
           <LinearGradient
             colors={[
-              theme.isDark ? theme.primary : theme.tabColor,
-              theme.isDark ? theme.primary : theme.tabColor,
+              isDark ? theme.primary : theme.tabColor,
+              isDark ? theme.primary : theme.tabColor,
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -524,6 +528,35 @@ export default function ServiceDetail() {
           )}
         </View>
       </View>
+
+      {/* Notice Banner for Laundry service */}
+      {activeTab?.key === "laundry" && (
+        <View
+          style={[
+            styles.laundryNoticeCard,
+            {
+              backgroundColor: isDark ? "rgba(245, 158, 11, 0.12)" : "#FEF3C7",
+              borderColor: isDark ? "#D97706" : "#F59E0B",
+            },
+          ]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={isDark ? "#FBBF24" : "#D97706"}
+            style={{ marginRight: 8, marginTop: 1 }}
+          />
+          <Text
+            style={[
+              styles.laundryNoticeText,
+              { color: isDark ? "#FDE68A" : "#92400E" },
+            ]}
+          >
+            <Text style={{ fontWeight: "800" }}>Note: </Text>
+            For laundry-only orders, a minimum order of 5 kg is required.
+          </Text>
+        </View>
+      )}
 
       {searchQuery.length > 0 && (
         <Text style={[styles.resultsCount, { color: theme.subText }]}>
@@ -682,8 +715,8 @@ export default function ServiceDetail() {
                     <Text style={[styles.itemTitle, { color: theme.text }]}>
                       {item.title}
                     </Text>
-                    <Text style={{ color: theme.subText, marginTop: 2 }}>
-                      ₹{item.price}
+                    <Text style={{ color: theme.subText, marginTop: 2, fontWeight: "500" }}>
+                      {formatDisplayPrice(item)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -936,6 +969,21 @@ const makeStyles = (theme: any) =>
       marginTop: 8,
       marginBottom: 4,
       paddingLeft: 4,
+    },
+    laundryNoticeCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 12,
+    },
+    laundryNoticeText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "600",
+      lineHeight: 18,
     },
     emptyContainer: {
       alignItems: "center",

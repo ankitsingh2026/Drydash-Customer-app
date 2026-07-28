@@ -19,7 +19,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ScrollView,
   Share,
@@ -40,10 +40,147 @@ function getInitials(firstName: string, lastName: string): string {
   return (f + l).toUpperCase() || "?";
 }
 
+/* ================= CUSTOM THEME TOGGLE ================= */
+
+function CustomThemeToggle() {
+  const { theme, isDark, toggleTheme, setThemeMode } = useTheme();
+  const styles = makeStyles(theme, isDark);
+  const activeIndex = isDark ? 1 : 0;
+  const slideAnim = useRef(new Animated.Value(activeIndex)).current;
+  const labelAnims = useRef([
+    new Animated.Value(activeIndex === 0 ? 1 : 0),
+    new Animated.Value(activeIndex === 1 ? 1 : 0),
+  ]).current;
+  const pillWidth = useRef(0);
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    const targetIndex = isDark ? 1 : 0;
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: targetIndex,
+        useNativeDriver: true,
+        damping: 18,
+        stiffness: 200,
+        mass: 0.6,
+      }),
+      Animated.timing(labelAnims[0], {
+        toValue: targetIndex === 0 ? 1 : 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(labelAnims[1], {
+        toValue: targetIndex === 1 ? 1 : 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isDark]);
+
+  const handleSelect = (index: number) => {
+    if (index === 0 && isDark) {
+      if (setThemeMode) setThemeMode("light");
+      else toggleTheme();
+    } else if (index === 1 && !isDark) {
+      if (setThemeMode) setThemeMode("dark");
+      else toggleTheme();
+    }
+  };
+
+  const THEME_OPTIONS = [
+    { key: "light", label: "Light", Icon: Sun },
+    { key: "dark", label: "Dark", Icon: Moon },
+  ];
+
+  return (
+    <View
+      style={[
+        styles.themeTabsWrap,
+        { backgroundColor: isDark ? "#0A1F1B" : "#EBF5F2" },
+      ]}
+      onLayout={(e) => {
+        const totalWidth = e.nativeEvent.layout.width;
+        const padding = 4;
+        const gap = 4;
+        pillWidth.current = (totalWidth - padding * 2 - gap) / 2;
+        setLayoutReady(true);
+      }}
+    >
+      {layoutReady && (
+        <Animated.View
+          style={[
+            styles.themeSlidingPill,
+            {
+              width: pillWidth.current,
+              transform: [
+                {
+                  translateX: slideAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, pillWidth.current + 4],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <LinearGradient
+            colors={[
+              isDark ? theme.primary : "#FFFFFF",
+              isDark ? theme.primary : "#FFFFFF",
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      )}
+
+      {THEME_OPTIONS.map((opt, i) => {
+        const active = (i === 0 && !isDark) || (i === 1 && isDark);
+        const IconComponent = opt.Icon;
+
+        const activeTextColor = isDark ? "#FFFFFF" : theme.primary;
+        const inactiveTextColor = isDark ? "#94A3B8" : "#64748B";
+
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            onPress={() => handleSelect(i)}
+            activeOpacity={0.85}
+            style={styles.themeTabOuter}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+              <IconComponent
+                size={14}
+                color={active ? activeTextColor : inactiveTextColor}
+              />
+              <Animated.Text
+                style={[
+                  styles.themeTabLabel,
+                  {
+                    color: labelAnims[i].interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [inactiveTextColor, activeTextColor],
+                    }),
+                    fontWeight: active ? "800" : "600",
+                  },
+                ]}
+              >
+                {opt.label}
+              </Animated.Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 /* ================= PROFILE ================= */
 
 export default function Profile() {
-  const { theme, colors, isDark, toggleTheme } = useTheme();
+  const { theme, colors, isDark, toggleTheme, setThemeMode } = useTheme();
   const styles = makeStyles(theme, isDark);
   const { logout, setAuthUser } = useAuthContext();
   const [profile, setProfile] = useState<any>(null);
@@ -205,56 +342,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
     );
   }
 
-  function CustomThemeToggle() {
-    const [anim] = useState(new Animated.Value(isDark ? 1 : 0));
 
-    useEffect(() => {
-      Animated.spring(anim, {
-        toValue: isDark ? 1 : 0,
-        useNativeDriver: false,
-        bounciness: 4,
-        speed: 12,
-      }).start();
-    }, [isDark]);
-
-    const backgroundColor = anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: ["#F1F5F9", "#001714"]
-    });
-
-    const thumbTranslateX = anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [4, 78]
-    });
-
-    return (
-      <TouchableWithoutFeedback onPress={toggleTheme}>
-        <Animated.View style={[styles.customToggleContainer, { backgroundColor, borderColor: isDark ? "#001714" : "#E2E8F0" }]}>
-          <Animated.View 
-            style={[
-              styles.customToggleThumb, 
-              { 
-                transform: [{ translateX: thumbTranslateX }],
-                backgroundColor: isDark ? "#102B25" : "#FFFFFF",
-                borderColor: isDark ? "#318f77" : "#94A3B8",
-                borderWidth: 1
-              }
-            ]} 
-          />
-          <View style={styles.customToggleLabels}>
-            <View style={styles.customToggleSideLabel}>
-              <Sun size={13} color={!isDark ? activeColors.primary : "#94A3B8"} />
-              <Text style={[styles.customToggleText, { color: !isDark ? activeColors.primary : "#94A3B8" }]}>Light</Text>
-            </View>
-            <View style={styles.customToggleSideLabel}>
-              <Moon size={13} color={isDark ? activeColors.primary : "#64748B"} />
-              <Text style={[styles.customToggleText, { color: isDark ? activeColors.primary : "#64748B" }]}>Dark</Text>
-            </View>
-          </View>
-        </Animated.View>
-      </TouchableWithoutFeedback>
-    );
-  }
 
   // ─── Render ───
   return (
@@ -640,44 +728,39 @@ themeTitle: {
   fontWeight: "700",
 },
 
-customToggleContainer: {
-  width: 156,
-  height: 38,
-  borderRadius: 19,
-  justifyContent: "center",
-  borderWidth: 1,
-},
-customToggleThumb: {
-  position: "absolute",
-  width: 74,
-  height: 30,
-  borderRadius: 15,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 3,
-  elevation: 2,
-},
-customToggleLabels: {
-  position: "absolute",
-  flexDirection: "row",
-  width: 156,
-  height: 38,
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingHorizontal: 8,
-  zIndex: 10,
-},
-customToggleSideLabel: {
-  flexDirection: "row",
-  alignItems: "center",
-  gap: 4,
-  width: 62,
-  justifyContent: "center",
-},
-customToggleText: {
-  fontSize: 12,
-  fontWeight: "700",
-},
+    themeTabsWrap: {
+      flexDirection: "row",
+      padding: 4,
+      borderRadius: 20,
+      gap: 4,
+      position: "relative",
+      width: 160,
+      height: 40,
+      alignItems: "center",
+    },
+    themeSlidingPill: {
+      position: "absolute",
+      top: 4,
+      bottom: 4,
+      left: 4,
+      borderRadius: 16,
+      overflow: "hidden",
+      shadowColor: theme.primary,
+      shadowOpacity: 0.3,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 4,
+    },
+    themeTabOuter: {
+      flex: 1,
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1,
+    },
+    themeTabLabel: {
+      fontSize: 13,
+      letterSpacing: 0.1,
+    },
   });
 };
