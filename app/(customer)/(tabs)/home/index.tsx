@@ -903,18 +903,22 @@ export default function Home() {
                     paddingHorizontal: 16,
                   }}
                 >
-                  <DotLottie
+                 {/* <DotLottie
                     key={lottieKey}
                     source={require("../../../../assets/Anim_Banner.lottie")}
                     autoPlay
                     loop
                     style={{ width: "100%", height: "100%" }}
                   />
-                    {/* <Banner
+                  */}
+                  
+                    <Banner
                     width="100%"
                     height={130}
                     preserveAspectRatio="xMidYMid meet"
-                  /> */}
+                  /> 
+
+
                 </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
