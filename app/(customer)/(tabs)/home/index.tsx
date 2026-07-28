@@ -470,32 +470,55 @@ export default function Home() {
 
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
 
+  // useEffect(() => {
+  //   if (!addressLoading && zoneData !== null) {
+  //     const t = setTimeout(() => {
+  //       setLoading(false);
+  //       Animated.timing(fadeAnim, {
+  //         toValue: 1,
+  //         duration: 400,
+  //         useNativeDriver: true,
+  //       }).start();
+
+  //       Animated.stagger(
+  //         80,
+  //         heroAnims.map((a) =>
+  //           Animated.timing(a, {
+  //             toValue: 1,
+  //             duration: 450,
+  //             easing: Easing.out(Easing.cubic),
+  //             useNativeDriver: true,
+  //           }),
+  //         ),
+  //       ).start();
+  //     }, 500);
+
+  //     return () => clearTimeout(t);
+  //   }
+  // }, [addressLoading, zoneData]);
+
   useEffect(() => {
-    if (!addressLoading && zoneData !== null) {
-      const t = setTimeout(() => {
-        setLoading(false);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }).start();
+  if (!addressLoading && zoneData !== null && !serviceLoading) {
+    const t = setTimeout(() => {
+      setLoading(false);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
 
-        Animated.stagger(
-          80,
-          heroAnims.map((a) =>
-            Animated.timing(a, {
-              toValue: 1,
-              duration: 450,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ),
-        ).start();
-      }, 500);
+      Animated.stagger(
+        80,
+        heroAnims.map((a) =>
+          Animated.timing(a, {
+            toValue: 1,
+            duration: 450,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ),
+      ).start();
+    }, 500);
 
-      return () => clearTimeout(t);
-    }
-  }, [addressLoading, zoneData]);
+    return () => clearTimeout(t);
+  }
+}, [addressLoading, zoneData, serviceLoading]);
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -958,7 +981,8 @@ export default function Home() {
                         lng={contextSelectedAddress.longitude}
                         zoneId={zoneData?.zoneId}
                         selectedSlot={selectedSlotIndex}
-                        autoScroll={selectedSlotIndex < 0}
+                      //  autoScroll={selectedSlotIndex < 0}
+                      autoScroll={false}
                         onSelect={(index: number, slot: any) => {
                           setSelectedSlotIndex(index);
                           setSelectedSlotData(slot);
