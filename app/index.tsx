@@ -22,38 +22,6 @@ export default function SplashScreen() {
   const updateTypeRef = useRef<UpdateType | null>(null);
   const [storeUrl, setStoreUrl] = useState<string | null>(null);
 
-  // useEffect(() => {
-  //   updateTypeRef.current = updateType;
-  // }, [updateType]);
-
-
-  const requestPermissions = async () => {
-    try {
-      if (Platform.OS === "android") {
-        const location = await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
-        console.log("Location:", location);
-      } else {
-        const location = await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
-        console.log("Location:", location);
-      }
-    } catch (error) {
-      console.log("Permission error:", error);
-    }
-  };
-
-  useEffect(() => {
-    const init = async () => {
-      await requestPermissions(); //  ask  for permissions first
-
-      setTimeout(() => {
-        router.replace("/(auth)/auth");
-      }, 1000);
-    };
-
-    init();
-  }, []);
-
-
   useEffect(() => {
     let appState = AppState.currentState;
 
@@ -108,10 +76,6 @@ export default function SplashScreen() {
     return () => {
       subscription.remove();
     };
-  }, []);
-
-  useEffect(() => {
-    requestPermissions(); // run only 1
   }, []);
 
   return (

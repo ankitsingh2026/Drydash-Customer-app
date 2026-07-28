@@ -20,12 +20,8 @@ export const ThemeContext = createContext<ThemeContextProps | null>(null);
 const THEME_STORAGE_KEY = "user_theme_mode";
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const systemScheme = useColorScheme();
-  
-  // Set default state based on system scheme
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(
-    (systemScheme === "light" ? "light" : "dark") as ThemeMode
-  );
+  // Default theme mode is "light"
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
 
   useEffect(() => {
     // Load theme from storage on mount
@@ -34,15 +30,15 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
         const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme === "light" || savedTheme === "dark") {
           setThemeModeState(savedTheme);
-        } else if (systemScheme === "light" || systemScheme === "dark") {
-          setThemeModeState(systemScheme);
+        } else {
+          setThemeModeState("light");
         }
       } catch (e) {
         console.error("Failed to load theme from storage", e);
       }
     };
     loadTheme();
-  }, [systemScheme]);
+  }, []);
 
   const toggleTheme = async () => {
     const nextMode = themeMode === "light" ? "dark" : "light";

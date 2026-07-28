@@ -26,6 +26,7 @@ import {
   Easing,
   Image,
   PanResponder,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -38,6 +39,7 @@ import {
   useSafeAreaInsets
 } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
+import { PERMISSIONS, request } from "react-native-permissions";
 import { useTheme } from "../../../../context/ThemeContext";
 import { useAddress } from "@/context/AddressContext";
 import { useNotifications } from "@/context/NotificationContext";
@@ -257,6 +259,21 @@ export default function Home() {
       }
     };
     checkAuth();
+  }, []);
+
+  useEffect(() => {
+    const requestLocationPermission = async () => {
+      try {
+        if (Platform.OS === "android") {
+          await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
+        } else if (Platform.OS === "ios") {
+          await request(PERMISSIONS.IOS.LOCATION_WHEN_IN_USE);
+        }
+      } catch (error) {
+        console.log("Location permission error on Home screen:", error);
+      }
+    };
+    requestLocationPermission();
   }, []);
 
   const performSearch = useCallback(async (query: string) => {
