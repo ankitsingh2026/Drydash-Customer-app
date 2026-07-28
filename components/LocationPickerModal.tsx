@@ -400,6 +400,7 @@ export default function LocationPickerModal({
 
                         <View style={styles.rowActions}>
                           <TouchableOpacity
+                            style={{ padding: 5}}
                             onPress={(e) => {
                               e.stopPropagation();
                               handleEdit(addr);
@@ -409,6 +410,7 @@ export default function LocationPickerModal({
                           </TouchableOpacity>
 
                           <TouchableOpacity
+                            style={{ padding: 5 }}
                             onPress={(e) => {
                               e.stopPropagation();
                               handleDelete(addr.id);
@@ -647,7 +649,7 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   rowActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 0,
     marginLeft: 8,
   },
   divider: {

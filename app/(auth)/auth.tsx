@@ -152,12 +152,10 @@ export default function AuthScreen() {
         if (!userIsTyping.current) {
           // Auto-fill only if user hasn't started typing
           setPhone(cleanNumber);
-          setTimeout(() => {
-            phoneInputRef.current?.blur();
-            if (validatePhone(cleanNumber)) {
-              sendOtp(cleanNumber, freshHashes?.[0]);
-            }
-          }, 200);
+          phoneInputRef.current?.blur();
+          if (validatePhone(cleanNumber)) {
+            sendOtp(cleanNumber, freshHashes?.[0]);
+          }
         }
         // If userIsTyping, do NOTHING — let them type
       } else {
@@ -196,6 +194,7 @@ export default function AuthScreen() {
   // }, [error]);
  
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
+    if (loading) return;
     const mobile = phoneValue || phone;
     // console.log("this is the mobileeeee=====>>>>>",mobile)
     // Alert.alert("chcek pyone :::  ",mobile)
@@ -225,12 +224,44 @@ export default function AuthScreen() {
     }
   };
  
-  // Auto-fill OTP when SMS is intercepted
+  // Auto-fill OTP when SMS is intercepted via SMS User Consent API
   useEffect(() => {
     if (retrievedCode && retrievedCode.length === 6) {
       setOtp(retrievedCode);
     }
   }, [retrievedCode]);
+
+  // Listen for incoming OTP SMS on Android via react-native-otp-verify (SMS Retriever API)
+  useEffect(() => {
+    if (Platform.OS === "android" && OtpVerify && step === "OTP") {
+      try {
+        OtpVerify.getOtp()
+          .then(() => {
+            OtpVerify.addListener((message: string) => {
+              try {
+                if (message && message !== "Timeout") {
+                  const matched = message.match(/\b\d{6}\b/);
+                  if (matched && matched[0]) {
+                    setOtp(matched[0]);
+                  }
+                }
+              } catch (e) {
+                console.log("OtpVerify listener error:", e);
+              }
+            });
+          })
+          .catch((err: any) => console.log("OtpVerify getOtp error:", err));
+      } catch (e) {
+        console.log("OtpVerify init error:", e);
+      }
+
+      return () => {
+        try {
+          OtpVerify.removeListener();
+        } catch (e) {}
+      };
+    }
+  }, [step]);
  
   const { saveTokens, setAuthUser } = useAuth();
  
@@ -525,6 +556,7 @@ export default function AuthScreen() {
                   autoComplete="sms-otp"
                   editable={!loading} // ← make sure loading state isn't blocking input
                   selectTextOnFocus
+                  autoFocus={true}
                 />
  
                 {/* Auto-read indicator */}

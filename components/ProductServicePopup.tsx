@@ -35,6 +35,7 @@ type ProductServicePopupProps = {
   product: {
     id: string;
     title: string;
+    mainHeading: string;
     price: number;
     category: string;
     image: string;
@@ -63,58 +64,52 @@ export default function ProductServicePopup({
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollEnabledRef = useRef(true);
   const isSwipingToClose = useRef(false);
+  const touchStartY = useRef(0);
+  const isClosing = useRef(false);
+
+  const handleCloseAnimation = () => {
+    if (isClosing.current) return;
+    isClosing.current = true;
+    Animated.timing(slideAnim, {
+      toValue: SCREEN_HEIGHT,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      onCloseRef.current();
+      isClosing.current = false;
+    });
+  };
 
   const panResponder = useRef(
     PanResponder.create({
-      // Start capturing as soon as touch starts
-      onStartShouldSetPanResponderCapture: (evt, gestureState) => {
-        // Only capture if we're at the top of scroll OR if it's a downward gesture
-        const isAtTop = scrollY.current <= 0;
-        if (isAtTop) {
-          // Temporarily disable scrolling on ScrollView
-          if (scrollViewRef.current && scrollEnabledRef.current) {
-            scrollEnabledRef.current = false;
-            scrollViewRef.current.setNativeProps({ scrollEnabled: false });
-          }
-          return true;
-        }
-        return false;
-      },
+      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const isVerticalDrag = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) && Math.abs(gestureState.dy) > 15;
+        const isDownwardDrag =
+          gestureState.dy > 3 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
         const isAtTop = scrollY.current <= 0;
-        if (isVerticalDrag && isAtTop) {
-          return true;
-        }
-        return false;
+        return isDownwardDrag && isAtTop;
+      },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        const isDownwardDrag =
+          gestureState.dy > 3 &&
+          Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        const isAtTop = scrollY.current <= 0;
+        return isDownwardDrag && isAtTop;
       },
       onPanResponderGrant: () => {
-        // Disable scrolling again (safe)
-        if (scrollViewRef.current && scrollEnabledRef.current) {
-          scrollEnabledRef.current = false;
-          scrollViewRef.current.setNativeProps({ scrollEnabled: false });
-        }
         isSwipingToClose.current = true;
       },
       onPanResponderMove: (evt, gestureState) => {
-        // Optional: animate the modal with the drag
         if (gestureState.dy > 0) {
           slideAnim.setValue(gestureState.dy);
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        // Re-enable scrolling after a delay
-        setTimeout(() => {
-          if (scrollViewRef.current && !scrollEnabledRef.current) {
-            scrollEnabledRef.current = true;
-            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
-          }
-        }, 100);
-        
-        if (gestureState.dy > 50) {
-          onCloseRef.current();
+        if (gestureState.dy > 30 || gestureState.vy > 0.3) {
+          handleCloseAnimation();
         } else {
-          // Animate back to 0 if not closed
           Animated.spring(slideAnim, {
             toValue: 0,
             useNativeDriver: true,
@@ -125,15 +120,7 @@ export default function ProductServicePopup({
         isSwipingToClose.current = false;
       },
       onPanResponderTerminate: () => {
-        // Re-enable scrolling
-        setTimeout(() => {
-          if (scrollViewRef.current && !scrollEnabledRef.current) {
-            scrollEnabledRef.current = true;
-            scrollViewRef.current.setNativeProps({ scrollEnabled: true });
-          }
-        }, 100);
         isSwipingToClose.current = false;
-        // Reset position
         Animated.spring(slideAnim, {
           toValue: 0,
           useNativeDriver: true,
@@ -144,12 +131,11 @@ export default function ProductServicePopup({
 
   React.useEffect(() => {
     if (visible) {
+      isClosing.current = false;
       // Reset scroll position when opened
       scrollY.current = 0;
-      scrollEnabledRef.current = true;
       if (scrollViewRef.current) {
         scrollViewRef.current.scrollTo({ y: 0, animated: false });
-        scrollViewRef.current.setNativeProps({ scrollEnabled: true });
       }
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -206,7 +192,11 @@ export default function ProductServicePopup({
 
   // Format price display
   const priceDisplay = product.displayPrice
-    ? `₹${product.price} ${product.displayPrice.replace(product.price.toString(), "").trim()}`
+    ? product.displayPrice.trim().startsWith("₹")
+      ? product.displayPrice.trim()
+      : product.displayPrice.trim().startsWith("/")
+        ? `₹${product.price}${product.displayPrice.trim()}`
+        : `₹${product.displayPrice.trim()}`
     : `₹${product.price}`;
 
   return (
@@ -217,7 +207,7 @@ export default function ProductServicePopup({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-         <View style={styles.header}>
+         <View style={styles.header} {...panResponder.panHandlers}>
             <View style={styles.dragIndicator} />
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <X size={16} color={theme.text} strokeWidth={2.5} />
@@ -231,7 +221,17 @@ export default function ProductServicePopup({
             styles.container,
             { transform: [{ translateY: slideAnim }] },
           ]}
-          // {...panResponder.panHandlers}
+          {...panResponder.panHandlers}
+          onTouchStart={(e) => {
+            touchStartY.current = e.nativeEvent.pageY;
+          }}
+          onTouchMove={(e) => {
+            const currentY = e.nativeEvent.pageY;
+            const diffY = currentY - touchStartY.current;
+            if (diffY > 20 && scrollY.current <= 0) {
+              handleCloseAnimation();
+            }
+          }}
         >
           {/* Drag bar + close */}
 
@@ -270,17 +270,40 @@ export default function ProductServicePopup({
           {/* Content with ScrollView */}
           <ScrollView
             ref={scrollViewRef}
-            showsVerticalScrollIndicator={false}
+            showsVerticalScrollIndicator={true}
             style={{ flexShrink: 1 }}
             contentContainerStyle={styles.scrollContent}
+            onTouchStart={(e) => {
+              touchStartY.current = e.nativeEvent.pageY;
+            }}
+            onTouchMove={(e) => {
+              const currentY = e.nativeEvent.pageY;
+              const diffY = currentY - touchStartY.current;
+              if (diffY > 20 && scrollY.current <= 0) {
+                handleCloseAnimation();
+              }
+            }}
             onScroll={(e) => {
-              scrollY.current = e.nativeEvent.contentOffset.y;
+              const y = e.nativeEvent.contentOffset.y;
+              scrollY.current = y;
+              if (y < -15) {
+                handleCloseAnimation();
+              }
+            }}
+            onScrollEndDrag={(e) => {
+              const y = e.nativeEvent.contentOffset.y;
+              const velocityY = e.nativeEvent.velocity?.y ?? 0;
+              if (y < -5 || (scrollY.current <= 0 && velocityY < -0.15)) {
+                handleCloseAnimation();
+              }
             }}
             scrollEventThrottle={16}
-            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            bounces={true}
+            overScrollMode="always"
           >
-            <View style={styles.content} {...panResponder.panHandlers}>
-              <Text style={styles.productTitle}>{product.title}</Text>
+            <View style={styles.content}>
+              <Text style={styles.productTitle}>{product.mainHeading}</Text>
 
               {/* Price and Unit */}
               <View style={styles.priceRow}>

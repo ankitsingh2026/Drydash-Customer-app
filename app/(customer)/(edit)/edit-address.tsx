@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
-import { Briefcase, Building2, Home, MapPin, Pencil } from "lucide-react-native";
+import { Briefcase, Building2, Home, MapPin, Phone, User } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -44,6 +44,7 @@ export default function EditAddress() {
 
   const [loading, setLoading] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const preventFetchRef = useRef(false);
 
   // Map state
@@ -412,43 +413,100 @@ export default function EditAddress() {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>ADDRESS DETAILS*</Text>
-            <View style={styles.inputContainer}>
+            <View
+              style={[
+                styles.inputBox,
+                focusedField === "houseFloor" && styles.inputBoxFocused,
+              ]}
+            >
+              <View style={styles.inputIconWrap}>
+                <Building2
+                  size={18}
+                  color={
+                    focusedField === "houseFloor"
+                      ? theme.primary
+                      : theme.textSecondary
+                  }
+                />
+              </View>
               <TextInput
-                style={styles.customInput}
+                style={styles.inputField}
                 value={addressForm.houseFloor}
-                onChangeText={(t: string) => setAddressForm((p) => ({ ...p, houseFloor: t }))}
+                onChangeText={(t: string) =>
+                  setAddressForm((p) => ({ ...p, houseFloor: t }))
+                }
                 placeholder="Floor, House No., Apartment, Landmark"
                 placeholderTextColor={theme.textSecondary}
+                onFocus={() => setFocusedField("houseFloor")}
+                onBlur={() => setFocusedField(null)}
               />
-              <Building2 size={20} color={theme.primary} style={{ marginRight: 12 }} />
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>RECEIVER DETAILS</Text>
-            <View style={styles.receiverCard}>
-              <View style={styles.receiverIconWrap}>
-                <Ionicons name="call" size={18} color={theme.text} />
-              </View>
-              <View style={{ flex: 1 }}>
+            <View style={styles.inputsGroup}>
+              {/* Receiver Name Input */}
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === "contactName" && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputIconWrap}>
+                  <User
+                    size={18}
+                    color={
+                      focusedField === "contactName"
+                        ? theme.primary
+                        : theme.textSecondary
+                    }
+                  />
+                </View>
                 <TextInput
-                  style={styles.receiverInputName}
+                  style={styles.inputField}
                   value={addressForm.contactName}
-                  onChangeText={(t: string) => setAddressForm((p) => ({ ...p, contactName: t }))}
-                  placeholder="Name"
+                  onChangeText={(t: string) =>
+                    setAddressForm((p) => ({ ...p, contactName: t }))
+                  }
+                  placeholder="Receiver's Name"
                   placeholderTextColor={theme.textSecondary}
+                  onFocus={() => setFocusedField("contactName")}
+                  onBlur={() => setFocusedField(null)}
                 />
+              </View>
+
+              {/* Receiver Phone Input */}
+              <View
+                style={[
+                  styles.inputBox,
+                  focusedField === "contactPhone" && styles.inputBoxFocused,
+                ]}
+              >
+                <View style={styles.inputIconWrap}>
+                  <Phone
+                    size={18}
+                    color={
+                      focusedField === "contactPhone"
+                        ? theme.primary
+                        : theme.textSecondary
+                    }
+                  />
+                </View>
                 <TextInput
-                  style={styles.receiverInputPhone}
+                  style={styles.inputField}
                   value={addressForm.contactPhone}
-                  onChangeText={(t: string) => setAddressForm((p) => ({ ...p, contactPhone: t }))}
-                  placeholder="Phone Number"
+                  onChangeText={(t: string) =>
+                    setAddressForm((p) => ({ ...p, contactPhone: t }))
+                  }
+                  placeholder="Receiver's Phone Number"
                   placeholderTextColor={theme.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  onFocus={() => setFocusedField("contactPhone")}
+                  onBlur={() => setFocusedField(null)}
                 />
               </View>
-              <Pencil size={18} color={theme.textSecondary} style={{ alignSelf: "flex-start", marginTop: 4 }} />
             </View>
           </View>
 
@@ -722,49 +780,35 @@ const makeStyles = (theme: any) => {
     letterSpacing: 0.5,
     marginBottom: 8,
   },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 12,
-  },
-  customInput: {
-    flex: 1,
-    height: 52,
-    color: theme.text,
-    paddingHorizontal: 16,
-    fontSize: 15,
-  },
-  receiverCard: {
-    flexDirection: "row",
-    backgroundColor: C.card,
-    borderWidth: 1,
-    borderColor: C.borderStrong,
-    borderRadius: 12,
-    padding: 14,
+  inputsGroup: {
     gap: 12,
   },
-  receiverIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.card,
+  inputBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.borderStrong,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    height: 52,
+  },
+  inputBoxFocused: {
+    borderColor: theme.primary,
+    borderWidth: 1.5,
+  },
+  inputIconWrap: {
+    width: 26,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 10,
   },
-  receiverInputName: {
+  inputField: {
+    flex: 1,
+    height: "100%",
     color: theme.text,
-    fontSize: 16,
-    fontWeight: "600",
-    padding: 0,
-    marginBottom: 4,
-  },
-  receiverInputPhone: {
-    color: theme.textSecondary,
-    fontSize: 14,
-    padding: 0,
+    fontSize: 15,
+    fontWeight: "500",
   },
   labelRow: {
     flexDirection: "row",

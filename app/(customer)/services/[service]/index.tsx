@@ -37,7 +37,7 @@ import { useTheme } from "../../../../context/ThemeContext";
 /* ---------- TABS ---------- */
 const TABS = [
   { key: "shoe", label: "Shoe Spa", icon: LucideShovel },
-  // { key: "laundry", label: "Laundry", icon: Shirt },
+  { key: "laundry", label: "Laundry", icon: Shirt },
   { key: "leather", label: "Leather", icon: Shirt },
   { key: "dryclean", label: "Dry Clean", icon: Sparkles },
 ];
@@ -48,6 +48,10 @@ type Item = {
   price: number;
   category: string;
   image: string;
+  description?: string;
+  process?: ProcessStep[];
+  displayPrice?: string;
+  unit?: string;
   type?: string;
 };
 
@@ -70,13 +74,15 @@ type APIItem = {
   mainDescription?: string;
 };
 
+const EMPTY_ARRAY: Item[] = [];
+
 export default function ServiceDetail() {
   const { service, pickupId, mode } = useLocalSearchParams<{
     service: string;
     pickupId?: string;
     mode?: string;
   }>();
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme);
   const cart = useCart();
   const insets = useSafeAreaInsets();
@@ -88,19 +94,19 @@ export default function ServiceDetail() {
   // API data states
   const [apiData, setApiData] = useState<Record<string, Item[]>>({
     shoe: [],
-    // laundry: [],
+    laundry: [],
     leather: [],
     dryclean: [],
   });
   const [loading, setLoading] = useState<Record<string, boolean>>({
     shoe: false,
-    // laundry: false,
+    laundry: false,
     leather: false,
     dryclean: false,
   });
   const [error, setError] = useState<Record<string, string | null>>({
     shoe: null,
-    // laundry: null,
+    laundry: null,
     leather: null,
     dryclean: null,
   });
@@ -115,7 +121,6 @@ export default function ServiceDetail() {
   const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
 
   const isEditMode = mode === "edit" && Boolean(pickupId);
   const [pickupLoading, setPickupLoading] = useState(false);
@@ -166,7 +171,7 @@ export default function ServiceDetail() {
 
   // Update the transform function in fetchCatalogData
   const fetchCatalogData = async (serviceType: string, slug: string) => {
-    const serviceKeys = ["shoe", "leather", "dryclean"];
+    const serviceKeys = ["shoe", "laundry", "leather", "dryclean"];
     if (!serviceKeys.includes(serviceType)) return;
 
     setLoading((prev) => ({ ...prev, [serviceType]: true }));
@@ -182,6 +187,7 @@ export default function ServiceDetail() {
           id: item._id,
           title: item.label,
           price: item.price,
+          mainHeading: item.mainHeading || item.label,
           category:
             TABS.find((tab) => tab.key === serviceType)?.label || serviceType,
           image: item.images?.[0]?.url || getFallbackImage(serviceType),
@@ -206,6 +212,8 @@ export default function ServiceDetail() {
   // Helper function for default descriptions
   const getDefaultDescription = (serviceType: string): string => {
     const descriptions = {
+      laundry:
+        "Fresh and hygienic wash, fold, and iron service.",
       leather:
         "Specialized leather care with gentle cleaning and conditioning.",
       dryclean: "Premium dry cleaning service using eco-friendly solvents.",
@@ -217,18 +225,7 @@ export default function ServiceDetail() {
     );
   };
 
-  type Item = {
-    id: string;
-    title: string;
-    price: number;
-    category: string;
-    image: string;
-    description?: string;
-    process?: ProcessStep[];
-    displayPrice?: string;
-    unit?: string;
-    type?: string;
-  };
+
 
   // Get fallback image based on service type
   const getFallbackImage = (serviceType: string): string => {
@@ -237,6 +234,8 @@ export default function ServiceDetail() {
     switch (serviceType) {
       case "shoe":
         return `${S3_BASE}/sheo-spa/shoe_1.jpg`;
+      case "laundry":
+        return `https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/laundry/laundry_1.png`;
       case "leather":
         return `${S3_BASE}/leather/leather.jpg`;
       case "dryclean":
@@ -246,13 +245,23 @@ export default function ServiceDetail() {
     }
   };
 
+  const formatDisplayPrice = (item: Item) => {
+    if (item.displayPrice) {
+      const trimmed = item.displayPrice.trim();
+      if (trimmed.startsWith("₹")) return trimmed;
+      if (trimmed.startsWith("/")) return `₹${item.price}${trimmed}`;
+      return `₹${trimmed}`;
+    }
+    return `₹${item.price}`;
+  };
+
   // Fetch data when tab changes or on initial load
   useEffect(() => {
     if (layoutReady) {
       const currentTabKey = TABS[tab]?.key;
       if (
         currentTabKey &&
-        ["shoe", "leather", "dryclean"].includes(currentTabKey)
+        ["shoe", "laundry", "leather", "dryclean"].includes(currentTabKey)
       ) {
         const slug = currentTabKey === "shoe" ? "shoespa" : currentTabKey;
         fetchCatalogData(currentTabKey, slug);
@@ -265,12 +274,8 @@ export default function ServiceDetail() {
     if (!layoutReady) return;
 
     const index = TABS.findIndex((t) => t.key === service);
-    if (index !== -1) {
+    if (index !== -1 && index !== tab) {
       switchTab(index);
-      if (service && ["shoe", "leather", "dryclean"].includes(service)) {
-        const slug = service === "shoe" ? "shoespa" : service;
-        fetchCatalogData(service, slug);
-      }
     }
   }, [service, layoutReady]);
 
@@ -341,7 +346,7 @@ export default function ServiceDetail() {
   const staticData = useMemo<Record<string, Item[]>>(
     () => ({
       shoe: [], // Will be populated by API
-      // laundry: [], // Will be populated by API
+      laundry: [], // Will be populated by API
       leather: [], // Will be populated by API
       dryclean: [], // Will be populated by API
       // Add other services here if needed
@@ -349,32 +354,33 @@ export default function ServiceDetail() {
     [],
   );
 
-  // Get current items (API data for shoe/laundry/dryclean, static for others)
   const activeTab = TABS[tab];
-  const currentItems =
-    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
-      ? apiData[activeTab.key]
-      : catalogData[activeTab?.key] || [];
+
+  // Get current items (API data for shoe/laundry/leather/dryclean with static catalog fallback)
+  const currentItems = useMemo(() => {
+    const activeKey = activeTab?.key;
+    if (!activeKey) return EMPTY_ARRAY;
+    const apiItems = apiData[activeKey];
+    if (apiItems && apiItems.length > 0) return apiItems;
+    return catalogData[activeKey] || EMPTY_ARRAY;
+  }, [activeTab?.key, apiData]);
 
   // Filter items based on search query
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredItems(currentItems);
-    } else {
-      const filtered = currentItems.filter((item) =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
-      setFilteredItems(filtered);
-    }
+  const filteredItems = useMemo(() => {
+    if (!searchQuery.trim()) return currentItems;
+    const q = searchQuery.toLowerCase();
+    return currentItems.filter((item) =>
+      item.title.toLowerCase().includes(q)
+    );
   }, [searchQuery, currentItems]);
 
   const isLoading =
-    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
+    activeTab?.key && ["shoe", "laundry", "leather", "dryclean"].includes(activeTab.key)
       ? loading[activeTab.key]
       : false;
 
   const hasError =
-    activeTab?.key && ["shoe", "leather", "dryclean"].includes(activeTab.key)
+    activeTab?.key && ["shoe", "laundry", "leather", "dryclean"].includes(activeTab.key)
       ? error[activeTab.key]
       : null;
 
@@ -387,38 +393,41 @@ export default function ServiceDetail() {
     });
   };
 
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: true,
+      headerBackVisible: false,
+      title: isEditMode ? "EDIT ITEMS" : "SERVICE CATALOG",
+      headerStyle: {
+        backgroundColor: theme.background,
+      },
+      headerShadowVisible: false,
+      headerTitleAlign: "center" as const,
+      headerTitleStyle: {
+        fontWeight: "800" as const,
+        fontSize: 16,
+        color: theme.text,
+      },
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            padding: 8,
+            marginLeft: 8,
+            borderRadius: 12,
+            backgroundColor: theme.card,
+          }}
+        >
+          <ArrowLeft size={20} color={theme.text} />
+        </TouchableOpacity>
+      ),
+    }),
+    [isEditMode, theme.background, theme.card, theme.text]
+  );
+
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
-       <Stack.Screen
-        options={{
-          headerShown: true,
-          headerBackVisible: false,
-          title: isEditMode ? "EDIT ITEMS" : "Service Catalog".toUpperCase(),
-          headerStyle: {
-            backgroundColor: theme.background,
-          },
-          headerShadowVisible: false,
-          headerTitleAlign: "center",
-          headerTitleStyle: {
-            fontWeight: "800",
-            fontSize: 16,
-            color: theme.text,
-          },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={{
-                padding: 8,
-                // marginLeft: 8,
-                borderRadius: 12,
-                // backgroundColor: theme.card,
-              }}
-            >
-              <ArrowLeft size={20} color={theme.text} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      <Stack.Screen options={screenOptions} />
 
       {/* ---------- SEGMENTED TABS ---------- */}
       <View
@@ -439,9 +448,9 @@ export default function ServiceDetail() {
               transform: [
                 {
                   translateX: slideAnim.interpolate({
-                    inputRange: [0, 1, 2],
-                    outputRange: [0, 1, 2].map(
-                      (i) => i * (pillWidth.current + 8),
+                    inputRange: TABS.map((_, i) => i),
+                    outputRange: TABS.map(
+                      (_, i) => i * (pillWidth.current + 8),
                     ),
                   }),
                 },
@@ -453,8 +462,8 @@ export default function ServiceDetail() {
         >
           <LinearGradient
             colors={[
-              theme.isDark ? theme.primary : theme.tabColor,
-              theme.isDark ? theme.primary : theme.tabColor,
+              isDark ? theme.primary : theme.tabColor,
+              isDark ? theme.primary : theme.tabColor,
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -519,6 +528,35 @@ export default function ServiceDetail() {
           )}
         </View>
       </View>
+
+      {/* Notice Banner for Laundry service */}
+      {activeTab?.key === "laundry" && (
+        <View
+          style={[
+            styles.laundryNoticeCard,
+            {
+              backgroundColor: isDark ? "rgba(245, 158, 11, 0.12)" : "#FEF3C7",
+              borderColor: isDark ? "#D97706" : "#F59E0B",
+            },
+          ]}
+        >
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={isDark ? "#FBBF24" : "#D97706"}
+            style={{ marginRight: 8, marginTop: 1 }}
+          />
+          <Text
+            style={[
+              styles.laundryNoticeText,
+              { color: isDark ? "#FDE68A" : "#92400E" },
+            ]}
+          >
+            <Text style={{ fontWeight: "800" }}>Note: </Text>
+            For laundry-only orders, a minimum order of 5 kg is required.
+          </Text>
+        </View>
+      )}
 
       {searchQuery.length > 0 && (
         <Text style={[styles.resultsCount, { color: theme.subText }]}>
@@ -677,8 +715,8 @@ export default function ServiceDetail() {
                     <Text style={[styles.itemTitle, { color: theme.text }]}>
                       {item.title}
                     </Text>
-                    <Text style={{ color: theme.subText, marginTop: 2 }}>
-                      ₹{item.price}
+                    <Text style={{ color: theme.subText, marginTop: 2, fontWeight: "500" }}>
+                      {formatDisplayPrice(item)}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -931,6 +969,21 @@ const makeStyles = (theme: any) =>
       marginTop: 8,
       marginBottom: 4,
       paddingLeft: 4,
+    },
+    laundryNoticeCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 12,
+    },
+    laundryNoticeText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: "600",
+      lineHeight: 18,
     },
     emptyContainer: {
       alignItems: "center",

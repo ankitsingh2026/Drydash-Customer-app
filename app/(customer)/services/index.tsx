@@ -39,13 +39,13 @@ const SERVICES = [
     subtitle: "Gentle and premium care",
     icon: DrycleanIcon,
   },
-  // {
-  //   key: "Laundry",
-  //   slug: "laundry",
-  //   label: "LAUNDRY",
-  //   subtitle: "Fresh & hygienic",
-  //   icon: LaundryIcon,
-  // },
+  {
+    key: "Laundry",
+    slug: "laundry",
+    label: "LAUNDRY",
+    subtitle: "Fresh & hygienic",
+    icon: LaundryIcon,
+  },
   {
     key: "Leather",
     slug: "leather",
@@ -123,7 +123,7 @@ export default function ServicesPage() {
                   key={s.key}
                   activeOpacity={0.85}
                   onPress={() => {
-                    if (["shoe", "leather", "dryclean"].includes(s.slug)) {
+                    if (["shoe", "laundry", "leather", "dryclean"].includes(s.slug)) {
                       router.push({
                         pathname: "/services/[service]",
                         params: { service: s.slug as any },
