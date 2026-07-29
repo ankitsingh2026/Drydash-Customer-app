@@ -106,7 +106,10 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
 
   // Fetch service data whenever selectedAddress changes
   useEffect(() => {
-    if (!selectedAddress) return;
+    if (!selectedAddress) {
+      setServiceLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       console.log("Selected address changed:", selectedAddress);
@@ -131,15 +134,26 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         }
       }
 
-      if (coords) {
-        await fetchFullServiceData(coords.lat, coords.lng);
-      } else {
-        // No coordinates – treat as not in area
+      try {
+        if (coords) {
+          await fetchFullServiceData(coords.lat, coords.lng);
+        } else {
+          // No coordinates – treat as not in area
+          updateServiceData({
+            coords: null,
+            zoneData: { zoneFound: false },
+            serviceData: null,
+          });
+        }
+      } catch (err) {
+        console.error("Fetch service data error:", err);
         updateServiceData({
           coords: null,
           zoneData: { zoneFound: false },
           serviceData: null,
         });
+      } finally {
+        setServiceLoading(false);
       }
     };
 
@@ -401,7 +415,7 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             onPress={handleBellPress}
             style={styles.iconBtn}
           >
-            <Bell size={18} style={styles.bellIcon} />
+            <Bell size={18} color={theme.text} />
             {unreadCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>

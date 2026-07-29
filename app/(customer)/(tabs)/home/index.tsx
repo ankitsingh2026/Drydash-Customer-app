@@ -27,6 +27,7 @@ import {
   Image,
   PanResponder,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -204,8 +205,8 @@ const HERO_SLIDES = [
 
 
 export default function Home() {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [loading, setLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -232,8 +233,9 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
-  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading } = useAddress();
+  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading, isNetworkError, refreshAddresses } = useAddress();
   const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
+  const [refreshing, setRefreshing] = useState(false);
 
   const { notifications, cancelledData } = useNotifications();
 
@@ -390,6 +392,20 @@ export default function Home() {
     }
   }, [user, cancelledData]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refreshAddresses(),
+        refreshBooking(),
+      ]);
+    } catch (e) {
+      console.log("Pull to refresh error:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshAddresses, refreshBooking]);
+
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const placeholderAnim = useRef(new Animated.Value(0)).current;
@@ -470,8 +486,16 @@ export default function Home() {
 
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
 
+  // Safety fallback timer so loader is NEVER trapped indefinitely
   useEffect(() => {
-    if (!addressLoading && zoneData !== null) {
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 4000);
+    return () => clearTimeout(safetyTimer);
+  }, []);
+
+  useEffect(() => {
+    if (!addressLoading) {
       const t = setTimeout(() => {
         setLoading(false);
         Animated.timing(fadeAnim, {
@@ -491,7 +515,7 @@ export default function Home() {
             }),
           ),
         ).start();
-      }, 500);
+      }, zoneData !== null ? 300 : 0);
 
       return () => clearTimeout(t);
     }
@@ -754,14 +778,76 @@ export default function Home() {
             {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
               <RainBackground />
             )}
-            <ScrollView style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} contentContainerStyle={{ paddingBottom: 100 }}
-            // showsVerticalScrollIndicator={false}
-            // keyboardShouldPersistTaps="handled"
-            // nestedScrollEnabled={true}
-            // bounces={false}            
-            // overScrollMode="never"        
+            <ScrollView 
+              style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} 
+              contentContainerStyle={{ paddingBottom: 100 }}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={theme.primary}
+                  colors={[theme.primary]}
+                />
+              }
             >
               <View>
+                {/* ── NETWORK ERROR BANNER ── */}
+                {isNetworkError && (
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={onRefresh}
+                    style={{
+                      marginHorizontal: 16,
+                      marginTop: 12,
+                      marginBottom: 6,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      borderRadius: 16,
+                      backgroundColor: isDark ? "rgba(239, 68, 68, 0.12)" : "#FEF2F2",
+                      borderWidth: 1,
+                      borderColor: isDark ? "rgba(239, 68, 68, 0.3)" : "#FECACA",
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1, gap: 12 }}>
+                      <View
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: 18,
+                          backgroundColor: isDark ? "rgba(239, 68, 68, 0.2)" : "#FEE2E2",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Ionicons name="cloud-offline-outline" size={20} color="#EF4444" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: theme.text }}>
+                          Network Connection Error
+                        </Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2, lineHeight: 15 }}>
+                          Unable to fetch data. Tap to retry or pull down.
+                        </Text>
+                      </View>
+                    </View>
+                    {/* <View
+                      style={{
+                        backgroundColor: theme.primary,
+                        paddingHorizontal: 14,
+                        paddingVertical: 7,
+                        borderRadius: 10,
+                        marginLeft: 8,
+                      }}
+                    >
+                      <Text style={{ color: isDark ? "#001714" : "#FFFFFF", fontSize: 12, fontWeight: "800" }}>
+                        Retry
+                      </Text>
+                    </View> */}
+                  </TouchableOpacity>
+                )}
 
                 {/* ── SEARCH BAR ── */}
                 <View style={{ position: "relative", zIndex: 1000 }}>
@@ -1360,7 +1446,7 @@ export default function Home() {
         <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
       </SafeAreaProvider>
 
-      {(loading || serviceLoading) && (
+      {loading && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 99999, elevation: 99999 }]}>
           <AppLoader />
         </View>
@@ -1369,7 +1455,7 @@ export default function Home() {
   );
 }
 
-const makeStyles = (theme: any) => StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
   root: { flex: 1 },
 
   searchResultsContainer: {
@@ -1529,7 +1615,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   heroSubtitle: {
     fontSize: 13,
     fontWeight: "500",
-    color: "#D1FAE5",
+    color: theme.textSecondary,
     marginTop: 4,
   },
   dotsRow: {
@@ -1573,7 +1659,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   swipeHint: {
     fontWeight: "800",
     fontSize: 12,
-    color: theme.text,
+    color: isDark ? "#001714" : "#FFFFFF",
     letterSpacing: 1.5,
     marginLeft: 30,
   },

@@ -266,7 +266,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   videoSubtitle: {
     fontSize: 12,
     fontWeight: "500",
-    color: "#9CCFC0",
+    color: theme.textSecondary,
   },
   durationBadge: {
     position: "absolute",

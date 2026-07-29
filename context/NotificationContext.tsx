@@ -219,12 +219,32 @@ export const NotificationProvider = ({
       console.log("Socket error:", err.message);
     });
 
+    // Helper to route notification clicks
+    const handleNotificationNavigation = (remoteMessage: any) => {
+      if (!remoteMessage?.data) return;
+      const { type, roomId, orderId } = remoteMessage.data;
+
+      if (type === "chat" || roomId) {
+        router.push("/(customer)/(assistant)/chat");
+      } else if (type === "payment_success" || orderId) {
+        if (orderId) {
+          router.push(`/(customer)/orders/${orderId}`);
+        } else {
+          router.push("/(customer)/(tabs)/orders");
+        }
+      }
+    };
+
+    // Handle foreground FCM messages
+    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+      console.log("FCM foreground notification received:", remoteMessage);
+      refreshNotifications();
+    });
+
     // Handle notification click when the app is in the background
     const unsubscribeNotificationOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
       console.log("Notification caused app to open from background state:", remoteMessage);
-      if (remoteMessage.data?.type === "chat" || remoteMessage.data?.roomId) {
-        router.push("/(customer)/(assistant)/chat");
-      }
+      handleNotificationNavigation(remoteMessage);
     });
 
     // Check if app was opened from a quit state by a notification
@@ -233,11 +253,9 @@ export const NotificationProvider = ({
       .then((remoteMessage) => {
         if (remoteMessage) {
           console.log("Notification caused app to open from quit state:", remoteMessage);
-          if (remoteMessage.data?.type === "chat" || remoteMessage.data?.roomId) {
-            setTimeout(() => {
-              router.push("/(customer)/(assistant)/chat");
-            }, 1000);
-          }
+          setTimeout(() => {
+            handleNotificationNavigation(remoteMessage);
+          }, 1000);
         }
       });
 
@@ -246,6 +264,7 @@ export const NotificationProvider = ({
       if (socketRef.current === socket) {
         socketRef.current = null;
       }
+      unsubscribeOnMessage();
       unsubscribeNotificationOpened();
     };
   }, [customerId, refreshNotifications, upsertNotification]);
