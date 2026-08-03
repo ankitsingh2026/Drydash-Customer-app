@@ -156,8 +156,8 @@ export default function HomeActiveOrderCard({
     statusKey === "deliverriderassigned" ||
     statusKey === "outfordelivery" ||
     statusKey === "readyfordelivery";
-  const riderName = String(order.riderName ?? "").trim() || "Rider";
-  const pickupRiderName = order.assignedRider.pickup.riderName;
+  const riderName = String(order?.riderName ?? "").trim() || "Rider";
+  const pickupRiderName = order?.assignedRider?.pickup?.riderName;
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
 

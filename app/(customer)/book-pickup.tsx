@@ -17,6 +17,7 @@ import { getLocationDetails } from "@/features/location/location.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
+import { findNearbySavedAddress } from "@/utils/distance";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -498,12 +499,32 @@ export default function BookPickup() {
     return () => clearTimeout(timer);
   }, [mapQuery]);
 
-  // Set pickup address from selected address
+  // Set pickup address from selected address (with 500m proximity auto-match)
   useEffect(() => {
-    if (contextSelectedAddress && !selectedPickupAddressId) {
-      setSelectedPickupAddressId(contextSelectedAddress.id);
+    if (contextSelectedAddress) {
+      if (
+        (contextSelectedAddress.id === "current_location" || !selectedPickupAddressId) &&
+        contextSelectedAddress.latitude &&
+        contextSelectedAddress.longitude &&
+        allAddresses.length > 0
+      ) {
+        const nearbySaved = findNearbySavedAddress(
+          contextSelectedAddress.latitude,
+          contextSelectedAddress.longitude,
+          allAddresses,
+          500
+        );
+        if (nearbySaved) {
+          setSelectedPickupAddressId(nearbySaved.id);
+          setSelectedAddress(nearbySaved);
+          return;
+        }
+      }
+      if (!selectedPickupAddressId) {
+        setSelectedPickupAddressId(contextSelectedAddress.id);
+      }
     }
-  }, [contextSelectedAddress]);
+  }, [contextSelectedAddress, allAddresses]);
 
   // Check service availability for selected address
   useEffect(() => {
@@ -612,9 +633,26 @@ export default function BookPickup() {
     if (confirmLoading) return;
     try {
       setConfirmLoading(true);
+
+      let effectivePickupId = selectedPickupAddressId;
+
+      // 500m proximity auto-select check if currently set to current_location or empty
+      if (!effectivePickupId || effectivePickupId === "current_location") {
+        const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+        const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+        if (lat && lng && allAddresses.length > 0) {
+          const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+          if (nearbySaved) {
+            effectivePickupId = nearbySaved.id;
+            setSelectedPickupAddressId(nearbySaved.id);
+            setSelectedAddress(nearbySaved);
+          }
+        }
+      }
+
       if (
-        !selectedPickupAddressId ||
-        selectedPickupAddressId === "current_location"
+        !effectivePickupId ||
+        effectivePickupId === "current_location"
       ) {
         showAlert({
           type: "warning",
@@ -629,10 +667,23 @@ export default function BookPickup() {
         setConfirmLoading(false);
         return;
       }
-      const deliveryId =
+
+      let deliveryId =
         deliveryMode === "same"
-          ? selectedPickupAddressId
+          ? effectivePickupId
           : selectedDeliveryAddressId;
+
+      if (!deliveryId || deliveryId === "current_location") {
+        const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+        const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+        if (lat && lng && allAddresses.length > 0) {
+          const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+          if (nearbySaved) {
+            deliveryId = nearbySaved.id;
+            setSelectedDeliveryAddressId(nearbySaved.id);
+          }
+        }
+      }
 
       if (!deliveryId || deliveryId === "current_location") {
         showAlert({
@@ -704,6 +755,7 @@ export default function BookPickup() {
                 zoneId: locationDetails.zoneId,
                 slotTime: convertedSlotTime,
                 deliveryLabel: selectedSlotData.deliveryLabel || "",
+                isSameDayDelivery: selectedSlotData.isSameDayDelivery || false,
                 customerDetails: {
                   appCustomerId: String(auth_id),
                   name: `${firstName || ""} ${lastName || ""}`.trim(),

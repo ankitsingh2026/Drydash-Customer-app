@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSlotSocket } from "@/context/SlotSocketContext";
+import { findNearbySavedAddress } from "@/utils/distance";
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
@@ -90,8 +91,21 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         longitude: loc.coords.longitude,
       } as any;
 
-      setSelectedAddress(currentLocAddress);
-      setLocationText(labelStr || "Current Location");
+      // Check if current real-time location is within 500m of any saved address
+      const nearbySaved = findNearbySavedAddress(
+        loc.coords.latitude,
+        loc.coords.longitude,
+        allAddresses,
+        500
+      );
+
+      if (nearbySaved) {
+        setSelectedAddress(nearbySaved);
+        setLocationText(`${nearbySaved.line1}, ${nearbySaved.city}`);
+      } else {
+        setSelectedAddress(currentLocAddress);
+        setLocationText(labelStr || "Current Location");
+      }
     } catch (err) {
       console.log("Auto location fetch error", err);
     }
@@ -103,6 +117,28 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       fetchAndSetCurrentLocation();
     }
   }, []);
+
+  // Auto-switch to nearby saved address if allAddresses loads after initial GPS fix
+  useEffect(() => {
+    if (
+      selectedAddress &&
+      selectedAddress.id === "current_location" &&
+      selectedAddress.latitude &&
+      selectedAddress.longitude &&
+      allAddresses.length > 0
+    ) {
+      const nearbySaved = findNearbySavedAddress(
+        selectedAddress.latitude,
+        selectedAddress.longitude,
+        allAddresses,
+        500
+      );
+      if (nearbySaved) {
+        setSelectedAddress(nearbySaved);
+        setLocationText(`${nearbySaved.line1}, ${nearbySaved.city}`);
+      }
+    }
+  }, [allAddresses, selectedAddress]);
 
   // Fetch service data whenever selectedAddress changes
   useEffect(() => {
