@@ -257,7 +257,6 @@ export default function Home() {
     }, [])
   );
 
-  const styles = makeStyles(theme);
 
   useEffect(() => {
     const checkAuth = async () => {
