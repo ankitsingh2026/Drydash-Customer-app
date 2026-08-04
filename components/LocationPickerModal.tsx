@@ -525,9 +525,9 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
     overflow: "hidden",
   },
   actionRow: {
-    minHeight: 84,
+    minHeight: 50,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -547,13 +547,13 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
     backgroundColor: theme.background,
   },
   actionTitle: {
-    fontSize: 19 / 1,
+    fontSize: 16,
     color: theme.text,
     fontWeight: "700",
   },
   actionSubTitle: {
     marginTop: 2,
-    fontSize: 14,
+    fontSize: 12,
     color: theme.textSecondary,
     lineHeight: 18,
   },
@@ -574,7 +574,7 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
     fontSize: 16,
   },
   simpleRow: {
-    height: 68,
+    height: 45,
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
@@ -582,7 +582,7 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
   },
   simpleRowLabel: {
     flex: 1,
-    fontSize: 18 / 1,
+    fontSize: 16,
     color: theme.text,
     fontWeight: "700",
   },
@@ -608,7 +608,7 @@ const makeStyles = (theme: any, isDark?: boolean) => StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 8,
   },
   addrIconWrap: {
     width: 34,

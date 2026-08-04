@@ -58,7 +58,7 @@ import Banner from "../../../../assets/homeicons/Banner1.svg";
 import LottieView from "lottie-react-native";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 
-const { width } = Dimensions.get("window");
+const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
 
@@ -207,8 +207,11 @@ const HERO_SLIDES = [
 export default function Home() {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
-  const [loading, setLoading] = useState(true);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  // Read params early so we can skip the AppLoader if coming from a booking redirect
+  const params = useLocalSearchParams<{ orderPlaced?: string; justBooked?: string }>();
+  const isFromBooking = params.justBooked === "1" || params.orderPlaced === "1";
+  const [loading, setLoading] = useState(!isFromBooking);
+  const fadeAnim = useRef(new Animated.Value(isFromBooking ? 1 : 0)).current;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
@@ -217,7 +220,13 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  const params = useLocalSearchParams<{ orderPlaced?: string }>();
+  // ─── Spotlight mode (shown just after booking redirect) ──────────────────
+  const [spotlightMode, setSpotlightMode] = useState(false);
+  const [spotlightVisible, setSpotlightVisible] = useState(false); // controls render (keeps alive during fade-out)
+  const spotlightCard = useRef(new Animated.Value(0)).current;   // 0→1 for card entrance
+  const spotlightDim  = useRef(new Animated.Value(0)).current;   // 0→1 for content dim
+  const spotlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spotlightShownRef = useRef(false);
   const [offerVisible, setOfferVisible] = useState(true);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -746,11 +755,73 @@ export default function Home() {
     useCallback(() => {
       dragXJS.setValue(0);
       refreshBooking();
-      if (params.orderPlaced === "1") {
-        router.setParams({ orderPlaced: undefined });
+      const hasBookingParam = params.justBooked === "1" || params.orderPlaced === "1";
+      if (hasBookingParam && !spotlightShownRef.current) {
+        spotlightShownRef.current = true;
+        router.setParams({ justBooked: undefined, orderPlaced: undefined });
+
+        // Reset & fade IN — fade-out is handled by a separate useEffect
+        spotlightDim.setValue(0);
+        spotlightCard.setValue(0);
+        setSpotlightMode(true);
+        setSpotlightVisible(true);
+
+        Animated.parallel([
+          Animated.timing(spotlightDim, {
+            toValue: 1,
+            duration: 220,
+            useNativeDriver: true,
+          }),
+          Animated.spring(spotlightCard, {
+            toValue: 1,
+            friction: 7,
+            tension: 180,
+            useNativeDriver: true,
+          }),
+        ]).start();
       }
-    }, [params.orderPlaced, refreshBooking]),
+      // NOTE: no cleanup that clears timers — fade-out timer lives in its own useEffect below
+    }, [params.orderPlaced, params.justBooked]),
   );
+
+  // ─── Spotlight fade-out timer ─────────────────────────────────────────────
+  // Starts the 1.2s countdown once the pickup card data is ready.
+  // Falls back to a 3s max-wait so spotlight never stays forever.
+  useEffect(() => {
+    if (!spotlightVisible) return;
+
+    // Safety fallback: always dismiss after 3s even if data never loads
+    const safetyTimer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(spotlightDim, { toValue: 0, duration: 300, useNativeDriver: true }),
+        Animated.timing(spotlightCard, { toValue: 0, duration: 300, useNativeDriver: true }),
+      ]).start(() => {
+        setSpotlightMode(false);
+        setSpotlightVisible(false);
+        spotlightShownRef.current = false;
+      });
+    }, 3000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [spotlightVisible]);
+
+  // Once activeBooking loads while spotlight is active, hold for 1.5s then fade out
+  useEffect(() => {
+    if (!spotlightVisible || !activeBooking) return;
+
+    const timer = setTimeout(() => {
+      Animated.parallel([
+        Animated.timing(spotlightDim, { toValue: 0, duration: 350, useNativeDriver: true }),
+        Animated.timing(spotlightCard, { toValue: 0, duration: 350, useNativeDriver: true }),
+      ]).start(() => {
+        setSpotlightMode(false);
+        setSpotlightVisible(false);
+        spotlightShownRef.current = false;
+      });
+    }, 1500); // show real card for 1.5s then fade
+
+    return () => clearTimeout(timer);
+  }, [spotlightVisible, activeBooking]);
 
   const PRIMARY = theme.primary;
 
@@ -778,9 +849,139 @@ export default function Home() {
             {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
               <RainBackground />
             )}
+            {/* ── SPOTLIGHT DIM LAYER ── overlays everything during booking redirect ── */}
+            {spotlightVisible && (
+              <Animated.View
+                pointerEvents={spotlightMode ? "none" : "none"}
+                style={[
+                  StyleSheet.absoluteFill,
+                  {
+                    backgroundColor: isDark ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.55)",
+                    zIndex: 80,
+                    opacity: spotlightDim,
+                  },
+                ]}
+              />
+            )}
+
+            {/* ── SPOTLIGHT CARD ── shows real PickupStatusCard once data loads ── */}
+            {spotlightVisible && (
+              <Animated.View
+                style={{
+                  position: "absolute",
+                  left: 16,
+                  right: 16,
+                  top: SCREEN_HEIGHT * 0.24,
+                  zIndex: 90,
+                  opacity: spotlightCard,
+                  transform: [
+                    {
+                      translateY: spotlightCard.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [40, 0],
+                      }),
+                    },
+                    {
+                      scale: spotlightCard.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.92, 1],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                {/* Glow ring */}
+                <Animated.View
+                  pointerEvents="none"
+                  style={{
+                    position: "absolute",
+                    top: -12,
+                    left: -12,
+                    right: -12,
+                    bottom: -12,
+                    borderRadius: 34,
+                    shadowColor: theme.primary,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.55,
+                    shadowRadius: 30,
+                    elevation: 20,
+                    opacity: spotlightCard,
+                  }}
+                />
+
+                {/* "Booking Confirmed" badge above card */}
+                <View style={{ alignItems: "center", marginBottom: 10 }}>
+                  <View style={{
+                    backgroundColor: theme.primary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 7,
+                    borderRadius: 20,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                    shadowColor: theme.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 8,
+                    elevation: 8,
+                  }}>
+                    <Ionicons name="checkmark-circle" size={16} color={isDark ? "#001714" : "#fff"} />
+                    <Text style={{ color: isDark ? "#001714" : "#fff", fontWeight: "800", fontSize: 14, letterSpacing: 0.3 }}>
+                      Booking Confirmed!
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Real PickupStatusCard or skeleton */}
+                {activeBooking && activeType === "pickup" ? (
+                  <PickupStatusCard
+                    pickup={activeBooking}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(customer)/order-tracking",
+                        params: { pickupId: activeBooking?._id },
+                      })
+                    }
+                    onActionComplete={refreshBooking}
+                  />
+                ) : (
+                  // Skeleton shown while refreshBooking loads
+                  <View style={{
+                    backgroundColor: theme.card,
+                    borderRadius: 22,
+                    padding: 22,
+                    borderWidth: 1.5,
+                    borderColor: theme.primary + "30",
+                    shadowColor: theme.primary,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 16,
+                    elevation: 12,
+                    gap: 14,
+                  }}>
+                    {/* Skeleton row 1 */}
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.primary + "25" }} />
+                      <View style={{ flex: 1, gap: 8 }}>
+                        <View style={{ height: 14, borderRadius: 7, backgroundColor: theme.border, width: "60%" }} />
+                        <View style={{ height: 11, borderRadius: 6, backgroundColor: theme.border, width: "40%" }} />
+                      </View>
+                    </View>
+                    {/* Skeleton row 2 */}
+                    <View style={{ height: 1, backgroundColor: theme.border }} />
+                    <View style={{ gap: 8 }}>
+                      <View style={{ height: 12, borderRadius: 6, backgroundColor: theme.border, width: "80%" }} />
+                      <View style={{ height: 12, borderRadius: 6, backgroundColor: theme.border, width: "65%" }} />
+                    </View>
+                  </View>
+                )}
+              </Animated.View>
+            )}
+
             <ScrollView 
               style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} 
               contentContainerStyle={{ paddingBottom: 100 }}
+              scrollEnabled={!spotlightMode}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
@@ -1446,7 +1647,7 @@ export default function Home() {
         <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
       </SafeAreaProvider>
 
-      {loading && (
+      {loading && !spotlightMode && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 99999, elevation: 99999 }]}>
           <AppLoader />
         </View>

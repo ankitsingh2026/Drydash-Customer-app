@@ -33,9 +33,9 @@ export default function OrderSuccess() {
     const t = setTimeout(() => {
       router.replace({
         pathname: "/(customer)/(tabs)/home",
-        params: { orderPlaced: "1" },
+        params: { justBooked: "1", orderPlaced: "1" },
       });
-    }, 1500);
+    }, 600);
 
     return () => clearTimeout(t);
   }, []);
