@@ -874,6 +874,7 @@ export default function Home() {
                     backgroundColor: isDark ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.55)",
                     zIndex: 80,
                     opacity: spotlightDim,
+                    
                   },
                 ]}
               />
@@ -886,7 +887,7 @@ export default function Home() {
                   position: "absolute",
                   left: 16,
                   right: 16,
-                  top: SCREEN_HEIGHT * 0.24,
+                  top: SCREEN_HEIGHT * 0.30,
                   zIndex: 90,
                   opacity: spotlightCard,
                   transform: [

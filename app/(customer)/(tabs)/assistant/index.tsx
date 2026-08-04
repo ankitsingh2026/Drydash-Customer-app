@@ -244,7 +244,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
 
   callBtn: {
-    height: 52,
+    height: 56  ,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
