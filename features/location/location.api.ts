@@ -192,11 +192,71 @@ export const getFullServiceData = async (
     }
 
     // 2. Check service + slots
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
     const serviceRes = await oldApiClient.post(`v1/slots/service/check`, {
       zoneId: zoneData.zoneId,
+      date: todayStr,
     });
     const serviceData = serviceRes.data;
     console.log("Service data====>:", serviceData);
+
+    if (serviceData?.data?.dates && Array.isArray(serviceData.data.dates)) {
+      const dates = serviceData.data.dates;
+      const todayEntry = dates.find((d: any) => d.label === "Today" || d.date === todayStr) || dates[0];
+      const tomorrowEntry = dates.find((d: any) => d.label === "Tomorrow") || dates[1];
+
+      if (todayEntry) {
+        serviceData.data.allSlots = todayEntry.allSlots || [];
+      }
+      if (tomorrowEntry && tomorrowEntry.allSlots) {
+        serviceData.data.tomorrowSlots = tomorrowEntry.allSlots.map((s: any) => ({
+          ...s,
+          isTomorrow: true,
+          dayLabel: "Tomorrow",
+          date: tomorrowEntry.date,
+        }));
+      }
+    } else {
+      // Fallback: Check if today has any valid upcoming slots
+      const todaySlots = serviceData?.data?.allSlots || [];
+      const hasValidTodaySlot = todaySlots.some(
+        (s: any) =>
+          s.enabled &&
+          s.status !== "expired" &&
+          (s.availableCapacity === undefined || s.availableCapacity > 0)
+      );
+
+      if (!hasValidTodaySlot && zoneData.zoneId) {
+        try {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const y = tomorrow.getFullYear();
+          const m = String(tomorrow.getMonth() + 1).padStart(2, "0");
+          const d = String(tomorrow.getDate()).padStart(2, "0");
+          const tomorrowStr = `${y}-${m}-${d}`;
+
+          const tomorrowRes = await oldApiClient.post(`v1/slots/service/check`, {
+            zoneId: zoneData.zoneId,
+            date: tomorrowStr,
+          });
+
+          if (tomorrowRes.data?.data?.allSlots) {
+            serviceData.data.tomorrowSlots = tomorrowRes.data.data.allSlots.map(
+              (s: any) => ({
+                ...s,
+                isTomorrow: true,
+                dayLabel: "Tomorrow",
+                date: tomorrowStr,
+              })
+            );
+          }
+        } catch (err) {
+          console.log("Error fetching tomorrow slots in getFullServiceData:", err);
+        }
+      }
+    }
 
     const result = {
       coords: { lat: latitude, lng: longitude },

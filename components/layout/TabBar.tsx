@@ -254,14 +254,56 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   // Helper to get best slot from serviceData (API response)
   const getBestSlot = () => {
     if (!serviceData?.data || !serviceData.serviceAvailable) return null;
-    if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
-    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
-      return (
-        serviceData.data.allSlots.find((s: any) => s.enabled && s.status === 'upcoming') ||
-        serviceData.data.allSlots.find((s: any) => s.enabled) ||
-        serviceData.data.allSlots[0]
-      );
+    if (serviceData.data.activeSlot && serviceData.data.activeSlot.status !== 'expired') {
+      return serviceData.data.activeSlot;
     }
+
+    if (serviceData.data.dates && Array.isArray(serviceData.data.dates)) {
+      const dates = serviceData.data.dates;
+      const getTodayStr = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+
+      const todayEntry = dates.find((d: any) => d.label === "Today" || d.date === getTodayStr()) || dates[0];
+      const tomorrowEntry = dates.find((d: any) => d.label === "Tomorrow") || dates[1];
+
+      if (todayEntry?.allSlots) {
+        const validToday = todayEntry.allSlots.find(
+          (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+        );
+        if (validToday) return validToday;
+      }
+
+      if (tomorrowEntry?.allSlots) {
+        const validTomorrow = tomorrowEntry.allSlots.find(
+          (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+        );
+        if (validTomorrow) {
+          return {
+            ...validTomorrow,
+            isTomorrow: true,
+            dayLabel: "Tomorrow",
+            date: tomorrowEntry.date,
+          };
+        }
+      }
+    }
+
+    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
+      const validToday = serviceData.data.allSlots.find(
+        (s: any) => s.enabled && s.status !== 'expired' && (s.availableCapacity === undefined || s.availableCapacity > 0)
+      );
+      if (validToday) return validToday;
+    }
+
+    if (serviceData.data.tomorrowSlots && serviceData.data.tomorrowSlots.length > 0) {
+      const validTomorrow = serviceData.data.tomorrowSlots.find(
+        (s: any) => s.enabled && s.status !== 'expired' && (s.availableCapacity === undefined || s.availableCapacity > 0)
+      );
+      if (validTomorrow) return validTomorrow;
+    }
+
     return null;
   };
 
