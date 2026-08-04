@@ -156,6 +156,8 @@ function AddressCard({
                     onEdit();
                   }}
                   style={styles.actionBtn}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
                 >
                   <Pencil size={15} color={theme.textSecondary} />
                 </TouchableOpacity>
@@ -324,6 +326,8 @@ export default function SavedAddresses() {
           <TouchableOpacity
             onPress={() => router.back()}
             style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <ArrowLeft size={22} color={theme.text} />
           </TouchableOpacity>

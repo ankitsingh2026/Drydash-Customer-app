@@ -86,6 +86,8 @@ export default function Support() {
                     style={styles.backButton}
                     onPress={() => router.back()}
                     activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
                 >
                     <Ionicons 
                         name="arrow-back" 

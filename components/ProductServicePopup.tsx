@@ -308,11 +308,11 @@ export default function ProductServicePopup({
               {/* Price and Unit */}
               <View style={styles.priceRow}>
                 <Text style={styles.productPrice}>{priceDisplay}</Text>
-                {product.unit && (
+                {/* {product.unit && (
                   <View style={styles.unitBadge}>
                     <Text style={styles.unitText}>per {product.unit}</Text>
                   </View>
-                )}
+                )} */}
               </View>
 
               <Text style={styles.productDesc}>
@@ -698,7 +698,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     elevation: 6,
   },
   stepNumText: {
-    color: theme.text,
+    color: isDark ? "#001714" : "#fffff",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -714,7 +714,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   stepDesc: {
     fontSize: 12.5,
-    color: "#4D7A74",
+    color: "#fffff",
     lineHeight: 19,
   },
   divider: {

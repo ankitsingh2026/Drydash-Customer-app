@@ -907,7 +907,8 @@ const closeImagePreview = () => {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={22} color={C.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
@@ -917,9 +918,9 @@ const closeImagePreview = () => {
               <Text style={styles.onlineText}>ONLINE</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.headerBtn}>
+          {/* <TouchableOpacity style={styles.headerBtn}>
             <Ionicons name="ellipsis-vertical" size={20} color={C.subText} />
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         <KeyboardAvoidingView

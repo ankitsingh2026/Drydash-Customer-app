@@ -953,228 +953,256 @@ export default function BookPickup() {
     </View>
   );
 
+ 
   const CartSection = () => {
-    if (!items?.length) return null;
-
-    // const deliveryHandling = 40;
-    // const serviceCharge = Math.round(cartSubtotal * 0.05);
-    // const gst = Math.round((cartSubtotal + serviceCharge) * 0.09);
-    // const igst = Math.round((cartSubtotal + serviceCharge) * 0.09);
-
+    const totalCount = items.reduce((sum, item) => sum + item.qty, 0);
     const grandTotal = total;
 
     return (
       <View style={s.section}>
-        <Text style={s.sectionLabel}>CART ITEMS</Text>
-
-        <View style={{ marginTop: 1 }}>
-          {items.map((item) => {
-            const lineTotal = item.qty * item.price;
-            // Handle both string ids and object ids (some items may have id as object with _id property)
-            const itemKey =
-              typeof item.id === "object"
-                ? item.id?._id || JSON.stringify(item.id)
-                : item.id;
-
-            return (
-              <View style={s.cartCard} key={itemKey}>
-                {/* LEFT IMAGE */}
-                <Image source={{ uri: item.image }} style={s.itemImage} />
-
-                {/* CENTER CONTENT */}
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={s.itemTitle}>{item.title}</Text>
-                  <Text style={s.itemPrice}>₹{item.price}/Qty</Text>
-                </View>
-
-                {/* RIGHT SIDE */}
-                <View style={s.rightSection}>
-                  {/* STEPPER */}
-                  <View style={s.stepperNew}>
-                    <TouchableOpacity
-                      onPress={() => setQty(item.id, item.qty - 1)}
-                    >
-                      <Ionicons name="remove" size={16} color={theme.text} />
-                    </TouchableOpacity>
-
-                    <Text style={s.qtyText}>{item.qty}</Text>
-
-                    <TouchableOpacity
-                      onPress={() => setQty(item.id, item.qty + 1)}
-                    >
-                      <Ionicons name="add" size={16} color={theme.primary} />
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => removeItem(item.id)}
-                    style={s.deleteBtnNew}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={{ marginTop: 4 }}>
-          <View style={s.rowBetween}>
-            <Text style={s.sectionLabel}>APPLIED OFFERS</Text>
-
-            <TouchableOpacity onPress={() => setCouponOpen(true)}>
-              <Text style={{ color: theme.primary }}>View All &rsaquo;</Text>
-            </TouchableOpacity>
-          </View>
+        {/* HEADER ROW */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: items?.length ? 12 : 4,
+          }}
+        >
+          <Text style={s.sectionLabel}>CART ITEMS ({totalCount})</Text>
 
           <TouchableOpacity
-            onPress={() => setCouponOpen(true)}
+            onPress={() => router.push("/services/[service]")}
             activeOpacity={0.85}
             style={{
-              marginTop: 8,
-              borderRadius: 14,
-              paddingHorizontal: 14,
-              paddingVertical: 6,
-              backgroundColor: theme.card, // flat base
-              borderWidth: 1,
-              borderColor: appliedCoupon ? theme.primary : theme.border,
+              backgroundColor: items?.length > 0 ? "#FFFFFF" : theme.primary,
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 10,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 4,
+              borderWidth: items?.length > 0 ? 1 : 0,
+              borderColor: items?.length > 0 ? (isDark ? "rgba(255,255,255,0.2)" : theme.border) : "transparent",
             }}
           >
-            <View
+            <Text
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
+                color: items?.length > 0 ? (isDark ? "#001714" : theme.primary) : (isDark ? "#001714" : "#FFFFFF"),
+                fontSize: 12,
+                fontWeight: "800",
+                letterSpacing: 0.5,
               }}
             >
-              {/* LEFT */}
-              <View style={{ flex: 1 }}>
+              + ADD ITEMS
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ITEMS LIST & BREAKDOWN (when items exist) */}
+        {items.length > 0 && (
+          <>
+            <View style={{ marginTop: 1 }}>
+              {items.map((item) => {
+                const lineTotal = item.qty * item.price;
+                const itemKey =
+                  typeof item.id === "object"
+                    ? item.id?._id || JSON.stringify(item.id)
+                    : item.id;
+
+                return (
+                  <View style={s.cartCard} key={itemKey}>
+                    {/* LEFT IMAGE */}
+                    <Image source={{ uri: item.image }} style={s.itemImage} />
+
+                    {/* CENTER CONTENT */}
+                    <View style={{ flex: 1, marginLeft: 12 }}>
+                      <Text style={s.itemTitle}>{item.title}</Text>
+                      <Text style={s.itemPrice}>₹{item.price}/Qty</Text>
+                    </View>
+
+                    {/* RIGHT SIDE STEPPER */}
+                    <View style={s.rightSection}>
+                      <View style={s.stepperNew}>
+                        <TouchableOpacity
+                          onPress={() => setQty(item.id, item.qty - 1)}
+                        >
+                          <Ionicons name="remove" size={16} color={theme.text} />
+                        </TouchableOpacity>
+
+                        <Text style={s.qtyText}>{item.qty}</Text>
+
+                        <TouchableOpacity
+                          onPress={() => setQty(item.id, item.qty + 1)}
+                        >
+                          <Ionicons name="add" size={16} color={theme.primary} />
+                        </TouchableOpacity>
+                      </View>
+
+                      <TouchableOpacity
+                        onPress={() => removeItem(item.id)}
+                        style={s.deleteBtnNew}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* APPLIED OFFERS */}
+            <View style={{ marginTop: 4 }}>
+              <View style={s.rowBetween}>
+                <Text style={s.sectionLabel}>APPLIED OFFERS</Text>
+
+                <TouchableOpacity onPress={() => setCouponOpen(true)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                  <Text style={{ color: theme.primary }}>View All &rsaquo;</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setCouponOpen(true)}
+                activeOpacity={0.85}
+                style={{
+                  marginTop: 8,
+                  borderRadius: 14,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  backgroundColor: theme.card,
+                  borderWidth: 1,
+                  borderColor: appliedCoupon ? theme.primary : theme.border,
+                }}
+              >
                 <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
                 >
-                  {/* Coupon Code */}
-                  <Text
+                  <View style={{ flex: 1 }}>
+                    <View
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.text,
+                          fontWeight: "900",
+                          fontSize: 15,
+                          letterSpacing: 0.5,
+                        }}
+                      >
+                        {appliedCoupon?.code || "Apply Coupon"}
+                      </Text>
+
+                      {appliedCoupon && (
+                        <View
+                          style={{
+                            backgroundColor: theme.inputBackground,
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            borderRadius: 4,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: theme.primary,
+                              fontWeight: "800",
+                            }}
+                          >
+                            BEST VALUE
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text
+                      style={{
+                        color: theme.textSecondary,
+                        fontSize: 12,
+                      }}
+                    >
+                      {appliedCoupon
+                        ? appliedCoupon.description
+                        : "Tap to view available offers"}
+                    </Text>
+                  </View>
+
+                  <View
                     style={{
-                      color: theme.text,
-                      fontWeight: "900",
-                      fontSize: 15,
-                      letterSpacing: 0.5,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 10,
                     }}
                   >
-                    {appliedCoupon?.code || "Apply Coupon"}
-                  </Text>
-
-                  {/* Badge */}
-                  {appliedCoupon && (
                     <View
                       style={{
-                        backgroundColor: theme.inputBackground,
-                        paddingHorizontal: 6,
-                        paddingVertical: 2,
-                        borderRadius: 4,
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 18,
+                        borderWidth: 1,
+                        borderColor: appliedCoupon ? theme.primary : theme.border,
+                        backgroundColor: appliedCoupon ? theme.inputBackground : "transparent",
                       }}
                     >
                       <Text
                         style={{
-                          fontSize: 10,
-                          color: theme.primary,
+                          color: appliedCoupon ? theme.primary : theme.textSecondary,
                           fontWeight: "800",
+                          fontSize: 12,
                         }}
                       >
-                        BEST VALUE
+                        {appliedCoupon ? "✓ Applied" : "Apply"}
                       </Text>
                     </View>
-                  )}
+
+                    {appliedCoupon && (
+                      <TouchableOpacity
+                        onPress={() => setAppliedCoupon(null)}
+                        activeOpacity={0.8}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          backgroundColor: theme.border,
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
+              </TouchableOpacity>
+            </View>
 
-                {/* Description */}
-                <Text
-                  style={{
-                    color: theme.textSecondary,
-                    fontSize: 12,
-                  }}
-                >
-                  {appliedCoupon
-                    ? appliedCoupon.description
-                    : "Tap to view available offers"}
-                </Text>
-              </View>
+            {/* SUBTOTAL & TOTAL PAYABLE */}
+            <View style={{ marginTop: 18 }}>
+              <BreakRow label="Subtotal" value={cartSubtotal} />
+              {discount > 0 && <BreakRow label="Discount" value={`${discount}`} />}
 
-              {/* RIGHT BUTTON */}
-              {/* RIGHT ACTION */}
               <View
                 style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
+                  height: 1,
+                  backgroundColor: theme.border,
+                  marginVertical: 10,
                 }}
-              >
-                {/* Applied Badge */}
-                <View
-                  style={{
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 18,
-                    borderWidth: 1,
-                    borderColor: appliedCoupon ? theme.primary : theme.border,
-                    backgroundColor: appliedCoupon ? theme.inputBackground : "transparent",
-                  }}
-                >
-                  <Text
-                    style={{
-                      color: appliedCoupon ? theme.primary : theme.textSecondary,
-                      fontWeight: "800",
-                      fontSize: 12,
-                    }}
-                  >
-                    {appliedCoupon ? "✓ Applied" : "Apply"}
-                  </Text>
-                </View>
+              />
 
-                {/* DELETE ICON */}
-                {appliedCoupon && (
-                  <TouchableOpacity
-                    onPress={() => setAppliedCoupon(null)}
-                    activeOpacity={0.8}
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 17,
-                      backgroundColor: theme.border,
-                      justifyContent: "center",
-                      alignItems: "center",
-
-                    }}
-                  >
-                    <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
-                  </TouchableOpacity>
-                )}
-              </View>
+              <BreakRow label="Total Payable" value={grandTotal} total />
             </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ marginTop: 18 }}>
-          <BreakRow label="Subtotal" value={cartSubtotal} />
-          {discount > 0 && <BreakRow label="Discount" value={`${discount}`} />}
-          {/* <BreakRow label="Delivery Handling" value={deliveryHandling} strike />
-          <BreakRow label="Service Charge" value={serviceCharge} strike />
-          <BreakRow label="GST (9%)" value={gst} strike />
-          <BreakRow label="IGST (9%)" value={igst} strike /> */}
-
-          <View
-            style={{
-              height: 1,
-              backgroundColor: theme.border,
-              marginVertical: 10,
-            }}
-          />
-
-          <BreakRow label="Total Payable" value={grandTotal} total />
-        </View>
+          </>
+        )}
       </View>
     );
   };
+
 
   const noSlotsToday = pickupType === "today" && !hasAvailableSlots;
   const selectedSlotFull =
@@ -1381,6 +1409,7 @@ export default function BookPickup() {
               onPress={goBackSafe}
               hitSlop={10}
               style={s.headerBack}
+              
             >
               <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </TouchableOpacity>
@@ -1423,7 +1452,7 @@ export default function BookPickup() {
               })()}
 
               {/* ADDRESS LINE (unchanged) */}
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom:5 }}>
                 <Ionicons
                   name={
                     (selectedPickupAddr?.label || contextSelectedAddress?.label)
@@ -1636,7 +1665,7 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 )}
               </View>
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 onPress={() => router.push("/services/[service]")}
                 activeOpacity={0.8}
                 style={{
@@ -1663,7 +1692,7 @@ export default function BookPickup() {
                 >
                   Add items for estimate
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               {/* <DeliveryAddressSection /> */}
 
               <CartSection />

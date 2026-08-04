@@ -322,7 +322,8 @@ export default function EditAddress() {
         
         {/* Top Search Overlay */}
         <View style={[styles.headerOverlay, { paddingTop: Math.max(insets.top, 16) }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="arrow-back" size={24} color={theme.text} />
           </TouchableOpacity>
           

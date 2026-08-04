@@ -267,6 +267,8 @@ export default function TermsScreen() {
           onPress={() => router.back()}
           style={styles.backBtn}
           activeOpacity={0.8}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
         >
           <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>

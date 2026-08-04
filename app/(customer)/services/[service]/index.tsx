@@ -417,6 +417,7 @@ export default function ServiceDetail() {
             borderRadius: 12,
             backgroundColor: theme.card,
           }}
+          
         >
           <ArrowLeft size={20} color={theme.text} />
         </TouchableOpacity>

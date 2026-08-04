@@ -149,6 +149,8 @@ function CustomThemeToggle() {
             onPress={() => handleSelect(i)}
             activeOpacity={0.85}
             style={styles.themeTabOuter}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <IconComponent
@@ -537,6 +539,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             await logout();
             router.replace("/(auth)/auth");
           }}
+          
         >
           <LogOut size={18} color={activeColors.danger} />
           <Text style={[styles.logoutText, { color: activeColors.danger }]}>
