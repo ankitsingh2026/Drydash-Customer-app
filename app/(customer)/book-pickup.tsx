@@ -236,18 +236,65 @@ export default function BookPickup() {
   const getBestSlot = () => {
     if (selectedSlotData) return selectedSlotData;
     if (!serviceData?.data || !serviceData.serviceAvailable) return null;
-    if (serviceData.data.activeSlot) return serviceData.data.activeSlot;
-    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
-      return serviceData.data.allSlots.find((s: any) => s.enabled) || serviceData.data.allSlots[0];
+    if (serviceData.data.activeSlot && serviceData.data.activeSlot.status !== "expired") {
+      return serviceData.data.activeSlot;
     }
+
+    if (serviceData.data.dates && Array.isArray(serviceData.data.dates)) {
+      const dates = serviceData.data.dates;
+      const getTodayStr = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+
+      const todayEntry = dates.find((d: any) => d.label === "Today" || d.date === getTodayStr()) || dates[0];
+      const tomorrowEntry = dates.find((d: any) => d.label === "Tomorrow") || dates[1];
+
+      if (todayEntry?.allSlots) {
+        const validToday = todayEntry.allSlots.find(
+          (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+        );
+        if (validToday) return validToday;
+      }
+
+      if (tomorrowEntry?.allSlots) {
+        const validTomorrow = tomorrowEntry.allSlots.find(
+          (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+        );
+        if (validTomorrow) {
+          return {
+            ...validTomorrow,
+            isTomorrow: true,
+            dayLabel: "Tomorrow",
+            date: tomorrowEntry.date,
+          };
+        }
+      }
+    }
+
+    if (serviceData.data.allSlots && serviceData.data.allSlots.length > 0) {
+      const validToday = serviceData.data.allSlots.find(
+        (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+      );
+      if (validToday) return validToday;
+    }
+
+    if (serviceData.data.tomorrowSlots && serviceData.data.tomorrowSlots.length > 0) {
+      const validTomorrow = serviceData.data.tomorrowSlots.find(
+        (s: any) => s.enabled && s.status !== "expired" && (s.availableCapacity === undefined || s.availableCapacity > 0)
+      );
+      if (validTomorrow) return validTomorrow;
+    }
+
     return null;
   };
 
-  const { preSelectedSlotIndex, preSelectedSlotTime } = useLocalSearchParams<{
+  const { preSelectedSlotIndex, preSelectedSlotTime, preSelectedDate, preSelectedIsTomorrow } = useLocalSearchParams<{
     preSelectedSlotIndex?: string;
     preSelectedSlotTime?: string;
+    preSelectedDate?: string;
+    preSelectedIsTomorrow?: string;
   }>();
-
 
   useEffect(() => {
     if (preSelectedSlotTime && preSelectedSlotTime !== "") {
@@ -255,7 +302,27 @@ export default function BookPickup() {
       // Also set slot data immediately so the UI hint shows
       setSelectedSlotData({ time: preSelectedSlotTime });
     }
-  }, []);
+
+    if (preSelectedIsTomorrow === "true") {
+      setPickupType("schedule");
+      if (preSelectedDate) {
+        const [year, month, day] = preSelectedDate.split("-").map(Number);
+        if (year && month && day) {
+          setDate(new Date(year, month - 1, day));
+        } else {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          setDate(tomorrow);
+        }
+      } else {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        setDate(tomorrow);
+      }
+    } else if (preSelectedIsTomorrow === "false") {
+      setPickupType("today");
+    }
+  }, [preSelectedSlotTime, preSelectedIsTomorrow, preSelectedDate]);
 
   const getActiveSlot = () => serviceData?.data?.activeSlot || null;
 
@@ -1946,6 +2013,19 @@ export default function BookPickup() {
                           s.availableCapacity > 0
                       );
                       setHasAvailableSlots(available);
+
+                      // ─── Auto-select pre-selected slot from home screen ───
+                      if (preSelectedTimeRef.current) {
+                        const targetTime = preSelectedTimeRef.current;
+                        const matchIndex = slots.findIndex(
+                          (s) => s.time === targetTime && s.enabled && s.status !== "expired"
+                        );
+                        if (matchIndex !== -1) {
+                          setSelectedSlotIndex(matchIndex);
+                          setSelectedSlotData(slots[matchIndex]);
+                          preSelectedTimeRef.current = ""; // clear so it doesn't re-trigger
+                        }
+                      }
                     }}
                   />
                 ) : (
