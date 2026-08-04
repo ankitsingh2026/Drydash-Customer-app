@@ -17,6 +17,7 @@ import { getLocationDetails } from "@/features/location/location.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
+import { findNearbySavedAddress } from "@/utils/distance";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -498,12 +499,32 @@ export default function BookPickup() {
     return () => clearTimeout(timer);
   }, [mapQuery]);
 
-  // Set pickup address from selected address
+  // Set pickup address from selected address (with 500m proximity auto-match)
   useEffect(() => {
-    if (contextSelectedAddress && !selectedPickupAddressId) {
-      setSelectedPickupAddressId(contextSelectedAddress.id);
+    if (contextSelectedAddress) {
+      if (
+        (contextSelectedAddress.id === "current_location" || !selectedPickupAddressId) &&
+        contextSelectedAddress.latitude &&
+        contextSelectedAddress.longitude &&
+        allAddresses.length > 0
+      ) {
+        const nearbySaved = findNearbySavedAddress(
+          contextSelectedAddress.latitude,
+          contextSelectedAddress.longitude,
+          allAddresses,
+          500
+        );
+        if (nearbySaved) {
+          setSelectedPickupAddressId(nearbySaved.id);
+          setSelectedAddress(nearbySaved);
+          return;
+        }
+      }
+      if (!selectedPickupAddressId) {
+        setSelectedPickupAddressId(contextSelectedAddress.id);
+      }
     }
-  }, [contextSelectedAddress]);
+  }, [contextSelectedAddress, allAddresses]);
 
   // Check service availability for selected address
   useEffect(() => {
@@ -609,45 +630,145 @@ export default function BookPickup() {
   };
 
   // ─── Background API runner (fire-and-forget after optimistic navigation) ───
-  const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
-    try {
-      if (pickupType === "today" && selectedPickupAddr) {
-        let resolvedZoneId =
-          zoneData?.zoneId ||
-          serviceData?.data?.zoneInfo?.zoneId ||
-          serviceData?.zoneId;
+ const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
+  try {
+    setConfirmLoading(true);
 
-        const lat = selectedPickupAddr.latitude;
-        const lng = selectedPickupAddr.longitude;
+    let effectivePickupId = selectedPickupAddressId;
 
-        if (!resolvedZoneId && lat && lng) {
-          const locationDetails = await getLocationDetails(lat, lng);
-          resolvedZoneId = locationDetails?.zoneId;
-        }
-
-        if (resolvedZoneId && selectedSlotData?.time) {
-          const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
-          const bookingPayload = {
-            zoneId: resolvedZoneId,
-            slotTime: convertedSlotTime,
-            deliveryLabel: selectedSlotData.deliveryLabel || "",
-            customerDetails: {
-              appCustomerId: String(auth_id),
-              name: `${firstName || ""} ${lastName || ""}`.trim(),
-              phone: phone,
-            },
-          };
-          const bookingResponse = await createBookingApi(bookingPayload);
-          if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
-            orderDetails.bookingId = bookingResponse.data.booking.bookingId;
-          }
+    // 500m proximity auto-select check if currently set to current_location or empty
+    if (!effectivePickupId || effectivePickupId === "current_location") {
+      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+      if (lat && lng && allAddresses.length > 0) {
+        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+        if (nearbySaved) {
+          effectivePickupId = nearbySaved.id;
+          setSelectedPickupAddressId(nearbySaved.id);
+          setSelectedAddress(nearbySaved);
         }
       }
-      await createOrderApi(orderDetails);
-    } catch (err: any) {
-      console.log("Background booking error (order may still exist):", err?.message);
     }
-  };
+
+    if (!effectivePickupId || effectivePickupId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for pickup.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("pickup");
+          setAddModalOpen(true);
+        },
+      });
+      setConfirmLoading(false);
+      return;
+    }
+
+    let deliveryId =
+      deliveryMode === "same"
+        ? effectivePickupId
+        : selectedDeliveryAddressId;
+
+    if (!deliveryId || deliveryId === "current_location") {
+      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+      if (lat && lng && allAddresses.length > 0) {
+        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+        if (nearbySaved) {
+          deliveryId = nearbySaved.id;
+          setSelectedDeliveryAddressId(nearbySaved.id);
+        }
+      }
+    }
+
+    if (!deliveryId || deliveryId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for delivery.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("delivery");
+          setAddModalOpen(true);
+        },
+      });
+      setConfirmLoading(false);
+      return;
+    }
+
+    let selectedSlotForPayload: string | undefined;
+    if (selectedSlotData?.time) {
+      selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
+    }
+
+    const scheduledDate = pickupType === "today" ? new Date() : date;
+    const orderItems = items
+      .filter((item) => item.id && item.qty > 0)
+      .map((item) => ({
+        itemId: item.id,
+        quantity: item.qty,
+      }));
+
+    const orderDetails: CreatePickupRequest = {
+      firstName,
+      lastName,
+      contact: phone,
+      appCustomerId: String(auth_id),
+      tempPickupAdresssId: selectedPickupAddressId,
+      tempDeliveryAddressId: deliveryId,
+      date: formatDateForApi(scheduledDate),
+      isHeavy: hasHeavyItems,
+      morning_delivery: isMorningDelivery,
+    };
+    if (selectedSlotForPayload) {
+      orderDetails.slot = selectedSlotForPayload;
+    }
+    if (note?.trim()) orderDetails.note = note.trim();
+    if (orderItems.length) orderDetails.items = orderItems;
+
+    // For "today" tab, first create booking to get bookingId
+    if (pickupType === "today" && selectedPickupAddr) {
+      let resolvedZoneId =
+        zoneData?.zoneId ||
+        serviceData?.data?.zoneInfo?.zoneId ||
+        serviceData?.zoneId;
+
+      const lat = selectedPickupAddr.latitude;
+      const lng = selectedPickupAddr.longitude;
+
+      if (!resolvedZoneId && lat && lng) {
+        const locationDetails = await getLocationDetails(lat, lng);
+        resolvedZoneId = locationDetails?.zoneId;
+      }
+
+      if (resolvedZoneId && selectedSlotData?.time) {
+        const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
+        const bookingPayload = {
+          zoneId: resolvedZoneId,
+          slotTime: convertedSlotTime,
+          deliveryLabel: selectedSlotData.deliveryLabel || "",
+          isSameDayDelivery: selectedSlotData.isSameDayDelivery || false,
+          customerDetails: {
+            appCustomerId: String(auth_id),
+            name: `${firstName || ""} ${lastName || ""}`.trim(),
+            phone: phone,
+          },
+        };
+        console.log(" BOOKING PAYLOAD ===>", bookingPayload);
+        const bookingResponse = await createBookingApi(bookingPayload);
+        if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
+          orderDetails.bookingId = bookingResponse.data.booking.bookingId;
+          console.log(" BOOKING CREATED ===>", bookingResponse.data.booking.bookingId);
+        }
+      }
+    }
+
+    await createOrderApi(orderDetails);
+  } catch (err: any) {
+    console.log("Background booking error (order may still exist):", err?.message);
+  }
+};
 
   const confirmPickup = () => {
     if (confirmLoading) return;
