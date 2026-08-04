@@ -17,6 +17,7 @@ type AddressContextType = {
   selectedAddressId: string | null;
   allAddresses: Address[];
   loading: boolean;
+  isNetworkError: boolean;
   setSelectedAddress: (address: Address | null) => void;
   refreshAddresses: () => Promise<void>;
   // SERVICE STATES 👇
@@ -52,7 +53,8 @@ export const AddressProvider: React.FC<{ children: React.ReactNode }> = ({
   );
   const selectedAddressIdRef = useRef<string | null>(null);
   const [allAddresses, setAllAddresses] = useState<Address[]>([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isNetworkError, setIsNetworkError] = useState(false);
 
 // SERVICE STATES 👇
   const [coords, setCoords] = useState<{lat: number; lng: number} | null>(null);
@@ -71,6 +73,7 @@ const [loading, setLoading] = useState(true);
 
     try {
       console.log("Fetching addresses for authId:", authId);
+      setIsNetworkError(false);
       const data = await getAddressApi(authId);
       // console.log("Address API response:", data);
 
@@ -106,6 +109,7 @@ const [loading, setLoading] = useState(true);
       }
     } catch (e) {
       console.error("Error fetching addresses:", e);
+      setIsNetworkError(true);
     } finally {
       setLoading(false);
     }
@@ -198,6 +202,7 @@ return (
       selectedAddressId,
       allAddresses,
       loading,
+      isNetworkError,
       setSelectedAddress: handleSetSelectedAddress,
       refreshAddresses,
       // SERVICE 👇

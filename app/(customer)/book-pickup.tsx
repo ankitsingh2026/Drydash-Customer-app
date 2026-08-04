@@ -17,6 +17,7 @@ import { getLocationDetails } from "@/features/location/location.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
 import { useAuth } from "@/hooks/useAuth";
 import { buildPhoneCandidates } from "@/utils/phone";
+import { findNearbySavedAddress } from "@/utils/distance";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,7 +26,7 @@ import { router } from "expo-router";
 import { CirclePlus } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
-
+  ActivityIndicator,
   Dimensions,
   Image,
   Keyboard,
@@ -439,11 +440,11 @@ export default function BookPickup() {
     else router.replace("/(customer)/(tabs)/home");
   };
 
-  // REMOVE the SuccessModal-based flow entirely — replace openSuccessModal with this:
-  const openSuccessModal = (msg: string) => {
+  // Navigate to order success screen (which then auto-redirects to home)
+  const openSuccessModal = (_msg?: string) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const address = selectedPickupAddr
-      ? `${selectedPickupAddr.line1 || selectedPickupAddr.street}, ${selectedPickupAddr.city}`
+      ? `${selectedPickupAddr.line1 || selectedPickupAddr.street || ""}, ${selectedPickupAddr.city || ""}`
       : "";
     router.replace({
       pathname: "/(customer)/order-success",
@@ -498,12 +499,32 @@ export default function BookPickup() {
     return () => clearTimeout(timer);
   }, [mapQuery]);
 
-  // Set pickup address from selected address
+  // Set pickup address from selected address (with 500m proximity auto-match)
   useEffect(() => {
-    if (contextSelectedAddress && !selectedPickupAddressId) {
-      setSelectedPickupAddressId(contextSelectedAddress.id);
+    if (contextSelectedAddress) {
+      if (
+        (contextSelectedAddress.id === "current_location" || !selectedPickupAddressId) &&
+        contextSelectedAddress.latitude &&
+        contextSelectedAddress.longitude &&
+        allAddresses.length > 0
+      ) {
+        const nearbySaved = findNearbySavedAddress(
+          contextSelectedAddress.latitude,
+          contextSelectedAddress.longitude,
+          allAddresses,
+          500
+        );
+        if (nearbySaved) {
+          setSelectedPickupAddressId(nearbySaved.id);
+          setSelectedAddress(nearbySaved);
+          return;
+        }
+      }
+      if (!selectedPickupAddressId) {
+        setSelectedPickupAddressId(contextSelectedAddress.id);
+      }
     }
-  }, [contextSelectedAddress]);
+  }, [contextSelectedAddress, allAddresses]);
 
   // Check service availability for selected address
   useEffect(() => {
@@ -608,149 +629,224 @@ export default function BookPickup() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const confirmPickup = async () => {
-    if (confirmLoading) return;
-    try {
-      setConfirmLoading(true);
-      if (
-        !selectedPickupAddressId ||
-        selectedPickupAddressId === "current_location"
-      ) {
-        showAlert({
-          type: "warning",
-          title: "Complete Your Address",
-          message: "Please add a complete address for pickup.",
-          primaryLabel: "Add Address",
-          onPrimary: () => {
-            setAddressType("pickup");
-            setAddModalOpen(true);
-          },
-        });
-        setConfirmLoading(false);
-        return;
-      }
-      const deliveryId =
-        deliveryMode === "same"
-          ? selectedPickupAddressId
-          : selectedDeliveryAddressId;
+  // ─── Background API runner (fire-and-forget after optimistic navigation) ───
+ const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
+  try {
+    setConfirmLoading(true);
 
-      if (!deliveryId || deliveryId === "current_location") {
-        showAlert({
-          type: "warning",
-          title: "Complete Your Address",
-          message: "Please add a complete address for delivery.",
-          primaryLabel: "Add Address",
-          onPrimary: () => {
-            setAddressType("delivery");
-            setAddModalOpen(true);
-          },
-        });
+    let effectivePickupId = selectedPickupAddressId;
 
-        setConfirmLoading(false);
-        return;
-      }
-      let selectedSlotForPayload: string | undefined;
-
-      if (selectedSlotData?.time) {
-        // Use the time from SlotPicker component (e.g., "8AM - 11AM")
-        selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
-      }
-
-      const scheduledDate = pickupType === "today" ? new Date() : date;
-      const orderItems = items
-        .filter((item) => item.id && item.qty > 0)
-        .map((item) => ({
-          itemId: item.id,
-          quantity: item.qty,
-        }));
-
-      const orderDetails: CreatePickupRequest = {
-        firstName,
-        lastName,
-        contact: phone,
-        appCustomerId: String(auth_id),
-        tempPickupAdresssId: selectedPickupAddressId,
-        tempDeliveryAddressId: deliveryId,
-        date: formatDateForApi(scheduledDate),
-        isHeavy: hasHeavyItems,
-        morning_delivery: isMorningDelivery,
-      };
-      if (selectedSlotForPayload) {
-        orderDetails.slot = selectedSlotForPayload;
-      }
-      if (note?.trim()) orderDetails.note = note.trim();
-      if (orderItems.length) orderDetails.items = orderItems;
-
-      // For "today" tab, first create booking to get bookingId
-      let bookingId: string | undefined;
-      if (pickupType === "today" && selectedPickupAddr) {
-        try {
-          // Get zoneId from coordinates
-          const lat = selectedPickupAddr.latitude;
-          const lng = selectedPickupAddr.longitude;
-
-          if (lat && lng) {
-            // Resolve zone from coordinates
-            const locationDetails = await getLocationDetails(lat, lng);
-
-            if (locationDetails?.zoneId && selectedSlotData?.time) {
-              // Convert slot time format from "8:00 AM - 11:00 AM" to "8AM - 11AM"
-              const convertedSlotTime = convertSlotTimeFormat(
-                selectedSlotData.time,
-              );
-
-              // Call booking API
-              const bookingPayload = {
-                zoneId: locationDetails.zoneId,
-                slotTime: convertedSlotTime,
-                deliveryLabel: selectedSlotData.deliveryLabel || "",
-                customerDetails: {
-                  appCustomerId: String(auth_id),
-                  name: `${firstName || ""} ${lastName || ""}`.trim(),
-                  phone: phone,
-                },
-              };
-
-              console.log(" BOOKING PAYLOAD ===>", bookingPayload);
-
-              const bookingResponse = await createBookingApi(bookingPayload);
-
-              if (
-                bookingResponse?.success &&
-                bookingResponse?.data?.booking?.bookingId
-              ) {
-                bookingId = bookingResponse.data.booking.bookingId;
-                console.log(" BOOKING CREATED ===>", bookingId);
-              }
-            }
-          }
-        } catch (bookingError: any) {
-          console.log("Booking API error:", bookingError);
-          // Continue with pickup creation even if booking fails
+    // 500m proximity auto-select check if currently set to current_location or empty
+    if (!effectivePickupId || effectivePickupId === "current_location") {
+      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+      if (lat && lng && allAddresses.length > 0) {
+        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+        if (nearbySaved) {
+          effectivePickupId = nearbySaved.id;
+          setSelectedPickupAddressId(nearbySaved.id);
+          setSelectedAddress(nearbySaved);
         }
       }
+    }
 
-      // Add bookingId to order if available
-      if (bookingId) {
-        orderDetails.bookingId = bookingId;
+    if (!effectivePickupId || effectivePickupId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for pickup.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("pickup");
+          setAddModalOpen(true);
+        },
+      });
+      setConfirmLoading(false);
+      return;
+    }
+
+    let deliveryId =
+      deliveryMode === "same"
+        ? effectivePickupId
+        : selectedDeliveryAddressId;
+
+    if (!deliveryId || deliveryId === "current_location") {
+      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+      if (lat && lng && allAddresses.length > 0) {
+        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+        if (nearbySaved) {
+          deliveryId = nearbySaved.id;
+          setSelectedDeliveryAddressId(nearbySaved.id);
+        }
+      }
+    }
+
+    if (!deliveryId || deliveryId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for delivery.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("delivery");
+          setAddModalOpen(true);
+        },
+      });
+      setConfirmLoading(false);
+      return;
+    }
+
+    let selectedSlotForPayload: string | undefined;
+    if (selectedSlotData?.time) {
+      selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
+    }
+
+    const scheduledDate = pickupType === "today" ? new Date() : date;
+    const orderItems = items
+      .filter((item) => item.id && item.qty > 0)
+      .map((item) => ({
+        itemId: item.id,
+        quantity: item.qty,
+      }));
+
+    const orderDetails: CreatePickupRequest = {
+      firstName,
+      lastName,
+      contact: phone,
+      appCustomerId: String(auth_id),
+      tempPickupAdresssId: selectedPickupAddressId,
+      tempDeliveryAddressId: deliveryId,
+      date: formatDateForApi(scheduledDate),
+      isHeavy: hasHeavyItems,
+      morning_delivery: isMorningDelivery,
+    };
+    if (selectedSlotForPayload) {
+      orderDetails.slot = selectedSlotForPayload;
+    }
+    if (note?.trim()) orderDetails.note = note.trim();
+    if (orderItems.length) orderDetails.items = orderItems;
+
+    // For "today" tab, first create booking to get bookingId
+    if (pickupType === "today" && selectedPickupAddr) {
+      let resolvedZoneId =
+        zoneData?.zoneId ||
+        serviceData?.data?.zoneInfo?.zoneId ||
+        serviceData?.zoneId;
+
+      const lat = selectedPickupAddr.latitude;
+      const lng = selectedPickupAddr.longitude;
+
+      if (!resolvedZoneId && lat && lng) {
+        const locationDetails = await getLocationDetails(lat, lng);
+        resolvedZoneId = locationDetails?.zoneId;
       }
 
-      console.log("📤 ORDER PAYLOAD ===>", orderDetails);
-
-      await createOrderApi(orderDetails);
-      clear();
-
-      if (pickupType === "today")
-        openSuccessModal(
-          "Sit & relax 😌\nYour pickup will be collected shortly!",
-        );
-      else openSuccessModal("Pickup scheduled successfully ✅");
-    } catch (err: any) {
-      showAlert({ type: 'error', title: 'Booking failed', message: err?.message || 'Failed to create order.' });
-
-    } finally {
-      setConfirmLoading(false);
+      if (resolvedZoneId && selectedSlotData?.time) {
+        const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
+        const bookingPayload = {
+          zoneId: resolvedZoneId,
+          slotTime: convertedSlotTime,
+          deliveryLabel: selectedSlotData.deliveryLabel || "",
+          isSameDayDelivery: selectedSlotData.isSameDayDelivery || false,
+          customerDetails: {
+            appCustomerId: String(auth_id),
+            name: `${firstName || ""} ${lastName || ""}`.trim(),
+            phone: phone,
+          },
+        };
+        console.log(" BOOKING PAYLOAD ===>", bookingPayload);
+        const bookingResponse = await createBookingApi(bookingPayload);
+        if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
+          orderDetails.bookingId = bookingResponse.data.booking.bookingId;
+          console.log(" BOOKING CREATED ===>", bookingResponse.data.booking.bookingId);
+        }
+      }
     }
+
+    await createOrderApi(orderDetails);
+  } catch (err: any) {
+    console.log("Background booking error (order may still exist):", err?.message);
+  }
+};
+
+  const confirmPickup = () => {
+    if (confirmLoading) return;
+
+    // ── 1. Synchronous validation ──────────────────────────────────────────────
+    const pickupAddrId =
+      selectedPickupAddressId || contextSelectedAddress?.id || selectedPickupAddr?.id;
+
+    if (!pickupAddrId || pickupAddrId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for pickup.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("pickup");
+          setAddModalOpen(true);
+        },
+      });
+      return;
+    }
+
+    const deliveryId =
+      deliveryMode === "same" ? pickupAddrId : selectedDeliveryAddressId;
+
+    if (!deliveryId || deliveryId === "current_location") {
+      showAlert({
+        type: "warning",
+        title: "Complete Your Address",
+        message: "Please add a complete address for delivery.",
+        primaryLabel: "Add Address",
+        onPrimary: () => {
+          setAddressType("delivery");
+          setAddModalOpen(true);
+        },
+      });
+      return;
+    }
+
+    // ── 2. Build payload synchronously ────────────────────────────────────────
+    let selectedSlotForPayload: string | undefined;
+    if (selectedSlotData?.time) {
+      selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
+    }
+
+    const scheduledDate = pickupType === "today" ? new Date() : date;
+    const orderItems = items
+      .filter((item) => item.id && item.qty > 0)
+      .map((item) => ({ itemId: item.id, quantity: item.qty }));
+
+    const orderDetails: CreatePickupRequest = {
+      firstName: firstName || "",
+      lastName: lastName || "",
+      contact: phone,
+      appCustomerId: String(auth_id),
+      tempPickupAdresssId: pickupAddrId,
+      tempDeliveryAddressId: deliveryId,
+      date: formatDateForApi(scheduledDate),
+      isHeavy: hasHeavyItems,
+      morning_delivery: isMorningDelivery,
+    };
+    if (selectedSlotForPayload) orderDetails.slot = selectedSlotForPayload;
+    if (note?.trim()) orderDetails.note = note.trim();
+    if (orderItems.length) orderDetails.items = orderItems;
+
+    // ── 3. Navigate immediately (optimistic UI) ───────────────────────────────
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const address = selectedPickupAddr
+      ? `${selectedPickupAddr.line1 || selectedPickupAddr.street || ""}, ${selectedPickupAddr.city || ""}`
+      : "";
+    clear();
+    router.replace({
+      pathname: "/(customer)/order-success",
+      params: { address },
+    });
+
+    // ── 4. Fire API calls in background (no await) ────────────────────────────
+    runBookingApiInBackground(orderDetails);
   };
 
   useEffect(() => {
@@ -914,12 +1010,14 @@ export default function BookPickup() {
   // ─── Derived data ─────────────────────────────────────────────
   const nextDays = getNextDays(30);
 
-  const selectedPickupAddr = allAddresses.find(
-    (a) => a.id === selectedPickupAddressId,
-  );
-  const selectedDeliveryAddr = allAddresses.find(
-    (a) => a.id === selectedDeliveryAddressId,
-  );
+  const selectedPickupAddr =
+    allAddresses.find((a) => String(a.id) === String(selectedPickupAddressId)) ||
+    contextSelectedAddress ||
+    allAddresses[0] ||
+    null;
+  const selectedDeliveryAddr =
+    allAddresses.find((a) => String(a.id) === String(selectedDeliveryAddressId)) ||
+    selectedPickupAddr;
 
   const BreakRow = ({ label, value, total, strike }: any) => (
     <View
@@ -1057,9 +1155,7 @@ export default function BookPickup() {
               <View style={s.rowBetween}>
                 <Text style={s.sectionLabel}>APPLIED OFFERS</Text>
 
-                <TouchableOpacity onPress={() => setCouponOpen(true)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
+                <TouchableOpacity onPress={() => setCouponOpen(true)}>
                   <Text style={{ color: theme.primary }}>View All &rsaquo;</Text>
                 </TouchableOpacity>
               </View>
@@ -1665,34 +1761,6 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 )}
               </View>
-              {/* <TouchableOpacity
-                onPress={() => router.push("/services/[service]")}
-                activeOpacity={0.8}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  marginTop: 10,
-                  alignSelf: "flex-start",
-                }}
-              >
-                <CirclePlus
-                  style={{
-                    color: theme.primary,
-                  }}
-                  size={14}
-                />
-
-                <Text
-                  style={{
-                    color: theme.primary,
-                    fontSize: 13,
-                    fontWeight: "600",
-                    marginLeft: 4,
-                  }}
-                >
-                  Add items for estimate
-                </Text>
-              </TouchableOpacity> */}
               {/* <DeliveryAddressSection /> */}
 
               <CartSection />
@@ -2038,25 +2106,30 @@ export default function BookPickup() {
                 {
                   flex: 1,
                   backgroundColor: theme.subText,
-                  opacity: bookingBlocked ? 0.55 : 1,
+                  opacity: confirmLoading ? 0.85 : (bookingBlocked ? 0.55 : 1),
                 },
               ]}
               onPress={confirmPickup}
               disabled={bookingBlocked}
             >
-              <Text style={s.confirmText}>
-                {noSlotsToday
-                  ? "No Slots Available"
-                  : selectedSlotFull
-                    ? "Slot Full"
-                    : checkingActiveBooking
-                      ? "Checking..."
-                      : confirmLoading
-                        ? "Booking..."
-                        : pickupType === "today"
-                          ? "Book Without Pay"
-                          : "Confirm Pickup"}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                {confirmLoading && (
+                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                )}
+                <Text style={s.confirmText}>
+                  {noSlotsToday
+                    ? "No Slots Available"
+                    : selectedSlotFull
+                      ? "Slot Full"
+                      : checkingActiveBooking
+                        ? "Checking..."
+                        : confirmLoading
+                          ? "Booking..."
+                          : pickupType === "today"
+                            ? "Book Without Pay"
+                            : "Confirm Pickup"}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>

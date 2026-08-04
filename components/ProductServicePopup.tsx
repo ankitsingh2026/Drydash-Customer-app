@@ -698,7 +698,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     elevation: 6,
   },
   stepNumText: {
-    color: isDark ? "#001714" : "#fffff",
+    color: isDark ? "#001714" : "#FFFFFF",
     fontSize: 15,
     fontWeight: "800",
   },
@@ -714,12 +714,12 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   stepDesc: {
     fontSize: 12.5,
-    color: "#fffff",
+    color: theme.textSecondary,
     lineHeight: 19,
   },
   divider: {
     height: 1,
-    backgroundColor: theme.card,
+    backgroundColor: theme.border,
     marginHorizontal: 20,
     marginVertical: 16,
   },
@@ -733,7 +733,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   totalLabel: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#3E6E68",
+    color: theme.textSecondary,
     letterSpacing: 1.2,
     marginBottom: 2,
   },
@@ -745,7 +745,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   unitHint: {
     fontSize: 10,
-    color: "#3E6E68",
+    color: theme.textSecondary,
     marginTop: 2,
   },
   addBtnWrapper: {
@@ -764,7 +764,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   addBtnText: {
     fontSize: 15,
     fontWeight: "800",
-    color: theme.text,
+    color: isDark ? "#001714" : "#FFFFFF",
   },
   qtyContainer: {
     flexDirection: "row",

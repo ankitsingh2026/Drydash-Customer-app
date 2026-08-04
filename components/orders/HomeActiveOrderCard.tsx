@@ -156,8 +156,8 @@ export default function HomeActiveOrderCard({
     statusKey === "deliverriderassigned" ||
     statusKey === "outfordelivery" ||
     statusKey === "readyfordelivery";
-  const riderName = String(order.riderName ?? "").trim() || "Rider";
-  const pickupRiderName = order.assignedRider.pickup.riderName;
+  const riderName = String(order?.riderName ?? "").trim() || "Rider";
+  const pickupRiderName = order?.assignedRider?.pickup?.riderName;
   const cardTime = formatCardTime(order.updatedAt || order.createdAt);
   const orderCode = order.order_id ? `Order #${order.order_id}` : "Order";
 
@@ -518,7 +518,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     justifyContent: "center",
   },
   orderId: {
-    color: "#D1D5DB",
+    color: theme.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
@@ -537,7 +537,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
 
   deliveryMetaText: {
-    color: "#95B6AD",
+    color: theme.textSecondary,
     fontSize: 13,
     lineHeight: 18,
     marginTop: -4,
@@ -553,7 +553,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderRadius: 20,
     backgroundColor: theme.card,
     borderWidth: 1,
-    borderColor: theme.card,
+    borderColor: theme.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -578,21 +578,21 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     alignItems: "center",
     gap: 5,
     borderWidth: 1,
-    borderColor: theme.card,
+    borderColor: theme.border,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
     backgroundColor: theme.background,
   },
   pillText: {
-    color: "#A7B8B2",
+    color: theme.textSecondary,
     fontSize: 11,
     fontWeight: "700",
   },
 
 
   primaryCtaText: {
-    color: theme.background,
+    color: isDark ? "#001714" : "#FFFFFF",
     fontWeight: "900",
     fontSize: 16,
   },
@@ -622,7 +622,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     gap: 12,
   },
   reviewCta: {
-    color: "#9EE8D1",
+    color: theme.primary,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -635,8 +635,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     letterSpacing: 0.5,
   },
   chatBtnHeader: {
-  
-    color: "#fff ",
+    color: theme.text,
     alignItems: "center",
     justifyContent: "center",
   },
