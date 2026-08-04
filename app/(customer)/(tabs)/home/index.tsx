@@ -1050,6 +1050,8 @@ export default function Home() {
                             params: {
                               preSelectedSlotIndex: String(index),
                               preSelectedSlotTime: slot?.time ?? "",
+                              preSelectedDate: slot?.date ?? "",
+                              preSelectedIsTomorrow: slot?.isTomorrow ? "true" : "false",
                             },
                           });
                         }}

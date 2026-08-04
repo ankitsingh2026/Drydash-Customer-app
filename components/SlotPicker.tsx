@@ -110,8 +110,91 @@ const SlotPicker: React.FC<Props> = ({
 
             console.log("📦 Service response:", serviceData);
 
-            // ✅ FIX 2: safe access
-            const allSlots = serviceData?.data?.allSlots || [];
+            let allSlots: Slot[] = [];
+
+            const getTodayStr = () => {
+                const d = new Date();
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            };
+
+            const getTomorrowStr = () => {
+                const d = new Date();
+                d.setDate(d.getDate() + 1);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            };
+
+            if (serviceData?.data?.dates && Array.isArray(serviceData.data.dates)) {
+                const dates = serviceData.data.dates;
+                const targetDateStr = date || getTodayStr();
+
+                const specificEntry = date ? dates.find((d: any) => d.date === targetDateStr) : null;
+
+                if (date && specificEntry) {
+                    allSlots = specificEntry.allSlots || [];
+                } else {
+                    const todayEntry = dates.find((d: any) => d.label === "Today" || d.date === getTodayStr()) || dates[0];
+                    const tomorrowEntry = dates.find((d: any) => d.label === "Tomorrow") || dates[1];
+
+                    const todaySlots: Slot[] = todayEntry?.allSlots || [];
+                    const hasValidToday = todaySlots.some(
+                        (s) =>
+                            s.enabled &&
+                            s.status !== "expired" &&
+                            (s.availableCapacity === undefined || s.availableCapacity > 0)
+                    );
+
+                    let tomorrowSlots: Slot[] = [];
+                    if (tomorrowEntry && tomorrowEntry.allSlots) {
+                        tomorrowSlots = tomorrowEntry.allSlots.map((s: any) => ({
+                            ...s,
+                            isTomorrow: true,
+                            dayLabel: "Tomorrow",
+                            date: tomorrowEntry.date,
+                        }));
+                    }
+
+                    allSlots = [...todaySlots, ...tomorrowSlots];
+                }
+            } else {
+                // Fallback to legacy single allSlots
+                allSlots = serviceData?.data?.allSlots || [];
+                const getTodayStr = () => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                };
+                const getTomorrowStr = () => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 1);
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                };
+
+                const isToday = !date || date === getTodayStr();
+
+                if (isToday) {
+                    try {
+                        const tomorrowStr = getTomorrowStr();
+                        const tomorrowRes = await oldApiClient.post(
+                            "/v1/slots/service/check",
+                            { zoneId: currentZoneId, date: tomorrowStr }
+                        );
+
+                        const tomorrowSlots: Slot[] = (tomorrowRes.data?.data?.allSlots || []).map(
+                            (s: any) => ({
+                                ...s,
+                                isTomorrow: true,
+                                dayLabel: "Tomorrow",
+                                date: tomorrowStr,
+                            })
+                        );
+
+                        if (tomorrowSlots.length > 0) {
+                            allSlots = [...allSlots, ...tomorrowSlots];
+                        }
+                    } catch (err) {
+                        console.log("❌ Tomorrow slots fetch error in SlotPicker", err);
+                    }
+                }
+            }
 
             setSlots(allSlots);
 
@@ -124,10 +207,13 @@ const SlotPicker: React.FC<Props> = ({
         }
     };
 
-    // ✅ Build full UI list (including expired) and grey-out the unselectable slots
-    const visibleSlots = slots
-        // ✅ FIX 3: show ALL statuses (expired/upcoming/disabled), but keep sorting
+    // ✅ Build full UI list (including expired) sorted by Day then Start Time
+    const visibleSlots = [...slots]
         .sort((a, b) => {
+            // Keep Today slots before Tomorrow slots
+            if (!!a.isTomorrow !== !!b.isTomorrow) {
+                return a.isTomorrow ? 1 : -1;
+            }
             const getHour = (time: string) => {
                 const num = parseInt(time);
                 if (time.includes("PM") && num !== 12) return num + 12;
@@ -343,7 +429,18 @@ const SlotPicker: React.FC<Props> = ({
 
                 const isUnavailable = isExpired || isFullyBooked || isDisabledByApi;
 
-                return (
+                const isFirstTomorrow = slot.isTomorrow && (index === 0 || !visibleSlots[index - 1].isTomorrow);
+
+                const getTomorrowDateFormatted = () => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const dayName = tomorrow.toLocaleDateString("en-IN", { weekday: "short" });
+                    const monthName = tomorrow.toLocaleDateString("en-IN", { month: "short" });
+                    const dateNum = tomorrow.getDate();
+                    return `${dayName}, ${monthName} ${dateNum}`;
+                };
+
+                const renderSlotChip = () => (
                     <TouchableOpacity
                         key={index}
                         disabled={isUnavailable}
@@ -377,7 +474,7 @@ const SlotPicker: React.FC<Props> = ({
                                     )}
                                 </View>
 
-                                {/* STATUS / SECOND LINE (always show text like previous UI) */}
+                                {/* STATUS / SECOND LINE */}
                                 <View style={styles.bottomRow}>
                                     {isUnavailable ? (
                                         <>
@@ -396,22 +493,46 @@ const SlotPicker: React.FC<Props> = ({
                                                         : "Not available"}
                                             </Text>
                                         </>
-                                    ) : slot.isActive ? (
-                                        <>
-                                            <Ionicons name="flash" size={12} color="#FFD600" />
-                                            <Text style={styles.fast}>Filling fast</Text>
-                                        </>
                                     ) : (
-                                        <Text style={styles.available}>
-                                            {slot.availableCapacity} left
-                                        </Text>
+                                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", flex: 1 }}>
+                                            {slot.isActive ? (
+                                                <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+                                                    <Ionicons name="flash" size={12} color="#FFD600" />
+                                                    <Text style={styles.fast}>Filling fast</Text>
+                                                </View>
+                                            ) : (
+                                                <Text style={styles.available}>
+                                                    {slot.availableCapacity} left
+                                                </Text>
+                                            )}
+
+                                            {slot.isTomorrow ? (
+                                                <View style={styles.tomorrowBadge}>
+                                                    <Text style={styles.tomorrowBadgeText}>Tomorrow</Text>
+                                                </View>
+                                            ) : (
+                                                <View style={styles.todayBadge}>
+                                                    <Text style={styles.todayBadgeText}>Today</Text>
+                                                </View>
+                                            )}
+                                        </View>
                                     )}
                                 </View>
-
                             </View>
                         </View>
                     </TouchableOpacity>
                 );
+
+                if (isFirstTomorrow && index > 0) {
+                    return (
+                        <React.Fragment key={`divider-${index}`}>
+                            <View style={styles.verticalDivider} />
+                            {renderSlotChip()}
+                        </React.Fragment>
+                    );
+                }
+
+                return renderSlotChip();
             })}
         </ScrollView>
     );
@@ -457,14 +578,49 @@ export default SlotPicker;
 
 const makeSlotStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     slotChip: {
-        width: 150,
+        minWidth: 155,
         height: 70,
-        padding: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
         borderRadius: 14,
         backgroundColor: theme.card,
         borderWidth: 1,
         borderColor: theme.border,
         justifyContent: "space-between",
+    },
+    tomorrowBadge: {
+        backgroundColor: theme.primary + "1E",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: theme.primary + "40",
+    },
+    tomorrowBadgeText: {
+        color: theme.primary,
+        fontSize: 10,
+        fontWeight: "800",
+    },
+    todayBadge: {
+        backgroundColor: theme.subText + "1E",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: theme.subText + "40",
+    },
+    todayBadgeText: {
+        color: theme.subText,
+        fontSize: 10,
+        fontWeight: "800",
+    },
+    verticalDivider: {
+        width: 1.5,
+        height: 48,
+        backgroundColor: theme.primary + "60",
+        borderRadius: 1,
+        alignSelf: "center",
+        marginRight: 10,
     },
     bottomRow: {
         flexDirection: "row",
