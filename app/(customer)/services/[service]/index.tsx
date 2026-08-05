@@ -1002,11 +1002,17 @@ const makeStyles = (theme: any) =>
       paddingHorizontal: 40,
     },
     loadingContainer: {
-      flex: 1,
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 60,
       gap: 16,
+      zIndex: 999,
+      // keep a bit of vertical padding for aesthetic spacing when header is present
+      paddingVertical: 60,
     },
     loadingText: {
       fontSize: 14,

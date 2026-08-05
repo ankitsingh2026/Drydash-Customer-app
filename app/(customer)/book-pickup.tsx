@@ -2,6 +2,7 @@ import CouponCard from "@/components/CouponCard";
 import { fetchAllValidCoupons } from "@/features/coupons/coupons.api";
 import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
+import PickupConfirmationModal from "@/components/PickupConfirmationModal";
 import { useAddress } from "@/context/AddressContext";
 import { useCart } from "@/context/CartContext";
 import { checkServiceAvailability, getFullServiceData } from "@/features/location/location.api";
@@ -170,6 +171,11 @@ export default function BookPickup() {
   const [successOpen, setSuccessOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  // ── Booking animation modal state ─────────────────────────────────────
+  const [showBookingAnim, setShowBookingAnim] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const bookingAnimAddressRef = useRef("");
+  const bookingAnimSlotRef = useRef("");
   const [notesModalOpen, setNotesModalOpen] = useState(false);
   const [tempNote, setTempNote] = useState("");
   const [addressForm, setAddressForm] = useState({
@@ -696,7 +702,7 @@ export default function BookPickup() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // ─── Background API runner (fire-and-forget after optimistic navigation) ───
+  // ─── Background API runner (shows animation, fires API) ──────────────────
  const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
   try {
     setConfirmLoading(true);
@@ -729,6 +735,7 @@ export default function BookPickup() {
         },
       });
       setConfirmLoading(false);
+      setShowBookingAnim(false);
       return;
     }
 
@@ -761,6 +768,7 @@ export default function BookPickup() {
         },
       });
       setConfirmLoading(false);
+      setShowBookingAnim(false);
       return;
     }
 
@@ -822,20 +830,27 @@ export default function BookPickup() {
             phone: phone,
           },
         };
-        console.log(" BOOKING PAYLOAD ===>", bookingPayload);
+        console.log(" BOOKING PAYLOAD ==>", bookingPayload);
         const bookingResponse = await createBookingApi(bookingPayload);
         if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
           orderDetails.bookingId = bookingResponse.data.booking.bookingId;
-          console.log(" BOOKING CREATED ===>", bookingResponse.data.booking.bookingId);
+          console.log(" BOOKING CREATED ==>", bookingResponse.data.booking.bookingId);
         }
       }
     }
 
     await createOrderApi(orderDetails);
+    // Signal animation modal that booking succeeded
+    setBookingConfirmed(true);
   } catch (err: any) {
     console.log("Background booking error (order may still exist):", err?.message);
+    // Even on error, transition to confirmed so UX doesn't hang
+    setBookingConfirmed(true);
+  } finally {
+    setConfirmLoading(false);
   }
 };
+
 
   const confirmPickup = () => {
     if (confirmLoading) return;
@@ -901,16 +916,24 @@ export default function BookPickup() {
     if (note?.trim()) orderDetails.note = note.trim();
     if (orderItems.length) orderDetails.items = orderItems;
 
-    // ── 3. Navigate immediately (optimistic UI) ───────────────────────────────
+    // ── 3. Show booking animation modal (optimistic UI) ───────────────────────
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const address = selectedPickupAddr
       ? `${selectedPickupAddr.line1 || selectedPickupAddr.street || ""}, ${selectedPickupAddr.city || ""}`
       : "";
+
+    // Store address/slot for the animation modal
+    bookingAnimAddressRef.current = address;
+    bookingAnimSlotRef.current = selectedSlotData?.time
+      ? `Today before ${selectedSlotData.time.split(" - ")[1] || selectedSlotData.time}`
+      : "Today";
+
+    // Reset confirmed flag and show modal
+    setBookingConfirmed(false);
+    setShowBookingAnim(true);
+
+    // Clear cart
     clear();
-    router.replace({
-      pathname: "/(customer)/order-success",
-      params: { address },
-    });
 
     // ── 4. Fire API calls in background (no await) ────────────────────────────
     runBookingApiInBackground(orderDetails);
@@ -2210,6 +2233,22 @@ export default function BookPickup() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ══════════════════ PICKUP CONFIRMATION ANIMATION MODAL ══════════════════ */}
+        <PickupConfirmationModal
+          visible={showBookingAnim}
+          confirmed={bookingConfirmed}
+          address={bookingAnimAddressRef.current}
+          slotLabel={bookingAnimSlotRef.current}
+          onDismiss={() => {
+            setShowBookingAnim(false);
+            setBookingConfirmed(false);
+            router.replace({
+              pathname: "/(customer)/(tabs)/home",
+              params: { orderPlaced: "1" },
+            });
+          }}
+        />
 
         {/* ══════════════════ NOTES MODAL ══════════════════ */}
         <Modal
