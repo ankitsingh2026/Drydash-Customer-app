@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { showAlert } from '../Customalert';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as FileSystem from 'expo-file-system';
 import { Asset } from 'expo-asset';
 import { generateInvoiceApi } from '@/features/orders/orders.api';
 import { useTheme } from '@/context/ThemeContext';

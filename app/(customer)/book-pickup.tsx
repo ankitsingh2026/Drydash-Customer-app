@@ -1141,6 +1141,7 @@ export default function BookPickup() {
     </View>
   );
 
+ 
   const CartSection = () => {
     const totalCount = items.reduce((sum, item) => sum + item.qty, 0);
     const grandTotal = total;
@@ -1388,6 +1389,7 @@ export default function BookPickup() {
     );
   };
 
+
   const noSlotsToday = pickupType === "today" && !hasAvailableSlots;
   const selectedSlotFull =
     pickupType === "today" &&
@@ -1593,6 +1595,7 @@ export default function BookPickup() {
               onPress={goBackSafe}
               hitSlop={10}
               style={s.headerBack}
+              
             >
               <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </TouchableOpacity>
@@ -1635,7 +1638,7 @@ export default function BookPickup() {
               })()}
 
               {/* ADDRESS LINE (unchanged) */}
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom:5 }}>
                 <Ionicons
                   name={
                     (selectedPickupAddr?.label || contextSelectedAddress?.label)

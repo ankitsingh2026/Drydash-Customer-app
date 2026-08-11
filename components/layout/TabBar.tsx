@@ -463,6 +463,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
               style={styles.locationRow}
               onPress={() => setModalVisible(true)}
               activeOpacity={0.75}
+              hitSlop={{ top: 15, bottom: 10, left: 10 }}
+
             >
               <Ionicons
                 name={
@@ -492,6 +494,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             activeOpacity={0.8}
             onPress={handleBellPress}
             style={styles.iconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <Bell size={18} color={theme.text} />
             {unreadCount > 0 && (

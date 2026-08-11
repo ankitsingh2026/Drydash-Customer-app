@@ -165,7 +165,10 @@ export default function PrivacyPolicy() {
 
             {/* ── Header ── */}
             <View style={[styles.header, { borderBottomColor: colors.border }]}>
-                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.8}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
+>
                     <Ionicons name="arrow-back" size={22} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerTitle, { color: colors.text }]}>Privacy Policy</Text>
@@ -251,7 +254,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     backBtn: {
         width: 40,
         height: 40,
-        borderRadius: 20,
+      //  borderRadius: 20,
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: theme.card,
@@ -337,10 +340,10 @@ const makeStyles = (theme: any) => StyleSheet.create({
     sectionIconWrap: {
         width: 40,
         height: 40,
-        borderRadius: 14,
+        
         alignItems: "center",
         justifyContent: "center",
-        borderWidth: 1,
+       
     },
     sectionTitle: {
         flex: 1,

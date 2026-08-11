@@ -15,7 +15,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import RazorpayCustomUI from 'react-native-customui';
 import RazorpayCheckout from 'react-native-razorpay';
 import { Ionicons } from '@expo/vector-icons';
 import { oldApiClient } from '@/lib/api/client';
@@ -66,6 +65,7 @@ const COD_OPTION = {
   id: 'cod',
   name: 'Cash/UPI on Delivery',
   isCod: true,
+  localIcon: require('@/assets/images/icons/cash-on-delivery.png')
 };
 
 export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
@@ -319,7 +319,15 @@ const [selectedApp, setSelectedApp] = useState<any>(
   const renderPaymentIcon = (item: any, size: number = 40) => {
     const iconStyle = size === 40 ? styles.paymentIcon : styles.otherIcon;
     if (item.isCod) {
-      return <Ionicons name="cash-outline" size={size} color="#555" style={iconStyle} />;
+      return (
+        <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
+          <Ionicons
+            name="wallet-outline"
+            size={size === 40 ? 24 : 20}
+            color="#22c55e"
+          />
+        </View>
+      );
     }
     if (item.icon) {
       return <Image source={item.icon} style={iconStyle} onError={() => console.log('Icon error:', item.name)} />;
@@ -498,6 +506,27 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 40,
   },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  smallIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
   paymentTextContainer: { flex: 1 },
   paymentLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   payLabel: { fontSize: 11, fontWeight: '600', color: theme.textSecondary, letterSpacing: 0.5 },

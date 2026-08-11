@@ -48,6 +48,7 @@ import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
 import SlotPicker from "@/components/SlotPicker";
 import SwipeToAction from "@/components/SwipeToAction";
+
 import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
 import LaundryIcon from "../../../../assets/homeicons/Laundry-logo.svg";
@@ -256,7 +257,6 @@ export default function Home() {
       setLottieKey((prev) => prev + 1);
     }, [])
   );
-
 
 
   useEffect(() => {
@@ -496,40 +496,55 @@ export default function Home() {
 
   const shoeSpaPulse = useRef(new Animated.Value(1)).current;
 
-  // Safety fallback timer so loader is NEVER trapped indefinitely
+  // useEffect(() => {
+  //   if (!addressLoading && zoneData !== null) {
+  //     const t = setTimeout(() => {
+  //       setLoading(false);
+  //       Animated.timing(fadeAnim, {
+  //         toValue: 1,
+  //         duration: 400,
+  //         useNativeDriver: true,
+  //       }).start();
+
+  //       Animated.stagger(
+  //         80,
+  //         heroAnims.map((a) =>
+  //           Animated.timing(a, {
+  //             toValue: 1,
+  //             duration: 450,
+  //             easing: Easing.out(Easing.cubic),
+  //             useNativeDriver: true,
+  //           }),
+  //         ),
+  //       ).start();
+  //     }, 500);
+
+  //     return () => clearTimeout(t);
+  //   }
+  // }, [addressLoading, zoneData]);
+
   useEffect(() => {
-    const safetyTimer = setTimeout(() => {
+  if (!addressLoading && zoneData !== null && !serviceLoading) {
+    const t = setTimeout(() => {
       setLoading(false);
-    }, 4000);
-    return () => clearTimeout(safetyTimer);
-  }, []);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
 
-  useEffect(() => {
-    if (!addressLoading) {
-      const t = setTimeout(() => {
-        setLoading(false);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }).start();
+      Animated.stagger(
+        80,
+        heroAnims.map((a) =>
+          Animated.timing(a, {
+            toValue: 1,
+            duration: 450,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ),
+      ).start();
+    }, 500);
 
-        Animated.stagger(
-          80,
-          heroAnims.map((a) =>
-            Animated.timing(a, {
-              toValue: 1,
-              duration: 450,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ),
-        ).start();
-      }, zoneData !== null ? 300 : 0);
-
-      return () => clearTimeout(t);
-    }
-  }, [addressLoading, zoneData]);
+    return () => clearTimeout(t);
+  }
+}, [addressLoading, zoneData, serviceLoading]);
 
   // Auto-rotating carousel
   useEffect(() => {
@@ -838,7 +853,7 @@ export default function Home() {
           }}
         />
         <StatusBar
-          style={theme.statusBar}
+          style={"light"}
           backgroundColor={theme.background}
           translucent={false}
         />
@@ -866,6 +881,7 @@ export default function Home() {
                     backgroundColor: isDark ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.55)",
                     zIndex: 80,
                     opacity: spotlightDim,
+                    
                   },
                 ]}
               />
@@ -878,7 +894,7 @@ export default function Home() {
                   position: "absolute",
                   left: 16,
                   right: 16,
-                  top: SCREEN_HEIGHT * 0.24,
+                  top: SCREEN_HEIGHT * 0.30,
                   zIndex: 90,
                   opacity: spotlightCard,
                   transform: [
@@ -1103,7 +1119,7 @@ export default function Home() {
                       <Ionicons
                         name="search-outline"
                         size={18}
-                        color={theme.textSecondary}
+                        color= {theme.textSecondary}
                         style={{ marginRight: 8 }}
                       />
                       <TextInput
@@ -1138,11 +1154,11 @@ export default function Home() {
                             setSearchResults([]);
                           }}
                         >
-                          <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                          <Ionicons name="close-circle" size={18} color="#6B7280" />
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity>
-                          {/* <Ionicons name="mic-outline" size={18} color={theme.textSecondary} /> */}
+                          {/* <Ionicons name="mic-outline" size={18} color="#6B7280" /> */}
                         </TouchableOpacity>
                       )}
                     </View>
@@ -1152,12 +1168,12 @@ export default function Home() {
                     <View
                       style={[
                         styles.searchResultsContainer,
-                        { backgroundColor: theme.modalBackground, borderColor: theme.border },
+                        { backgroundColor: "#052420", borderColor: "#1A2F2C" },
                       ]}
                     >
                       {searchLoading ? (
                         <View style={styles.loadingContainer}>
-                          <Ionicons name="reload-outline" size={30} color={theme.primary} />
+                          <Ionicons name="reload-outline" size={30} color="#56BFAB" />
                           <Text
                             style={[styles.loadingText, { color: theme.subText }]}
                           >
@@ -1238,7 +1254,7 @@ export default function Home() {
                   <DelayBanner delayInfo={delayInfo} />
                 )}
 
-                <TouchableOpacity
+                 <TouchableOpacity
                   activeOpacity={0.92}
                   style={{
                     height: 130,
@@ -1246,25 +1262,29 @@ export default function Home() {
                     paddingHorizontal: 16,
                   }}
                 >
-                  <DotLottie
+                 {/* <DotLottie
                     key={lottieKey}
                     source={require("../../../../assets/Anim_Banner.lottie")}
                     autoPlay
                     loop
                     style={{ width: "100%", height: "100%" }}
                   />
-                    {/* <Banner
+                  */}
+                  
+                    <Banner
                     width="100%"
                     height={130}
                     preserveAspectRatio="xMidYMid meet"
-                  /> */}
+                  /> 
+
+
                 </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
                   <View style={{ marginHorizontal: 12 }}>
                     <Text
                       style={{
-                        color: theme.textSecondary,
+                        color: "#4E7060",
                         fontSize: 11,
                         fontWeight: "800",
                         letterSpacing: 0.7,
@@ -1280,7 +1300,8 @@ export default function Home() {
                         lng={contextSelectedAddress.longitude}
                         zoneId={zoneData?.zoneId}
                         selectedSlot={selectedSlotIndex}
-                        autoScroll={selectedSlotIndex < 0}
+                      //  autoScroll={selectedSlotIndex < 0}
+                      autoScroll={false}
                         onSelect={(index: number, slot: any) => {
                           setSelectedSlotIndex(index);
                           setSelectedSlotData(slot);
@@ -1322,6 +1343,7 @@ export default function Home() {
                                 const isFull = slot.availableCapacity === 0;
                                 const isFilling =
                                   slot.availableCapacity > 0 && slot.availableCapacity <= 3;
+                                console.log("REMAINING", remaining);
                                 return (
                                   <TouchableOpacity
                                     key={i}
@@ -1339,10 +1361,10 @@ export default function Home() {
                                     style={{
                                       flex: 1,
                                       minHeight: 86,
-                                      backgroundColor: theme.card,
+                                      backgroundColor: "#071C14",
                                       borderRadius: 18,
                                       borderWidth: 1.2,
-                                      borderColor: isFull ? theme.border : theme.lightborder,
+                                      borderColor: isFull ? "#1A2F2C" : "#214434",
                                       paddingHorizontal: 14,
                                       paddingVertical: 12,
                                       opacity: isFull ? 0.45 : 1,
@@ -1351,7 +1373,7 @@ export default function Home() {
                                   >
                                     <Text
                                       style={{
-                                        color: isFull ? theme.textSecondary : theme.text,
+                                        color: isFull ? "#4E7060" : "#F7F8F5",
                                         fontSize: 15,
                                         fontWeight: "800",
                                         letterSpacing: 0.2,
@@ -1380,10 +1402,10 @@ export default function Home() {
                                           gap: 5,
                                         }}
                                       >
-                                        <Text style={{ fontSize: 12, color: theme.subText }}>⚡</Text>
+                                        <Text style={{ fontSize: 12, color: "#C8F135" }}>⚡</Text>
                                         <Text
                                           style={{
-                                            color: theme.subText,
+                                            color: "#C8F135",
                                             fontSize: 11,
                                             fontWeight: "700",
                                           }}
@@ -1403,10 +1425,10 @@ export default function Home() {
                                   style={{
                                     width: 64,
                                     minHeight: 86,
-                                    backgroundColor: theme.card,
+                                    backgroundColor: "#071C14",
                                     borderRadius: 18,
                                     borderWidth: 1.2,
-                                    borderColor: theme.lightborder,
+                                    borderColor: "#214434",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     paddingHorizontal: 8,
@@ -1414,7 +1436,7 @@ export default function Home() {
                                 >
                                   <Text
                                     style={{
-                                      color: theme.text,
+                                      color: "#F7F8F5",
                                       fontSize: 20,
                                       fontWeight: "900",
                                       lineHeight: 24,
@@ -1424,7 +1446,7 @@ export default function Home() {
                                   </Text>
                                   <Text
                                     style={{
-                                      color: theme.textSecondary,
+                                      color: "#B2BDB6",
                                       fontSize: 11,
                                       fontWeight: "700",
                                       marginTop: 2,
@@ -1445,10 +1467,10 @@ export default function Home() {
                         style={{
                           flexDirection: "row",
                           alignItems: "center",
-                          backgroundColor: theme.card,
+                          backgroundColor: "#071C14",
                           borderRadius: 16,
                           borderWidth: 1,
-                          borderColor: theme.border,
+                          borderColor: "#1A2F2C",
                           padding: 14,
                           gap: 10,
                         }}
@@ -1458,14 +1480,14 @@ export default function Home() {
                             width: 34,
                             height: 34,
                             borderRadius: 17,
-                            backgroundColor: theme.inputBackground,
+                            backgroundColor: "#0F2D1F",
                             alignItems: "center",
                             justifyContent: "center",
                           }}
                         >
-                          <Ionicons name="location-outline" size={16} color={theme.subText} />
+                          <Ionicons name="location-outline" size={16} color="#00E1A2" />
                         </View>
-                        <Text style={{ color: theme.textSecondary, fontSize: 12, fontWeight: "600" }}>
+                        <Text style={{ color: "#4E7060", fontSize: 12, fontWeight: "600" }}>
                           Select a pickup address to view today's slots
                         </Text>
                       </TouchableOpacity>
@@ -1511,7 +1533,8 @@ export default function Home() {
                   <View style={styles.section}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
-                      <TouchableOpacity onPress={() => router.push('/services')}>
+                      <TouchableOpacity onPress={() => router.push('/services')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}  >
                         <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
                       </TouchableOpacity>
                     </View>
@@ -1543,13 +1566,15 @@ export default function Home() {
                             {/* Icon area — fills top ~65% of card */}
                             <Animated.View
                               style={{
-                                width: "100%",
-                                aspectRatio: 1,
-                                alignItems: "center",
-                                justifyContent: "center",
+
+                                width: '100%',
+                                aspectRatio: 1,           // square icon zone
+                                alignItems: 'center',
+                                justifyContent: 'center',
+
                               }}
                             >
-                              <Icon width="80%" height="80%" />
+                             <Icon width="80%" height="80%" />
                             </Animated.View>
 
                             {/* Text area — sits below icon */}
@@ -1617,7 +1642,7 @@ export default function Home() {
 
               <View style={styles.wrapper}>
                 <LinearGradient
-                  colors={theme.ordergradient}
+                  colors={theme.gradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0.7 }}
                   style={styles.card}
@@ -1711,12 +1736,10 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     overflow: "hidden",
     zIndex: 1001,
     elevation: 6,
-    shadowColor: theme.background,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    backgroundColor: theme.modalBackground,
-    borderColor: theme.border,
   },
   searchResultsList: {
     maxHeight: 400,
@@ -1725,7 +1748,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     flexDirection: "row",
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.border,
+    borderBottomColor: "#1A2F2C",
   },
   searchResultImageContainer: {
     width: 50,
@@ -1733,7 +1756,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     marginRight: 12,
-    backgroundColor: theme.border,
+    backgroundColor: "#1A2F2C",
   },
   searchResultImage: {
     width: "100%",
@@ -1747,17 +1770,14 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 2,
-    color: theme.text,
   },
   searchResultCategory: {
     fontSize: 11,
     marginBottom: 2,
-    color: theme.textSecondary,
   },
   searchResultPrice: {
     fontSize: 13,
     fontWeight: "700",
-    color: theme.subText,
   },
   loadingContainer: {
     padding: 32,
@@ -1767,7 +1787,6 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
   loadingText: {
     fontSize: 14,
     marginTop: 10,
-    color: theme.textSecondary,
   },
   noResultsContainer: {
     padding: 32,
@@ -1779,12 +1798,10 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 4,
-    color: theme.text,
   },
   noResultsSubtext: {
     fontSize: 12,
     textAlign: "center",
-    color: theme.textSecondary,
   },
   searchBarWrap: {
     paddingHorizontal: 16,
@@ -1798,15 +1815,12 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    backgroundColor: theme.inputBackground,
-    borderColor: theme.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     fontWeight: "500",
     paddingVertical: 0,
-    color: theme.text,
   },
   placeholderTicker: {
     position: "absolute",
@@ -1818,7 +1832,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     overflow: "hidden",
   },
   placeholderText: {
-    color: theme.placeholderText,
+    color: "#4B5563",
     fontSize: 14,
     fontWeight: "500",
     lineHeight: 18,
@@ -1830,7 +1844,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     top: 0,
     bottom: 0,
     borderRadius: 34,
-    backgroundColor: theme.primary,
+    backgroundColor: "#00C896",
   },
   heroCard: {
     width: CARD_WIDTH,
@@ -1846,12 +1860,12 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
   },
   heroTextWrap: {
     padding: 12,
-    backgroundColor: theme.card,
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   heroTitle: {
     fontSize: 20,
     fontWeight: "800",
-    color: theme.text,
+    color: "#FFFFFF",
     lineHeight: 26,
   },
   heroSubtitle: {
@@ -1897,6 +1911,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     right: 0,
     alignItems: "center",
     justifyContent: "center",
+
   },
   swipeHint: {
     fontWeight: "800",
@@ -1937,8 +1952,6 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     gap: 10,
-    backgroundColor: theme.card,
-    borderColor: theme.border,
   },
   serviceIconWrapper: {
     width: 42,
@@ -1947,7 +1960,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2, color: theme.text },
+  serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2 },
   wrapper: {
     padding: 16,
   },

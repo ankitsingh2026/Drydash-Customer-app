@@ -149,6 +149,8 @@ function CustomThemeToggle() {
             onPress={() => handleSelect(i)}
             activeOpacity={0.85}
             style={styles.themeTabOuter}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <IconComponent
@@ -460,25 +462,25 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
           </LinearGradient>
         </TouchableOpacity>
         <View
-  style={[
-    styles.themeCard,
-    {
-      backgroundColor: activeColors.card,
-      borderColor: activeColors.border,
-    },
-  ]}
->
-  <Text
-    style={[
-      styles.themeTitle,
-      { color: activeColors.text },
-    ]}
-  >
-    Theme
-  </Text>
+          style={[
+            styles.themeCard,
+            {
+              backgroundColor: activeColors.card,
+              borderColor: activeColors.border,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.themeTitle,
+              { color: activeColors.text },
+            ]}
+          >
+            Theme
+          </Text>
 
-  <CustomThemeToggle />
-</View>
+          <CustomThemeToggle />
+        </View>
 
         {/* ── GRID MENU ── */}
         <View style={styles.grid}>
@@ -537,6 +539,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             await logout();
             router.replace("/(auth)/auth");
           }}
+          
         >
           <LogOut size={18} color={activeColors.danger} />
           <Text style={[styles.logoutText, { color: activeColors.danger }]}>
@@ -712,21 +715,21 @@ const makeStyles = (theme: any, isDark: boolean) => {
     initials: { color: theme.text, fontSize: 28, fontWeight: "bold" },
     logoutText: { fontWeight: "800", fontSize: 15, color: colors.danger },
     themeCard: {
-  height: 52,
-  borderRadius: 14,
-  borderWidth: 1,
-  paddingHorizontal: 14,
-  marginBottom: 14,
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      marginBottom: 14,
 
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-themeTitle: {
-  fontSize: 15,
-  fontWeight: "700",
-},
+    themeTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
 
     themeTabsWrap: {
       flexDirection: "row",
