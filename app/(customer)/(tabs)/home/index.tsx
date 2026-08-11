@@ -244,7 +244,7 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
-  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading, isNetworkError, refreshAddresses } = useAddress();
+  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading, isNetworkError, refreshAddresses, coords } = useAddress();
   const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
   const [refreshing, setRefreshing] = useState(false);
 
@@ -1294,10 +1294,10 @@ export default function Home() {
                       AVAILABLE SLOTS
                     </Text>
 
-                    {contextSelectedAddress?.latitude && contextSelectedAddress?.longitude ? (
+                    {(contextSelectedAddress?.latitude && contextSelectedAddress?.longitude) || (coords?.lat && coords?.lng) ? (
                       <SlotPicker
-                        lat={contextSelectedAddress.latitude}
-                        lng={contextSelectedAddress.longitude}
+                        lat={contextSelectedAddress?.latitude || coords?.lat || 0}
+                        lng={contextSelectedAddress?.longitude || coords?.lng || 0}
                         zoneId={zoneData?.zoneId}
                         selectedSlot={selectedSlotIndex}
                       //  autoScroll={selectedSlotIndex < 0}

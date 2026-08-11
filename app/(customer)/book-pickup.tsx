@@ -1109,6 +1109,12 @@ export default function BookPickup() {
     allAddresses.find((a) => String(a.id) === String(selectedDeliveryAddressId)) ||
     selectedPickupAddr;
 
+  const hasSavedPickupAddress =
+    allAddresses.length > 0 &&
+    selectedPickupAddr &&
+    selectedPickupAddr.id !== "current_location" &&
+    Boolean(selectedPickupAddr.latitude && selectedPickupAddr.longitude);
+
   const BreakRow = ({ label, value, total, strike }: any) => (
     <View
       style={{
@@ -1773,7 +1779,7 @@ export default function BookPickup() {
                   PICKUP SLOT
                 </Text>
 
-                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
+                {hasSavedPickupAddress ? (
                   <SlotPicker
                     lat={selectedPickupAddr.latitude}
                     lng={selectedPickupAddr.longitude}
@@ -2020,7 +2026,7 @@ export default function BookPickup() {
                   Pick Time
                 </Text>
 
-                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
+                {hasSavedPickupAddress ? (
                   <SlotPicker
                     lat={selectedPickupAddr.latitude}
                     lng={selectedPickupAddr.longitude}
