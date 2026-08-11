@@ -2241,11 +2241,14 @@ export default function BookPickup() {
           address={bookingAnimAddressRef.current}
           slotLabel={bookingAnimSlotRef.current}
           onDismiss={() => {
-            setShowBookingAnim(false);
-            setBookingConfirmed(false);
             router.replace({
               pathname: "/(customer)/(tabs)/home",
-              params: { orderPlaced: "1" },
+              params: {
+                orderPlaced: "1",
+                justBooked: "1",
+                bookingAddress: bookingAnimAddressRef.current,
+                bookingSlot: bookingAnimSlotRef.current,
+              },
             });
           }}
         />

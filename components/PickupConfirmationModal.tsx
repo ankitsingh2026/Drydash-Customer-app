@@ -212,9 +212,10 @@ export default function PickupConfirmationModal({
   };
 
   // ────────────────────────────────────────────────────────────────────────
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} transparent={false} animationType="fade">
-      <View style={styles.root}>
+    <View style={[StyleSheet.absoluteFill, { zIndex: 99999, backgroundColor: C.lightBg }]}>
         {/* ── PHASE 1: Loading / scheduling ── */}
         {phase === "loading" && (
           <View style={styles.loadingPhase}>
@@ -379,7 +380,6 @@ export default function PickupConfirmationModal({
           </Animated.View>
         )}
       </View>
-    </Modal>
   );
 }
 

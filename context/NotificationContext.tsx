@@ -35,6 +35,16 @@ export interface NotificationItem {
   createdAt?: string;
 }
 
+export interface PromoNotificationPayload {
+  title: string;
+  message: string;
+  campaignType?: string;
+  deepLink?: string;
+  ctaLabel?: string;
+  campaignId?: string;
+  imageUrl?: string;
+}
+
 interface NotificationContextType {
   notifications: NotificationItem[];
   unreadCount: number;
@@ -45,6 +55,8 @@ interface NotificationContextType {
   setPaymentUpdate: React.Dispatch<React.SetStateAction<any>>;
   cancelledData: any,
   setCancelledData: React.Dispatch<React.SetStateAction<any>>;
+  promoNotification: PromoNotificationPayload | null;
+  clearPromoNotification: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -92,6 +104,9 @@ export const NotificationProvider = ({
   const [unreadCount, setUnreadCount] = useState(0);
   const [paymentUpdate, setPaymentUpdate] = useState<any>(null);
   const [cancelledData, setCancelledData] = useState({});
+  const [promoNotification, setPromoNotification] = useState<PromoNotificationPayload | null>(null);
+
+  const clearPromoNotification = useCallback(() => setPromoNotification(null), []);
 
   const customerId = user?.user?.id ?? user?.id;
   const socketRef = useRef<Socket | null>(null);
@@ -194,6 +209,21 @@ export const NotificationProvider = ({
       if (typeof payload?.unreadCount === "number") {
         setUnreadCount(payload.unreadCount);
       }
+
+      const notifData = payload?.notification;
+      const notifType = notifData?.type;
+      const MARKETING_TYPES = ["marketing", "promotional", "re_engagement", "seasonal", "event"];
+      if (MARKETING_TYPES.includes(notifType)) {
+        setPromoNotification({
+          title: notifData?.title ?? "Special Offer",
+          message: notifData?.message ?? "",
+          campaignType: notifType,
+          deepLink: notifData?.data?.screen ?? notifData?.data?.extra?.deepLink ?? "home",
+          ctaLabel: notifData?.data?.extra?.ctaLabel ?? "Book Now",
+          campaignId: notifData?.data?.extra?.campaignId,
+          imageUrl: notifData?.data?.extra?.imageUrl,
+        });
+      }
     });
 
     socket.on("CUSTOMER_NOTIFICATION_READ", ({ id, unreadCount }) => {
@@ -220,11 +250,26 @@ export const NotificationProvider = ({
     });
 
     // Helper to route notification clicks
+    const MARKETING_TYPES = ["marketing", "promotional", "re_engagement", "seasonal", "event"];
+
+    const DEEP_LINK_ROUTES: Record<string, string> = {
+      "home":        "/(customer)/(tabs)/home",
+      "book-pickup": "/(customer)/book-pickup",
+      "orders":      "/(customer)/(tabs)/orders",
+      "services":    "/(customer)/services",
+      "wallet":      "/(customer)/wallet",
+      "coupons":     "/(customer)/(tabs)/home",
+    };
+
     const handleNotificationNavigation = (remoteMessage: any) => {
       if (!remoteMessage?.data) return;
-      const { type, roomId, orderId } = remoteMessage.data;
+      const { type, roomId, orderId, deepLink } = remoteMessage.data;
 
-      if (type === "chat" || roomId) {
+      if (MARKETING_TYPES.includes(type)) {
+        const target = deepLink || "home";
+        const route = DEEP_LINK_ROUTES[target] ?? "/(customer)/(tabs)/home";
+        router.push(route as any);
+      } else if (type === "chat" || roomId) {
         router.push("/(customer)/(assistant)/chat");
       } else if (type === "payment_success" || orderId) {
         if (orderId) {
@@ -238,6 +283,29 @@ export const NotificationProvider = ({
     // Handle foreground FCM messages
     const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
       console.log("FCM foreground notification received:", remoteMessage);
+
+      const msgType = remoteMessage?.data?.type as string ?? "";
+      const MARKETING_TYPES = ["marketing", "promotional", "re_engagement", "seasonal", "event"];
+
+      if (MARKETING_TYPES.includes(msgType)) {
+        const imageUrl =
+          (remoteMessage.notification?.android as any)?.imageUrl ||
+          remoteMessage.notification?.imageUrl ||
+          (remoteMessage.data?.imageUrl as string) ||
+          (remoteMessage.data?.image as string);
+
+        // Show promo banner in-app
+        setPromoNotification({
+          title: remoteMessage.notification?.title ?? remoteMessage.data?.title as string ?? "Special Offer",
+          message: remoteMessage.notification?.body ?? remoteMessage.data?.body as string ?? "",
+          campaignType: msgType,
+          deepLink: remoteMessage.data?.deepLink as string,
+          ctaLabel: remoteMessage.data?.ctaLabel as string,
+          campaignId: remoteMessage.data?.campaignId as string,
+          imageUrl,
+        });
+      }
+
       refreshNotifications();
     });
 
@@ -315,7 +383,9 @@ export const NotificationProvider = ({
         paymentUpdate,
         setPaymentUpdate,
         cancelledData,
-        setCancelledData
+        setCancelledData,
+        promoNotification,
+        clearPromoNotification,
       }}
     >
       {children}

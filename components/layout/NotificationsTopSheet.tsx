@@ -7,6 +7,7 @@ import React, { useEffect, useRef } from "react";
 import {
   Animated,
   Dimensions,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -202,6 +203,7 @@ export default function NotificationsTopSheet({
               .filter((n) => n.unread)
               .map((n, idx) => {
                 const meta = getMeta(n.kind, theme.primary, theme);
+                const imageUrl = (n as any).data?.extra?.imageUrl || (n as any).data?.imageUrl;
 
                 return (
                   <TouchableOpacity
@@ -219,14 +221,22 @@ export default function NotificationsTopSheet({
                       },
                     ]}
                   >
-                    <View
-                      style={[
-                        styles.iconWrap,
-                        { backgroundColor: meta.softBg },
-                      ]}
-                    >
-                      <Ionicons name={meta.icon} size={20} color={theme.text} />
-                    </View>
+                    {imageUrl ? (
+                      <Image
+                        source={{ uri: imageUrl }}
+                        style={styles.thumbImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.iconWrap,
+                          { backgroundColor: meta.softBg },
+                        ]}
+                      >
+                        <Ionicons name={meta.icon} size={20} color={theme.text} />
+                      </View>
+                    )}
 
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.titleText, { color: theme.text }]}>
@@ -288,6 +298,11 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
+  },
+  thumbImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
   },
   titleText: {
     fontWeight: "700",

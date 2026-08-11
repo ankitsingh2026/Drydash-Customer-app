@@ -11,6 +11,7 @@ import PickupStatusCard from "@/components/orders/OrderCard";
 import ProductServicePopup from "@/components/ProductServicePopup";
 import DelayBanner from "@/components/home/DelayBanner";
 import RainBackground from "@/components/home/RainBackground";
+import PromoNotificationBanner from "@/components/notifications/PromoNotificationBanner";
 import { getMeApi } from "@/features/auth/auth.api";
 import { getAllSearchedActiveItems } from "@/features/catalog/catalog.api";
 import { getActivePickupOrOrder } from "@/features/pickups/pickup.api";
@@ -208,7 +209,7 @@ export default function Home() {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   // Read params early so we can skip the AppLoader if coming from a booking redirect
-  const params = useLocalSearchParams<{ orderPlaced?: string; justBooked?: string }>();
+  const params = useLocalSearchParams<{ orderPlaced?: string; justBooked?: string; bookingAddress?: string; bookingSlot?: string }>();
   const isFromBooking = params.justBooked === "1" || params.orderPlaced === "1";
   const [loading, setLoading] = useState(!isFromBooking);
   const fadeAnim = useRef(new Animated.Value(isFromBooking ? 1 : 0)).current;
@@ -246,7 +247,7 @@ export default function Home() {
   const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
   const [refreshing, setRefreshing] = useState(false);
 
-  const { notifications, cancelledData } = useNotifications();
+  const { notifications, cancelledData, promoNotification, clearPromoNotification } = useNotifications();
 
   // Force DotLottie to re-mount every time this screen gains focus
   const [lottieKey, setLottieKey] = useState(0);
@@ -769,13 +770,13 @@ export default function Home() {
         Animated.parallel([
           Animated.timing(spotlightDim, {
             toValue: 1,
-            duration: 220,
+            duration: 300,
             useNativeDriver: true,
           }),
           Animated.spring(spotlightCard, {
             toValue: 1,
-            friction: 7,
-            tension: 180,
+            friction: 8,
+            tension: 65,
             useNativeDriver: true,
           }),
         ]).start();
@@ -849,6 +850,12 @@ export default function Home() {
             {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
               <RainBackground />
             )}
+            {/* ── PROMO NOTIFICATION BANNER ── */}
+            <PromoNotificationBanner
+              notification={promoNotification}
+              onDismiss={clearPromoNotification}
+            />
+
             {/* ── SPOTLIGHT DIM LAYER ── overlays everything during booking redirect ── */}
             {spotlightVisible && (
               <Animated.View
@@ -878,7 +885,7 @@ export default function Home() {
                     {
                       translateY: spotlightCard.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [40, 0],
+                        outputRange: [SCREEN_HEIGHT * 0.45, 0],
                       }),
                     },
                     {
@@ -932,7 +939,7 @@ export default function Home() {
                   </View>
                 </View>
 
-                {/* Real PickupStatusCard or skeleton */}
+                {/* Real PickupStatusCard or instant preview or skeleton */}
                 {activeBooking && activeType === "pickup" ? (
                   <PickupStatusCard
                     pickup={activeBooking}
@@ -944,6 +951,38 @@ export default function Home() {
                     }
                     onActionComplete={refreshBooking}
                   />
+                ) : (params.bookingAddress || params.bookingSlot) ? (
+                  <View style={{
+                    backgroundColor: theme.card,
+                    borderRadius: 22,
+                    padding: 20,
+                    borderWidth: 1.5,
+                    borderColor: theme.primary + "40",
+                    shadowColor: theme.primary,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 16,
+                    elevation: 12,
+                    gap: 10,
+                  }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                      <View style={{
+                        width: 44, height: 44, borderRadius: 22,
+                        backgroundColor: theme.primary + "20",
+                        alignItems: "center", justifyContent: "center"
+                      }}>
+                        <Ionicons name="checkmark-circle-outline" size={24} color={theme.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "800", color: theme.text }}>
+                          {params.bookingSlot || "Pickup Scheduled"}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }} numberOfLines={1}>
+                          {params.bookingAddress || "Address confirmed"}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
                 ) : (
                   // Skeleton shown while refreshBooking loads
                   <View style={{
