@@ -20,7 +20,7 @@ const FEATURE_VIDEO = {
   subtitle: "Watch our premium cleaning process",
   duration: "1:20",
   video: {
-    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-videos.mp4",
+    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4",
   },
 };
 
