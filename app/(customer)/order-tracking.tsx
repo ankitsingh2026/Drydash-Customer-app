@@ -203,8 +203,8 @@ function ItemIcon({
   icon: OrderItem["icon"];
   accent: string;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);   // add this
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);   // add this
   return (
     <View style={[styles.itemIconInner, { borderColor: `${accent}55` }]}>
       <MaterialCommunityIcons name={icon as any} size={20} color={accent} />
@@ -223,8 +223,8 @@ function ActionTagButton({
   onPress: () => void;
   tone?: "default" | "danger";
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <TouchableOpacity activeOpacity={0.85} onPress={onPress}>
       <View
@@ -275,8 +275,8 @@ function Header({
   onCancel?: () => void;
   showMenu?: boolean;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
 
   if (!showMenu)
     return (
@@ -378,8 +378,8 @@ function StatusBanner({
   subtitle: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.statusBanner}>
       <View style={styles.statusIconWrap}>
@@ -400,8 +400,8 @@ function ItemCard({
   item: OrderItem;
   onDelete?: () => void;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemLeft}>
@@ -423,8 +423,8 @@ function ItemCard({
 }
 
 function LocationCard({ value }: { value: string }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.locationCardWrap}>
       <Ionicons name="location-outline" size={14} color={theme.primary} />
@@ -436,8 +436,8 @@ function LocationCard({ value }: { value: string }) {
 }
 
 function TagPill({ label }: { label: string }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.tagPill}>
       <Text style={styles.tagPillText}>{label}</Text>
@@ -446,8 +446,8 @@ function TagPill({ label }: { label: string }) {
 }
 
 function RatingCard() {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.ratingCard}>
       <View style={styles.ratingStarWrap}>
@@ -472,8 +472,8 @@ function BillRow({
   value: string;
   highlight?: boolean;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.billRow}>
       <Text style={styles.billLabel}>{label}</Text>
@@ -493,8 +493,8 @@ function BillCard({
   bill: typeof ORDER.bill;
   showExpanded: boolean;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const [open, setOpen] = useState(false);
 
   const {
@@ -546,8 +546,8 @@ function CouponSection({
   onOpen: () => void;
   onApply: (coupon: any, action: "apply" | "remove") => void;
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={styles.offerHeaderRow}>
@@ -665,8 +665,8 @@ function OrderDetailsCard({
     orderDate: string;
   };
 }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.sectionCard}>
       <View style={styles.sectionTopRow}>
@@ -732,8 +732,8 @@ function OrderDetailsCard({
 }
 
 function HelpCard() {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   return (
     <View style={styles.sectionCard}>
       <Text style={styles.helpTitle}>NEED HELP?</Text>
@@ -759,8 +759,8 @@ function HelpCard() {
 }
 
 function BottomCTA({ mode }: { mode: ScreenMode }) {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const title = mode === "pickup-scheduled" ? "Reschedule" : "Repeat Order";
   const subtitle =
     mode === "pickup-scheduled"
@@ -778,8 +778,8 @@ function BottomCTA({ mode }: { mode: ScreenMode }) {
 }
 
 export default function OrderTrackingScreen() {
-  const { theme } = useTheme();
-  const styles = makeStyles(theme);
+  const { theme, isDark } = useTheme();
+  const styles = makeStyles(theme, isDark);
   const navigation = useNavigation();
   const { user } = useAuth();
   const { selectedAddress } = useAddress();
@@ -1288,9 +1288,10 @@ export default function OrderTrackingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
       <StatusBar
         barStyle="light-content"
@@ -1318,6 +1319,8 @@ export default function OrderTrackingScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
       >
         {screenMode === "pickup-scheduled" ||
           screenMode === "pickup-assigned" ? (
@@ -1360,14 +1363,16 @@ export default function OrderTrackingScreen() {
                       },
                     })
                   }
-                  style={styles.addItemsRow}
+                  style={[
+                    styles.addItemsPill,
+                    {
+                      backgroundColor: isDark ? 'transparent' : '#FFFFFF',
+                      borderColor: isDark ? theme.lightborder : theme.border,
+                    },
+                  ]}
                 >
-                  <Ionicons
-                    name="add-circle-outline"
-                    size={18}
-                    color={theme.primary}
-                  />
-                  <Text style={styles.addItemsText}>Add More Items</Text>
+                  <Ionicons name="add" size={14} color={theme.primary} />
+                  <Text style={[styles.addItemsPillText, { color: theme.primary }]}>ADD ITEMS</Text>
                 </TouchableOpacity>
 
                 <CouponSection
@@ -1423,7 +1428,11 @@ export default function OrderTrackingScreen() {
             ) : (
               <TouchableOpacity
                 activeOpacity={0.85}
-                style={styles.scheduledAddEstimateRow}
+                style={[
+                  styles.addItemsPill,
+                  styles.addItemsPillLarge,
+                  { backgroundColor: theme.primary },
+                ]}
                 onPress={() =>
                   router.push({
                     pathname: "/(customer)/services/[service]",
@@ -1435,13 +1444,9 @@ export default function OrderTrackingScreen() {
                   })
                 }
               >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={18}
-                  color={theme.primary}
-                />
-                <Text style={styles.scheduledAddEstimateText}>
-                  Add Items for estimate
+                <Ionicons name="add" size={16} color={isDark ? theme.background : '#FFFFFF'} />
+                <Text style={[styles.addItemsPillText, { color: isDark ? theme.background : '#FFFFFF', fontSize: 13 }]}>
+                  ADD ITEMS FOR ESTIMATE
                 </Text>
               </TouchableOpacity>
             )}
@@ -1521,7 +1526,13 @@ export default function OrderTrackingScreen() {
 
             <TouchableOpacity
               activeOpacity={0.85}
-              style={styles.addItemsRow}
+              style={[
+                styles.addItemsPill,
+                {
+                  backgroundColor: isDark ? 'transparent' : '#FFFFFF',
+                  borderColor: isDark ? theme.lightborder : theme.border,
+                },
+              ]}
               onPress={() =>
                 router.push({
                   pathname: "/(customer)/services/[service]",
@@ -1533,12 +1544,8 @@ export default function OrderTrackingScreen() {
                 })
               }
             >
-              <Ionicons
-                name="add-circle-outline"
-                size={18}
-                color={theme.primary}
-              />
-              <Text style={styles.addItemsText}>Add More Items</Text>
+              <Ionicons name="add" size={14} color={theme.primary} />
+              <Text style={[styles.addItemsPillText, { color: theme.primary }]}>ADD ITEMS</Text>
             </TouchableOpacity>
 
             <CouponSection
@@ -1778,7 +1785,7 @@ export default function OrderTrackingScreen() {
   );
 }
 
-const makeStyles = (theme: any) => StyleSheet.create({
+const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.background,
@@ -1823,7 +1830,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 18,
-    paddingBottom: 24,
+    paddingBottom: 90,
   },
   loaderWrap: {
     flex: 1,
@@ -1939,14 +1946,18 @@ const makeStyles = (theme: any) => StyleSheet.create({
   scheduledAddEstimateRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    marginTop: 8,
-    marginBottom: 14,
+    marginTop: 12,
+    marginBottom: 16,
+    alignSelf: "center",
   },
   scheduledAddEstimateText: {
-    color: theme.text,
-    fontSize: 16,
-    fontWeight: "700",
+    color: theme.primary,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   locationCardWrap: {
     borderRadius: 12,
@@ -1966,6 +1977,34 @@ const makeStyles = (theme: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  addItemsPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    marginBottom: 14,
+  },
+  addItemsPillLarge: {
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 0,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  addItemsPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  // legacy (kept for safety, no longer used in JSX)
   addItemsRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2169,7 +2208,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     position: "absolute",
     left: 8,
     right: 8,
-    bottom: 12,
+    bottom: 8,
   },
   totalAmountBarBtn: {
     height: 40,
@@ -2182,12 +2221,11 @@ const makeStyles = (theme: any) => StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
-     marginBottom:30
   },
   totalAmountBarText: {
-    color: theme.text,
+    color: isDark ? "#2a2828" : "#e3d4d4",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 0.2,
    
   },
