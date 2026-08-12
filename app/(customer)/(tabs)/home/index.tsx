@@ -48,6 +48,7 @@ import { useNotifications } from "@/context/NotificationContext";
 import UnserviceableArea from "@/components/UnserviceableArea";
 import SlotPicker from "@/components/SlotPicker";
 import SwipeToAction from "@/components/SwipeToAction";
+import { useCart } from "@/context/CartContext";
 
 import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
@@ -249,6 +250,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { notifications, cancelledData, promoNotification, clearPromoNotification } = useNotifications();
+  const { items: cartItems } = useCart();
+  const cartTotalQty = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
   // Force DotLottie to re-mount every time this screen gains focus
   const [lottieKey, setLottieKey] = useState(0);
@@ -1666,7 +1669,7 @@ export default function Home() {
             </ScrollView>
 
 
-            {activeType === 'none' && !bookingLoading && (
+            {activeType === 'none' && !bookingLoading && cartTotalQty === 0 && (
               <View style={{
                 position: 'absolute',
                 bottom: 0,           // anchor to bottom edge
@@ -1692,7 +1695,7 @@ export default function Home() {
             <FloatingCart
               onOpen={() => setCartOpen(true)}
               bottomOffset={
-                activeType === "none"
+                activeType === "none" && cartTotalQty === 0
                   ? 60
                   : 12
               }

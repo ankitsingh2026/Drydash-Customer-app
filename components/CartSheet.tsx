@@ -1,7 +1,7 @@
 // components/CartSheet.tsx
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Minus, Plus, X } from "lucide-react-native";
+import { Minus, Plus, Trash2, X } from "lucide-react-native";
 import React from "react";
 import {
   Image,
@@ -41,11 +41,29 @@ export default function CartSheet({
             <Text style={[styles.title, { color: theme.text }]}>Your Cart</Text>
 
             <View style={styles.headerActions}>
-              {/* {items.length > 0 && (
-                <TouchableOpacity onPress={clear}>
-                   <Trash2 size={18} color={theme.subText} />
+              {items.length > 0 && (
+                <TouchableOpacity
+                  onPress={clear}
+                  activeOpacity={0.75}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: isDark ? "rgba(248, 113, 113, 0.08)" : "#FEF2F2",
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                    gap: 4,
+                    marginRight: 6,
+                    borderWidth: 1,
+                    borderColor: isDark ? "rgba(248, 113, 113, 0.2)" : "#FECACA",
+                  }}
+                >
+                  <Trash2 size={13} color={isDark ? "#FCA5A5" : "#F87171"} />
+                  <Text style={{ color: isDark ? "#FCA5A5" : "#F87171", fontSize: 12, fontWeight: "700" }}>
+                    Clear All
+                  </Text>
                 </TouchableOpacity>
-              )} */}
+              )}
               <TouchableOpacity onPress={onClose}>
                 <X size={22} color={theme.subText} />
               </TouchableOpacity>
