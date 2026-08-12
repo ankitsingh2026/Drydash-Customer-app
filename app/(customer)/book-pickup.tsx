@@ -1109,6 +1109,12 @@ export default function BookPickup() {
     allAddresses.find((a) => String(a.id) === String(selectedDeliveryAddressId)) ||
     selectedPickupAddr;
 
+  const hasSavedPickupAddress =
+    allAddresses.length > 0 &&
+    selectedPickupAddr &&
+    selectedPickupAddr.id !== "current_location" &&
+    Boolean(selectedPickupAddr.latitude && selectedPickupAddr.longitude);
+
   const BreakRow = ({ label, value, total, strike }: any) => (
     <View
       style={{
@@ -1141,6 +1147,7 @@ export default function BookPickup() {
     </View>
   );
 
+ 
   const CartSection = () => {
     const totalCount = items.reduce((sum, item) => sum + item.qty, 0);
     const grandTotal = total;
@@ -1158,33 +1165,66 @@ export default function BookPickup() {
         >
           <Text style={s.sectionLabel}>CART ITEMS ({totalCount})</Text>
 
-          <TouchableOpacity
-            onPress={() => router.push("/services/[service]")}
-            activeOpacity={0.85}
-            style={{
-              backgroundColor: items?.length > 0 ? "#FFFFFF" : theme.primary,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 4,
-              borderWidth: items?.length > 0 ? 1 : 0,
-              borderColor: items?.length > 0 ? (isDark ? "rgba(255,255,255,0.2)" : theme.border) : "transparent",
-            }}
-          >
-            <Text
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {items?.length > 0 && (
+              <TouchableOpacity
+                onPress={clear}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: isDark ? "rgba(248, 113, 113, 0.08)" : "#FEF2F2",
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  borderWidth: 1,
+                  borderColor: isDark ? "rgba(248, 113, 113, 0.2)" : "#FECACA",
+                }}
+              >
+                <Ionicons name="trash-outline" size={13} color={isDark ? "#FCA5A5" : "#F87171"} />
+                <Text
+                  style={{
+                    color: isDark ? "#FCA5A5" : "#F87171",
+                    fontSize: 11,
+                    fontWeight: "800",
+                    letterSpacing: 0.3,
+                  }}
+                >
+                  CLEAR ALL
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              onPress={() => router.push("/services/[service]")}
+              activeOpacity={0.85}
               style={{
-                color: items?.length > 0 ? (isDark ? "#001714" : theme.primary) : (isDark ? "#001714" : "#FFFFFF"),
-                fontSize: 12,
-                fontWeight: "800",
-                letterSpacing: 0.5,
+                backgroundColor: items?.length > 0 ? "#FFFFFF" : theme.primary,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 4,
+                borderWidth: items?.length > 0 ? 1 : 0,
+                borderColor: items?.length > 0 ? (isDark ? "rgba(255,255,255,0.2)" : theme.border) : "transparent",
               }}
             >
-              + ADD ITEMS
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={{
+                  color: items?.length > 0 ? (isDark ? "#001714" : theme.primary) : (isDark ? "#001714" : "#FFFFFF"),
+                  fontSize: 12,
+                  fontWeight: "800",
+                  letterSpacing: 0.5,
+                }}
+              >
+                + ADD ITEMS
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ITEMS LIST & BREAKDOWN (when items exist) */}
@@ -1387,6 +1427,7 @@ export default function BookPickup() {
       </View>
     );
   };
+
 
   const noSlotsToday = pickupType === "today" && !hasAvailableSlots;
   const selectedSlotFull =
@@ -1593,6 +1634,7 @@ export default function BookPickup() {
               onPress={goBackSafe}
               hitSlop={10}
               style={s.headerBack}
+              
             >
               <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </TouchableOpacity>
@@ -1635,7 +1677,7 @@ export default function BookPickup() {
               })()}
 
               {/* ADDRESS LINE (unchanged) */}
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom:5 }}>
                 <Ionicons
                   name={
                     (selectedPickupAddr?.label || contextSelectedAddress?.label)
@@ -1770,7 +1812,7 @@ export default function BookPickup() {
                   PICKUP SLOT
                 </Text>
 
-                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
+                {hasSavedPickupAddress ? (
                   <SlotPicker
                     lat={selectedPickupAddr.latitude}
                     lng={selectedPickupAddr.longitude}
@@ -2017,7 +2059,7 @@ export default function BookPickup() {
                   Pick Time
                 </Text>
 
-                {selectedPickupAddr?.latitude && selectedPickupAddr?.longitude ? (
+                {hasSavedPickupAddress ? (
                   <SlotPicker
                     lat={selectedPickupAddr.latitude}
                     lng={selectedPickupAddr.longitude}

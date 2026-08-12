@@ -308,11 +308,11 @@ export default function ProductServicePopup({
               {/* Price and Unit */}
               <View style={styles.priceRow}>
                 <Text style={styles.productPrice}>{priceDisplay}</Text>
-                {product.unit && (
+                {/* {product.unit && (
                   <View style={styles.unitBadge}>
                     <Text style={styles.unitText}>per {product.unit}</Text>
                   </View>
-                )}
+                )} */}
               </View>
 
               <Text style={styles.productDesc}>

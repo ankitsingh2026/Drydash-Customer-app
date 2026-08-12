@@ -231,6 +231,8 @@ const CustomThemeToggle = React.memo(function CustomThemeToggle() {
             onPress={() => handleSelect(i)}
             activeOpacity={0.85}
             style={styles.themeTabOuter}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <IconComponent
@@ -512,14 +514,24 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             <ChevronRight size={18} color={activeColors.subText} />
           </LinearGradient>
         </TouchableOpacity>
-
         <View
           style={[
             styles.themeCard,
-            { backgroundColor: activeColors.card, borderColor: activeColors.border },
+            {
+              backgroundColor: activeColors.card,
+              borderColor: activeColors.border,
+            },
           ]}
         >
-          <Text style={[styles.themeTitle, { color: activeColors.text }]}>Theme</Text>
+          <Text
+            style={[
+              styles.themeTitle,
+              { color: activeColors.text },
+            ]}
+          >
+            Theme
+          </Text>
+
           <CustomThemeToggle />
         </View>
 
@@ -588,7 +600,11 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
               borderColor: activeColors.dangerBorder,
             },
           ]}
-          onPress={onLogout}
+          onPress={async () => {
+            await logout();
+            router.replace("/(auth)/auth");
+          }}
+          
         >
           <LogOut size={18} color={activeColors.danger} />
           <Text style={[styles.logoutText, { color: activeColors.danger }]}>
@@ -698,7 +714,12 @@ const makeStyles = (theme: any, isDark: boolean) => {
       alignItems: "center",
       justifyContent: "space-between",
     },
-    themeTitle: { fontSize: 15, fontWeight: "700" },
+
+    themeTitle: {
+      fontSize: 15,
+      fontWeight: "700",
+    },
+
     themeTabsWrap: {
       flexDirection: "row",
       padding: 4,

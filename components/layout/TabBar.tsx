@@ -27,14 +27,13 @@ type TabBarProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-let hasAutoLocationFetched = false;
-
 export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     const { colors, theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
   const { unreadCount, refreshNotifications } = useNotifications();
   const isFetchingRef = useRef(false);
+  const isFetchingCurrentLocRef = useRef(false);
 
   const {
     selectedAddress,
@@ -63,11 +62,20 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const fetchAndSetCurrentLocation = async () => {
+    if (isFetchingCurrentLocRef.current) return;
+    isFetchingCurrentLocRef.current = true;
     try {
-      const { status } = await Location.getForegroundPermissionsAsync();
+      setServiceLoading(true);
+      let { status } = await Location.getForegroundPermissionsAsync();
       if (status !== "granted") {
         const req = await Location.requestForegroundPermissionsAsync();
-        if (req.status !== "granted") return;
+        status = req.status;
+      }
+      if (status !== "granted") {
+        console.log("Location permission not granted");
+        setLocationText("Select location");
+        setServiceLoading(false);
+        return;
       }
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
@@ -89,6 +97,9 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         state: g?.region || "",
         latitude: loc.coords.latitude,
         longitude: loc.coords.longitude,
+        flat: labelStr || "Current Location",
+        street: labelStr || "Current Location",
+        pincode: g?.postalCode || "",
       } as any;
 
       // Check if current real-time location is within 500m of any saved address
@@ -108,14 +119,15 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       }
     } catch (err) {
       console.log("Auto location fetch error", err);
+      setLocationText("Select location");
+      setServiceLoading(false);
+    } finally {
+      isFetchingCurrentLocRef.current = false;
     }
   };
 
   useEffect(() => {
-    if (!hasAutoLocationFetched) {
-      hasAutoLocationFetched = true;
-      fetchAndSetCurrentLocation();
-    }
+    fetchAndSetCurrentLocation();
   }, []);
 
   // Auto-switch to nearby saved address if allAddresses loads after initial GPS fix
@@ -143,7 +155,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
   // Fetch service data whenever selectedAddress changes
   useEffect(() => {
     if (!selectedAddress) {
-      setServiceLoading(false);
+      // Fallback: If no location is selected (or new user with no saved addresses), fetch current GPS location!
+      fetchAndSetCurrentLocation();
       return;
     }
 
@@ -205,12 +218,13 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
         if (allAddresses.length > 0) {
           setSelectedAddress(allAddresses[0]);
         } else {
-          setSelectedAddress(null);
-          setLocationText("No address selected");
+          fetchAndSetCurrentLocation();
         }
       }
+    } else if (!loading) {
+      fetchAndSetCurrentLocation();
     }
-  }, [allAddresses]);
+  }, [allAddresses, loading]);
 
   const fetchFullServiceData = async (lat: number, lng: number) => {
     try {
@@ -463,6 +477,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
               style={styles.locationRow}
               onPress={() => setModalVisible(true)}
               activeOpacity={0.75}
+              hitSlop={{ top: 15, bottom: 10, left: 10 }}
+
             >
               <Ionicons
                 name={
@@ -492,6 +508,8 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             activeOpacity={0.8}
             onPress={handleBellPress}
             style={styles.iconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+
           >
             <Bell size={18} color={theme.text} />
             {unreadCount > 0 && (

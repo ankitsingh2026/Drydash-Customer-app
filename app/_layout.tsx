@@ -11,6 +11,8 @@ import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
 import { SlotSocketProvider } from "../context/SlotSocketContext";
 import { AlertProvider } from "@/components/Customalert";
+import messaging from "@react-native-firebase/messaging";
+
 
 setupInterceptors();
 

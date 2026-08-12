@@ -24,7 +24,7 @@ import {
 } from "react-native";
 
 const { height: SCREEN_H } = Dimensions.get("window");
-import { showAlert, AlertOverlay } from "@/components/Customalert";
+import { ConfirmDialog, ConfirmDialogConfig } from "@/components/Customalert";
 import { useTheme } from "../context/ThemeContext";
 
 
@@ -54,6 +54,8 @@ export default function LocationPickerModal({
   const appState = useRef(AppState.currentState);
   const [searchText, setSearchText] = useState("");
   const { refreshAddresses } = useAddress();
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   useEffect(() => {
     if (!visible) {
@@ -168,12 +170,13 @@ export default function LocationPickerModal({
   };
 
   const handleDelete = (id: string) => {
-    showAlert({
+    setConfirmDialog({
       type: 'error',
       title: 'Delete Address',
       message: 'Are you sure you want to delete this address?',
-      primaryLabel: 'Delete',
-      onPrimary: async () => {
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: async () => {
         try {
           await deleteAddressApi(id);
           await refreshAddresses();
@@ -182,9 +185,11 @@ export default function LocationPickerModal({
         }
       },
     });
+    setConfirmVisible(true);
   };
 
   const handleEdit = (addr: Address) => {
+    onClose();
     router.push({
       pathname: "/edit-address",
       params: {
@@ -312,7 +317,8 @@ export default function LocationPickerModal({
           <View style={styles.handle} />
 
           <View style={styles.headerRow}>
-            <TouchableOpacity onPress={onClose} style={styles.backBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.backBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Ionicons name="chevron-back" size={22} color={theme.text} />
             </TouchableOpacity>
             <Text style={styles.headerText}>{headerTitle}</Text>
@@ -405,6 +411,7 @@ export default function LocationPickerModal({
                               e.stopPropagation();
                               handleEdit(addr);
                             }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           >
                             <Pencil size={20} color={theme.textSecondary} />
                           </TouchableOpacity>
@@ -415,6 +422,7 @@ export default function LocationPickerModal({
                               e.stopPropagation();
                               handleDelete(addr.id);
                             }}
+                          //  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                           >
                             <Trash2 size={20} color={"#ff4444"} />
                           </TouchableOpacity>
@@ -429,7 +437,11 @@ export default function LocationPickerModal({
             </View>
           </ScrollView>
         </Animated.View>
-        <AlertOverlay /> 
+        <ConfirmDialog
+          visible={confirmVisible}
+          config={confirmDialog}
+          onDismiss={() => setConfirmVisible(false)}
+        />
       </View>
     </Modal>
   );

@@ -27,6 +27,7 @@ import { showAlert } from "@/components/Customalert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import DryDashLogo from "../../assets/images/logo/drydashLogo.svg";
+import { registerCustomerPushToken } from "@/lib/notifications/fcm";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
  
 let OtpVerify: any = null;
@@ -293,6 +294,10 @@ export default function AuthScreen() {
  
       if (!res.isNewUser) {
         await setAuthUser(res.user);
+
+          await registerCustomerPushToken(res.user.id);
+
+
         router.replace("/(customer)/(tabs)/home");
       } else {
         setStep("REGISTER");

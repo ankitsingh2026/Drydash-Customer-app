@@ -87,8 +87,8 @@ export default function SupportIndex() {
           </Animated.View>
 
           {/* action buttons */}
-          <Animated.View style={{ opacity: fade, gap: 10, marginTop: 4 }}>
-             {/* Chat with Us */}
+          <Animated.View style={styles.actionRow}>
+            {/* Chat with Us */}
             <TouchableOpacity
               activeOpacity={0.88}
               onPress={() => router.push("/(customer)/(assistant)/chat")}
@@ -187,7 +187,13 @@ const makeStyles = (theme: any) => StyleSheet.create({
     height: 50,
     gap: 10,
   },
-
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    marginTop: 8,
+  },
   searchInput: {
     flex: 1,
     fontSize: 14,
@@ -205,11 +211,14 @@ const makeStyles = (theme: any) => StyleSheet.create({
     elevation: 6,
   },
   chatBtn: {
-    height: 52,
+    height: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    borderColor: theme.border
   },
   chatBtnText: {
     fontSize: 15,
@@ -224,7 +233,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 4,
-    marginLeft: 6,
+    marginLeft: 4,
   },
   chatBadgeText: {
     color: theme.primary,
@@ -235,7 +244,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
   },
 
   callBtn: {
-    height: 52,
+    height: 56  ,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -244,6 +253,8 @@ const makeStyles = (theme: any) => StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: theme.border,
+    paddingVertical: 11,
+    paddingHorizontal: 16
   },
   callBtnText: {
     fontSize: 15,

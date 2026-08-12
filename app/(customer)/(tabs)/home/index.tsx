@@ -1233,7 +1233,8 @@ export default function Home() {
                   <View style={styles.section}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
-                      <TouchableOpacity onPress={() => router.push('/services')}>
+                      <TouchableOpacity onPress={() => router.push('/services')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}  >
                         <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
                       </TouchableOpacity>
                     </View>

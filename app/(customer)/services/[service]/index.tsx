@@ -413,10 +413,11 @@ export default function ServiceDetail() {
           onPress={() => router.back()}
           style={{
             padding: 8,
-            marginLeft: 8,
+          //  marginLeft: 8,
             borderRadius: 12,
             backgroundColor: theme.card,
           }}
+          
         >
           <ArrowLeft size={20} color={theme.text} />
         </TouchableOpacity>
