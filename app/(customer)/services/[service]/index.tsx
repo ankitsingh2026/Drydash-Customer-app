@@ -27,6 +27,7 @@ import {
   TouchableOpacity,
   View,
   PanResponder,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
@@ -428,6 +429,7 @@ export default function ServiceDetail() {
 
   return (
     <View style={[styles.root, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <Stack.Screen options={screenOptions} />
 
       {/* ---------- SEGMENTED TABS ---------- */}

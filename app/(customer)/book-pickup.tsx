@@ -42,6 +42,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationPickerModal from "../../components/LocationPickerModal";
@@ -1607,6 +1608,7 @@ export default function BookPickup() {
   // ─── RENDER ───────────────────────────────────────────────────────────────────
   return (
     <View style={[s.safe, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <KeyboardAvoidingView
         style={[s.safe, { backgroundColor: theme.background }]}
         behavior={Platform.OS === "ios" ? "padding" : "height"}

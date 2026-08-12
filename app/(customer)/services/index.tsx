@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
@@ -76,7 +77,7 @@ const SERVICES = [
   },
 ];
 export default function ServicesPage() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { selectedAddress } = useAddress();
   const styles = makeStyles(theme);
@@ -84,6 +85,7 @@ export default function ServicesPage() {
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <View style={{ flex: 1, }}>
         {/* Header */}
         <View style={styles.header}>

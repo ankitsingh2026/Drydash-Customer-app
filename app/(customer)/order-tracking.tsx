@@ -1294,7 +1294,7 @@ export default function OrderTrackingScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
       <StatusBar
-        barStyle="light-content"
+        barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={theme.background}
       />
 

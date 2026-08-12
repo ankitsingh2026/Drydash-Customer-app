@@ -11,6 +11,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  StatusBar,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -23,7 +24,7 @@ const FEATURES = [
 ];
 
 export default function CarWash() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,6 +90,7 @@ export default function CarWash() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <Stack.Screen
         options={{
           headerShown: false,

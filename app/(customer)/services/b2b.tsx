@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,7 +28,7 @@ const ORG_TYPES = [
 ];
 
 export default function B2bServicesPage() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme);
 
   const [form, setForm] = useState({
@@ -69,6 +70,7 @@ export default function B2bServicesPage() {
 
   return (
     <SafeAreaView style={styles.root}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <Stack.Screen
         options={{
           headerShown: true,
