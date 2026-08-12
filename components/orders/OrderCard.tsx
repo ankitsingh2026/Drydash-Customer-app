@@ -3,7 +3,6 @@ import { PickupRecord } from "@/features/pickups/pickup.types";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Alert,
     Animated,
     Easing,
     Modal,
@@ -731,10 +730,11 @@ const openCancelModal = () => {
 
     const handleCancelPickup = async () => {
         if (!pickup?._id) {
-            Alert.alert(
-                "Missing Pickup",
-                "Unable to cancel this pickup right now."
-            );
+            showAlert({
+                type: 'error',
+                title: 'Missing Pickup',
+                message: 'Unable to cancel this pickup right now.',
+            });
             return;
         }
 
@@ -746,25 +746,21 @@ const openCancelModal = () => {
             setCancelModalVisible(false);
 
             setTimeout(() => {
-                Alert.alert(
-                    "Pickup Cancelled",
-                    "Your pickup has been cancelled successfully.",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => {
-                                onActionComplete?.();
-                            },
-                        },
-                    ]
-                );
+                showAlert({
+                    type: 'success',
+                    title: 'Pickup Cancelled',
+                    message: 'Your pickup has been cancelled successfully.',
+                    duration: 4000,
+                });
+                onActionComplete?.();
             }, 400);
 
         } catch (error: any) {
-            Alert.alert(
-                "Cancel Failed",
-                error?.message || "Unable to cancel pickup."
-            );
+            showAlert({
+                type: 'error',
+                title: 'Cancel Failed',
+                message: error?.message || 'Unable to cancel pickup.',
+            });
         } finally {
             setActionLoading(false);
         }
@@ -784,24 +780,20 @@ const openCancelModal = () => {
             setRescheduleModalVisible(false);
 
             setTimeout(() => {
-                Alert.alert(
-                    "Pickup Rescheduled",
-                    "Your pickup date has been updated.",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => {
-                                onActionComplete?.();
-                            },
-                        },
-                    ]
-                );
+                showAlert({
+                    type: 'success',
+                    title: 'Pickup Rescheduled',
+                    message: 'Your pickup date has been updated.',
+                    duration: 4000,
+                });
+                onActionComplete?.();
             }, 400);
         } catch (error: any) {
-            Alert.alert(
-               "Reschedule Failed",
-                error?.message || "Unable to cancel pickup."
-            );
+            showAlert({
+                type: 'error',
+                title: 'Reschedule Failed',
+                message: error?.message || 'Unable to reschedule pickup.',
+            });
         } finally {
             setActionLoading(false);
         }

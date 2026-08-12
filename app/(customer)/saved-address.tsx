@@ -25,7 +25,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { showAlert } from "@/components/Customalert";
+import { ConfirmDialog, ConfirmDialogConfig } from "@/components/Customalert";
 import { useTheme } from "@/context/ThemeContext";
 
 const { width } = Dimensions.get("window");
@@ -203,6 +203,8 @@ export default function SavedAddresses() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(
     (params.selectedId as string) || null,
   );
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogConfig | null>(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   const headerFade = useRef(new Animated.Value(0)).current;
 
@@ -280,13 +282,14 @@ export default function SavedAddresses() {
     router.back();
   };
 
-  const handleDelete = async (id: string) => {
-    showAlert({
+  const handleDelete = (id: string) => {
+    setConfirmDialog({
       type: 'error',
       title: 'Delete Address',
       message: 'Are you sure you want to delete this address?',
-      primaryLabel: 'Delete',
-      onPrimary: async () => {
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      onConfirm: async () => {
         try {
           await deleteAddressApi(id);
           setAddresses((prev) => prev.filter((a) => a.id !== id));
@@ -296,6 +299,7 @@ export default function SavedAddresses() {
         }
       },
     });
+    setConfirmVisible(true);
   };
 
   const handleAddNewAddress = () => {
@@ -448,6 +452,11 @@ export default function SavedAddresses() {
           )}
         </View>
       </SafeAreaView>
+      <ConfirmDialog
+        visible={confirmVisible}
+        config={confirmDialog}
+        onDismiss={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }
