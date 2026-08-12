@@ -1,5 +1,3 @@
-
-
 import AppLoader from "@/components/AppLoader";
 import CartSheet from "@/components/CartSheet";
 import FloatingCart from "@/components/FloatingCart";
@@ -20,13 +18,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
   Image,
-  PanResponder,
   Platform,
   RefreshControl,
   ScrollView,
@@ -38,9 +35,7 @@ import {
 } from "react-native";
 import {
   SafeAreaProvider,
-  useSafeAreaInsets
 } from "react-native-safe-area-context";
-import { SvgUri } from "react-native-svg";
 import { PERMISSIONS, request } from "react-native-permissions";
 import { useTheme } from "../../../../context/ThemeContext";
 import { useAddress } from "@/context/AddressContext";
@@ -50,18 +45,13 @@ import SlotPicker from "@/components/SlotPicker";
 import SwipeToAction from "@/components/SwipeToAction";
 import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
-import LaundryIcon from "../../../../assets/homeicons/Laundry-logo.svg";
 import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
-import Banner from "../../../../assets/homeicons/Banner1.svg";
-import LottieView from "lottie-react-native";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 
-const { width, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const CARD_WIDTH = width - 32;
-
+const { width } = Dimensions.get("window");
 
 type HomeOrder = {
   _id?: string;
@@ -116,14 +106,6 @@ const QUICK_SERVICES = [
     timelineText: "Up to 8 hours",
     icon: DrycleanIcon,
   },
-  // {
-  //   key: "Laundry",
-  //   slug: "laundry",
-  //   label: "LAUNDRY",
-  //   subtitle: "Fresh & hygienic",
-  //   timelineText: "Up to 24 hours",
-  //   icon: LaundryIcon,
-  // },
   {
     key: "Leather",
     slug: "leather",
@@ -155,67 +137,101 @@ const QUICK_SERVICES = [
   },
 ];
 
-const HERO_SLIDES = [
-  {
-    key: "shoe-1",
-    tag: "SHOE SPA",
-    title: "Premium Shoe Cleaning",
-    subtitle: "Deep clean • Deodorize • Restore",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_shoe.png",
-    },
-  },
-  {
-    key: "shoe-2",
-    tag: "SHOFA CARE",
-    title: "Sofa Deep Cleaning",
-    subtitle: "Whitening • Polishing • Protection",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_sofa.png",
-    },
-  },
-  {
-    key: "premium-1",
-    tag: "Silk • Wool • Designer Wear",
-    title: "Luxury Garment Care",
-    subtitle: "Deep cleaning for high-end fabrics",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_suit.png",
-    },
-  },
-  {
-    key: "onsite-1",
-    tag: "ON-SITE",
-    title: "Doorstep Cleaning Service",
-    subtitle: "Carpets • Sofas • Mattresses",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_onsite.png",
-    },
-  },
-  {
-    key: "laundry-2",
-    tag: "Charges",
-    title: "",
-    subtitle: "",
-    image: {
-      uri: "https://drydash-app-images.s3.ap-south-1.amazonaws.com/hero-screen/h_offer.png",
-    },
-  },
-];
+const ServiceTile = React.memo(function ServiceTile({
+  service,
+  cardColor,
+  borderColor,
+  textColor,
+  subTextColor,
+  onPress,
+}: {
+  service: (typeof QUICK_SERVICES)[number];
+  cardColor: string;
+  borderColor: string;
+  textColor: string;
+  subTextColor: string;
+  onPress: (slug: string) => void;
+}) {
+  const Icon = service.icon;
+  return (
+    <TouchableOpacity
+      style={[serviceTileStyles.tile, { backgroundColor: cardColor, borderColor }]}
+      activeOpacity={0.85}
+      onPress={() => onPress(service.slug)}
+    >
+      <View style={serviceTileStyles.iconWrap}>
+        <Icon width="80%" height="80%" />
+      </View>
+      <View style={serviceTileStyles.textWrap}>
+        <Text style={[serviceTileStyles.label, { color: textColor }]} numberOfLines={1}>
+          {service.label}
+        </Text>
+        {service.timelineText ? (
+          <View style={serviceTileStyles.timelineRow}>
+            <Ionicons name="time-outline" size={12} color={subTextColor} />
+            <Text style={[serviceTileStyles.timelineText, { color: subTextColor }]} numberOfLines={1}>
+              {service.timelineText}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[serviceTileStyles.subtitle, { color: subTextColor }]} numberOfLines={2}>
+            {service.subtitle}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+});
 
-
+const serviceTileStyles = StyleSheet.create({
+  tile: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: "hidden",
+  },
+  iconWrap: {
+    width: "100%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textWrap: {
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+    paddingTop: 4,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  timelineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  timelineText: {
+    fontSize: 9,
+    fontWeight: "600",
+    lineHeight: 11,
+  },
+  subtitle: {
+    fontSize: 9,
+    fontWeight: "500",
+    lineHeight: 11,
+  },
+});
 
 export default function Home() {
   const { theme, isDark } = useTheme();
-  const styles = makeStyles(theme, isDark);
+  const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
   // Read params early so we can skip the AppLoader if coming from a booking redirect
   const params = useLocalSearchParams<{ orderPlaced?: string; justBooked?: string; bookingAddress?: string; bookingSlot?: string }>();
   const isFromBooking = params.justBooked === "1" || params.orderPlaced === "1";
   const [loading, setLoading] = useState(!isFromBooking);
   const fadeAnim = useRef(new Animated.Value(isFromBooking ? 1 : 0)).current;
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const insets = useSafeAreaInsets();
   const [userName, setUserName] = useState("Ankit");
   const { user, setAuthUser, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -226,9 +242,7 @@ export default function Home() {
   const [spotlightVisible, setSpotlightVisible] = useState(false); // controls render (keeps alive during fade-out)
   const spotlightCard = useRef(new Animated.Value(0)).current;   // 0→1 for card entrance
   const spotlightDim  = useRef(new Animated.Value(0)).current;   // 0→1 for content dim
-  const spotlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spotlightShownRef = useRef(false);
-  const [offerVisible, setOfferVisible] = useState(true);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -243,7 +257,8 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   // inside the component
-  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, loading: addressLoading, isNetworkError, refreshAddresses } = useAddress();
+  const { zoneData, serviceData, serviceLoading, selectedAddress: contextSelectedAddress, isNetworkError, refreshAddresses } = useAddress();
+  const addressLoading = useAddress().loading;
   const delayInfo = serviceData?.data?.zoneInfo?.delayInfo;
   const [refreshing, setRefreshing] = useState(false);
 
@@ -256,8 +271,6 @@ export default function Home() {
       setLottieKey((prev) => prev + 1);
     }, [])
   );
-
-
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -315,12 +328,10 @@ export default function Home() {
     setSearchQuery(text);
     setShowSearchResults(text.length > 0);
 
-    // Clear previous timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Debounce search to avoid too many API calls
     if (text.length > 0) {
       searchTimeoutRef.current = setTimeout(() => {
         performSearch(text);
@@ -389,10 +400,6 @@ export default function Home() {
         setActiveType("none");
         setActiveBooking(null);
       }
-
-      // if (__DEV__) {
-      //   console.log("[home] active booking refresh", { type, data });
-      // }
     } catch (error) {
       console.log("Home active booking refresh error:", error);
       setActiveType("none");
@@ -446,7 +453,6 @@ export default function Home() {
 
   const lastNotificationIdRef = useRef<string | null>(null);
 
-  // Refresh booking card in real-time on new notifications
   useEffect(() => {
     if (!notifications?.length) return;
 
@@ -474,7 +480,6 @@ export default function Home() {
     }
   }, [notifications]);
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (searchTimeoutRef.current) {
@@ -482,19 +487,6 @@ export default function Home() {
       }
     };
   }, []);
-
-  // ─── Constants ────────────────────────────────────────────────────────────────
-  const THUMB_SIZE = 44;
-  const PADDING = 4;
-  const swipeContainerWidth = width - 32;
-  const MAX_DRAG = swipeContainerWidth - THUMB_SIZE - PADDING * 2 - 8;
-  const SWIPE_THRESHOLD = MAX_DRAG * 0.25;
-
-  const heroAnims = useRef(
-    Array.from({ length: HERO_SLIDES.length }).map(() => new Animated.Value(0)),
-  ).current;
-
-  const shoeSpaPulse = useRef(new Animated.Value(1)).current;
 
   // Safety fallback timer so loader is NEVER trapped indefinitely
   useEffect(() => {
@@ -513,255 +505,35 @@ export default function Home() {
           duration: 400,
           useNativeDriver: true,
         }).start();
-
-        Animated.stagger(
-          80,
-          heroAnims.map((a) =>
-            Animated.timing(a, {
-              toValue: 1,
-              duration: 450,
-              easing: Easing.out(Easing.cubic),
-              useNativeDriver: true,
-            }),
-          ),
-        ).start();
       }, zoneData !== null ? 300 : 0);
 
       return () => clearTimeout(t);
     }
   }, [addressLoading, zoneData]);
 
-  // Auto-rotating carousel
-  useEffect(() => {
-    if (loading) return;
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => {
-        const next = (prev + 1) % HERO_SLIDES.length;
-        scrollViewRef.current?.scrollTo({
-          x: next * (CARD_WIDTH + 16),
-          animated: true,
-        });
-        return next;
-      });
-    }, 6000);
-    return () => clearInterval(interval);
-  }, [loading]);
-
-  useEffect(() => {
-    heroAnims[currentIndex].setValue(0);
-    Animated.timing(heroAnims[currentIndex], {
-      toValue: 1,
-      duration: 350,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [currentIndex]);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(shoeSpaPulse, {
-          toValue: 1.08,
-          duration: 1200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(shoeSpaPulse, {
-          toValue: 1,
-          duration: 1200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-  }, []);
-
-  // ─── Two animated values: native for thumb, JS for fill ───────────────────────
-  const dragXNative = useRef(new Animated.Value(0)).current;
-  const dragXJS = useRef(new Animated.Value(0)).current;
-  const dragXValue = useRef(0);
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(-1);
   const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
   const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
-  const trackFillWidth = dragXJS.interpolate({
-    inputRange: [0, MAX_DRAG],
-    outputRange: [THUMB_SIZE + PADDING * 2, swipeContainerWidth - 8],
-    extrapolate: "clamp",
-  });
 
-  const trackFillOpacity = dragXJS.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD * 0.2, SWIPE_THRESHOLD],
-    outputRange: [0, 0.18, 0.38],
-    extrapolate: "clamp",
-  });
-
-  const thumbScale = dragXNative.interpolate({
-    inputRange: [0, 10, SWIPE_THRESHOLD],
-    outputRange: [1, 1.06, 1.12],
-    extrapolate: "clamp",
-  });
-
-  const swipeTextOpacity = dragXNative.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD * 0.3, SWIPE_THRESHOLD],
-    outputRange: [1, 0.1, 0],
-    extrapolate: "clamp",
-  });
-
-  const swipeTextTranslateX = dragXNative.interpolate({
-    inputRange: [0, SWIPE_THRESHOLD],
-    outputRange: [0, 16],
-    extrapolate: "clamp",
-  });
-
-  const setDrag = (val: number) => {
-    const clamped = Math.max(0, Math.min(val, MAX_DRAG));
-    dragXNative.setValue(clamped);
-    dragXJS.setValue(clamped);
-    dragXValue.current = clamped;
-  };
-
-  const resetDrag = useCallback(() => {
-    Animated.parallel([
-      Animated.spring(dragXNative, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 20,
-        stiffness: 50,
-        mass: 0.5,
-      }),
-      Animated.spring(dragXJS, {
-        toValue: 0,
-        useNativeDriver: false,
-        damping: 20,
-        stiffness: 250,
-        mass: 0.5,
-      }),
-    ]).start(() => {
-      dragXValue.current = 0;
-    });
-  }, []);
-
-  // const completeSwipe = useCallback(() => {
-  //   Animated.parallel([
-  //     Animated.timing(dragXNative, {
-  //       toValue: MAX_DRAG,
-  //       duration: 100,
-  //       easing: Easing.out(Easing.quad),
-  //       useNativeDriver: true,
-  //     }),
-  //     Animated.timing(dragXJS, {
-  //       toValue: MAX_DRAG,
-  //       duration: 500,
-  //       easing: Easing.out(Easing.quad),
-  //       useNativeDriver: false,
-  //     }),
-  //   ]).start(() => {
-  //     router.push("/book-pickup");
-  //     setTimeout(resetDrag, 2000);
-  //   });
-  // }, [resetDrag]);
-
-  const completeSwipe = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(dragXNative, {
-        toValue: MAX_DRAG,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(dragXJS, {
-        toValue: MAX_DRAG,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
-      router.push("/book-pickup");
-      setTimeout(resetDrag, 500);
-    });
-  }, [resetDrag]);
-
-  const completeSwipeRef = useRef(completeSwipe);
-  const resetDragRef = useRef(resetDrag);
-  useEffect(() => {
-    completeSwipeRef.current = completeSwipe;
-    resetDragRef.current = resetDrag;
-  }, [completeSwipe, resetDrag]);
-
-  // const onPressBook = () => {
-  //   const animate = (val: Animated.Value, useNative: boolean) =>
-  //     Animated.timing(val, {
-  //       toValue: SWIPE_THRESHOLD + 0,
-  //       duration: 200,
-  //       easing: Easing.out(Easing.cubic),
-  //       useNativeDriver: useNative,
-  //     });
-
-  //   Animated.parallel([
-  //     animate(dragXNative, true),
-  //     animate(dragXJS, false),
-  //   ]).start(() => completeSwipeRef.current());
-  // };
-
-  const onPressBook = () => {
-    Animated.parallel([
-      Animated.timing(dragXNative, {
-        toValue: MAX_DRAG * 0.25,
-        duration: 120,
-        useNativeDriver: true,
-      }),
-      Animated.timing(dragXJS, {
-        toValue: MAX_DRAG * 0.25,
-        duration: 120,
-        useNativeDriver: false,
-      }),
-    ]).start(() => completeSwipeRef.current());
-  };
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
-        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, { dx, dy }) =>
-        Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 5,
-
-      onPanResponderGrant: () => {
-        dragXNative.stopAnimation();
-        dragXJS.stopAnimation();
-      },
-
-      onPanResponderMove: (_, { dx }) => {
-        setDrag(dx);
-      },
-
-      onPanResponderRelease: (_, { dx, vx }) => {
-        const current = dragXValue.current;
-        if (
-          current >= SWIPE_THRESHOLD || // 25%
-          vx > 0.35                     // quick flick
-        ) {
-          completeSwipeRef.current();
-        } else {
-          resetDragRef.current();
-        }
-      },
-
-      onPanResponderTerminate: () => {
-        resetDragRef.current();
-      },
-    }),
-  ).current;
+  const onServicePress = useCallback(
+    (slug: string) => {
+      if (["shoe", "leather", "dryclean"].includes(slug)) {
+        router.push({ pathname: "/services/[service]", params: { service: slug as any } });
+      } else {
+        router.push(`/services/${slug}`);
+      }
+    },
+    [router]
+  );
 
   useFocusEffect(
     useCallback(() => {
-      dragXJS.setValue(0);
       refreshBooking();
       const hasBookingParam = params.justBooked === "1" || params.orderPlaced === "1";
       if (hasBookingParam && !spotlightShownRef.current) {
         spotlightShownRef.current = true;
         router.setParams({ justBooked: undefined, orderPlaced: undefined });
 
-        // Reset & fade IN — fade-out is handled by a separate useEffect
         spotlightDim.setValue(0);
         spotlightCard.setValue(0);
         setSpotlightMode(true);
@@ -781,17 +553,12 @@ export default function Home() {
           }),
         ]).start();
       }
-      // NOTE: no cleanup that clears timers — fade-out timer lives in its own useEffect below
     }, [params.orderPlaced, params.justBooked]),
   );
 
-  // ─── Spotlight fade-out timer ─────────────────────────────────────────────
-  // Starts the 1.2s countdown once the pickup card data is ready.
-  // Falls back to a 3s max-wait so spotlight never stays forever.
   useEffect(() => {
     if (!spotlightVisible) return;
 
-    // Safety fallback: always dismiss after 3s even if data never loads
     const safetyTimer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(spotlightDim, { toValue: 0, duration: 300, useNativeDriver: true }),
@@ -806,7 +573,6 @@ export default function Home() {
     return () => clearTimeout(safetyTimer);
   }, [spotlightVisible]);
 
-  // Once activeBooking loads while spotlight is active, hold for 1.5s then fade out
   useEffect(() => {
     if (!spotlightVisible || !activeBooking) return;
 
@@ -819,12 +585,10 @@ export default function Home() {
         setSpotlightVisible(false);
         spotlightShownRef.current = false;
       });
-    }, 1500); // show real card for 1.5s then fade
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [spotlightVisible, activeBooking]);
-
-  const PRIMARY = theme.primary;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -850,16 +614,14 @@ export default function Home() {
             {delayInfo?.isDelay && delayInfo?.category === 'WEATHER' && (
               <RainBackground />
             )}
-            {/* ── PROMO NOTIFICATION BANNER ── */}
             <PromoNotificationBanner
               notification={promoNotification}
               onDismiss={clearPromoNotification}
             />
 
-            {/* ── SPOTLIGHT DIM LAYER ── overlays everything during booking redirect ── */}
             {spotlightVisible && (
               <Animated.View
-                pointerEvents={spotlightMode ? "none" : "none"}
+                pointerEvents="none"
                 style={[
                   StyleSheet.absoluteFill,
                   {
@@ -878,14 +640,14 @@ export default function Home() {
                   position: "absolute",
                   left: 16,
                   right: 16,
-                  top: SCREEN_HEIGHT * 0.24,
+                  top: styles.spotlightTop.top,
                   zIndex: 90,
                   opacity: spotlightCard,
                   transform: [
                     {
                       translateY: spotlightCard.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [SCREEN_HEIGHT * 0.45, 0],
+                        outputRange: [styles.spotlightTop.entranceOffset, 0],
                       }),
                     },
                     {
@@ -897,7 +659,6 @@ export default function Home() {
                   ],
                 }}
               >
-                {/* Glow ring */}
                 <Animated.View
                   pointerEvents="none"
                   style={{
@@ -916,7 +677,6 @@ export default function Home() {
                   }}
                 />
 
-                {/* "Booking Confirmed" badge above card */}
                 <View style={{ alignItems: "center", marginBottom: 10 }}>
                   <View style={{
                     backgroundColor: theme.primary,
@@ -939,7 +699,6 @@ export default function Home() {
                   </View>
                 </View>
 
-                {/* Real PickupStatusCard or instant preview or skeleton */}
                 {activeBooking && activeType === "pickup" ? (
                   <PickupStatusCard
                     pickup={activeBooking}
@@ -1006,7 +765,7 @@ export default function Home() {
                         <View style={{ height: 11, borderRadius: 6, backgroundColor: theme.border, width: "40%" }} />
                       </View>
                     </View>
-                    {/* Skeleton row 2 */}
+                     {/* Skeleton row 1 */}
                     <View style={{ height: 1, backgroundColor: theme.border }} />
                     <View style={{ gap: 8 }}>
                       <View style={{ height: 12, borderRadius: 6, backgroundColor: theme.border, width: "80%" }} />
@@ -1017,8 +776,8 @@ export default function Home() {
               </Animated.View>
             )}
 
-            <ScrollView 
-              style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]} 
+            <ScrollView
+              style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]}
               contentContainerStyle={{ paddingBottom: 100 }}
               scrollEnabled={!spotlightMode}
               refreshControl={
@@ -1031,7 +790,6 @@ export default function Home() {
               }
             >
               <View>
-                {/* ── NETWORK ERROR BANNER ── */}
                 {isNetworkError && (
                   <TouchableOpacity
                     activeOpacity={0.85}
@@ -1073,23 +831,9 @@ export default function Home() {
                         </Text>
                       </View>
                     </View>
-                    {/* <View
-                      style={{
-                        backgroundColor: theme.primary,
-                        paddingHorizontal: 14,
-                        paddingVertical: 7,
-                        borderRadius: 10,
-                        marginLeft: 8,
-                      }}
-                    >
-                      <Text style={{ color: isDark ? "#001714" : "#FFFFFF", fontSize: 12, fontWeight: "800" }}>
-                        Retry
-                      </Text>
-                    </View> */}
                   </TouchableOpacity>
                 )}
 
-                {/* ── SEARCH BAR ── */}
                 <View style={{ position: "relative", zIndex: 1000 }}>
                   <Animated.View
                     style={[styles.searchBarWrap, { opacity: fadeAnim }]}
@@ -1141,9 +885,7 @@ export default function Home() {
                           <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
                         </TouchableOpacity>
                       ) : (
-                        <TouchableOpacity>
-                          {/* <Ionicons name="mic-outline" size={18} color={theme.textSecondary} /> */}
-                        </TouchableOpacity>
+                        <TouchableOpacity />
                       )}
                     </View>
                   </Animated.View>
@@ -1169,9 +911,6 @@ export default function Home() {
                           style={styles.searchResultsList}
                           showsVerticalScrollIndicator={false}
                           nestedScrollEnabled={true}
-                        // keyboardShouldPersistTaps="handled"
-                        // bounces={false}
-
                         >
                           {searchResults.map((item) => (
                             <TouchableOpacity
@@ -1253,11 +992,6 @@ export default function Home() {
                     loop
                     style={{ width: "100%", height: "100%" }}
                   />
-                    {/* <Banner
-                    width="100%"
-                    height={130}
-                    preserveAspectRatio="xMidYMid meet"
-                  /> */}
                 </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
@@ -1268,7 +1002,6 @@ export default function Home() {
                         fontSize: 11,
                         fontWeight: "800",
                         letterSpacing: 0.7,
-                        // marginBottom: 0,
                       }}
                     >
                       AVAILABLE SLOTS
@@ -1284,7 +1017,6 @@ export default function Home() {
                         onSelect={(index: number, slot: any) => {
                           setSelectedSlotIndex(index);
                           setSelectedSlotData(slot);
-                          // Navigate to book-pickup with pre-selected slot
                           router.push({
                             pathname: "/(customer)/book-pickup",
                             params: {
@@ -1301,21 +1033,11 @@ export default function Home() {
                               s.enabled && s.status !== "expired" && s.availableCapacity > 0
                           );
                           setHasAvailableSlots(available);
-                          console.log("ALL SLOTS", slots.length);
-
                         }}
                         renderSlots={(slots: any[]) => {
                           const visible = slots.filter((s) => s.enabled && s.status !== "expired");
                           const shown = visible.slice(0, 2);
                           const remaining = visible.length - 2;
-                          console.log(
-                            "VISIBLE",
-                            visible.map((s) => ({
-                              time: s.time,
-                              enabled: s.enabled,
-                              status: s.status,
-                            }))
-                          );
                           return (
                             <View style={{ flexDirection: "row", alignItems: "stretch", gap: 10 }}>
                               {shown.map((slot, i) => {
@@ -1516,99 +1238,17 @@ export default function Home() {
                       </TouchableOpacity>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {QUICK_SERVICES.slice(0, 3).map((s) => {
-                        const isFeatured = s.key === "Shoe Spa";
-                        const Icon = s.icon;
-                        return (
-                          // Replace only the inner card JSX (the TouchableOpacity and its children)
-                          <TouchableOpacity
-                            key={s.key}
-                            style={{
-                              flex: 1,
-                              backgroundColor: theme.card,
-                              borderColor: theme.border,
-                              borderWidth: 1,
-                              borderRadius: 16,
-                              overflow: 'hidden',   // clips icon to card bounds
-                            }}
-                            activeOpacity={0.85}
-                            onPress={() => {
-                              if (["shoe", "leather", "dryclean"].includes(s.slug)) {
-                                router.push({ pathname: "/services/[service]", params: { service: s.slug as any } });
-                              } else {
-                                router.push(`/services/${s.slug}`);
-                              }
-                            }}
-                          >
-                            {/* Icon area — fills top ~65% of card */}
-                            <Animated.View
-                              style={{
-                                width: "100%",
-                                aspectRatio: 1,
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <Icon width="80%" height="80%" />
-                            </Animated.View>
-
-                            {/* Text area — sits below icon */}
-                            <View style={{ paddingHorizontal: 8, paddingBottom: 10, paddingTop: 4 }}>
-                              <Text
-                                style={{
-                                  color: theme.text,
-                                  fontSize: 13,
-                                  fontWeight: '800',
-                                  letterSpacing: 0.6,
-                                  marginBottom: 2,
-                                }}
-                                numberOfLines={1}
-                              >
-                                {s.label}
-                              </Text>
-                              {s.timelineText ? (
-                                <View
-                                  style={{
-                                    flexDirection: "row",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    marginTop: 0,
-                                  }}
-                                >
-                                  <Ionicons
-                                    name="time-outline"
-                                    size={12}
-                                    color={theme.textSecondary}
-                                  />
-                                  <Text
-                                    style={{
-                                      color: theme.textSecondary,
-                                      fontSize: 9,
-                                      fontWeight: "600",
-                                      lineHeight: 11,
-                                    }}
-                                    numberOfLines={1}
-                                  >
-                                    {s.timelineText}
-                                  </Text>
-                                </View>
-                              ) : (
-                                <Text
-                                  style={{
-                                    color: theme.textSecondary,
-                                    fontSize: 9,
-                                    fontWeight: "500",
-                                    lineHeight: 11,
-                                  }}
-                                  numberOfLines={2}
-                                >
-                                  {s.subtitle}
-                                </Text>
-                              )}
-                            </View>
-                          </TouchableOpacity>
-                        );
-                      })}
+                      {QUICK_SERVICES.slice(0, 3).map((s) => (
+                        <ServiceTile
+                          key={s.key}
+                          service={s}
+                          cardColor={theme.card}
+                          borderColor={theme.border}
+                          textColor={theme.text}
+                          subTextColor={theme.textSecondary}
+                          onPress={onServicePress}
+                        />
+                      ))}
                     </View>
                   </View>
                 </Animated.View>
@@ -1640,17 +1280,15 @@ export default function Home() {
               </View>
             </ScrollView>
 
-
             {activeType === 'none' && !bookingLoading && (
               <View style={{
                 position: 'absolute',
-                bottom: 0,           // anchor to bottom edge
+                bottom: 0,
                 left: 0,
                 right: 0,
                 zIndex: 50,
                 paddingHorizontal: 16,
                 paddingBottom: TAB_BAR_HEIGHT + 2,
-                // + (insets.bottom > 0 ? insets.bottom + 8 : 4)
               }}>
                 <Animated.View style={{
                   opacity: fadeAnim,
@@ -1699,6 +1337,14 @@ export default function Home() {
 
 const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
   root: { flex: 1 },
+
+  // Not a real style prop — reused as plain numeric constants for the
+  // spotlight overlay's positioning/entrance math so they aren't
+  // recomputed as magic numbers inline in JSX.
+  spotlightTop: {
+    top: Dimensions.get("window").height * 0.24,
+    entranceOffset: Dimensions.get("window").height * 0.45,
+  } as any,
 
   searchResultsContainer: {
     position: "absolute",
@@ -1824,130 +1470,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     lineHeight: 18,
     includeFontPadding: false,
   },
-  swipeTrackFill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 34,
-    backgroundColor: theme.primary,
-  },
-  heroCard: {
-    width: CARD_WIDTH,
-    height: 200,
-    borderRadius: 14,
-    overflow: "hidden",
-    justifyContent: "flex-end",
-  },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-  },
-  heroTextWrap: {
-    padding: 12,
-    backgroundColor: theme.card,
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: theme.text,
-    lineHeight: 26,
-  },
-  heroSubtitle: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: theme.textSecondary,
-    marginTop: 4,
-  },
-  dotsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    marginTop: 10,
-  },
-  dot: {
-    height: 6,
-    borderRadius: 3,
-  },
-  pickupCard: {
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: "hidden",
-    paddingTop: 14,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  swipeContainer: {
-    height: 52,
-    borderRadius: 34,
-    padding: 4,
-    overflow: "hidden",
-    justifyContent: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  swipeTextWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  swipeHint: {
-    fontWeight: "800",
-    fontSize: 12,
-    color: isDark ? "#001714" : "#FFFFFF",
-    letterSpacing: 1.5,
-    marginLeft: 30,
-  },
-  swipeDraggable: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 6,
-    zIndex: 2,
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-  },
-  swipeDraggableInner: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   section: { marginTop: 14, paddingHorizontal: 16 },
-  servicesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  serviceCard: {
-    width: (width - 32 - 10) / 2,
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 10,
-    backgroundColor: theme.card,
-    borderColor: theme.border,
-  },
-  serviceIconWrapper: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  serviceLabel: { fontSize: 14, fontWeight: "800", marginBottom: 2, color: theme.text },
   wrapper: {
     padding: 16,
   },

@@ -5,7 +5,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useTheme } from "@/theme/useTheme";
 import { darkTheme } from "@/theme/darkTheme";
-import { Switch } from "react-native";
 import {
   ChevronRight,
   FileText,
@@ -15,11 +14,10 @@ import {
   MapPinHouse,
   ShieldCheck,
   UserPen,
-  Wallet,
   Sun,
   Moon,
 } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ScrollView,
   Share,
@@ -28,7 +26,6 @@ import {
   TouchableOpacity,
   View,
   Animated,
-  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -39,12 +36,91 @@ function getInitials(firstName: string, lastName: string): string {
   const l = (lastName ?? "").trim()[0] ?? "";
   return (f + l).toUpperCase() || "?";
 }
+const StatBox = React.memo(function StatBox({
+  label,
+  value,
+  color,
+  subColor,
+}: {
+  label: string;
+  value: string | number;
+  color: string;
+  subColor: string;
+}) {
+  return (
+    <View style={statBoxStyles.box}>
+      <Text style={[statBoxStyles.value, { color }]}>{value}</Text>
+      <Text style={[statBoxStyles.label, { color: subColor }]}>{label}</Text>
+    </View>
+  );
+});
+
+const statBoxStyles = StyleSheet.create({
+  box: { flex: 1, alignItems: "center", paddingVertical: 14 },
+  value: { fontSize: 18, fontWeight: "900" },
+  label: { fontSize: 10, fontWeight: "600", marginTop: 3, letterSpacing: 0.5 },
+});
+
+const GridTile = React.memo(function GridTile({
+  Icon,
+  iconColor,
+  label,
+  sub,
+  onPress,
+  cardColor,
+  borderColor,
+  textColor,
+  subColor,
+}: {
+  Icon: any;
+  iconColor: string;
+  label: string;
+  sub?: string;
+  onPress?: () => void;
+  cardColor: string;
+  borderColor: string;
+  textColor: string;
+  subColor: string;
+}) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onPress}
+      style={[
+        gridTileStyles.tile,
+        { backgroundColor: cardColor, borderColor },
+      ]}
+    >
+      <View style={gridTileStyles.icon}>
+        <Icon color={iconColor} />
+      </View>
+      <Text style={[gridTileStyles.label, { color: textColor }]}>{label}</Text>
+      {sub ? (
+        <Text style={[gridTileStyles.sub, { color: subColor }]}>{sub}</Text>
+      ) : null}
+    </TouchableOpacity>
+  );
+});
+
+const gridTileStyles = StyleSheet.create({
+  tile: {
+    width: "47.5%",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    minHeight: 80,
+    justifyContent: "center",
+  },
+  icon: { marginBottom: 6 },
+  label: { fontSize: 13, fontWeight: "700" },
+  sub: { fontSize: 10, marginTop: 3 },
+});
 
 /* ================= CUSTOM THEME TOGGLE ================= */
 
-function CustomThemeToggle() {
+const CustomThemeToggle = React.memo(function CustomThemeToggle() {
   const { theme, isDark, toggleTheme, setThemeMode } = useTheme();
-  const styles = makeStyles(theme, isDark);
+  const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
   const activeIndex = isDark ? 1 : 0;
   const slideAnim = useRef(new Animated.Value(activeIndex)).current;
   const labelAnims = useRef([
@@ -77,20 +153,26 @@ function CustomThemeToggle() {
     ]).start();
   }, [isDark]);
 
-  const handleSelect = (index: number) => {
-    if (index === 0 && isDark) {
-      if (setThemeMode) setThemeMode("light");
-      else toggleTheme();
-    } else if (index === 1 && !isDark) {
-      if (setThemeMode) setThemeMode("dark");
-      else toggleTheme();
-    }
-  };
+  const handleSelect = useCallback(
+    (index: number) => {
+      if (index === 0 && isDark) {
+        if (setThemeMode) setThemeMode("light");
+        else toggleTheme();
+      } else if (index === 1 && !isDark) {
+        if (setThemeMode) setThemeMode("dark");
+        else toggleTheme();
+      }
+    },
+    [isDark, setThemeMode, toggleTheme]
+  );
 
-  const THEME_OPTIONS = [
-    { key: "light", label: "Light", Icon: Sun },
-    { key: "dark", label: "Dark", Icon: Moon },
-  ];
+  const THEME_OPTIONS = useMemo(
+    () => [
+      { key: "light", label: "Light", Icon: Sun },
+      { key: "dark", label: "Dark", Icon: Moon },
+    ],
+    []
+  );
 
   return (
     <View
@@ -103,7 +185,7 @@ function CustomThemeToggle() {
         const padding = 4;
         const gap = 4;
         pillWidth.current = (totalWidth - padding * 2 - gap) / 2;
-        setLayoutReady(true);
+        if (!layoutReady) setLayoutReady(true);
       }}
     >
       {layoutReady && (
@@ -175,30 +257,35 @@ function CustomThemeToggle() {
       })}
     </View>
   );
-}
+});
 
 /* ================= PROFILE ================= */
 
 export default function Profile() {
-  const { theme, colors, isDark, toggleTheme, setThemeMode } = useTheme();
-  const styles = makeStyles(theme, isDark);
+  const { theme, colors, isDark } = useTheme();
+  const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
   const { logout, setAuthUser } = useAuthContext();
   const [profile, setProfile] = useState<any>(null);
 
-  const activeColors = {
-    bg: colors.background,
-    card: colors.card,
-    border: colors.border,
-    primary: colors.primary,
-    primaryDim: isDark ? theme.card : theme.background,
-    text: colors.text,
-    subText: colors.subText,
-    dangerBg: isDark ? theme.border : "#FDF2F2",
-    dangerBorder: isDark ? "#4B1F1F" : "#FDE8E8",
-    danger: "#FF5A5A",
-  };
+  const activeColors = useMemo(
+    () => ({
+      bg: colors.background,
+      card: colors.card,
+      border: colors.border,
+      primary: colors.primary,
+      primaryDim: isDark ? theme.card : theme.background,
+      text: colors.text,
+      subText: colors.subText,
+      dangerBg: isDark ? theme.border : "#FDF2F2",
+      dangerBorder: isDark ? "#4B1F1F" : "#FDE8E8",
+      danger: "#FF5A5A",
+    }),
+    [colors, theme, isDark]
+  );
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProfile = async () => {
       try {
         const me = await getMeApi();
@@ -228,6 +315,8 @@ export default function Profile() {
             email: me.user?.email ?? me.email,
           },
         };
+
+        if (cancelled) return;
         setProfile(formatted);
         await setAuthUser({
           id: me.user.id,
@@ -238,13 +327,16 @@ export default function Profile() {
           role: me.user.role,
         });
       } catch {
+        if (cancelled) return;
         await logout();
-        setTimeout(() => {
-          router.replace("/(auth)/auth");
-        }, 0);
+        router.replace("/(auth)/auth");
       }
     };
+
     loadProfile();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const initials = profile
@@ -253,7 +345,7 @@ export default function Profile() {
 
   const displayContact = profile?.user?.phone || profile?.user?.email || "";
 
-  const onShareReferral = async () => {
+  const onShareReferral = useCallback(async () => {
     try {
       await Share.share({
         message: `🎉 Get ₹50 on your first DryDash order!
@@ -273,80 +365,52 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
-  const referGradColors = (isDark
-    ? [theme.background, theme.background, theme.background]
-    : ["#E6F4F0", "#D3EBE4", "#C2E8DD"]) as [string, string, ...string[]];
+  const referGradColors = useMemo(
+    () =>
+      (isDark
+        ? [theme.background, theme.background, theme.background]
+        : ["#E6F4F0", "#D3EBE4", "#C2E8DD"]) as [string, string, ...string[]],
+    [isDark, theme]
+  );
 
-  // ─── Helper components moved inside Profile ───
-  function StatBox({
-    label,
-    value,
-    accent,
-  }: {
-    label: string;
-    value: string | number;
-    accent?: boolean;
-  }) {
-    return (
-      <View style={styles.statBox}>
-        <Text
-          style={[
-            styles.statValue,
-            { color: accent ? activeColors.primary : activeColors.text },
-          ]}
-        >
-          {value}
-        </Text>
-        <Text style={[styles.statLabel, { color: activeColors.subText }]}>
-          {label}
-        </Text>
-      </View>
-    );
-  }
+  const iconColor = isDark ? theme.textSecondary : theme.icon;
 
-  function GridTile({
-    icon,
-    label,
-    sub,
-    onPress,
-    style,
-  }: {
-    icon: any;
-    label: string;
-    sub?: string;
-    onPress?: () => void;
-    style?: any;
-  }) {
-    return (
-      <TouchableOpacity
-        activeOpacity={0.75}
-        onPress={onPress}
-        style={[
-          styles.gridTile,
-          { backgroundColor: activeColors.card, borderColor: activeColors.border },
-          style,
-        ]}
-      >
-        <View style={styles.gridIcon}>{icon}</View>
-        <Text style={[styles.gridLabel, { color: activeColors.text }]}>
-          {label}
-        </Text>
-        {sub ? (
-          <Text style={[styles.gridSub, { color: activeColors.subText }]}>
-            {sub}
-          </Text>
-        ) : null}
-      </TouchableOpacity>
-    );
-  }
+  const onEditProfile = useCallback(() => {
+    router.push({
+      pathname: "/edit-profile",
+      params: {
+        name: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`,
+        phone: profile?.user?.phone ?? "",
+      },
+    });
+  }, [profile]);
 
+  const onHelpSupport = useCallback(() => {
+    router.push("/(customer)/(tabs)/assistant");
+  }, []);
 
+  const onSavedAddresses = useCallback(() => {
+    router.push("/saved-address");
+  }, []);
+
+  const onPrivacyPolicy = useCallback(() => {
+    router.push("/privacy-policy");
+  }, []);
+
+  const onTerms = useCallback(() => {
+    router.push("/terms");
+  }, []);
+
+  const onLogout = useCallback(async () => {
+    await logout();
+    router.replace("/(auth)/auth");
+  }, [logout]);
 
   // ─── Render ───
   return (
-    <SafeAreaView edges={['top']} style={[styles.safe, { backgroundColor: activeColors.bg }]}>
+    <SafeAreaView edges={["top"]} style={[styles.safe, { backgroundColor: activeColors.bg }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
@@ -358,7 +422,6 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
 
         {/* ── AVATAR + NAME ── */}
         <View style={styles.header}>
-          {/* Initials avatar with glow */}
           <View
             style={[
               styles.avatarGlow,
@@ -377,9 +440,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
                   { backgroundColor: isDark ? theme.background : "#E6F4F0" },
                 ]}
               >
-                <Text
-                  style={[styles.initialsText, { color: activeColors.primary }]}
-                >
+                <Text style={[styles.initialsText, { color: activeColors.primary }]}>
                   {initials}
                 </Text>
               </View>
@@ -403,19 +464,16 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             { backgroundColor: activeColors.card, borderColor: activeColors.border },
           ]}
         >
-          <StatBox label="ORDERS" value={profile?.orders ?? 0} />
-          <View
-            style={[styles.statDivider, { backgroundColor: activeColors.border }]}
-          />
+          <StatBox label="ORDERS" value={profile?.orders ?? 0} color={activeColors.text} subColor={activeColors.subText} />
+          <View style={[styles.statDivider, { backgroundColor: activeColors.border }]} />
           <StatBox
             label="SAVED"
             value={`₹${(profile?.saved ?? 0).toLocaleString("en-IN")}`}
-            accent
+            color={activeColors.primary}
+            subColor={activeColors.subText}
           />
-          <View
-            style={[styles.statDivider, { backgroundColor: activeColors.border }]}
-          />
-          <StatBox label="SERVICES" value={profile?.services ?? 0} />
+          <View style={[styles.statDivider, { backgroundColor: activeColors.border }]} />
+          <StatBox label="SERVICES" value={profile?.services ?? 0} color={activeColors.text} subColor={activeColors.subText} />
         </View>
 
         {/* ── REFER & EARN ── */}
@@ -433,20 +491,15 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             end={{ x: 1, y: 0 }}
             style={styles.referGradient}
           >
-            {/* left icon */}
             <View style={styles.referIconBox}>
               <LinearGradient
                 colors={[activeColors.primary, activeColors.primaryDim]}
                 style={styles.referIconGrad}
               >
-                <Gift
-                  size={18}
-                  color={isDark ? theme.background : theme.text}
-                />
+                <Gift size={18} color={isDark ? theme.background : theme.text} />
               </LinearGradient>
             </View>
 
-            {/* text */}
             <View style={styles.referText}>
               <Text style={[styles.referTitle, { color: activeColors.text }]}>
                 Refer &amp; Earn
@@ -459,67 +512,69 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             <ChevronRight size={18} color={activeColors.subText} />
           </LinearGradient>
         </TouchableOpacity>
-        <View
-  style={[
-    styles.themeCard,
-    {
-      backgroundColor: activeColors.card,
-      borderColor: activeColors.border,
-    },
-  ]}
->
-  <Text
-    style={[
-      styles.themeTitle,
-      { color: activeColors.text },
-    ]}
-  >
-    Theme
-  </Text>
 
-  <CustomThemeToggle />
-</View>
+        <View
+          style={[
+            styles.themeCard,
+            { backgroundColor: activeColors.card, borderColor: activeColors.border },
+          ]}
+        >
+          <Text style={[styles.themeTitle, { color: activeColors.text }]}>Theme</Text>
+          <CustomThemeToggle />
+        </View>
 
         {/* ── GRID MENU ── */}
         <View style={styles.grid}>
           <GridTile
-            icon={<UserPen color={isDark ? theme.textSecondary : theme.icon} />}
+            Icon={UserPen}
+            iconColor={iconColor}
             label="Edit Profile"
-            onPress={() =>
-              router.push({
-                pathname: "/edit-profile",
-                params: {
-                  name: `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`,
-                  phone: profile?.user?.phone ?? "",
-                },
-              })
-            }
+            onPress={onEditProfile}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
           />
           <GridTile
-            icon={<Headset color={isDark ? theme.textSecondary : theme.icon} />}
+            Icon={Headset}
+            iconColor={iconColor}
             label="Help & Support"
             sub="Instant help or request call"
-            onPress={() => router.push("/(customer)/(tabs)/assistant")}
+            onPress={onHelpSupport}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
           />
           <GridTile
-            icon={<MapPinHouse color={isDark ? theme.textSecondary : theme.icon} />}
+            Icon={MapPinHouse}
+            iconColor={iconColor}
             label="Saved Addresses"
-            onPress={() => router.push("/saved-address")}
+            onPress={onSavedAddresses}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
           />
-          {/* <GridTile
-            icon={<Wallet color={isDark ? theme.textSecondary : theme.icon} />}
-            label="Wallet"
-            onPress={() => router.push("/wallet")}
-          /> */}
           <GridTile
-            icon={<ShieldCheck color={isDark ? theme.textSecondary : theme.icon} />}
+            Icon={ShieldCheck}
+            iconColor={iconColor}
             label="Privacy Policy"
-            onPress={() => router.push("/privacy-policy")}
+            onPress={onPrivacyPolicy}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
           />
           <GridTile
-            icon={<FileText color={isDark ? theme.textSecondary : theme.icon} />}
+            Icon={FileText}
+            iconColor={iconColor}
             label="Terms & Condition"
-            onPress={() => router.push("/terms")}
+            onPress={onTerms}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
           />
         </View>
 
@@ -533,10 +588,7 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
               borderColor: activeColors.dangerBorder,
             },
           ]}
-          onPress={async () => {
-            await logout();
-            router.replace("/(auth)/auth");
-          }}
+          onPress={onLogout}
         >
           <LogOut size={18} color={activeColors.danger} />
           <Text style={[styles.logoutText, { color: activeColors.danger }]}>
@@ -559,15 +611,8 @@ const makeStyles = (theme: any, isDark: boolean) => {
     danger: "#FF5A5A",
   };
   return StyleSheet.create({
-    safe: {
-      flex: 1,
-      backgroundColor: colors.bg,
-    },
-    scroll: {
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 24,
-    },
+    safe: { flex: 1, backgroundColor: colors.bg },
+    scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
     pageTitle: {
       fontSize: 17,
       fontWeight: "700",
@@ -575,10 +620,7 @@ const makeStyles = (theme: any, isDark: boolean) => {
       textAlign: "center",
       marginBottom: 20,
     },
-    header: {
-      alignItems: "center",
-      marginBottom: 20,
-    },
+    header: { alignItems: "center", marginBottom: 20 },
     avatarGlow: {
       shadowColor: theme.primary,
       shadowOpacity: 0.35,
@@ -601,22 +643,9 @@ const makeStyles = (theme: any, isDark: boolean) => {
       alignItems: "center",
       justifyContent: "center",
     },
-    initialsText: {
-      fontSize: 28,
-      fontWeight: "900",
-      color: colors.primary,
-      letterSpacing: 1,
-    },
-    name: {
-      fontSize: 20,
-      fontWeight: "900",
-      color: colors.text,
-      marginBottom: 4,
-    },
-    contact: {
-      fontSize: 12,
-      color: colors.subText,
-    },
+    initialsText: { fontSize: 28, fontWeight: "900", color: colors.primary, letterSpacing: 1 },
+    name: { fontSize: 20, fontWeight: "900", color: colors.text, marginBottom: 4 },
+    contact: { fontSize: 12, color: colors.subText },
     statsRow: {
       flexDirection: "row",
       backgroundColor: colors.card,
@@ -626,28 +655,7 @@ const makeStyles = (theme: any, isDark: boolean) => {
       marginBottom: 14,
       overflow: "hidden",
     },
-    statBox: {
-      flex: 1,
-      alignItems: "center",
-      paddingVertical: 14,
-    },
-    statDivider: {
-      width: 1,
-      backgroundColor: colors.border,
-      marginVertical: 12,
-    },
-    statValue: {
-      fontSize: 18,
-      fontWeight: "900",
-      color: colors.text,
-    },
-    statLabel: {
-      fontSize: 10,
-      fontWeight: "600",
-      color: colors.subText,
-      marginTop: 3,
-      letterSpacing: 0.5,
-    },
+    statDivider: { width: 1, backgroundColor: colors.border, marginVertical: 12 },
     referWrapper: {
       borderRadius: 18,
       overflow: "hidden",
@@ -662,34 +670,12 @@ const makeStyles = (theme: any, isDark: boolean) => {
       paddingVertical: 14,
       gap: 12,
     },
-    referIconBox: {
-      borderRadius: 10,
-      overflow: "hidden",
-    },
-    referIconGrad: {
-      width: 38,
-      height: 38,
-      borderRadius: 10,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+    referIconBox: { borderRadius: 10, overflow: "hidden" },
+    referIconGrad: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
     referText: { flex: 1 },
     referTitle: { fontSize: 14, fontWeight: "800", color: colors.text },
     referSub: { fontSize: 11, color: colors.subText, marginTop: 2 },
     grid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 14 },
-    gridTile: {
-      width: "47.5%",
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: 16,
-      minHeight: 80,
-      justifyContent: "center",
-    },
-    gridIcon: { fontSize: 22, marginBottom: 6, color: theme.text },
-    gridLabel: { fontSize: 13, fontWeight: "700", color: colors.text },
-    gridSub: { fontSize: 10, color: colors.subText, marginTop: 3 },
     logoutBtn: {
       height: 52,
       borderRadius: 16,
@@ -701,33 +687,18 @@ const makeStyles = (theme: any, isDark: boolean) => {
       borderWidth: 1,
       borderColor: colors.dangerBorder,
     },
-    avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: "#4F46E5",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    initials: { color: theme.text, fontSize: 28, fontWeight: "bold" },
     logoutText: { fontWeight: "800", fontSize: 15, color: colors.danger },
     themeCard: {
-  height: 52,
-  borderRadius: 14,
-  borderWidth: 1,
-  paddingHorizontal: 14,
-  marginBottom: 14,
-
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-},
-
-themeTitle: {
-  fontSize: 15,
-  fontWeight: "700",
-},
-
+      height: 52,
+      borderRadius: 14,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      marginBottom: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    themeTitle: { fontSize: 15, fontWeight: "700" },
     themeTabsWrap: {
       flexDirection: "row",
       padding: 4,
@@ -751,16 +722,7 @@ themeTitle: {
       shadowOffset: { width: 0, height: 2 },
       elevation: 4,
     },
-    themeTabOuter: {
-      flex: 1,
-      height: "100%",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1,
-    },
-    themeTabLabel: {
-      fontSize: 13,
-      letterSpacing: 0.1,
-    },
+    themeTabOuter: { flex: 1, height: "100%", alignItems: "center", justifyContent: "center", zIndex: 1 },
+    themeTabLabel: { fontSize: 13, letterSpacing: 0.1 },
   });
 };

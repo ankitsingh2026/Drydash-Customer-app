@@ -1,10 +1,8 @@
 import { useTheme } from "@/context/ThemeContext";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import {
-  Animated,
   AppState,
   Dimensions,
   Image,
@@ -22,7 +20,7 @@ const FEATURE_VIDEO = {
   subtitle: "Watch our premium cleaning process",
   duration: "1:20",
   video: {
-    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4",
+    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-videos.mp4",
   },
 };
 
@@ -53,106 +51,90 @@ const ARTICLES = [
   },
 ];
 
-const PILLS = [
-  { key: "eco", icon: "leaf-outline" as const, label: "Eco-friendly cleaning" },
-  { key: "pickup", icon: "cube-outline" as const, label: "Doorstep pickup" },
-];
-
 export default function LearnExploreSection() {
-  const { theme, isDark } = useTheme()
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
-  
   const router = useRouter();
-  const playScale = useRef(new Animated.Value(1)).current;
 
-  const onPlayPressIn = () => {
-    Animated.spring(playScale, {
-      toValue: 0.92,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
-    }).start();
-  };
-
-  const onPlayPressOut = () => {
-    Animated.spring(playScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
-    }).start();
-  };
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.05,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 4000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-
+  // muted, looping, no controls — background-style preview
   const player = useVideoPlayer(FEATURE_VIDEO.video.uri, (player) => {
     player.loop = true;
     player.muted = true;
-    player.play();
   });
 
+  // useVideoPlayer releases the native player on unmount. Our focus/
+  // AppState listeners can still fire a play()/pause() call right around
+  // that moment (losing focus while navigating away, backgrounding while
+  // unmounting, etc.), which throws "shared object already released"
+  // instead of failing silently. These wrappers swallow that specific
+  // race instead of crashing the screen.
+  const safePlay = useCallback(() => {
+    try {
+      player.play();
+    } catch {
+      // player already released — nothing to do
+    }
+  }, [player]);
+
+  const safePause = useCallback(() => {
+    try {
+      player.pause();
+    } catch {
+      // player already released — nothing to do
+    }
+  }, [player]);
+
+  // Play only while this screen is focused (tab navigators keep screens
+  // mounted, so without this the video keeps decoding even when the user
+  // has navigated to a different tab).
+  useFocusEffect(
+    useCallback(() => {
+      safePlay();
+      return () => {
+        safePause();
+      };
+    }, [safePlay, safePause])
+  );
+
+  // Pause when the app is backgrounded, resume when it comes back —
+  // avoids burning CPU/GPU decoding a video nobody can see.
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "active") {
-        player.play();
+        safePlay();
+      } else {
+        safePause();
       }
     });
 
     return () => {
       subscription.remove();
     };
-  }, [player]);
-
+  }, [safePlay, safePause]);
 
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Learn & Explore</Text>
-        {/* <TouchableOpacity>
-          <Text style={styles.viewAll}>View All</Text>
-        </TouchableOpacity> */}
       </View>
 
       {/* ── Featured Video Card ── */}
-
-<View style={styles.videoCard}>
-  <VideoView
-    player={player}
-    style={styles.videoThumbnail}
-    contentFit="cover"
-    nativeControls={false}
-  />
-  <TouchableOpacity
-    style={styles.invisibleOverlay}
-    onPress={() => {
-      // Do nothing on press, or call player.pause()/play() if needed
-    }}
-  />
-</View>
+      <View style={styles.videoCard}>
+        <VideoView
+          player={player}
+          style={styles.videoThumbnail}
+          contentFit="cover"
+          nativeControls={false}
+        />
+      </View>
 
       {/* ── Article Cards (horizontal scroll) ── */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.articlesScroll}
+        removeClippedSubviews
       >
         {ARTICLES.map((article) => (
           <TouchableOpacity
@@ -258,11 +240,6 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     color: theme.text,
     marginBottom: 3,
   },
-  invisibleOverlay: {
-  ...StyleSheet.absoluteFillObject, // Cover the entire video area
-  backgroundColor: 'transparent',
-  zIndex: 10,
-},
   videoSubtitle: {
     fontSize: 12,
     fontWeight: "500",
@@ -306,7 +283,6 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     backgroundColor: theme.background,
     borderColor: theme.card,
   },
-
   articleImage: {
     width: "100%",
     height: 120,
