@@ -173,7 +173,7 @@ export default function LocationPickerModal({
     setConfirmDialog({
       type: 'error',
       title: 'Delete Address',
-      message: 'Are you sure you want to delete this address? This action cannot be undone.',
+      message: 'Are you sure you want to delete this address?',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       onConfirm: async () => {
