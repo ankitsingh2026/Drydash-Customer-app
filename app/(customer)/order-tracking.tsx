@@ -1473,7 +1473,7 @@ export default function OrderTrackingScreen() {
                 Includes Heavy Items (Rugs, Quilts, etc)
               </Text>
             </TouchableOpacity>
-            <View style={styles.deliveryRow}>
+            {/* <View style={styles.deliveryRow}>
               <Ionicons
                 name="flash-outline"
                 size={16}
@@ -1493,7 +1493,7 @@ export default function OrderTrackingScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </View> */}
 
             <Text style={styles.specialLabel}>SPECIAL INSTRUCTIONS</Text>
             <TextInput
