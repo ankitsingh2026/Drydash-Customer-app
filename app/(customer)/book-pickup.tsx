@@ -1294,13 +1294,16 @@ export default function BookPickup() {
                 onPress={() => setCouponOpen(true)}
                 activeOpacity={0.85}
                 style={{
-                  marginTop: 8,
+                  marginTop: 12,
                   borderRadius: 14,
                   paddingHorizontal: 14,
-                  paddingVertical: 6,
-                  backgroundColor: theme.card,
+                  paddingTop: 14,
+                  paddingBottom: 14,
+                  minHeight: 64,
+                  backgroundColor: appliedCoupon ? (isDark ? "rgba(78, 112, 96, 0.12)" : "#F0FDF4") : theme.card,
                   borderWidth: 1,
                   borderColor: appliedCoupon ? theme.primary : theme.border,
+                  justifyContent: "center",
                 }}
               >
                 <View
@@ -1310,47 +1313,36 @@ export default function BookPickup() {
                     alignItems: "center",
                   }}
                 >
-                  <View style={{ flex: 1 }}>
+                  <View style={{ flex: 1, justifyContent: "center", alignSelf: "center", paddingRight: 8, marginTop: 2 }}>
                     <View
                       style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                     >
+                      <Ionicons
+                        name="ticket-outline"
+                        size={18}
+                        color={appliedCoupon ? theme.primary : theme.textSecondary}
+                        style={{ marginTop: 1 }}
+                      />
                       <Text
                         style={{
                           color: theme.text,
                           fontWeight: "900",
                           fontSize: 15,
                           letterSpacing: 0.5,
+                          lineHeight: 20,
                         }}
                       >
                         {appliedCoupon?.code || "Apply Coupon"}
                       </Text>
-
-                      {appliedCoupon && (
-                        <View
-                          style={{
-                            backgroundColor: theme.inputBackground,
-                            paddingHorizontal: 6,
-                            paddingVertical: 2,
-                            borderRadius: 4,
-                          }}
-                        >
-                          <Text
-                            style={{
-                              fontSize: 10,
-                              color: theme.primary,
-                              fontWeight: "800",
-                            }}
-                          >
-                            BEST VALUE
-                          </Text>
-                        </View>
-                      )}
                     </View>
 
                     <Text
                       style={{
                         color: theme.textSecondary,
                         fontSize: 12,
+                        lineHeight: 16,
+                        marginTop: 2,
+                        marginLeft: 24,
                       }}
                     >
                       {appliedCoupon
@@ -1363,7 +1355,8 @@ export default function BookPickup() {
                     style={{
                       flexDirection: "row",
                       alignItems: "center",
-                      gap: 10,
+                      alignSelf: "center",
+                      gap: 8,
                     }}
                   >
                     <View
@@ -1373,7 +1366,9 @@ export default function BookPickup() {
                         borderRadius: 18,
                         borderWidth: 1,
                         borderColor: appliedCoupon ? theme.primary : theme.border,
-                        backgroundColor: appliedCoupon ? theme.inputBackground : "transparent",
+                        backgroundColor: appliedCoupon ? (isDark ? "rgba(78, 112, 96, 0.25)" : "#DCFCE7") : "transparent",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
                       <Text
@@ -1381,6 +1376,7 @@ export default function BookPickup() {
                           color: appliedCoupon ? theme.primary : theme.textSecondary,
                           fontWeight: "800",
                           fontSize: 12,
+                          lineHeight: 16,
                         }}
                       >
                         {appliedCoupon ? "✓ Applied" : "Apply"}
@@ -1389,18 +1385,23 @@ export default function BookPickup() {
 
                     {appliedCoupon && (
                       <TouchableOpacity
-                        onPress={() => setAppliedCoupon(null)}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setAppliedCoupon(null);
+                        }}
                         activeOpacity={0.8}
                         style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 17,
-                          backgroundColor: theme.border,
+                          width: 32,
+                          height: 32,
+                          borderRadius: 16,
+                          backgroundColor: isDark ? "rgba(248, 113, 113, 0.15)" : "#FEF2F2",
                           justifyContent: "center",
                           alignItems: "center",
+                          borderWidth: 1,
+                          borderColor: isDark ? "rgba(248, 113, 113, 0.2)" : "#FECACA",
                         }}
                       >
-                        <Ionicons name="trash-outline" size={16} color="#FF6B6B" />
+                        <Ionicons name="trash-outline" size={14} color={isDark ? "#FCA5A5" : "#F87171"} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -3011,7 +3012,7 @@ const makeStyles = (theme: any) => StyleSheet.create({
     fontWeight: "800",
     color: theme.textSecondary,
     letterSpacing: 1.2,
-    marginBottom: 10,
+    marginBottom: 1,
   },
 
   rowBetween: {

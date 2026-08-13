@@ -195,8 +195,43 @@ export default function AuthScreen() {
  
   const sendOtp = async (phoneValue?: string, hashValue?: string) => {
     if (loading) return;
+
+    console.log("this is the phoneee valueeeeeee===========>>>>>>>>>>>>>>>>>>>>>>>>>>",phoneValue, phone)
     const mobile = phoneValue || phone;
-    // console.log("this is the mobileeeee=====>>>>>",mobile)
+    console.log("this is the mobileeeee=====>>>>>",mobile)
+    // Alert.alert("chcek pyone :::  ",mobile)
+    // console.log('sendOtp called with mobile:', mobile);
+    const hashToUse = hashValue || hash[0];
+ 
+    if (!validatePhone(mobile)) {
+      return showAlert({ type: 'warning', title: 'Invalid number', message: 'Enter a valid 10-digit mobile number' });
+ 
+    }
+ 
+    try {
+      setLoading(true);
+ 
+      console.log("sending OTP to ==>>>:", mobile, "with hash:", hashToUse);
+      await sendOtpApi(mobile, hashToUse);
+      setStep("OTP");
+      setResendTimer(30);
+    } catch (e: any) {
+      const status = e?.response?.status || e?.status;
+ 
+      if (status === 410) {
+        showAlert({ type: 'error', title: 'Account scheduled for deletion', message: 'Contact support@drydash.in to restore access before 10 days.' });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async (phoneValue?: string, hashValue?: string) => {
+    if (loading) return;
+
+    console.log("this is the phoneee valueeeeeee===========>>>>>>>>>>>>>>>>>>>>>>>>>>",phoneValue, phone)
+    const mobile = phone;
+    console.log("this is the mobileeeee=====>>>>>",mobile)
     // Alert.alert("chcek pyone :::  ",mobile)
     // console.log('sendOtp called with mobile:', mobile);
     const hashToUse = hashValue || hash[0];
@@ -580,7 +615,7 @@ export default function AuthScreen() {
  
                   <TouchableOpacity
                     disabled={resendTimer > 0}
-                    onPress={sendOtp}
+                    onPress={resendOtp}
                     style={styles.linkButton}
                   >
                     <Ionicons
