@@ -1329,9 +1329,9 @@ export default function BookPickup() {
                   marginTop: 12,
                   borderRadius: 14,
                   paddingHorizontal: 14,
-                  paddingTop: 14,
-                  paddingBottom: 14,
-                  minHeight: 64,
+                  // paddingTop: 14,
+                  // paddingBottom: 14,
+                  minHeight: 60,
                   backgroundColor: appliedCoupon ? (isDark ? "rgba(78, 112, 96, 0.12)" : "#F0FDF4") : theme.card,
                   borderWidth: 1,
                   borderColor: appliedCoupon ? theme.primary : theme.border,
@@ -1345,21 +1345,22 @@ export default function BookPickup() {
                     alignItems: "center",
                   }}
                 >
-                  <View style={{ flex: 1, justifyContent: "center", alignSelf: "center", paddingRight: 8, marginTop: 2 }}>
+                  <View style={{ flex: 1, justifyContent: "center", alignSelf: "center", paddingRight: 8 }}>
                     <View
-                      style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                      style={{ flexDirection: "row", alignItems: "center", gap: 6, }}
                     >
                       <Ionicons
                         name="ticket-outline"
                         size={18}
                         color={appliedCoupon ? theme.primary : theme.textSecondary}
-                        style={{ marginTop: 1 }}
+                        style={{ marginTop: 15 }}
                       />
                       <Text
                         style={{
                           color: theme.text,
                           fontWeight: "900",
                           fontSize: 15,
+                          marginTop: 10,
                           letterSpacing: 0.5,
                           lineHeight: 20,
                         }}
@@ -1372,8 +1373,8 @@ export default function BookPickup() {
                       style={{
                         color: theme.textSecondary,
                         fontSize: 12,
-                        lineHeight: 16,
-                        marginTop: 2,
+                        // lineHeight: 16,
+                        marginBottom: 4,
                         marginLeft: 24,
                       }}
                     >
@@ -1408,7 +1409,7 @@ export default function BookPickup() {
                           color: appliedCoupon ? theme.primary : theme.textSecondary,
                           fontWeight: "800",
                           fontSize: 12,
-                          lineHeight: 16,
+                          // lineHeight: 16,
                         }}
                       >
                         {appliedCoupon ? "✓ Applied" : "Apply"}
@@ -1488,7 +1489,7 @@ export default function BookPickup() {
   // Special Instructions Section Component
   const SpecialInstructionsSection = () => (
     <View style={s.section}>
-      <Text style={s.sectionLabel}>SPECIAL INSTRUCTIONS</Text>
+      <Text style={[s.sectionLabel, { marginBottom:10}]}>SPECIAL INSTRUCTIONS</Text>
       <LinearGradient colors={theme.gradient} style={{ borderRadius: 14 }}>
         <TouchableOpacity
           style={[s.noteBox, { borderColor: theme.border }]}
@@ -1940,7 +1941,7 @@ export default function BookPickup() {
               <CartSection />
 
               <View style={s.section}>
-                <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
+                <Text style={[s.sectionLabel, { marginBottom: 10 }]}>ADDITIONAL INFO</Text>
 
                 <TouchableOpacity
                   onPress={() => setHasHeavyItems(!hasHeavyItems)}
@@ -2202,7 +2203,7 @@ export default function BookPickup() {
               {/* <DeliveryAddressSection /> */}
 
               <View style={s.section}>
-                <Text style={s.sectionLabel}>ADDITIONAL INFO</Text>
+                <Text style={[s.sectionLabel, { marginBottom: 10 }]}>ADDITIONAL INFO</Text>
                 <LinearGradient
                   colors={theme.gradient}
                   style={{ borderRadius: 14 }}
