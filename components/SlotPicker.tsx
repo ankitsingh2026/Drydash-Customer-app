@@ -22,6 +22,9 @@ interface Slot {
     startTime: string;
     bookingPercentage?: number;
     deliveryLabel?: string;
+    isTomorrow?: boolean;
+    date?: string;
+    dayLabel?: string;
 }
 
 
@@ -32,9 +35,12 @@ interface Props {
     date?: string;
     selectedSlot: number;
     onSelect: (index: number, slot: Slot) => void;
-     onSlotsUpdate?: (slots: Slot[]) => void;  
-     renderSlots?: (slots: any[]) => React.ReactNode;
+    onSlotsUpdate?: (slots: Slot[]) => void;  
+    renderSlots?: (slots: any[]) => React.ReactNode;
     autoScroll?: boolean;
+    onlyToday?: boolean;
+    onlySchedule?: boolean;
+    hideDayBadge?: boolean;
 }
 
 const SlotPicker: React.FC<Props> = ({
@@ -45,7 +51,11 @@ const SlotPicker: React.FC<Props> = ({
     selectedSlot,
     onSelect,
     onSlotsUpdate,
+    renderSlots,
     autoScroll = false,
+    onlyToday = false,
+    onlySchedule = false,
+    hideDayBadge = false,
 }) => {
     const { theme, isDark } = useTheme();
     const styles = makeSlotStyles(theme, isDark);
@@ -130,18 +140,22 @@ const SlotPicker: React.FC<Props> = ({
                 const specificEntry = date ? dates.find((d: any) => d.date === targetDateStr) : null;
 
                 if (date && specificEntry) {
-                    allSlots = specificEntry.allSlots || [];
+                    allSlots = (specificEntry.allSlots || []).map((s: any) => ({
+                        ...s,
+                        date: specificEntry.date || targetDateStr,
+                        isTomorrow: specificEntry.label === "Tomorrow" || targetDateStr === getTomorrowStr(),
+                        dayLabel: specificEntry.label || (targetDateStr === getTomorrowStr() ? "Tomorrow" : "Today"),
+                    }));
                 } else {
                     const todayEntry = dates.find((d: any) => d.label === "Today" || d.date === getTodayStr()) || dates[0];
                     const tomorrowEntry = dates.find((d: any) => d.label === "Tomorrow") || dates[1];
 
-                    const todaySlots: Slot[] = todayEntry?.allSlots || [];
-                    const hasValidToday = todaySlots.some(
-                        (s) =>
-                            s.enabled &&
-                            s.status !== "expired" &&
-                            (s.availableCapacity === undefined || s.availableCapacity > 0)
-                    );
+                    const todaySlots: Slot[] = (todayEntry?.allSlots || []).map((s: any) => ({
+                        ...s,
+                        date: todayEntry?.date || getTodayStr(),
+                        isTomorrow: false,
+                        dayLabel: "Today",
+                    }));
 
                     let tomorrowSlots: Slot[] = [];
                     if (tomorrowEntry && tomorrowEntry.allSlots) {
@@ -149,7 +163,7 @@ const SlotPicker: React.FC<Props> = ({
                             ...s,
                             isTomorrow: true,
                             dayLabel: "Tomorrow",
-                            date: tomorrowEntry.date,
+                            date: tomorrowEntry.date || getTomorrowStr(),
                         }));
                     }
 
@@ -157,16 +171,13 @@ const SlotPicker: React.FC<Props> = ({
                 }
             } else {
                 // Fallback to legacy single allSlots
-                allSlots = serviceData?.data?.allSlots || [];
-                const getTodayStr = () => {
-                    const d = new Date();
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                };
-                const getTomorrowStr = () => {
-                    const d = new Date();
-                    d.setDate(d.getDate() + 1);
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-                };
+                const legacySlots = (serviceData?.data?.allSlots || []).map((s: any) => ({
+                    ...s,
+                    date: date || getTodayStr(),
+                    isTomorrow: false,
+                    dayLabel: "Today",
+                }));
+                allSlots = legacySlots;
 
                 const isToday = !date || date === getTodayStr();
 
@@ -197,8 +208,6 @@ const SlotPicker: React.FC<Props> = ({
             }
 
             setSlots(allSlots);
-
-            onSlotsUpdate?.(allSlots);
         } catch (err) {
             console.log("❌ Slot fetch error", err);
             setSlots([]);
@@ -207,8 +216,22 @@ const SlotPicker: React.FC<Props> = ({
         }
     };
 
+    const getTodayStr = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+
     // ✅ Build full UI list (including expired) sorted by Day then Start Time
     const visibleSlots = [...slots]
+        .filter((s: any) => {
+            if (onlyToday) {
+                return !s.isTomorrow && (!s.date || s.date === getTodayStr());
+            }
+            if (onlySchedule) {
+                return s.isTomorrow || (s.date && s.date !== getTodayStr());
+            }
+            return true;
+        })
         .sort((a, b) => {
             // Keep Today slots before Tomorrow slots
             if (!!a.isTomorrow !== !!b.isTomorrow) {
@@ -222,6 +245,10 @@ const SlotPicker: React.FC<Props> = ({
             };
             return getHour(a.startTime) - getHour(b.startTime);
         });
+
+    useEffect(() => {
+        onSlotsUpdate?.(visibleSlots);
+    }, [slots, onlyToday, onlySchedule]);
 
     // console.log("✅ Visible slots:", visibleSlots);
 
@@ -506,14 +533,16 @@ const SlotPicker: React.FC<Props> = ({
                                                 </Text>
                                             )}
 
-                                            {slot.isTomorrow ? (
-                                                <View style={styles.tomorrowBadge}>
-                                                    <Text style={styles.tomorrowBadgeText}>Tomorrow</Text>
-                                                </View>
-                                            ) : (
-                                                <View style={styles.todayBadge}>
-                                                    <Text style={styles.todayBadgeText}>Today</Text>
-                                                </View>
+                                            {!hideDayBadge && !onlySchedule && (
+                                                slot.isTomorrow ? (
+                                                    <View style={styles.tomorrowBadge}>
+                                                        <Text style={styles.tomorrowBadgeText}>Tomorrow</Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.todayBadge}>
+                                                        <Text style={styles.todayBadgeText}>Today</Text>
+                                                    </View>
+                                                )
                                             )}
                                         </View>
                                     )}
@@ -523,7 +552,7 @@ const SlotPicker: React.FC<Props> = ({
                     </TouchableOpacity>
                 );
 
-                if (isFirstTomorrow && index > 0) {
+                if (!onlySchedule && !onlyToday && isFirstTomorrow && index > 0) {
                     return (
                         <React.Fragment key={`divider-${index}`}>
                             <View style={styles.verticalDivider} />
