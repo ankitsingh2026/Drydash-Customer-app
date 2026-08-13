@@ -328,6 +328,7 @@ export default function BookPickup() {
       }
     } else if (preSelectedIsTomorrow === "false") {
       setPickupType("today");
+      setDate(new Date());
     }
   }, [preSelectedSlotTime, preSelectedIsTomorrow, preSelectedDate]);
 
@@ -367,37 +368,68 @@ export default function BookPickup() {
   };
 
   const getDynamicDeliveryLabel = (slot: any) => {
-    if (!slot || !slot.deliveryLabel) return "11 AM tomorrow";
+    if (!slot || (!slot.time && !slot.deliveryLabel)) return "Tomorrow by 11:00 AM";
 
-    const parts = slot.deliveryLabel.split(" by ");
-    const labelRelative = parts[0];
-    const time = parts[1] || "";
-
-    let deliveryDate = new Date();
-    if (pickupType === "schedule") {
-      deliveryDate = new Date(date);
+    // 1. Calculate the pickup Date object
+    let pickupDate = new Date();
+    if (pickupType === "schedule" && date) {
+      pickupDate = new Date(date);
+    } else if (slot.date) {
+      const parts = slot.date.split("-").map(Number);
+      if (parts.length === 3 && !isNaN(parts[0])) {
+        pickupDate = new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+    } else if (slot.isTomorrow) {
+      pickupDate = new Date();
+      pickupDate.setDate(pickupDate.getDate() + 1);
     }
 
-    if (labelRelative.toLowerCase() === "tomorrow") {
+    // 2. Calculate Delivery Date & Time
+    let deliveryDate = new Date(pickupDate);
+    let deliveryTimeStr = "";
+
+    if (slot.deliveryLabel) {
+      const parts = slot.deliveryLabel.split(" by ");
+      const labelRelative = (parts[0] || "").toLowerCase().trim();
+      deliveryTimeStr = parts[1] || "";
+
+      if (labelRelative === "tomorrow") {
+        deliveryDate.setDate(deliveryDate.getDate() + 1);
+      } else if (labelRelative === "today") {
+        // Same day delivery
+      } else {
+        // Custom string like "2 days" or formatted string
+        return slot.deliveryLabel;
+      }
+    } else {
+      // Default delivery: Next day after pickup at 11:00 AM
       deliveryDate.setDate(deliveryDate.getDate() + 1);
-    } else if (labelRelative.toLowerCase() !== "today") {
-      return slot.deliveryLabel;
+      deliveryTimeStr = "11:00 AM";
     }
 
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+    // 3. Format delivery date relative to real-world Today / Tomorrow
+    const nowToday = new Date();
+    nowToday.setHours(0, 0, 0, 0);
+
+    const nowTomorrow = new Date(nowToday);
+    nowTomorrow.setDate(nowTomorrow.getDate() + 1);
+
+    const checkDeliveryDate = new Date(deliveryDate);
+    checkDeliveryDate.setHours(0, 0, 0, 0);
 
     let dayLabel = "";
-    if (deliveryDate.toDateString() === today.toDateString()) {
+    if (checkDeliveryDate.getTime() === nowToday.getTime()) {
       dayLabel = "Today";
-    } else if (deliveryDate.toDateString() === tomorrow.toDateString()) {
+    } else if (checkDeliveryDate.getTime() === nowTomorrow.getTime()) {
       dayLabel = "Tomorrow";
     } else {
-      dayLabel = deliveryDate.toLocaleDateString("en-IN", { weekday: "short" });
+      const dayName = deliveryDate.toLocaleDateString("en-IN", { weekday: "short" });
+      const monthName = deliveryDate.toLocaleDateString("en-IN", { month: "short" });
+      const dateNum = deliveryDate.getDate();
+      dayLabel = `${dayName}, ${monthName} ${dateNum}`;
     }
 
-    return time ? `${dayLabel} by ${time}` : dayLabel;
+    return deliveryTimeStr ? `${dayLabel} by ${deliveryTimeStr}` : dayLabel;
   };
 
   // Format slot time and day (Today/Tomorrow)
@@ -704,153 +736,153 @@ export default function BookPickup() {
   };
 
   // ─── Background API runner (shows animation, fires API) ──────────────────
- const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
-  try {
-    setConfirmLoading(true);
+  const runBookingApiInBackground = async (orderDetails: CreatePickupRequest) => {
+    try {
+      setConfirmLoading(true);
 
-    let effectivePickupId = selectedPickupAddressId;
+      let effectivePickupId = selectedPickupAddressId;
 
-    // 500m proximity auto-select check if currently set to current_location or empty
-    if (!effectivePickupId || effectivePickupId === "current_location") {
-      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
-      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
-      if (lat && lng && allAddresses.length > 0) {
-        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
-        if (nearbySaved) {
-          effectivePickupId = nearbySaved.id;
-          setSelectedPickupAddressId(nearbySaved.id);
-          setSelectedAddress(nearbySaved);
+      // 500m proximity auto-select check if currently set to current_location or empty
+      if (!effectivePickupId || effectivePickupId === "current_location") {
+        const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+        const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+        if (lat && lng && allAddresses.length > 0) {
+          const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+          if (nearbySaved) {
+            effectivePickupId = nearbySaved.id;
+            setSelectedPickupAddressId(nearbySaved.id);
+            setSelectedAddress(nearbySaved);
+          }
         }
       }
-    }
 
-    if (!effectivePickupId || effectivePickupId === "current_location") {
-      showAlert({
-        type: "warning",
-        title: "Complete Your Address",
-        message: "Please add a complete address for pickup.",
-        primaryLabel: "Add Address",
-        onPrimary: () => {
-          setAddressType("pickup");
-          setAddModalOpen(true);
-        },
-      });
-      setConfirmLoading(false);
-      setShowBookingAnim(false);
-      return;
-    }
-
-    let deliveryId =
-      deliveryMode === "same"
-        ? effectivePickupId
-        : selectedDeliveryAddressId;
-
-    if (!deliveryId || deliveryId === "current_location") {
-      const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
-      const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
-      if (lat && lng && allAddresses.length > 0) {
-        const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
-        if (nearbySaved) {
-          deliveryId = nearbySaved.id;
-          setSelectedDeliveryAddressId(nearbySaved.id);
-        }
-      }
-    }
-
-    if (!deliveryId || deliveryId === "current_location") {
-      showAlert({
-        type: "warning",
-        title: "Complete Your Address",
-        message: "Please add a complete address for delivery.",
-        primaryLabel: "Add Address",
-        onPrimary: () => {
-          setAddressType("delivery");
-          setAddModalOpen(true);
-        },
-      });
-      setConfirmLoading(false);
-      setShowBookingAnim(false);
-      return;
-    }
-
-    let selectedSlotForPayload: string | undefined;
-    if (selectedSlotData?.time) {
-      selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
-    }
-
-    const scheduledDate = pickupType === "today" ? new Date() : date;
-    const orderItems = items
-      .filter((item) => item.id && item.qty > 0)
-      .map((item) => ({
-        itemId: item.id,
-        quantity: item.qty,
-      }));
-
-    const orderDetails: CreatePickupRequest = {
-      firstName,
-      lastName,
-      contact: phone,
-      appCustomerId: String(auth_id),
-      tempPickupAdresssId: selectedPickupAddressId,
-      tempDeliveryAddressId: deliveryId,
-      date: formatDateForApi(scheduledDate),
-      isHeavy: hasHeavyItems,
-      morning_delivery: isMorningDelivery,
-    };
-    if (selectedSlotForPayload) {
-      orderDetails.slot = selectedSlotForPayload;
-    }
-    if (note?.trim()) orderDetails.note = note.trim();
-    if (orderItems.length) orderDetails.items = orderItems;
-
-    // For "today" tab, first create booking to get bookingId
-    if (pickupType === "today" && selectedPickupAddr) {
-      let resolvedZoneId =
-        zoneData?.zoneId ||
-        serviceData?.data?.zoneInfo?.zoneId ||
-        serviceData?.zoneId;
-
-      const lat = selectedPickupAddr.latitude;
-      const lng = selectedPickupAddr.longitude;
-
-      if (!resolvedZoneId && lat && lng) {
-        const locationDetails = await getLocationDetails(lat, lng);
-        resolvedZoneId = locationDetails?.zoneId;
-      }
-
-      if (resolvedZoneId && selectedSlotData?.time) {
-        const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
-        const bookingPayload = {
-          zoneId: resolvedZoneId,
-          slotTime: convertedSlotTime,
-          deliveryLabel: selectedSlotData.deliveryLabel || "",
-          isSameDayDelivery: selectedSlotData.isSameDayDelivery || false,
-          customerDetails: {
-            appCustomerId: String(auth_id),
-            name: `${firstName || ""} ${lastName || ""}`.trim(),
-            phone: phone,
+      if (!effectivePickupId || effectivePickupId === "current_location") {
+        showAlert({
+          type: "warning",
+          title: "Complete Your Address",
+          message: "Please add a complete address for pickup.",
+          primaryLabel: "Add Address",
+          onPrimary: () => {
+            setAddressType("pickup");
+            setAddModalOpen(true);
           },
-        };
-        console.log(" BOOKING PAYLOAD ==>", bookingPayload);
-        const bookingResponse = await createBookingApi(bookingPayload);
-        if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
-          orderDetails.bookingId = bookingResponse.data.booking.bookingId;
-          console.log(" BOOKING CREATED ==>", bookingResponse.data.booking.bookingId);
+        });
+        setConfirmLoading(false);
+        setShowBookingAnim(false);
+        return;
+      }
+
+      let deliveryId =
+        deliveryMode === "same"
+          ? effectivePickupId
+          : selectedDeliveryAddressId;
+
+      if (!deliveryId || deliveryId === "current_location") {
+        const lat = contextSelectedAddress?.latitude || (location as any)?.latitude;
+        const lng = contextSelectedAddress?.longitude || (location as any)?.longitude;
+        if (lat && lng && allAddresses.length > 0) {
+          const nearbySaved = findNearbySavedAddress(lat, lng, allAddresses, 500);
+          if (nearbySaved) {
+            deliveryId = nearbySaved.id;
+            setSelectedDeliveryAddressId(nearbySaved.id);
+          }
         }
       }
-    }
 
-    await createOrderApi(orderDetails);
-    // Signal animation modal that booking succeeded
-    setBookingConfirmed(true);
-  } catch (err: any) {
-    console.log("Background booking error (order may still exist):", err?.message);
-    // Even on error, transition to confirmed so UX doesn't hang
-    setBookingConfirmed(true);
-  } finally {
-    setConfirmLoading(false);
-  }
-};
+      if (!deliveryId || deliveryId === "current_location") {
+        showAlert({
+          type: "warning",
+          title: "Complete Your Address",
+          message: "Please add a complete address for delivery.",
+          primaryLabel: "Add Address",
+          onPrimary: () => {
+            setAddressType("delivery");
+            setAddModalOpen(true);
+          },
+        });
+        setConfirmLoading(false);
+        setShowBookingAnim(false);
+        return;
+      }
+
+      let selectedSlotForPayload: string | undefined;
+      if (selectedSlotData?.time) {
+        selectedSlotForPayload = convertSlotTimeFormat(selectedSlotData.time);
+      }
+
+      const scheduledDate = pickupType === "today" ? new Date() : date;
+      const orderItems = items
+        .filter((item) => item.id && item.qty > 0)
+        .map((item) => ({
+          itemId: item.id,
+          quantity: item.qty,
+        }));
+
+      const orderDetails: CreatePickupRequest = {
+        firstName,
+        lastName,
+        contact: phone,
+        appCustomerId: String(auth_id),
+        tempPickupAdresssId: selectedPickupAddressId,
+        tempDeliveryAddressId: deliveryId,
+        date: formatDateForApi(scheduledDate),
+        isHeavy: hasHeavyItems,
+        morning_delivery: isMorningDelivery,
+      };
+      if (selectedSlotForPayload) {
+        orderDetails.slot = selectedSlotForPayload;
+      }
+      if (note?.trim()) orderDetails.note = note.trim();
+      if (orderItems.length) orderDetails.items = orderItems;
+
+      // For "today" tab, first create booking to get bookingId
+      if (pickupType === "today" && selectedPickupAddr) {
+        let resolvedZoneId =
+          zoneData?.zoneId ||
+          serviceData?.data?.zoneInfo?.zoneId ||
+          serviceData?.zoneId;
+
+        const lat = selectedPickupAddr.latitude;
+        const lng = selectedPickupAddr.longitude;
+
+        if (!resolvedZoneId && lat && lng) {
+          const locationDetails = await getLocationDetails(lat, lng);
+          resolvedZoneId = locationDetails?.zoneId;
+        }
+
+        if (resolvedZoneId && selectedSlotData?.time) {
+          const convertedSlotTime = convertSlotTimeFormat(selectedSlotData.time);
+          const bookingPayload = {
+            zoneId: resolvedZoneId,
+            slotTime: convertedSlotTime,
+            deliveryLabel: selectedSlotData.deliveryLabel || "",
+            isSameDayDelivery: selectedSlotData.isSameDayDelivery || false,
+            customerDetails: {
+              appCustomerId: String(auth_id),
+              name: `${firstName || ""} ${lastName || ""}`.trim(),
+              phone: phone,
+            },
+          };
+          console.log(" BOOKING PAYLOAD ==>", bookingPayload);
+          const bookingResponse = await createBookingApi(bookingPayload);
+          if (bookingResponse?.success && bookingResponse?.data?.booking?.bookingId) {
+            orderDetails.bookingId = bookingResponse.data.booking.bookingId;
+            console.log(" BOOKING CREATED ==>", bookingResponse.data.booking.bookingId);
+          }
+        }
+      }
+
+      await createOrderApi(orderDetails);
+      // Signal animation modal that booking succeeded
+      setBookingConfirmed(true);
+    } catch (err: any) {
+      console.log("Background booking error (order may still exist):", err?.message);
+      // Even on error, transition to confirmed so UX doesn't hang
+      setBookingConfirmed(true);
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
 
   const confirmPickup = () => {
@@ -1148,7 +1180,7 @@ export default function BookPickup() {
     </View>
   );
 
- 
+
   const CartSection = () => {
     const totalCount = items.reduce((sum, item) => sum + item.qty, 0);
     const grandTotal = total;
@@ -1636,7 +1668,7 @@ export default function BookPickup() {
               onPress={goBackSafe}
               hitSlop={10}
               style={s.headerBack}
-              
+
             >
               <Ionicons name="chevron-back" size={24} color={theme.primary} />
             </TouchableOpacity>
@@ -1679,7 +1711,7 @@ export default function BookPickup() {
               })()}
 
               {/* ADDRESS LINE (unchanged) */}
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom:5 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, marginBottom: 5 }}>
                 <Ionicons
                   name={
                     (selectedPickupAddr?.label || contextSelectedAddress?.label)
@@ -1739,6 +1771,7 @@ export default function BookPickup() {
                   //   );
                   // }
                   setPickupType("today");
+                  setDate(new Date());
                 }}
                 // disabled={!isServiceAvailable || checkingService}
                 style={[
@@ -1765,7 +1798,15 @@ export default function BookPickup() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => setPickupType("schedule")}
+                onPress={() => {
+                  setPickupType("schedule");
+                  const todayStr = new Date().toDateString();
+                  if (date.toDateString() === todayStr) {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    setDate(tomorrow);
+                  }
+                }}
                 style={[
                   s.tab,
                   pickupType === "schedule" && {
@@ -1820,6 +1861,7 @@ export default function BookPickup() {
                     lng={selectedPickupAddr.longitude}
                     zoneId={zoneData?.zoneId}
                     selectedSlot={selectedSlotIndex}
+                    onlyToday={true}
                     onSelect={(index, slot) => {
                       setSelectedSlotIndex(index);
                       setSelectedSlotData(slot);
@@ -2068,6 +2110,8 @@ export default function BookPickup() {
                     zoneId={zoneData?.zoneId}
                     date={formatDateForApi(date)}
                     selectedSlot={selectedSlotIndex}
+                    onlySchedule={true}
+                    hideDayBadge={true}
                     onSelect={(index, slot) => {
                       setSelectedSlotIndex(index);
                       setSelectedSlotData(slot);
@@ -2143,6 +2187,14 @@ export default function BookPickup() {
                   </TouchableOpacity>
                 )}
               </View>
+              {selectedSlotData?.time && (
+                <Text
+                  style={ms.pickSelectTab}
+                >
+                  Pickup by{" "}
+                  {selectedSlotData.time.split(" - ")[1] || selectedSlotData.time} • Estimated delivery: {getDynamicDeliveryLabel(selectedSlotData)}
+                </Text>
+              )}
 
               <CartSection />
 
