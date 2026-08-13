@@ -50,6 +50,7 @@ import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
+import Banner from "../../../../assets/homeicons/Banner1.svg";
 
 const { width } = Dimensions.get("window");
 
@@ -985,13 +986,18 @@ export default function Home() {
                     paddingHorizontal: 16,
                   }}
                 >
-                  <DotLottie
+                   <Banner
+                    width="100%"
+                    height={130}
+                    preserveAspectRatio="xMidYMid meet"
+                  /> 
+                  {/* <DotLottie
                     key={lottieKey}
                     source={require("../../../../assets/Anim_Banner.lottie")}
                     autoPlay
                     loop
                     style={{ width: "100%", height: "100%" }}
-                  />
+                  /> */}
                 </TouchableOpacity>
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
