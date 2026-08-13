@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
-import GroundSvg from "@/assets/bookAnim/ground.svg";
+import GroundSvg from "@/assets/bookAnim/Ground.svg";
 
 const { width: W } = Dimensions.get("window");
 const GLOBE_W = 1000;

@@ -50,6 +50,7 @@ import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
+import { useCart } from "@/context/CartContext";
 
 const { width } = Dimensions.get("window");
 
@@ -263,6 +264,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
 
   const { notifications, cancelledData, promoNotification, clearPromoNotification } = useNotifications();
+  const { items: cartItems } = useCart();
+  const cartTotalQty = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
   // Force DotLottie to re-mount every time this screen gains focus
   const [lottieKey, setLottieKey] = useState(0);
@@ -1156,7 +1159,7 @@ export default function Home() {
               </View>
             </ScrollView>
 
-            {activeType === 'none' && !bookingLoading && (
+            {activeType === 'none' && !bookingLoading && cartTotalQty === 0 && (
               <View style={{
                 position: 'absolute',
                 bottom: 0,
@@ -1181,7 +1184,7 @@ export default function Home() {
             <FloatingCart
               onOpen={() => setCartOpen(true)}
               bottomOffset={
-                activeType === "none"
+                activeType === "none" && cartTotalQty === 0
                   ? 60
                   : 12
               }
