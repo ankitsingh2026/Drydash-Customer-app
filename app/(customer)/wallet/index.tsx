@@ -266,7 +266,7 @@ export default function WalletPage() {
             </Text>
           </View>
 
-          <Text style={[styles.balance, { color: theme.text }]}>₹ 1,240</Text>
+          <Text style={[styles.balance, { color: theme.text }]}>₹ 0</Text>
 
           <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
             <TouchableOpacity

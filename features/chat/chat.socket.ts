@@ -5,7 +5,7 @@ import { Message } from './chat.types';
 let socket: Socket | null = null;
 
 export const connectChatSocket = (token?: string) => {
-  const SOCKET_URL = "https://api.shiptos.com"
+  const SOCKET_URL = "https://staging.shiptos.com"
   socket = io(SOCKET_URL, {
     transports: ['websocket'],
     auth: token ? { token } : undefined,

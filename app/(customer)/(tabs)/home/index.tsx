@@ -104,7 +104,7 @@ const QUICK_SERVICES = [
     slug: "dryclean",
     label: "APPAREL DRY CLEAN",
     subtitle: "Gentle and premium care",
-    timelineText: "Up to 8 hours",
+    timelineText: "Up to 24 hours",
     icon: DrycleanIcon,
   },
   {
@@ -597,7 +597,6 @@ export default function Home() {
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <SafeAreaProvider>
         <TabBar
-          onOpenNotifications={() => setOpen(true)}
           onWalletPress={() => router.push("/(customer)/wallet")}
           style={{
             backgroundColor: theme.card,

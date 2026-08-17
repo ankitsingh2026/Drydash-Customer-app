@@ -6,6 +6,7 @@ import { router } from "expo-router";
 import { useTheme } from "@/theme/useTheme";
 import { darkTheme } from "@/theme/darkTheme";
 import {
+  Bell,
   ChevronRight,
   FileText,
   Gift,
@@ -16,6 +17,7 @@ import {
   UserPen,
   Sun,
   Moon,
+  Wallet,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +30,8 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
+import { useNotifications } from "@/context/NotificationContext";
 
 /* ================= HELPERS ================= */
 
@@ -267,7 +271,9 @@ export default function Profile() {
   const { theme, colors, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
   const { logout, setAuthUser } = useAuthContext();
+  const { unreadCount, refreshNotifications } = useNotifications();
   const [profile, setProfile] = useState<any>(null);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const activeColors = useMemo(
     () => ({
@@ -389,6 +395,19 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
     });
   }, [profile]);
 
+  const onNotificationsPress = useCallback(async () => {
+    try {
+      await refreshNotifications();
+    } catch (error) {
+      console.log("Notification refresh error:", error);
+    }
+    setNotificationsOpen(true);
+  }, [refreshNotifications]);
+
+  const onWalletPress = useCallback(() => {
+    router.push("/(customer)/wallet");
+  }, []);
+
   const onHelpSupport = useCallback(() => {
     router.push("/(customer)/(tabs)/assistant");
   }, []);
@@ -417,10 +436,35 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >
-        {/* ── PAGE TITLE ── */}
-        <Text style={[styles.pageTitle, { color: activeColors.text }]}>
-          Profile
-        </Text>
+        {/* ── HEADER ACTIONS ── */}
+        <View style={styles.topRow}>
+          <View style={styles.actionGroup}>
+            {/* <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onWalletPress}
+              style={[styles.actionButton, { backgroundColor: activeColors.card, borderColor: activeColors.border }]}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Wallet size={17} color={activeColors.text} />
+            </TouchableOpacity> */}
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={onNotificationsPress}
+              style={[styles.actionButton, { backgroundColor: activeColors.card, borderColor: activeColors.border }]}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Bell size={18} color={activeColors.text} />
+              {unreadCount > 0 && (
+                <View style={[styles.notificationBadge, { backgroundColor: activeColors.primary }]}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* ── AVATAR + NAME ── */}
         <View style={styles.header}>
@@ -612,6 +656,11 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <NotificationsTopSheet
+        visible={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -629,12 +678,41 @@ const makeStyles = (theme: any, isDark: boolean) => {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.bg },
     scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
-    pageTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-      color: colors.text,
-      textAlign: "center",
-      marginBottom: 20,
+    topRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      // marginBottom: 20,
+    },
+    actionGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    actionButton: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    },
+    notificationBadge: {
+      position: "absolute",
+      top: 2,
+      right: 2,
+      minWidth: 14,
+      height: 14,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+    },
+    notificationBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "800",
     },
     header: { alignItems: "center", marginBottom: 20 },
     avatarGlow: {
