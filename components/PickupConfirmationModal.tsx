@@ -1,10 +1,9 @@
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
   Easing,
-  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,10 +13,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import GroundSvg from "@/assets/bookAnim/Ground.svg";
+import RiderSvg from "@/assets/bookAnim/Rider.svg";
 
-const { width: W } = Dimensions.get("window");
+const { width: W, height: SCREEN_H } = Dimensions.get("window");
 const GLOBE_W = 1000;
-const GLOBE_H = (1691 / 1710) * GLOBE_W; 
+const GLOBE_H = (1691 / 1710) * GLOBE_W;
+
+// ── Rider dimensions (SVG static image) ──────────────────────────────────
+const RIDER_W = 160;
+const RIDER_H = 120;
 
 // ── Colours ───────────────────────────────────────────────────────────────
 const C = {
@@ -38,7 +42,13 @@ interface Props {
   address?: string;
   /** Pickup slot string, e.g. "Today before 3 PM" */
   slotLabel?: string;
-  /** Called after phase-2 animation completes - parent should navigate */
+  /**
+   * Called at the VERY START of the exit animation (before it finishes).
+   * Use this to trigger router.replace so the home screen loads underneath
+   * while the card is still animating upward.
+   */
+  onNavigate?: () => void;
+  /** Called after the exit animation fully completes — hide the overlay here */
   onDismiss: () => void;
 }
 
@@ -47,6 +57,7 @@ export default function PickupConfirmationModal({
   confirmed,
   address,
   slotLabel,
+  onNavigate,
   onDismiss,
 }: Props) {
   const insets = useSafeAreaInsets();
@@ -55,50 +66,78 @@ export default function PickupConfirmationModal({
   const [phase, setPhase] = useState<"loading" | "confirmed">("loading");
   const dismissCalledRef = useRef(false);
 
+  // ── Visibility – opacity-based so component stays mounted & assets stay warm
+  const visibilityAnim = useRef(new Animated.Value(0)).current;
+
   // ── Ground rotation loop ──────────────────────────────────────────────
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const rotateAnimLoop = useRef<Animated.CompositeAnimation | null>(null);
 
-  // ── Scooter position (horizontal slide out to the right on confirm) ────
-  const scooterX = useRef(new Animated.Value(0)).current;
-  const scooterOpacity = useRef(new Animated.Value(1)).current;
+  // ── Rider position (horizontal slide out to the right on confirm) ──────
+  const riderX = useRef(new Animated.Value(0)).current;
+  const riderOpacity = useRef(new Animated.Value(1)).current;
 
   // ── Confirmed-phase animations ─────────────────────────────────────────
   const bgOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
   const titleY = useRef(new Animated.Value(20)).current;
-  const cardY = useRef(new Animated.Value(60)).current;
+  // Card sweeps up from below screen, exits by continuing upward on dismiss
+  const cardY = useRef(new Animated.Value(SCREEN_H)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
-  // ── Lottie refs ────────────────────────────────────────────────────────
-  const scooterRef = useRef<LottieView>(null);
+  // ── Lottie ref for confirmation checkmark ─────────────────────────────
   const confirmRef = useRef<LottieView>(null);
   const [showConfirmLottie, setShowConfirmLottie] = useState(false);
 
-  // ─── Reset on open ─────────────────────────────────────────────────────
+  // ─── Exit: navigate first, then fade overlay after home is the active screen ───
+  const animateOutAndDismiss = useCallback(() => {
+    if (dismissCalledRef.current) return;
+    dismissCalledRef.current = true;
+
+    // ▶ Fire router.replace to home immediately
+    onNavigate?.();
+
+    // Keep overlay fully opaque while the stack transition commits.
+    // Once home is the active screen (~150ms), fade the overlay out smoothly.
+    // This ensures book-pickup NEVER shows through the fade.
+    setTimeout(() => {
+      Animated.timing(visibilityAnim, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        onDismiss();
+      });
+    }, 150);
+  }, [visibilityAnim, onNavigate, onDismiss]);
+
+  // ─── Show / hide via opacity (component always stays mounted) ──────────
   useEffect(() => {
+    Animated.timing(visibilityAnim, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? 60 : 200,
+      useNativeDriver: true,
+    }).start();
+
     if (visible) {
+      // Reset all state for fresh animation
       dismissCalledRef.current = false;
       setPhase("loading");
       setShowConfirmLottie(false);
 
-      // Reset animated values
       rotateAnim.setValue(0);
-      scooterX.setValue(0);
-      scooterOpacity.setValue(1);
+      riderX.setValue(0);
+      riderOpacity.setValue(1);
       bgOpacity.setValue(0);
       titleOpacity.setValue(0);
       titleY.setValue(20);
-      cardY.setValue(60);
+      cardY.setValue(SCREEN_H);
       cardOpacity.setValue(0);
 
       // Start continuous ground rotation
       startGroundRotate();
-
-      // Play scooter lottie
-      setTimeout(() => scooterRef.current?.play(), 100);
     } else {
-      // Stop animations when hidden
       rotateAnimLoop.current?.stop();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,13 +151,13 @@ export default function PickupConfirmationModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmed]);
 
-  // ─── Continuous Rotation Loop (Right-to-Left on Fixed Axis) ──────────────
+  // ─── Continuous Rotation Loop ─────────────────────────────────────────
   const startGroundRotate = () => {
     rotateAnim.setValue(0);
     const loop = Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 18000, // 18s for majestic continuous 360-degree rotation
+        duration: 18000,
         easing: Easing.linear,
         useNativeDriver: true,
       })
@@ -129,93 +168,95 @@ export default function PickupConfirmationModal({
 
   const groundRotation = rotateAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["0deg", "-360deg"], // Counter-clockwise rotation: ground moves Right -> Left
+    outputRange: ["0deg", "-360deg"],
   });
 
   // ─── Phase-2 sequence ──────────────────────────────────────────────────
   const triggerConfirmAnimation = () => {
-    // 1. Initial hold in center for 1.6s so user perceives the riding moment
+    // 1. Brief hold (500ms) — just enough to perceive the rider
     setTimeout(() => {
-      // 2. Scooter accelerates smoothly off to the right edge over 1.2s
+      // 2. Rider accelerates off to the right (700ms)
       Animated.parallel([
-        Animated.timing(scooterX, {
+        Animated.timing(riderX, {
           toValue: W + 200,
-          duration: 1200,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
+          duration: 700,
+          easing: Easing.bezier(0.4, 0, 1, 1),
           useNativeDriver: true,
         }),
-        Animated.timing(scooterOpacity, {
+        Animated.timing(riderOpacity, {
           toValue: 0,
-          duration: 800,
-          delay: 400,
+          duration: 450,
+          delay: 250,
           useNativeDriver: true,
         }),
       ]).start(() => {
-        // Stop ground rotation loop
         rotateAnimLoop.current?.stop();
 
-        // Switch to confirmed phase
+        // 3. Switch to confirmed phase, fade in green bg (250ms)
         setPhase("confirmed");
-
-        // Fade in green background
         Animated.timing(bgOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 250,
           useNativeDriver: true,
         }).start(() => {
-          // Show confirmation checkmark lottie
+          // 4. Show checkmark lottie + title (simultaneously, fast)
           setShowConfirmLottie(true);
-          setTimeout(() => confirmRef.current?.play(), 50);
+          confirmRef.current?.play();
 
-          // Animate title
           Animated.parallel([
             Animated.timing(titleOpacity, {
               toValue: 1,
-              duration: 350,
+              duration: 250,
               useNativeDriver: true,
             }),
             Animated.timing(titleY, {
               toValue: 0,
-              duration: 350,
+              duration: 250,
               easing: Easing.out(Easing.quad),
               useNativeDriver: true,
             }),
           ]).start();
 
-          // Slide up confirmed card
+          // 5. Card sweeps up from bottom of screen (spring, snappy)
           setTimeout(() => {
             Animated.parallel([
               Animated.timing(cardOpacity, {
                 toValue: 1,
-                duration: 400,
+                duration: 200,
                 useNativeDriver: true,
               }),
               Animated.spring(cardY, {
                 toValue: 0,
-                friction: 8,
-                tension: 80,
+                friction: 7,
+                tension: 72,
                 useNativeDriver: true,
               }),
             ]).start();
-          }, 250);
+          }, 150);
 
-          // Auto-dismiss after animations settle
+          // 6. Auto-dismiss after 1s on confirmed screen, then fast fade to home
           setTimeout(() => {
-            if (!dismissCalledRef.current) {
-              dismissCalledRef.current = true;
-              onDismiss();
-            }
-          }, 3000);
+            animateOutAndDismiss();
+          }, 1000);
         });
       });
-    }, 1600);
+    }, 500);
   };
 
-  // ────────────────────────────────────────────────────────────────────────
-  if (!visible) return null;
-
+  // ── Always rendered; visibility controlled via opacity ──────────────────
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 99999, backgroundColor: C.lightBg }]}>
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          zIndex: 99999,
+          opacity: visibilityAnim,
+          pointerEvents: visible ? "auto" : "none",
+        },
+      ]}
+    >
+      <View style={{ flex: 1, backgroundColor: C.lightBg }}>
+
         {/* ── PHASE 1: Loading / scheduling ── */}
         {phase === "loading" && (
           <View style={styles.loadingPhase}>
@@ -227,42 +268,32 @@ export default function PickupConfirmationModal({
               </Text>
             </View>
 
-            {/* Scooter + Rotating Globe stage */}
+            {/* Rider SVG + Rotating Globe stage */}
             <View style={styles.stage}>
-              {/* Solid green base fill under globe connecting seamlessly to bottom section */}
+              {/* Solid green base fill */}
               <View style={styles.stageGreenBase} />
 
-              {/* Rotating Globe SVG (India Gate, Qutub Minar, Lotus Temple, Red Fort rotate behind scooter) */}
+              {/* Rotating Globe SVG */}
               <Animated.View
                 style={[
                   styles.globeWrap,
-                  {
-                    transform: [{ rotate: groundRotation }],
-                  },
+                  { transform: [{ rotate: groundRotation }] },
                 ]}
               >
                 <GroundSvg width={GLOBE_W} height={GLOBE_H} />
               </Animated.View>
 
-              {/* Scooter rider (lottie) - fixed at top center of green hill horizon */}
+              {/* Rider SVG (replaces Lottie scooter) */}
               <Animated.View
                 style={[
-                  styles.scooterWrap,
+                  styles.riderWrap,
                   {
-                    transform: [{ translateX: scooterX }],
-                    opacity: scooterOpacity,
+                    transform: [{ translateX: riderX }],
+                    opacity: riderOpacity,
                   },
                 ]}
               >
-                <LottieView
-                  ref={scooterRef}
-                  source={require("@/assets/bookAnim/delivery-scooter-rider.json")}
-                  style={styles.scooterLottie}
-                  loop
-                  autoPlay
-                  speed={1}
-                  resizeMode="contain"
-                />
+                <RiderSvg width={RIDER_W} height={RIDER_H} />
               </Animated.View>
             </View>
 
@@ -310,7 +341,7 @@ export default function PickupConfirmationModal({
                 PICKUP{"\n"}CONFIRMED
               </Animated.Text>
 
-              {/* Checkmark lottie */}
+              {/* Confirmation checkmark lottie */}
               {showConfirmLottie && (
                 <LottieView
                   ref={confirmRef}
@@ -318,13 +349,13 @@ export default function PickupConfirmationModal({
                   style={styles.confirmLottie}
                   loop={false}
                   autoPlay
-                  speed={1.2}
+                  speed={1.3}
                   resizeMode="contain"
                 />
               )}
             </View>
 
-            {/* Bottom pickup info card */}
+            {/* Bottom pickup info card — sweeps up from below screen */}
             <Animated.View
               style={[
                 styles.confirmedCard,
@@ -337,17 +368,9 @@ export default function PickupConfirmationModal({
             >
               {/* Pickup scheduled badge & slot */}
               <View style={styles.confirmedCardInner}>
-                <View style={styles.scheduledRow}>
-                  <View style={styles.scheduledBadge}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={C.green}
-                    />
-                    <Text style={styles.scheduledBadgeText}>
-                      PICKUP SCHEDULED
-                    </Text>
-                  </View>
+                <View style={styles.scheduledBadge}>
+                  <Ionicons name="checkmark-circle" size={16} color={C.green} />
+                  <Text style={styles.scheduledBadgeText}>PICKUP SCHEDULED</Text>
                 </View>
 
                 <Text style={styles.pickupLabel}>Pickup</Text>
@@ -364,32 +387,24 @@ export default function PickupConfirmationModal({
                 </Text>
               </View>
 
+              {/* Manual dismiss — triggers the slide-up exit animation */}
               <TouchableOpacity
                 style={styles.returnBtn}
-                onPress={() => {
-                  if (!dismissCalledRef.current) {
-                    dismissCalledRef.current = true;
-                    onDismiss();
-                  }
-                }}
+                onPress={animateOutAndDismiss}
                 activeOpacity={0.85}
               >
-                <Text style={styles.returnBtnText}>Return</Text>
+                <Text style={styles.returnBtnText}>Return to Home</Text>
               </TouchableOpacity>
             </Animated.View>
           </Animated.View>
         )}
       </View>
+    </Animated.View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.lightBg,
-  },
-
   // ── Phase 1 ──────────────────────────────────────────────────────────
   loadingPhase: {
     flex: 1,
@@ -416,7 +431,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Stage (globe + scooter)
+  // Stage (globe + rider)
   stage: {
     flex: 1,
     alignItems: "center",
@@ -436,19 +451,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: GLOBE_W,
     height: GLOBE_H,
-    bottom: -570, // Creates wide gentle arc matching target Image 2
+    bottom: -570,
     alignSelf: "center",
     zIndex: 10,
   },
-  scooterWrap: {
+  riderWrap: {
     position: "absolute",
-    bottom: 272, // Lifted so wheels sit perfectly on top of green hill curve
+    bottom: 272,        // sits on top of the green hill arc
     alignSelf: "center",
-    zIndex: 100, // Guaranteed on top of globe and green base
-  },
-  scooterLottie: {
-    width: 145,
-    height: 108,
+    zIndex: 100,
   },
 
   // Bottom green address section
@@ -509,31 +520,34 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 1,
     lineHeight: 42,
-    marginBottom: 28,
+    marginBottom: 24,
   },
   confirmLottie: {
     width: 140,
     height: 140,
   },
 
-  // Bottom card in Phase 2
+  // Bottom card — sweeps up on enter, slides further up on exit (into home)
   confirmedCard: {
     backgroundColor: C.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     paddingHorizontal: 20,
     paddingTop: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    elevation: 22,
   },
   confirmedCardInner: {
-    paddingVertical: 8,
-  },
-  scheduledRow: {
-    marginBottom: 8,
+    paddingVertical: 6,
   },
   scheduledBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    marginBottom: 6,
   },
   scheduledBadgeText: {
     fontSize: 12,
@@ -544,7 +558,7 @@ const styles = StyleSheet.create({
   pickupLabel: {
     fontSize: 14,
     color: C.textMuted,
-    marginTop: 4,
+    marginTop: 2,
   },
   slotText: {
     fontSize: 18,
@@ -565,12 +579,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   returnBtn: {
-    marginTop: 18,
+    marginTop: 16,
     backgroundColor: C.green,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 16,
+    paddingVertical: 17,
     alignItems: "center",
     marginHorizontal: 4,
+    marginBottom: 4,
   },
   returnBtnText: {
     color: C.white,

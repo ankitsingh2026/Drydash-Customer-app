@@ -51,6 +51,7 @@ import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
 import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 import { useCart } from "@/context/CartContext";
+import { useHomeData } from "@/context/HomeDataContext";
 
 const { width } = Dimensions.get("window");
 
@@ -267,6 +268,9 @@ export default function Home() {
   const { items: cartItems } = useCart();
   const cartTotalQty = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
+  // HomeData context – used to skip redundant fetches after a booking redirect
+  const { skipNextFetch, setSkipNextFetch } = useHomeData();
+
   // Force DotLottie to re-mount every time this screen gains focus
   const [lottieKey, setLottieKey] = useState(0);
   useFocusEffect(
@@ -277,6 +281,14 @@ export default function Home() {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Skip the getMeApi call if we're coming from a fresh booking redirect;
+      // the user object is already up-to-date in AuthContext.
+      if (skipNextFetch) {
+        // Populate userName from the cached user object instead of a network call
+        const cachedName = (user as any)?.firstName || (user as any)?.user?.firstName || "";
+        if (cachedName) setUserName(cachedName);
+        return;
+      }
       try {
         const me = await getMeApi();
         await setAuthUser(me);
@@ -531,8 +543,45 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      refreshBooking();
       const hasBookingParam = params.justBooked === "1" || params.orderPlaced === "1";
+
+      // ── Fast path: coming from a booking redirect ──────────────────────────
+      // Skip refreshBooking (saves ~300-600ms API round-trip) and clear the flag
+      // so subsequent focus events run normally.
+      if (skipNextFetch) {
+        setSkipNextFetch(false);
+
+        if (hasBookingParam && !spotlightShownRef.current) {
+          spotlightShownRef.current = true;
+          router.setParams({ justBooked: undefined, orderPlaced: undefined });
+
+          spotlightDim.setValue(0);
+          spotlightCard.setValue(0);
+          setSpotlightMode(true);
+          setSpotlightVisible(true);
+
+          Animated.parallel([
+            Animated.timing(spotlightDim, {
+              toValue: 1,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.spring(spotlightCard, {
+              toValue: 1,
+              friction: 8,
+              tension: 65,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }
+
+        // Trigger refreshBooking in background without blocking render
+        setTimeout(() => refreshBooking(), 800);
+        return;
+      }
+
+      // ── Normal path ────────────────────────────────────────────────────────
+      refreshBooking();
       if (hasBookingParam && !spotlightShownRef.current) {
         spotlightShownRef.current = true;
         router.setParams({ justBooked: undefined, orderPlaced: undefined });
@@ -556,7 +605,7 @@ export default function Home() {
           }),
         ]).start();
       }
-    }, [params.orderPlaced, params.justBooked]),
+    }, [params.orderPlaced, params.justBooked, skipNextFetch]),
   );
 
   useEffect(() => {

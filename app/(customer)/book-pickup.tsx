@@ -4,6 +4,7 @@ import PickupMap from "@/components/maps/PickupMap.native";
 import { SuccessModal } from "@/components/SuccessModal";
 import PickupConfirmationModal from "@/components/PickupConfirmationModal";
 import { useAddress } from "@/context/AddressContext";
+import { useHomeData } from "@/context/HomeDataContext";
 import { useCart } from "@/context/CartContext";
 import { checkServiceAvailability, getFullServiceData } from "@/features/location/location.api";
 import {
@@ -226,6 +227,7 @@ export default function BookPickup() {
   const [pickerType, setPickerType] = useState<"pickup" | "delivery">("pickup");
 
   const { items, setQty, removeItem, clear } = useCart();
+  const { setSkipNextFetch, setCachedData, showBookingModal, confirmBookingModal, hideBookingModal } = useHomeData();
   const preSelectedTimeRef = useRef<string>("");
 
   const cartSubtotal = items.reduce(
@@ -768,7 +770,7 @@ export default function BookPickup() {
           },
         });
         setConfirmLoading(false);
-        setShowBookingAnim(false);
+        hideBookingModal();
         return;
       }
 
@@ -801,7 +803,7 @@ export default function BookPickup() {
           },
         });
         setConfirmLoading(false);
-        setShowBookingAnim(false);
+        hideBookingModal();
         return;
       }
 
@@ -874,11 +876,11 @@ export default function BookPickup() {
 
       await createOrderApi(orderDetails);
       // Signal animation modal that booking succeeded
-      setBookingConfirmed(true);
+      confirmBookingModal();
     } catch (err: any) {
       console.log("Background booking error (order may still exist):", err?.message);
       // Even on error, transition to confirmed so UX doesn't hang
-      setBookingConfirmed(true);
+      confirmBookingModal();
     } finally {
       setConfirmLoading(false);
     }
@@ -955,15 +957,12 @@ export default function BookPickup() {
       ? `${selectedPickupAddr.line1 || selectedPickupAddr.street || ""}, ${selectedPickupAddr.city || ""}`
       : "";
 
-    // Store address/slot for the animation modal
-    bookingAnimAddressRef.current = address;
-    bookingAnimSlotRef.current = selectedSlotData?.time
+    const slotLabel = selectedSlotData?.time
       ? `Today before ${selectedSlotData.time.split(" - ")[1] || selectedSlotData.time}`
       : "Today";
 
-    // Reset confirmed flag and show modal
-    setBookingConfirmed(false);
-    setShowBookingAnim(true);
+    // Show the modal via context (modal lives at root layout level)
+    showBookingModal(address, slotLabel);
 
     // Clear cart
     clear();
@@ -2332,24 +2331,8 @@ export default function BookPickup() {
           </View>
         </View>
 
-        {/* ══════════════════ PICKUP CONFIRMATION ANIMATION MODAL ══════════════════ */}
-        <PickupConfirmationModal
-          visible={showBookingAnim}
-          confirmed={bookingConfirmed}
-          address={bookingAnimAddressRef.current}
-          slotLabel={bookingAnimSlotRef.current}
-          onDismiss={() => {
-            router.replace({
-              pathname: "/(customer)/(tabs)/home",
-              params: {
-                orderPlaced: "1",
-                justBooked: "1",
-                bookingAddress: bookingAnimAddressRef.current,
-                bookingSlot: bookingAnimSlotRef.current,
-              },
-            });
-          }}
-        />
+        {/* PickupConfirmationModal is rendered at _layout.tsx root level */}
+        {/* so it persists across navigation and can animate over the home screen */}
 
         {/* ══════════════════ NOTES MODAL ══════════════════ */}
         <Modal
