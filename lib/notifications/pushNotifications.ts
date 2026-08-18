@@ -5,7 +5,7 @@ import { PermissionsAndroid, Platform } from "react-native";
 import axios from "axios";
 import { BASE_URL } from "../api/client";
 
-const API_URL = "https://staging.shiptos.com";
+const API_URL = "https://api.shiptos.com";
 
 async function requestPermission(): Promise<boolean> {
   if (Platform.OS === "android" && Number(Platform.Version) >= 33) {

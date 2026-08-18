@@ -8,13 +8,13 @@ export const apiClient = axios.create({
 });
 
 export const oldApiClient = axios.create({
-  baseURL: "https://staging.shiptos.com/api", // old backend
+  baseURL: "https://api.shiptos.com/api", // old backend
   headers: { "Content-Type": "application/json" },
 });
 
 
 export const multipartApiClient = axios.create({
-    baseURL: "https://staging.shiptos.com/api", // old backend
+    baseURL: "https://api.shiptos.com/api", // old backend
     headers: {
     "Content-Type": "multipart/form-data",
   },
@@ -25,4 +25,4 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-export const BASE_URL = "https://staging.shiptos.com"; 
+export const BASE_URL = "https://api.shiptos.com"; 
