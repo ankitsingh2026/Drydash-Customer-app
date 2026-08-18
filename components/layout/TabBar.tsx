@@ -225,9 +225,9 @@ export const TabBar = ({ onWalletPress, style }: TabBarProps) => {
     }
   }, [allAddresses, loading]);
 
-  const fetchFullServiceData = async (lat: number, lng: number) => {
+  const fetchFullServiceData = async (lat: number, lng: number, forceRefresh = false) => {
     try {
-      const data = await getFullServiceData(lat, lng, true); // force refresh
+      const data = await getFullServiceData(lat, lng, forceRefresh);
       updateServiceData(data);
     } catch (error) {
       console.error("Full service data error:", error);

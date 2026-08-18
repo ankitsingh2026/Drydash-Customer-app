@@ -239,18 +239,21 @@ export default function Home() {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
-  // ─── Spotlight mode (shown just after booking redirect) ──────────────────
-  const [spotlightMode, setSpotlightMode] = useState(false);
-  const [spotlightVisible, setSpotlightVisible] = useState(false); // controls render (keeps alive during fade-out)
-  const spotlightCard = useRef(new Animated.Value(0)).current;   // 0→1 for card entrance
-  const spotlightDim  = useRef(new Animated.Value(0)).current;   // 0→1 for content dim
-  const spotlightShownRef = useRef(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [popupVisible, setPopupVisible] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [activeBooking, setActiveBooking] = useState<any>(null);
-  const [activeType, setActiveType] = useState<"none" | "pickup" | "order">("none");
+  const [activeBooking, setActiveBooking] = useState<any>(() =>
+    isFromBooking && (params.bookingSlot || params.bookingAddress)
+      ? {
+          slot: params.bookingSlot,
+          pickup_address: { address: params.bookingAddress },
+        }
+      : null
+  );
+  const [activeType, setActiveType] = useState<"none" | "pickup" | "order">(
+    isFromBooking ? "pickup" : "none"
+  );
   const [bookingLoading, setBookingLoading] = useState(false);
   const TAB_BAR_HEIGHT = 0;
 
@@ -463,8 +466,9 @@ export default function Home() {
   }, [placeholderIndex, isFocused, searchQuery, placeholderAnim]);
 
   useEffect(() => {
+    if (skipNextFetch) return;
     refreshBooking();
-  }, [refreshBooking, cancelledData]);
+  }, [refreshBooking, cancelledData, skipNextFetch]);
 
   const lastNotificationIdRef = useRef<string | null>(null);
 
@@ -512,6 +516,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (isFromBooking) {
+      setLoading(false);
+      fadeAnim.setValue(1);
+      return;
+    }
     if (!addressLoading) {
       const t = setTimeout(() => {
         setLoading(false);
@@ -524,7 +533,7 @@ export default function Home() {
 
       return () => clearTimeout(t);
     }
-  }, [addressLoading, zoneData]);
+  }, [addressLoading, zoneData, isFromBooking]);
 
   const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(-1);
   const [selectedSlotData, setSelectedSlotData] = useState<any>(null);
@@ -543,104 +552,9 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      const hasBookingParam = params.justBooked === "1" || params.orderPlaced === "1";
-
-      // ── Fast path: coming from a booking redirect ──────────────────────────
-      // Skip refreshBooking (saves ~300-600ms API round-trip) and clear the flag
-      // so subsequent focus events run normally.
-      if (skipNextFetch) {
-        setSkipNextFetch(false);
-
-        if (hasBookingParam && !spotlightShownRef.current) {
-          spotlightShownRef.current = true;
-          router.setParams({ justBooked: undefined, orderPlaced: undefined });
-
-          spotlightDim.setValue(0);
-          spotlightCard.setValue(0);
-          setSpotlightMode(true);
-          setSpotlightVisible(true);
-
-          Animated.parallel([
-            Animated.timing(spotlightDim, {
-              toValue: 1,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.spring(spotlightCard, {
-              toValue: 1,
-              friction: 8,
-              tension: 65,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
-
-        // Trigger refreshBooking in background without blocking render
-        setTimeout(() => refreshBooking(), 800);
-        return;
-      }
-
-      // ── Normal path ────────────────────────────────────────────────────────
       refreshBooking();
-      if (hasBookingParam && !spotlightShownRef.current) {
-        spotlightShownRef.current = true;
-        router.setParams({ justBooked: undefined, orderPlaced: undefined });
-
-        spotlightDim.setValue(0);
-        spotlightCard.setValue(0);
-        setSpotlightMode(true);
-        setSpotlightVisible(true);
-
-        Animated.parallel([
-          Animated.timing(spotlightDim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.spring(spotlightCard, {
-            toValue: 1,
-            friction: 8,
-            tension: 65,
-            useNativeDriver: true,
-          }),
-        ]).start();
-      }
-    }, [params.orderPlaced, params.justBooked, skipNextFetch]),
+    }, [refreshBooking])
   );
-
-  useEffect(() => {
-    if (!spotlightVisible) return;
-
-    const safetyTimer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(spotlightDim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(spotlightCard, { toValue: 0, duration: 300, useNativeDriver: true }),
-      ]).start(() => {
-        setSpotlightMode(false);
-        setSpotlightVisible(false);
-        spotlightShownRef.current = false;
-      });
-    }, 3000);
-
-    return () => clearTimeout(safetyTimer);
-  }, [spotlightVisible]);
-
-  useEffect(() => {
-    if (!spotlightVisible || !activeBooking) return;
-
-    const timer = setTimeout(() => {
-      Animated.parallel([
-        Animated.timing(spotlightDim, { toValue: 0, duration: 350, useNativeDriver: true }),
-        Animated.timing(spotlightCard, { toValue: 0, duration: 350, useNativeDriver: true }),
-      ]).start(() => {
-        setSpotlightMode(false);
-        setSpotlightVisible(false);
-        spotlightShownRef.current = false;
-      });
-    }, 1500);
-
-    return () => clearTimeout(timer);
-  }, [spotlightVisible, activeBooking]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -670,167 +584,10 @@ export default function Home() {
               onDismiss={clearPromoNotification}
             />
 
-            {spotlightVisible && (
-              <Animated.View
-                pointerEvents="none"
-                style={[
-                  StyleSheet.absoluteFill,
-                  {
-                    backgroundColor: isDark ? "rgba(0,0,0,0.72)" : "rgba(0,0,0,0.55)",
-                    zIndex: 80,
-                    opacity: spotlightDim,
-                  },
-                ]}
-              />
-            )}
-
-            {/* ── SPOTLIGHT CARD ── shows real PickupStatusCard once data loads ── */}
-            {spotlightVisible && (
-              <Animated.View
-                style={{
-                  position: "absolute",
-                  left: 16,
-                  right: 16,
-                  top: styles.spotlightTop.top,
-                  zIndex: 90,
-                  opacity: spotlightCard,
-                  transform: [
-                    {
-                      translateY: spotlightCard.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [styles.spotlightTop.entranceOffset, 0],
-                      }),
-                    },
-                    {
-                      scale: spotlightCard.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.92, 1],
-                      }),
-                    },
-                  ],
-                }}
-              >
-                <Animated.View
-                  pointerEvents="none"
-                  style={{
-                    position: "absolute",
-                    top: -12,
-                    left: -12,
-                    right: -12,
-                    bottom: -12,
-                    borderRadius: 34,
-                    shadowColor: theme.primary,
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.55,
-                    shadowRadius: 30,
-                    elevation: 20,
-                    opacity: spotlightCard,
-                  }}
-                />
-
-                <View style={{ alignItems: "center", marginBottom: 10 }}>
-                  <View style={{
-                    backgroundColor: theme.primary,
-                    paddingHorizontal: 16,
-                    paddingVertical: 7,
-                    borderRadius: 20,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 7,
-                    shadowColor: theme.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 8,
-                    elevation: 8,
-                  }}>
-                    <Ionicons name="checkmark-circle" size={16} color={isDark ? "#001714" : "#fff"} />
-                    <Text style={{ color: isDark ? "#001714" : "#fff", fontWeight: "800", fontSize: 14, letterSpacing: 0.3 }}>
-                      Booking Confirmed!
-                    </Text>
-                  </View>
-                </View>
-
-                {activeBooking && activeType === "pickup" ? (
-                  <PickupStatusCard
-                    pickup={activeBooking}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/(customer)/order-tracking",
-                        params: { pickupId: activeBooking?._id },
-                      })
-                    }
-                    onActionComplete={refreshBooking}
-                  />
-                ) : (params.bookingAddress || params.bookingSlot) ? (
-                  <View style={{
-                    backgroundColor: theme.card,
-                    borderRadius: 22,
-                    padding: 20,
-                    borderWidth: 1.5,
-                    borderColor: theme.primary + "40",
-                    shadowColor: theme.primary,
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 16,
-                    elevation: 12,
-                    gap: 10,
-                  }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <View style={{
-                        width: 44, height: 44, borderRadius: 22,
-                        backgroundColor: theme.primary + "20",
-                        alignItems: "center", justifyContent: "center"
-                      }}>
-                        <Ionicons name="checkmark-circle-outline" size={24} color={theme.primary} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, fontWeight: "800", color: theme.text }}>
-                          {params.bookingSlot || "Pickup Scheduled"}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2 }} numberOfLines={1}>
-                          {params.bookingAddress || "Address confirmed"}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  // Skeleton shown while refreshBooking loads
-                  <View style={{
-                    backgroundColor: theme.card,
-                    borderRadius: 22,
-                    padding: 22,
-                    borderWidth: 1.5,
-                    borderColor: theme.primary + "30",
-                    shadowColor: theme.primary,
-                    shadowOffset: { width: 0, height: 6 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 16,
-                    elevation: 12,
-                    gap: 14,
-                  }}>
-                    {/* Skeleton row 1 */}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.primary + "25" }} />
-                      <View style={{ flex: 1, gap: 8 }}>
-                        <View style={{ height: 14, borderRadius: 7, backgroundColor: theme.border, width: "60%" }} />
-                        <View style={{ height: 11, borderRadius: 6, backgroundColor: theme.border, width: "40%" }} />
-                      </View>
-                    </View>
-                     {/* Skeleton row 1 */}
-                    <View style={{ height: 1, backgroundColor: theme.border }} />
-                    <View style={{ gap: 8 }}>
-                      <View style={{ height: 12, borderRadius: 6, backgroundColor: theme.border, width: "80%" }} />
-                      <View style={{ height: 12, borderRadius: 6, backgroundColor: theme.border, width: "65%" }} />
-                    </View>
-                  </View>
-                )}
-              </Animated.View>
-            )}
-
             <ScrollView
               style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]}
               contentContainerStyle={{ paddingBottom: 100 }}
-              scrollEnabled={!spotlightMode}
+              scrollEnabled={true}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshing}
@@ -1253,7 +1010,7 @@ export default function Home() {
         <NotificationsTopSheet visible={open} onClose={() => setOpen(false)} />
       </SafeAreaProvider>
 
-      {loading && !spotlightMode && (
+      {loading && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 99999, elevation: 99999 }]}>
           <AppLoader />
         </View>
@@ -1264,14 +1021,6 @@ export default function Home() {
 
 const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
   root: { flex: 1 },
-
-  // Not a real style prop — reused as plain numeric constants for the
-  // spotlight overlay's positioning/entrance math so they aren't
-  // recomputed as magic numbers inline in JSX.
-  spotlightTop: {
-    top: Dimensions.get("window").height * 0.24,
-    entranceOffset: Dimensions.get("window").height * 0.45,
-  } as any,
 
   searchResultsContainer: {
     position: "absolute",

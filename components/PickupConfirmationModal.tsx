@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -6,7 +5,6 @@ import {
   Easing,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,8 +27,9 @@ const C = {
   lightBg: "#F4F9F7",
   white: "#FFFFFF",
   textDark: "#0A251E",
-  textMuted: "#5A736E",
-  cardBorder: "#E0EDEA",
+  textMuted: "#6B7280",
+  cardBorder: "#E5E7EB",
+  pillBg: "#F9FAFB",
 };
 
 interface Props {
@@ -43,9 +42,7 @@ interface Props {
   /** Pickup slot string, e.g. "Today before 3 PM" */
   slotLabel?: string;
   /**
-   * Called at the VERY START of the exit animation (before it finishes).
-   * Use this to trigger router.replace so the home screen loads underneath
-   * while the card is still animating upward.
+   * Called when screen expansion finishes to trigger navigation to home screen
    */
   onNavigate?: () => void;
   /** Called after the exit animation fully completes — hide the overlay here */
@@ -80,43 +77,24 @@ export default function PickupConfirmationModal({
   // ── Confirmed-phase animations ─────────────────────────────────────────
   const bgOpacity = useRef(new Animated.Value(0)).current;
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleY = useRef(new Animated.Value(20)).current;
-  // Card sweeps up from below screen, exits by continuing upward on dismiss
-  const cardY = useRef(new Animated.Value(SCREEN_H)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
+  const titleY = useRef(new Animated.Value(15)).current;
+
+  // Bottom sheet entrance (from bottom of screen)
+  const cardEntranceAnim = useRef(new Animated.Value(180)).current;
+  const cardEntranceOpacity = useRef(new Animated.Value(0)).current;
+
+  // Upward expansion to make complete screen white (0 -> 1)
+  const expandAnim = useRef(new Animated.Value(0)).current;
 
   // ── Lottie ref for confirmation checkmark ─────────────────────────────
   const confirmRef = useRef<LottieView>(null);
   const [showConfirmLottie, setShowConfirmLottie] = useState(false);
 
-  // ─── Exit: navigate first, then fade overlay after home is the active screen ───
-  const animateOutAndDismiss = useCallback(() => {
-    if (dismissCalledRef.current) return;
-    dismissCalledRef.current = true;
-
-    // ▶ Fire router.replace to home immediately
-    onNavigate?.();
-
-    // Keep overlay fully opaque while the stack transition commits.
-    // Once home is the active screen (~150ms), fade the overlay out smoothly.
-    // This ensures book-pickup NEVER shows through the fade.
-    setTimeout(() => {
-      Animated.timing(visibilityAnim, {
-        toValue: 0,
-        duration: 350,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        onDismiss();
-      });
-    }, 150);
-  }, [visibilityAnim, onNavigate, onDismiss]);
-
-  // ─── Show / hide via opacity (component always stays mounted) ──────────
+  // ─── Show / hide via opacity ─────────────────────────────────────────
   useEffect(() => {
     Animated.timing(visibilityAnim, {
       toValue: visible ? 1 : 0,
-      duration: visible ? 60 : 200,
+      duration: visible ? 50 : 150,
       useNativeDriver: true,
     }).start();
 
@@ -131,9 +109,10 @@ export default function PickupConfirmationModal({
       riderOpacity.setValue(1);
       bgOpacity.setValue(0);
       titleOpacity.setValue(0);
-      titleY.setValue(20);
-      cardY.setValue(SCREEN_H);
-      cardOpacity.setValue(0);
+      titleY.setValue(15);
+      cardEntranceAnim.setValue(180);
+      cardEntranceOpacity.setValue(0);
+      expandAnim.setValue(0);
 
       // Start continuous ground rotation
       startGroundRotate();
@@ -171,79 +150,149 @@ export default function PickupConfirmationModal({
     outputRange: ["0deg", "-360deg"],
   });
 
-  // ─── Phase-2 sequence ──────────────────────────────────────────────────
+  // ─── Phase-2 Fast & Smooth Sequence ──────────────────────────────────
   const triggerConfirmAnimation = () => {
-    // 1. Brief hold (500ms) — just enough to perceive the rider
+    // 1. Snappy transition: Rider rides off (300ms)
     setTimeout(() => {
-      // 2. Rider accelerates off to the right (700ms)
       Animated.parallel([
         Animated.timing(riderX, {
-          toValue: W + 200,
-          duration: 700,
+          toValue: W + 180,
+          duration: 320,
           easing: Easing.bezier(0.4, 0, 1, 1),
           useNativeDriver: true,
         }),
         Animated.timing(riderOpacity, {
           toValue: 0,
-          duration: 450,
-          delay: 250,
+          duration: 200,
+          delay: 100,
           useNativeDriver: true,
         }),
       ]).start(() => {
         rotateAnimLoop.current?.stop();
 
-        // 3. Switch to confirmed phase, fade in green bg (250ms)
+        // 2. Switch to confirmed phase, fade in green bg (150ms)
         setPhase("confirmed");
         Animated.timing(bgOpacity, {
           toValue: 1,
-          duration: 250,
+          duration: 160,
           useNativeDriver: true,
         }).start(() => {
-          // 4. Show checkmark lottie + title (simultaneously, fast)
+          // 3. Show checkmark + title + bottom sheet
           setShowConfirmLottie(true);
           confirmRef.current?.play();
 
           Animated.parallel([
             Animated.timing(titleOpacity, {
               toValue: 1,
-              duration: 250,
+              duration: 200,
               useNativeDriver: true,
             }),
             Animated.timing(titleY, {
               toValue: 0,
-              duration: 250,
+              duration: 200,
               easing: Easing.out(Easing.quad),
               useNativeDriver: true,
             }),
+            Animated.timing(cardEntranceOpacity, {
+              toValue: 1,
+              duration: 220,
+              useNativeDriver: false,
+            }),
+            Animated.spring(cardEntranceAnim, {
+              toValue: 0,
+              friction: 9,
+              tension: 80,
+              useNativeDriver: false,
+            }),
           ]).start();
 
-          // 5. Card sweeps up from bottom of screen (spring, snappy)
+          // 4. Hold (1150ms) so the full checkbox/checkmark animation finishes and is clearly seen
           setTimeout(() => {
-            Animated.parallel([
-              Animated.timing(cardOpacity, {
-                toValue: 1,
-                duration: 200,
-                useNativeDriver: true,
-              }),
-              Animated.spring(cardY, {
-                toValue: 0,
-                friction: 7,
-                tension: 72,
-                useNativeDriver: true,
-              }),
-            ]).start();
-          }, 150);
+            // Card suddenly moves up with smooth animation
+            Animated.timing(expandAnim, {
+              toValue: 1,
+              duration: 360,
+              easing: Easing.bezier(0.2, 0.9, 0.25, 1),
+              useNativeDriver: false,
+            }).start(() => {
+              if (dismissCalledRef.current) return;
+              dismissCalledRef.current = true;
 
-          // 6. Auto-dismiss after 1s on confirmed screen, then fast fade to home
-          setTimeout(() => {
-            animateOutAndDismiss();
-          }, 1000);
+              // Suddenly redirect to Home screen with smooth seamless handoff
+              onNavigate?.();
+              setTimeout(() => {
+                onDismiss();
+              }, 30);
+            });
+          }, 1150);
         });
       });
-    }, 500);
+    }, 100);
   };
 
-  // ── Always rendered; visibility controlled via opacity ──────────────────
+  // ─── Slot display helper ───────────────────────────────────────────────
+  const renderSlotFormatted = (label?: string) => {
+    if (!label) {
+      return <Text style={styles.slotTextBold}>Today</Text>;
+    }
+
+    const match = label.match(/^(Today before|Tomorrow before)\s+(.+)$/i);
+    if (match) {
+      return (
+        <Text style={styles.slotText}>
+          <Text style={styles.slotPrefix}>{match[1]} </Text>
+          <Text style={styles.slotTimeHighlight}>{match[2]}</Text>
+        </Text>
+      );
+    }
+    return <Text style={styles.slotTextBold}>{label}</Text>;
+  };
+
+  // ─── Sheet expansion interpolations ────────────────────────────────────
+  const restingSheetHeight = 230 + insets.bottom;
+  const initialTop = SCREEN_H - restingSheetHeight;
+
+  // Sheet top position moves from bottom resting spot all the way to 0
+  const sheetTop = Animated.add(
+    cardEntranceAnim,
+    expandAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [initialTop, 0],
+    })
+  );
+
+  // Border top radius flattens as sheet covers the top of the screen
+  const sheetBorderRadius = expandAnim.interpolate({
+    inputRange: [0, 0.6, 1],
+    outputRange: [36, 16, 0],
+  });
+
+  // Scheduled card smoothly translates to upper-middle portion of screen on expansion
+  const scheduledCardTranslateY = expandAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, SCREEN_H * 0.30],
+  });
+
+  // Address pill fades out during upward expansion
+  const addressOpacity = expandAnim.interpolate({
+    inputRange: [0, 0.2],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  const addressTranslateY = expandAnim.interpolate({
+    inputRange: [0, 0.2],
+    outputRange: [0, 12],
+    extrapolate: "clamp",
+  });
+
+  // Top confirmed title & checkmark fade out as white sheet sweeps over them
+  const topContentOpacity = expandAnim.interpolate({
+    inputRange: [0, 0.3],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
   return (
     <Animated.View
       style={[
@@ -283,7 +332,7 @@ export default function PickupConfirmationModal({
                 <GroundSvg width={GLOBE_W} height={GLOBE_H} />
               </Animated.View>
 
-              {/* Rider SVG (replaces Lottie scooter) */}
+              {/* Rider SVG */}
               <Animated.View
                 style={[
                   styles.riderWrap,
@@ -322,10 +371,14 @@ export default function PickupConfirmationModal({
           <Animated.View
             style={[styles.confirmedPhase, { opacity: bgOpacity }]}
           >
-            <View
+            {/* Top Header & Checkmark */}
+            <Animated.View
               style={[
                 styles.confirmedTop,
-                { paddingTop: insets.top + 32 },
+                {
+                  paddingTop: insets.top + 32,
+                  opacity: topContentOpacity,
+                },
               ]}
             >
               {/* Title */}
@@ -341,60 +394,76 @@ export default function PickupConfirmationModal({
                 PICKUP{"\n"}CONFIRMED
               </Animated.Text>
 
-              {/* Confirmation checkmark lottie */}
-              {showConfirmLottie && (
+              {/* Confirmation checkmark */}
+              {showConfirmLottie ? (
                 <LottieView
                   ref={confirmRef}
                   source={require("@/assets/bookAnim/Confirmation.json")}
                   style={styles.confirmLottie}
                   loop={false}
                   autoPlay
-                  speed={1.3}
+                  speed={1.2}
                   resizeMode="contain"
                 />
+              ) : (
+                <View style={styles.checkCirclePlaceholder}>
+                  <Ionicons name="checkmark" size={64} color="#FFFFFF" />
+                </View>
               )}
-            </View>
+            </Animated.View>
 
-            {/* Bottom pickup info card — sweeps up from below screen */}
+            {/* 
+              ── EXPANDING WHITE SHEET CONTAINER ──
+              Starts at the bottom with rounded corners (Image 1),
+              then expands fast & smoothly up to make complete screen white (Image 2 & 3).
+            */}
             <Animated.View
               style={[
-                styles.confirmedCard,
+                styles.expandingWhiteSheet,
                 {
-                  opacity: cardOpacity,
-                  transform: [{ translateY: cardY }],
-                  paddingBottom: insets.bottom + 16,
+                  top: sheetTop,
+                  height: SCREEN_H + 100,
+                  borderTopLeftRadius: sheetBorderRadius,
+                  borderTopRightRadius: sheetBorderRadius,
+                  opacity: cardEntranceOpacity,
                 },
               ]}
             >
-              {/* Pickup scheduled badge & slot */}
-              <View style={styles.confirmedCardInner}>
-                <View style={styles.scheduledBadge}>
-                  <Ionicons name="checkmark-circle" size={16} color={C.green} />
-                  <Text style={styles.scheduledBadgeText}>PICKUP SCHEDULED</Text>
+              {/* Scheduled Card container */}
+              <Animated.View
+                style={[
+                  styles.scheduledCardWrapper,
+                  {
+                    transform: [{ translateY: scheduledCardTranslateY }],
+                  },
+                ]}
+              >
+                {/* 1. PICKUP SCHEDULED Card */}
+                <View style={styles.scheduledCard}>
+                  <View style={styles.scheduledBadgeRow}>
+                    <Ionicons name="checkmark-circle" size={17} color={C.green} />
+                    <Text style={styles.scheduledBadgeText}>PICKUP SCHEDULED</Text>
+                  </View>
+
+                  <Text style={styles.pickupLabel}>Pickup</Text>
+                  {renderSlotFormatted(slotLabel)}
                 </View>
 
-                <Text style={styles.pickupLabel}>Pickup</Text>
-                {slotLabel ? (
-                  <Text style={styles.slotText}>{slotLabel}</Text>
-                ) : null}
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.confirmedCardInner}>
-                <Text style={styles.addrConfirmedText} numberOfLines={3}>
-                  {address || ""}
-                </Text>
-              </View>
-
-              {/* Manual dismiss — triggers the slide-up exit animation */}
-              <TouchableOpacity
-                style={styles.returnBtn}
-                onPress={animateOutAndDismiss}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.returnBtnText}>Return to Home</Text>
-              </TouchableOpacity>
+                {/* 2. Address Pill below card (fades out as card moves up) */}
+                <Animated.View
+                  style={[
+                    styles.addressPill,
+                    {
+                      opacity: addressOpacity,
+                      transform: [{ translateY: addressTranslateY }],
+                    },
+                  ]}
+                >
+                  <Text style={styles.addressPillText} numberOfLines={2}>
+                    {address || "Address confirmed"}
+                  </Text>
+                </Animated.View>
+              </Animated.View>
             </Animated.View>
           </Animated.View>
         )}
@@ -457,12 +526,12 @@ const styles = StyleSheet.create({
   },
   riderWrap: {
     position: "absolute",
-    bottom: 250,        // sits on top of the green hill arc
+    bottom: 250,
     alignSelf: "center",
     zIndex: 100,
   },
 
-  // Bottom green address section
+  // Bottom green address section (Phase 1)
   bottomAddrContainer: {
     backgroundColor: C.green,
     paddingHorizontal: 18,
@@ -505,45 +574,69 @@ const styles = StyleSheet.create({
   confirmedPhase: {
     flex: 1,
     backgroundColor: C.green,
-    justifyContent: "space-between",
   },
   confirmedTop: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    marginTop: 20,
   },
   confirmedTitle: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "900",
     color: C.white,
     textAlign: "center",
-    letterSpacing: 1,
-    lineHeight: 42,
-    marginBottom: 24,
+    letterSpacing: 0.8,
+    lineHeight: 40,
+    marginBottom: 28,
   },
   confirmLottie: {
     width: 140,
     height: 140,
   },
+  checkCirclePlaceholder: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  // Bottom card — sweeps up on enter, slides further up on exit (into home)
-  confirmedCard: {
+  // Expanding Sheet Container
+  expandingWhiteSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
     backgroundColor: C.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingHorizontal: 16,
+    paddingTop: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 20,
-    elevation: 22,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 20,
   },
-  confirmedCardInner: {
-    paddingVertical: 6,
+  scheduledCardWrapper: {
+    width: "100%",
+    gap: 12,
   },
-  scheduledBadge: {
+
+  // Inner Scheduled Card
+  scheduledCard: {
+    backgroundColor: C.white,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  scheduledBadgeRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -553,44 +646,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: C.green,
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   pickupLabel: {
-    fontSize: 14,
+    fontSize: 13,
     color: C.textMuted,
-    marginTop: 2,
-  },
-  slotText: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: C.textDark,
+    fontWeight: "500",
     marginTop: 4,
   },
-  divider: {
-    height: 1,
-    backgroundColor: C.cardBorder,
-    marginVertical: 10,
+  slotText: {
+    fontSize: 17,
+    marginTop: 4,
   },
-  addrConfirmedText: {
-    fontSize: 15,
-    color: C.textDark,
-    textAlign: "center",
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  returnBtn: {
-    marginTop: 16,
-    backgroundColor: C.green,
-    borderRadius: 16,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginHorizontal: 4,
-    marginBottom: 4,
-  },
-  returnBtnText: {
-    color: C.white,
+  slotPrefix: {
+    fontSize: 17,
     fontWeight: "800",
-    fontSize: 16,
-    letterSpacing: 0.3,
+    color: "#111827",
+  },
+  slotTimeHighlight: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: C.green,
+  },
+  slotTextBold: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#111827",
+    marginTop: 4,
+  },
+
+  // Address pill
+  addressPill: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  addressPillText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#1F2937",
+    textAlign: "center",
+    lineHeight: 18,
   },
 });
