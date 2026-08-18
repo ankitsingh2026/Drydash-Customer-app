@@ -230,22 +230,25 @@ export default function PickupConfirmationModal({
     }, 100);
   };
 
-  // ─── Slot display helper ───────────────────────────────────────────────
-  const renderSlotFormatted = (label?: string) => {
-    if (!label) {
-      return <Text style={styles.slotTextBold}>Today</Text>;
-    }
+  // ─── Slot parsing helper matching Home screen ScheduledPickupCard ───
+  const getSlotDetails = (label?: string) => {
+    const isTomorrow = (label || "").toLowerCase().includes("tomorrow");
+    const dateLabel = isTomorrow ? "TOMORROW" : "TODAY";
 
-    const match = label.match(/^(Today before|Tomorrow before)\s+(.+)$/i);
-    if (match) {
-      return (
-        <Text style={styles.slotText}>
-          <Text style={styles.slotPrefix}>{match[1]} </Text>
-          <Text style={styles.slotTimeHighlight}>{match[2]}</Text>
-        </Text>
-      );
+    let highlightTime = "6:00 PM";
+    if (label) {
+      const match = label.match(/before\s+(.+)$/i);
+      if (match) {
+        highlightTime = match[1].trim();
+      } else if (label.includes("-")) {
+        const parts = label.split("-");
+        highlightTime = parts[parts.length - 1].trim();
+      } else {
+        const cleaned = label.replace(/^(today|tomorrow)/i, "").trim();
+        if (cleaned) highlightTime = cleaned;
+      }
     }
-    return <Text style={styles.slotTextBold}>{label}</Text>;
+    return { dateLabel, highlightTime };
   };
 
   // ─── Sheet expansion interpolations ────────────────────────────────────
@@ -438,16 +441,49 @@ export default function PickupConfirmationModal({
                   },
                 ]}
               >
-                {/* 1. PICKUP SCHEDULED Card */}
-                <View style={styles.scheduledCard}>
-                  <View style={styles.scheduledBadgeRow}>
-                    <Ionicons name="checkmark-circle" size={17} color={C.green} />
-                    <Text style={styles.scheduledBadgeText}>PICKUP SCHEDULED</Text>
-                  </View>
+                {/* 1. SCHEDULED PICKUP CARD (matches Home Screen ScheduledPickupCard) */}
+                {(() => {
+                  const slotInfo = getSlotDetails(slotLabel);
+                  return (
+                    <View style={styles.scheduledCard}>
+                      <View style={styles.innerCompact}>
+                        {/* Top Status & Actions Row */}
+                        <View style={styles.headerRowCompact}>
+                          <View style={styles.statusPill}>
+                            <Ionicons name="ellipse" size={7} color={C.green} />
+                            <Text style={styles.statusPillText}>PICKUP SCHEDULED</Text>
+                          </View>
+                          <View style={styles.headerRightActions}>
+                            <View style={styles.cartBadgeWrap}>
+                              <Ionicons name="cart-outline" size={19} color={C.green} />
+                            </View>
+                            <Ionicons name="ellipsis-vertical" size={19} color={C.green} />
+                          </View>
+                        </View>
 
-                  <Text style={styles.pickupLabel}>Pickup</Text>
-                  {renderSlotFormatted(slotLabel)}
-                </View>
+                        {/* Main Pickup Timeslot */}
+                        <View style={styles.pickupHeadingBlock}>
+                          <Text style={styles.pickupSubLabel}>PICKUP</Text>
+                          <Text style={styles.pickupBigLine}>{slotInfo.dateLabel}</Text>
+                          <Text style={styles.pickupBigLine}>
+                            BEFORE{" "}
+                            <Text style={styles.pickupBigAccent}>{slotInfo.highlightTime.toUpperCase()}</Text>
+                          </Text>
+                        </View>
+
+                        {/* Bottom Actions Row */}
+                        <View style={styles.bottomRowCompact}>
+                          <View style={styles.tagPill}>
+                            <Text style={styles.tagPillText}>+ ADD ITEMS</Text>
+                          </View>
+                          <View style={styles.chatFab}>
+                            <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })()}
 
                 {/* 2. Address Pill below card (fades out as card moves up) */}
                 <Animated.View
@@ -622,57 +658,110 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 
-  // Inner Scheduled Card
+  // Inner Scheduled Card (matches Home screen ScheduledPickupCard)
   scheduledCard: {
     backgroundColor: C.white,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    borderColor: C.cardBorder,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  scheduledBadgeRow: {
+  innerCompact: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  headerRowCompact: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statusPill: {
+    minHeight: 22,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D1E7DD",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
+    gap: 5,
+    alignSelf: "flex-start",
   },
-  scheduledBadgeText: {
-    fontSize: 12,
-    fontWeight: "800",
+  statusPillText: {
     color: C.green,
-    letterSpacing: 0.6,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    fontWeight: "800",
   },
-  pickupLabel: {
-    fontSize: 13,
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cartBadgeWrap: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickupHeadingBlock: {
+    gap: 1,
+  },
+  pickupSubLabel: {
     color: C.textMuted,
-    fontWeight: "500",
-    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
-  slotText: {
-    fontSize: 17,
-    marginTop: 4,
-  },
-  slotPrefix: {
-    fontSize: 17,
+  pickupBigLine: {
+    color: C.textDark,
+    fontSize: 18,
     fontWeight: "800",
-    color: "#111827",
+    lineHeight: 25,
+    letterSpacing: 0.5,
   },
-  slotTimeHighlight: {
-    fontSize: 17,
-    fontWeight: "800",
+  pickupBigAccent: {
     color: C.green,
-  },
-  slotTextBold: {
-    fontSize: 17,
     fontWeight: "800",
-    color: "#111827",
-    marginTop: 4,
+  },
+  bottomRowCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  tagPill: {
+    minHeight: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    backgroundColor: C.pillBg,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  tagPillText: {
+    color: C.green,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  chatFab: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: C.green,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // Address pill
