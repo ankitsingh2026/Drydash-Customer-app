@@ -12,7 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
-import GroundSvg from "@/assets/bookAnim/Ground.svg";
+import GroundSvg from "@/assets/bookAnim/GroundNew.svg";
 import RiderSvg from "@/assets/bookAnim/Rider.svg";
 
 const { width: W, height: SCREEN_H } = Dimensions.get("window");
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   riderWrap: {
     position: "absolute",
-    bottom: 272,        // sits on top of the green hill arc
+    bottom: 250,        // sits on top of the green hill arc
     alignSelf: "center",
     zIndex: 100,
   },
