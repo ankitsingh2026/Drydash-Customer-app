@@ -1,23 +1,30 @@
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
   Dimensions,
-  Easing,
-  Modal,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
-import GroundSvg from "@/assets/bookAnim/Ground.svg";
+import * as Haptics from "expo-haptics";
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
+import { gsap } from "gsap";
+import GroundSvg from "@/assets/bookAnim/GroundNew.svg";
+import RiderSvg from "@/assets/bookAnim/Rider.svg";
 
-const { width: W } = Dimensions.get("window");
+const { width: W, height: SCREEN_H } = Dimensions.get("window");
 const GLOBE_W = 1000;
-const GLOBE_H = (1691 / 1710) * GLOBE_W; 
+const GLOBE_H = (1691 / 1710) * GLOBE_W;
+
+// ── Rider dimensions (SVG static image) ──────────────────────────────────
+const RIDER_W = 160;
+const RIDER_H = 120;
 
 // ── Colours ───────────────────────────────────────────────────────────────
 const C = {
@@ -25,8 +32,9 @@ const C = {
   lightBg: "#F4F9F7",
   white: "#FFFFFF",
   textDark: "#0A251E",
-  textMuted: "#5A736E",
-  cardBorder: "#E0EDEA",
+  textMuted: "#6B7280",
+  cardBorder: "#E5E7EB",
+  pillBg: "#F9FAFB",
 };
 
 interface Props {
@@ -38,7 +46,11 @@ interface Props {
   address?: string;
   /** Pickup slot string, e.g. "Today before 3 PM" */
   slotLabel?: string;
-  /** Called after phase-2 animation completes - parent should navigate */
+  /**
+   * Called when screen transition begins so home screen renders underneath
+   */
+  onNavigate?: () => void;
+  /** Called after the flight animation fully completes — hide the overlay here */
   onDismiss: () => void;
 }
 
@@ -47,352 +59,629 @@ export default function PickupConfirmationModal({
   confirmed,
   address,
   slotLabel,
+  onNavigate,
   onDismiss,
 }: Props) {
   const insets = useSafeAreaInsets();
 
-  // ── Phase tracking ─────────────────────────────────────────────────────
+  // ── Target Coordinates for Home Screen Docking ─────────────────────────
+  // TabBar (~78px) + Search (~52px) + Banner (~130px) + insets.top = insets.top + 260px
+  const targetHomeCardTop = insets.top + 260;
+  const bottomRestingCardTop = SCREEN_H - (195 + insets.bottom);
+
+  // ── Local states ───────────────────────────────────────────────────────
   const [phase, setPhase] = useState<"loading" | "confirmed">("loading");
-  const dismissCalledRef = useRef(false);
-
-  // ── Ground rotation loop ──────────────────────────────────────────────
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const rotateAnimLoop = useRef<Animated.CompositeAnimation | null>(null);
-
-  // ── Scooter position (horizontal slide out to the right on confirm) ────
-  const scooterX = useRef(new Animated.Value(0)).current;
-  const scooterOpacity = useRef(new Animated.Value(1)).current;
-
-  // ── Confirmed-phase animations ─────────────────────────────────────────
-  const bgOpacity = useRef(new Animated.Value(0)).current;
-  const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleY = useRef(new Animated.Value(20)).current;
-  const cardY = useRef(new Animated.Value(60)).current;
-  const cardOpacity = useRef(new Animated.Value(0)).current;
-
-  // ── Lottie refs ────────────────────────────────────────────────────────
-  const scooterRef = useRef<LottieView>(null);
-  const confirmRef = useRef<LottieView>(null);
   const [showConfirmLottie, setShowConfirmLottie] = useState(false);
+  const confirmRef = useRef<LottieView>(null);
+  const dismissTriggeredRef = useRef(false);
 
-  // ─── Reset on open ─────────────────────────────────────────────────────
+  // GSAP timeline & timer references for clean cancellation
+  const idleTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const confirmTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const modalOpenTimeRef = useRef<number>(0);
+  const transitionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Reanimated Shared Values (Driven by GSAP Engine) ──────────────────
+  const visibility = useSharedValue(0);
+
+  // Phase 1: Globe continuous rotation & Rider idle suspension float
+  const globeRotation = useSharedValue(0);
+  const riderIdleY = useSharedValue(0);
+  const phase1Opacity = useSharedValue(1);
+
+  // Rider departure on confirm
+  const riderX = useSharedValue(0);
+  const riderTilt = useSharedValue(0);
+  const riderOpacity = useSharedValue(1);
+
+  // Phase 2: Confirmed stage entrance & green background
+  const phase2GreenOpacity = useSharedValue(0);
+  const titleY = useSharedValue(-24);
+  const titleOpacity = useSharedValue(0);
+  const topContentY = useSharedValue(0);
+  const topContentOpacity = useSharedValue(1);
+  const checkScale = useSharedValue(0.6);
+
+  // Scheduled Card Flight & Docking
+  const cardY = useSharedValue(SCREEN_H + 50);
+  const cardOpacity = useSharedValue(0);
+  const cardScale = useSharedValue(1);
+  const cardFlightShadow = useSharedValue(0);
+  const addressPillOpacity = useSharedValue(0);
+  const addressPillY = useSharedValue(0);
+
+  // ── Clean up all GSAP timelines ───────────────────────────────────────
+  const killAllAnimations = useCallback(() => {
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+      transitionTimeoutRef.current = null;
+    }
+    idleTimelineRef.current?.kill();
+    idleTimelineRef.current = null;
+    confirmTimelineRef.current?.kill();
+    confirmTimelineRef.current = null;
+  }, []);
+
+  // ── Reset & Start GSAP Loop on Visible ─────────────────────────────────
   useEffect(() => {
     if (visible) {
-      dismissCalledRef.current = false;
+      modalOpenTimeRef.current = Date.now();
+      dismissTriggeredRef.current = false;
       setPhase("loading");
       setShowConfirmLottie(false);
 
+      killAllAnimations();
+
       // Reset animated values
-      rotateAnim.setValue(0);
-      scooterX.setValue(0);
-      scooterOpacity.setValue(1);
-      bgOpacity.setValue(0);
-      titleOpacity.setValue(0);
-      titleY.setValue(20);
-      cardY.setValue(60);
-      cardOpacity.setValue(0);
+      visibility.value = 1;
+      phase1Opacity.value = 1;
+      phase2GreenOpacity.value = 0;
 
-      // Start continuous ground rotation
-      startGroundRotate();
+      globeRotation.value = 0;
+      riderIdleY.value = 0;
+      riderX.value = 0;
+      riderTilt.value = 0;
+      riderOpacity.value = 1;
 
-      // Play scooter lottie
-      setTimeout(() => scooterRef.current?.play(), 100);
+      titleY.value = -24;
+      titleOpacity.value = 0;
+      topContentY.value = 0;
+      topContentOpacity.value = 1;
+      checkScale.value = 0.6;
+
+      cardY.value = SCREEN_H + 50;
+      cardOpacity.value = 0;
+      cardScale.value = 1;
+      cardFlightShadow.value = 0;
+      addressPillOpacity.value = 0;
+      addressPillY.value = 0;
+
+      // Create GSAP Idle Timeline for continuous globe rotation & subtle suspension
+      const idleTl = gsap.timeline({ repeat: -1 });
+
+      idleTl.to(
+        globeRotation,
+        {
+          value: -360,
+          duration: 18,
+          ease: "none",
+        },
+        0
+      );
+
+      const floatTl = gsap.timeline({ repeat: -1, yoyo: true });
+      floatTl.to(riderIdleY, {
+        value: -4.5,
+        duration: 0.85,
+        ease: "power1.inOut",
+      });
+
+      idleTimelineRef.current = idleTl;
     } else {
-      // Stop animations when hidden
-      rotateAnimLoop.current?.stop();
+      killAllAnimations();
+      visibility.value = 0;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
 
-  // ─── React to confirmed prop ────────────────────────────────────────────
+    return () => {
+      killAllAnimations();
+    };
+  }, [visible, killAllAnimations]);
+
+  // ── GSAP Confirmed Animation & Unified Bottom-to-Top Flight ───────────
   useEffect(() => {
-    if (confirmed && phase === "loading") {
-      triggerConfirmAnimation();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [confirmed]);
+    if (confirmed && visible && phase === "loading") {
+      // Calculate remaining dwell time to ensure rider stays moving on ground for at least 2 seconds
+      const elapsed = Date.now() - modalOpenTimeRef.current;
+      const minDwellTime = 2000; // 2 seconds minimum ground time
+      const delayBeforeTransition = Math.max(0, minDwellTime - elapsed);
 
-  // ─── Continuous Rotation Loop (Right-to-Left on Fixed Axis) ──────────────
-  const startGroundRotate = () => {
-    rotateAnim.setValue(0);
-    const loop = Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 18000, // 18s for majestic continuous 360-degree rotation
-        easing: Easing.linear,
-        useNativeDriver: true,
-      })
-    );
-    rotateAnimLoop.current = loop;
-    loop.start();
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+
+      transitionTimeoutRef.current = setTimeout(() => {
+        // 1. Haptic feedback on confirmation
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch (_) {}
+
+        // Stop idle animations
+        idleTimelineRef.current?.kill();
+
+        // 2. Master GSAP Confirmation Timeline
+        const confirmTl = gsap.timeline();
+        confirmTimelineRef.current = confirmTl;
+
+        // (A) Rider Ride-Off & Accelerate smoothly off screen
+        confirmTl
+          .to(
+            riderTilt,
+            {
+              value: 3.5,
+              duration: 0.35,
+              ease: "power1.out",
+            },
+            0
+          )
+          .to(
+            riderX,
+            {
+              value: W + 220,
+              duration: 0.72,
+              ease: "power2.inOut",
+            },
+            0
+          )
+          .to(
+            riderOpacity,
+            {
+              value: 0,
+              duration: 0.26,
+              ease: "power2.in",
+            },
+            0.44
+          )
+          .to(
+            phase1Opacity,
+            {
+              value: 0,
+              duration: 0.28,
+              ease: "power2.out",
+              onComplete: () => {
+                setPhase("confirmed");
+                setShowConfirmLottie(true);
+              },
+            },
+            0.36
+          )
+          .to(
+            phase2GreenOpacity,
+            {
+              value: 1,
+              duration: 0.3,
+              ease: "power2.out",
+            },
+            0.4
+          )
+          // (C) Confirmed Title & Checkmark Spring Entrance
+          .to(
+            titleY,
+            {
+              value: 0,
+              duration: 0.36,
+              ease: "back.out(1.4)",
+            },
+            0.42
+          )
+          .to(
+            titleOpacity,
+            {
+              value: 1,
+              duration: 0.25,
+              ease: "power2.out",
+            },
+            0.42
+          )
+          .to(
+            checkScale,
+            {
+              value: 1,
+              duration: 0.4,
+              ease: "back.out(1.7)",
+            },
+            0.44
+          )
+          // (D) SHOW CARD ON BOTTOM while checkmark is showing
+          .to(
+            cardOpacity,
+            {
+              value: 1,
+              duration: 0.22,
+              ease: "power2.out",
+            },
+            0.44
+          )
+          .to(
+            cardY,
+            {
+              value: bottomRestingCardTop,
+              duration: 0.42,
+              ease: "power3.out",
+            },
+            0.44
+          )
+          // (E) HOLD PREVIEW (~0.65s): User sees checkmark + card on the bottom
+          // (F) MOVE CARD UP: Card takes flight to fit into Home screen position!
+          .call(() => {
+            // Pre-mount Home Screen underneath right as card begins flight
+            onNavigate?.();
+          }, undefined, 1.45)
+          // Green background dissolves smoothly to reveal Home screen underneath
+          .to(
+            phase2GreenOpacity,
+            {
+              value: 0,
+              duration: 0.52,
+              ease: "power2.inOut",
+            },
+            1.45
+          )
+          // Title & checkmark float up and dissolve as card ascends
+          .to(
+            topContentOpacity,
+            {
+              value: 0,
+              duration: 0.3,
+              ease: "power2.in",
+            },
+            1.45
+          )
+          .to(
+            topContentY,
+            {
+              value: -42,
+              duration: 0.34,
+              ease: "power2.in",
+            },
+            1.45
+          )
+          // Card glides smoothly from bottomRestingCardTop to targetHomeCardTop
+          .to(
+            cardY,
+            {
+              value: targetHomeCardTop,
+              duration: 0.65,
+              ease: "power3.inOut",
+            },
+            1.45
+          )
+          // Mid-flight dynamic elevation lift & gentle landing into Home slot
+          .to(
+            cardScale,
+            {
+              value: 1.025,
+              duration: 0.32,
+              ease: "power2.out",
+            },
+            1.45
+          )
+          .to(
+            cardFlightShadow,
+            {
+              value: 1,
+              duration: 0.32,
+              ease: "power2.out",
+            },
+            1.45
+          )
+          .to(
+            cardScale,
+            {
+              value: 1.0,
+              duration: 0.33,
+              ease: "power2.inOut",
+            },
+            1.77
+          )
+          .to(
+            cardFlightShadow,
+            {
+              value: 0,
+              duration: 0.33,
+              ease: "power2.inOut",
+              onComplete: () => {
+                if (dismissTriggeredRef.current) return;
+                dismissTriggeredRef.current = true;
+
+                // Seamless handoff to the Home screen card
+                onDismiss();
+              },
+            },
+            1.77
+          );
+      }, delayBeforeTransition);
+    }
+
+    return () => {
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+    };
+  }, [
+    confirmed,
+    visible,
+    phase,
+    targetHomeCardTop,
+    onNavigate,
+    onDismiss,
+  ]);
+
+  // ── Slot parsing helper matching Home screen ScheduledPickupCard ───
+  const getSlotDetails = (label?: string) => {
+    const isTomorrow = (label || "").toLowerCase().includes("tomorrow");
+    const dateLabel = isTomorrow ? "TOMORROW" : "TODAY";
+
+    let highlightTime = "6:00 PM";
+    if (label) {
+      const match = label.match(/before\s+(.+)$/i);
+      if (match) {
+        highlightTime = match[1].trim();
+      } else if (label.includes("-")) {
+        const parts = label.split("-");
+        highlightTime = parts[parts.length - 1].trim();
+      } else {
+        const cleaned = label.replace(/^(today|tomorrow)/i, "").trim();
+        if (cleaned) highlightTime = cleaned;
+      }
+    }
+    return { dateLabel, highlightTime };
   };
 
-  const groundRotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "-360deg"], // Counter-clockwise rotation: ground moves Right -> Left
+  // ── Reanimated Styles driven by GSAP ──────────────────────────────────
+  const rootAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: visibility.value,
+  }));
+
+  const globeAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${globeRotation.value}deg` }],
+  }));
+
+  const riderAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: riderX.value },
+      { translateY: riderIdleY.value },
+      { rotate: `${riderTilt.value}deg` },
+    ],
+    opacity: riderOpacity.value,
+  }));
+
+  const phase1AnimatedStyle = useAnimatedStyle(() => ({
+    opacity: phase1Opacity.value,
+  }));
+
+  const phase2GreenBackgroundStyle = useAnimatedStyle(() => ({
+    opacity: phase2GreenOpacity.value,
+  }));
+
+  const topContentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: topContentOpacity.value,
+    transform: [{ translateY: topContentY.value }],
+  }));
+
+  const titleAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: titleOpacity.value,
+    transform: [{ translateY: titleY.value }],
+  }));
+
+  const checkAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: checkScale.value }],
+  }));
+
+  // Card Flight & Landing style
+  const scheduledCardContainerStyle = useAnimatedStyle(() => {
+    const shadowOpacity = interpolate(cardFlightShadow.value, [0, 1], [0.1, 0.25]);
+    const elevation = interpolate(cardFlightShadow.value, [0, 1], [4, 12]);
+
+    return {
+      top: cardY.value,
+      opacity: cardOpacity.value,
+      transform: [{ scale: cardScale.value }],
+      shadowOpacity,
+      elevation,
+    };
   });
 
-  // ─── Phase-2 sequence ──────────────────────────────────────────────────
-  const triggerConfirmAnimation = () => {
-    // 1. Initial hold in center for 1.6s so user perceives the riding moment
-    setTimeout(() => {
-      // 2. Scooter accelerates smoothly off to the right edge over 1.2s
-      Animated.parallel([
-        Animated.timing(scooterX, {
-          toValue: W + 200,
-          duration: 1200,
-          easing: Easing.bezier(0.4, 0, 0.2, 1),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scooterOpacity, {
-          toValue: 0,
-          duration: 800,
-          delay: 400,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        // Stop ground rotation loop
-        rotateAnimLoop.current?.stop();
+  const addressPillAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: addressPillOpacity.value,
+    transform: [{ translateY: addressPillY.value }],
+  }));
 
-        // Switch to confirmed phase
-        setPhase("confirmed");
-
-        // Fade in green background
-        Animated.timing(bgOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }).start(() => {
-          // Show confirmation checkmark lottie
-          setShowConfirmLottie(true);
-          setTimeout(() => confirmRef.current?.play(), 50);
-
-          // Animate title
-          Animated.parallel([
-            Animated.timing(titleOpacity, {
-              toValue: 1,
-              duration: 350,
-              useNativeDriver: true,
-            }),
-            Animated.timing(titleY, {
-              toValue: 0,
-              duration: 350,
-              easing: Easing.out(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]).start();
-
-          // Slide up confirmed card
-          setTimeout(() => {
-            Animated.parallel([
-              Animated.timing(cardOpacity, {
-                toValue: 1,
-                duration: 400,
-                useNativeDriver: true,
-              }),
-              Animated.spring(cardY, {
-                toValue: 0,
-                friction: 8,
-                tension: 80,
-                useNativeDriver: true,
-              }),
-            ]).start();
-          }, 250);
-
-          // Auto-dismiss after animations settle
-          setTimeout(() => {
-            if (!dismissCalledRef.current) {
-              dismissCalledRef.current = true;
-              onDismiss();
-            }
-          }, 3000);
-        });
-      });
-    }, 1600);
-  };
-
-  // ────────────────────────────────────────────────────────────────────────
   if (!visible) return null;
 
   return (
-    <View style={[StyleSheet.absoluteFill, { zIndex: 99999, backgroundColor: C.lightBg }]}>
+    <Animated.View
+      style={[
+        StyleSheet.absoluteFill,
+        styles.rootOverlay,
+        rootAnimatedStyle,
+      ]}
+      pointerEvents={visible ? "auto" : "none"}
+    >
+      <View style={styles.fullscreenContainer}>
+
         {/* ── PHASE 1: Loading / scheduling ── */}
-        {phase === "loading" && (
-          <View style={styles.loadingPhase}>
-            {/* Top text */}
-            <View style={[styles.topTextWrap, { paddingTop: insets.top + 28 }]}>
-              <Text style={styles.schedulingTitle}>Scheduling your pickup</Text>
-              <Text style={styles.schedulingSubtitle}>
-                This will only take a few seconds.
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.loadingPhase,
+            phase1AnimatedStyle,
+          ]}
+          pointerEvents={phase === "loading" ? "auto" : "none"}
+        >
+          {/* Top text */}
+          <View style={[styles.topTextWrap, { paddingTop: insets.top + 28 }]}>
+            <Text style={styles.schedulingTitle}>Scheduling your pickup</Text>
+            <Text style={styles.schedulingSubtitle}>
+              This will only take a few seconds.
+            </Text>
+          </View>
+
+          {/* Rider SVG + Rotating Globe stage */}
+          <View style={styles.stage}>
+            {/* Solid green base fill */}
+            <View style={styles.stageGreenBase} />
+
+            {/* Rotating Globe SVG */}
+            <Animated.View style={[styles.globeWrap, globeAnimatedStyle]}>
+              <GroundSvg width={GLOBE_W} height={GLOBE_H} />
+            </Animated.View>
+
+            {/* Rider SVG */}
+            <Animated.View style={[styles.riderWrap, riderAnimatedStyle]}>
+              <RiderSvg width={RIDER_W} height={RIDER_H} />
+            </Animated.View>
+          </View>
+
+          {/* Bottom green section with pickup address */}
+          <View
+            style={[
+              styles.bottomAddrContainer,
+              { paddingBottom: insets.bottom + 20 },
+            ]}
+          >
+            <View style={styles.addrHeaderRow}>
+              <Ionicons name="location-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.addrHeaderLabel}>PICKUP ADDRESS</Text>
+            </View>
+            <View style={styles.addrCardWhite}>
+              <Text style={styles.addrCardText} numberOfLines={2}>
+                {address || ""}
               </Text>
             </View>
-
-            {/* Scooter + Rotating Globe stage */}
-            <View style={styles.stage}>
-              {/* Solid green base fill under globe connecting seamlessly to bottom section */}
-              <View style={styles.stageGreenBase} />
-
-              {/* Rotating Globe SVG (India Gate, Qutub Minar, Lotus Temple, Red Fort rotate behind scooter) */}
-              <Animated.View
-                style={[
-                  styles.globeWrap,
-                  {
-                    transform: [{ rotate: groundRotation }],
-                  },
-                ]}
-              >
-                <GroundSvg width={GLOBE_W} height={GLOBE_H} />
-              </Animated.View>
-
-              {/* Scooter rider (lottie) - fixed at top center of green hill horizon */}
-              <Animated.View
-                style={[
-                  styles.scooterWrap,
-                  {
-                    transform: [{ translateX: scooterX }],
-                    opacity: scooterOpacity,
-                  },
-                ]}
-              >
-                <LottieView
-                  ref={scooterRef}
-                  source={require("@/assets/bookAnim/delivery-scooter-rider.json")}
-                  style={styles.scooterLottie}
-                  loop
-                  autoPlay
-                  speed={1}
-                  resizeMode="contain"
-                />
-              </Animated.View>
-            </View>
-
-            {/* Bottom green section with pickup address */}
-            <View
-              style={[
-                styles.bottomAddrContainer,
-                { paddingBottom: insets.bottom + 20 },
-              ]}
-            >
-              <View style={styles.addrHeaderRow}>
-                <Ionicons name="location-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.addrHeaderLabel}>PICKUP ADDRESS</Text>
-              </View>
-              <View style={styles.addrCardWhite}>
-                <Text style={styles.addrCardText} numberOfLines={2}>
-                  {address || ""}
-                </Text>
-              </View>
-            </View>
           </View>
-        )}
+        </Animated.View>
 
-        {/* ── PHASE 2: Confirmed ── */}
+        {/* ── PHASE 2: Confirmed & Flight Stage ── */}
         {phase === "confirmed" && (
-          <Animated.View
-            style={[styles.confirmedPhase, { opacity: bgOpacity }]}
-          >
-            <View
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {/* Green background that dissolves into the Home screen */}
+            <Animated.View
+              style={[
+                StyleSheet.absoluteFill,
+                styles.confirmedPhaseGreenBg,
+                phase2GreenBackgroundStyle,
+              ]}
+            />
+
+            {/* Top Header & Checkmark */}
+            <Animated.View
               style={[
                 styles.confirmedTop,
                 { paddingTop: insets.top + 32 },
+                topContentAnimatedStyle,
               ]}
             >
               {/* Title */}
-              <Animated.Text
-                style={[
-                  styles.confirmedTitle,
-                  {
-                    opacity: titleOpacity,
-                    transform: [{ translateY: titleY }],
-                  },
-                ]}
-              >
+              <Animated.Text style={[styles.confirmedTitle, titleAnimatedStyle]}>
                 PICKUP{"\n"}CONFIRMED
               </Animated.Text>
 
-              {/* Checkmark lottie */}
-              {showConfirmLottie && (
-                <LottieView
-                  ref={confirmRef}
-                  source={require("@/assets/bookAnim/Confirmation.json")}
-                  style={styles.confirmLottie}
-                  loop={false}
-                  autoPlay
-                  speed={1.2}
-                  resizeMode="contain"
-                />
-              )}
-            </View>
+              {/* Confirmation checkmark */}
+              <Animated.View style={[styles.checkWrapper, checkAnimatedStyle]}>
+                {showConfirmLottie ? (
+                  <LottieView
+                    ref={confirmRef}
+                    source={require("@/assets/bookAnim/Confirmation.json")}
+                    style={styles.confirmLottie}
+                    loop={false}
+                    autoPlay
+                    speed={1.2}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <View style={styles.checkCirclePlaceholder}>
+                    <Ionicons name="checkmark" size={64} color="#FFFFFF" />
+                  </View>
+                )}
+              </Animated.View>
+            </Animated.View>
 
-            {/* Bottom pickup info card */}
+            {/* 
+              ── FLOATING SCHEDULED CARD ──
+              Rises from the bottom of the screen and smoothly glides up
+              to dock into the exact spot of the Home screen's active pickup card!
+            */}
             <Animated.View
               style={[
-                styles.confirmedCard,
-                {
-                  opacity: cardOpacity,
-                  transform: [{ translateY: cardY }],
-                  paddingBottom: insets.bottom + 16,
-                },
+                styles.floatingCardContainer,
+                scheduledCardContainerStyle,
               ]}
             >
-              {/* Pickup scheduled badge & slot */}
-              <View style={styles.confirmedCardInner}>
-                <View style={styles.scheduledRow}>
-                  <View style={styles.scheduledBadge}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={C.green}
-                    />
-                    <Text style={styles.scheduledBadgeText}>
-                      PICKUP SCHEDULED
-                    </Text>
+              {/* 1. SCHEDULED PICKUP CARD (Exact 1:1 match to Home Screen ScheduledPickupCard) */}
+              {(() => {
+                const slotInfo = getSlotDetails(slotLabel);
+                return (
+                  <View style={styles.scheduledCard}>
+                    <View style={styles.innerCompact}>
+                      {/* Top Status & Actions Row */}
+                      <View style={styles.headerRowCompact}>
+                        <View style={styles.statusPill}>
+                          <Ionicons name="ellipse" size={7} color={C.green} />
+                          <Text style={styles.statusPillText}>PICKUP SCHEDULED</Text>
+                        </View>
+                        <View style={styles.headerRightActions}>
+                          <View style={styles.cartBadgeWrap}>
+                            <Ionicons name="cart-outline" size={19} color={C.green} />
+                          </View>
+                          <Ionicons name="ellipsis-vertical" size={19} color={C.green} />
+                        </View>
+                      </View>
+
+                      {/* Main Pickup Timeslot */}
+                      <View style={styles.pickupHeadingBlock}>
+                        <Text style={styles.pickupSubLabel}>PICKUP</Text>
+                        <Text style={styles.pickupBigLine}>{slotInfo.dateLabel}</Text>
+                        <Text style={styles.pickupBigLine}>
+                          BEFORE{" "}
+                          <Text style={styles.pickupBigAccent}>
+                            {slotInfo.highlightTime.toUpperCase()}
+                          </Text>
+                        </Text>
+                      </View>
+
+                      {/* Bottom Actions Row */}
+                      <View style={styles.bottomRowCompact}>
+                        <View style={styles.tagPill}>
+                          <Text style={styles.tagPillText}>+ ADD ITEMS</Text>
+                        </View>
+                        <View style={styles.chatFab}>
+                          <Ionicons name="chatbubble-ellipses" size={20} color="#FFFFFF" />
+                        </View>
+                      </View>
+                    </View>
                   </View>
-                </View>
-
-                <Text style={styles.pickupLabel}>Pickup</Text>
-                {slotLabel ? (
-                  <Text style={styles.slotText}>{slotLabel}</Text>
-                ) : null}
-              </View>
-
-              <View style={styles.divider} />
-
-              <View style={styles.confirmedCardInner}>
-                <Text style={styles.addrConfirmedText} numberOfLines={3}>
-                  {address || ""}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                style={styles.returnBtn}
-                onPress={() => {
-                  if (!dismissCalledRef.current) {
-                    dismissCalledRef.current = true;
-                    onDismiss();
-                  }
-                }}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.returnBtnText}>Return</Text>
-              </TouchableOpacity>
+                );
+              })()}
             </Animated.View>
-          </Animated.View>
+          </View>
         )}
       </View>
+    </Animated.View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  root: {
+  rootOverlay: {
+    zIndex: 99999,
+  },
+  fullscreenContainer: {
     flex: 1,
-    backgroundColor: C.lightBg,
+    backgroundColor: "transparent",
   },
 
   // ── Phase 1 ──────────────────────────────────────────────────────────
   loadingPhase: {
-    flex: 1,
     backgroundColor: C.lightBg,
     justifyContent: "space-between",
   },
@@ -416,7 +705,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  // Stage (globe + scooter)
+  // Stage (globe + rider)
   stage: {
     flex: 1,
     alignItems: "center",
@@ -436,22 +725,18 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: GLOBE_W,
     height: GLOBE_H,
-    bottom: -570, // Creates wide gentle arc matching target Image 2
+    bottom: -570,
     alignSelf: "center",
     zIndex: 10,
   },
-  scooterWrap: {
+  riderWrap: {
     position: "absolute",
-    bottom: 272, // Lifted so wheels sit perfectly on top of green hill curve
+    bottom: 250,
     alignSelf: "center",
-    zIndex: 100, // Guaranteed on top of globe and green base
-  },
-  scooterLottie: {
-    width: 145,
-    height: 108,
+    zIndex: 100,
   },
 
-  // Bottom green address section
+  // Bottom green address section (Phase 1)
   bottomAddrContainer: {
     backgroundColor: C.green,
     paddingHorizontal: 18,
@@ -491,91 +776,150 @@ const styles = StyleSheet.create({
   },
 
   // ── Phase 2 ──────────────────────────────────────────────────────────
-  confirmedPhase: {
-    flex: 1,
+  confirmedPhaseGreenBg: {
     backgroundColor: C.green,
-    justifyContent: "space-between",
   },
   confirmedTop: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    marginTop: 20,
   },
   confirmedTitle: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "900",
     color: C.white,
     textAlign: "center",
-    letterSpacing: 1,
-    lineHeight: 42,
-    marginBottom: 28,
+    letterSpacing: 0.8,
+    lineHeight: 40,
+    marginBottom: 24,
+  },
+  checkWrapper: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   confirmLottie: {
     width: 140,
     height: 140,
   },
+  checkCirclePlaceholder: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#22C55E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  // Bottom card in Phase 2
-  confirmedCard: {
+  // Floating & Docking Card Container
+  floatingCardContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 10,
+  },
+
+  // Inner Scheduled Card (matches Home screen ScheduledPickupCard)
+  scheduledCard: {
     backgroundColor: C.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 24,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
   },
-  confirmedCardInner: {
-    paddingVertical: 8,
+  innerCompact: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
-  scheduledRow: {
-    marginBottom: 8,
+  headerRowCompact: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  scheduledBadge: {
+  statusPill: {
+    minHeight: 22,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#D1E7DD",
+    backgroundColor: "#F0FDF4",
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
+    alignSelf: "flex-start",
   },
-  scheduledBadgeText: {
-    fontSize: 12,
-    fontWeight: "800",
+  statusPillText: {
     color: C.green,
-    letterSpacing: 0.5,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    fontWeight: "800",
   },
-  pickupLabel: {
-    fontSize: 14,
+  headerRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cartBadgeWrap: {
+    width: 26,
+    height: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickupHeadingBlock: {
+    gap: 1,
+  },
+  pickupSubLabel: {
     color: C.textMuted,
-    marginTop: 4,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
-  slotText: {
+  pickupBigLine: {
+    color: C.textDark,
     fontSize: 18,
     fontWeight: "800",
-    color: C.textDark,
-    marginTop: 4,
+    lineHeight: 25,
+    letterSpacing: 0.5,
   },
-  divider: {
-    height: 1,
-    backgroundColor: C.cardBorder,
-    marginVertical: 10,
-  },
-  addrConfirmedText: {
-    fontSize: 15,
-    color: C.textDark,
-    textAlign: "center",
-    lineHeight: 22,
-    fontWeight: "500",
-  },
-  returnBtn: {
-    marginTop: 18,
-    backgroundColor: C.green,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginHorizontal: 4,
-  },
-  returnBtnText: {
-    color: C.white,
+  pickupBigAccent: {
+    color: C.green,
     fontWeight: "800",
-    fontSize: 16,
+  },
+  bottomRowCompact: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  tagPill: {
+    minHeight: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: C.cardBorder,
+    backgroundColor: C.pillBg,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  tagPillText: {
+    color: C.green,
+    fontSize: 12,
+    fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  chatFab: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: C.green,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

@@ -4,7 +4,7 @@ import { getFullServiceData } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { Bell } from "lucide-react-native";
+import { Wallet } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,11 +27,10 @@ type TabBarProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
-    const { colors, theme, isDark } = useTheme();
+export const TabBar = ({ onWalletPress, style }: TabBarProps) => {
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
-  const { unreadCount, refreshNotifications } = useNotifications();
   const isFetchingRef = useRef(false);
   const isFetchingCurrentLocRef = useRef(false);
 
@@ -226,9 +225,9 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
     }
   }, [allAddresses, loading]);
 
-  const fetchFullServiceData = async (lat: number, lng: number) => {
+  const fetchFullServiceData = async (lat: number, lng: number, forceRefresh = false) => {
     try {
-      const data = await getFullServiceData(lat, lng, true); // force refresh
+      const data = await getFullServiceData(lat, lng, forceRefresh);
       updateServiceData(data);
     } catch (error) {
       console.error("Full service data error:", error);
@@ -250,19 +249,6 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
       setSelectedAddress(address);
     }
     if (label) setLocationText(label);
-  };
-
-  const handleBellPress = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    try {
-      await refreshNotifications();
-      onOpenNotifications?.();
-    } catch (e) {
-      console.error("Notification refresh failed", e);
-    } finally {
-      isFetchingRef.current = false;
-    }
   };
 
   // Helper to get best slot from serviceData (API response)
@@ -504,22 +490,14 @@ export const TabBar = ({ onOpenNotifications, style }: TabBarProps) => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             activeOpacity={0.8}
-            onPress={handleBellPress}
-            style={styles.iconBtn}
+            onPress={() => onWalletPress?.()}
+            style={styles.walletBtn}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-
           >
-            <Bell size={18} color={theme.text} />
-            {unreadCount > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                  {unreadCount > 9 ? "9+" : unreadCount}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+            <Wallet size={18} color={theme.text} />
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -575,7 +553,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     fontWeight: "500",
     maxWidth: 200,
   },
-  iconBtn: {
+  walletBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -585,25 +563,6 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: theme.accent,
-    // shadowOpacity: 0.15,
-    // shadowRadius: 10,
-    // elevation: 6,
-  },
-  badge: {
-    position: "absolute",
-    top: 3,
-    right: 4,
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.error,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: "800",
   },
   deliveryLabel: {
     fontSize: 12,

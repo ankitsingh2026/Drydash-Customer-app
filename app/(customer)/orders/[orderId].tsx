@@ -1458,7 +1458,7 @@ export default function OrderReceipt() {
 
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '700' }}>Items</Text>
-              {isPaid ? (
+              {isDelivered ? (
                 <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <DownloadInvoiceButton orderId={orderId as string} />
                 </TouchableOpacity>
