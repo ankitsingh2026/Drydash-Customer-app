@@ -13,7 +13,7 @@ type Props = {
 
 export default function UpdateModal({ visible, type, onLater, storeUrl }: Props) {
   const { theme, isDark } = useTheme();
-  const styles = makeStyles(theme);
+  const styles = makeStyles(theme, isDark);
 
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
@@ -43,7 +43,7 @@ export default function UpdateModal({ visible, type, onLater, storeUrl }: Props)
           <Ionicons
             name={type === "force" ? "alert-circle" : "cloud-download"}
             size={42}
-            color={type === "force" ? "#FF6B6B" : theme.card}
+            color={type === "force" ? "#FF6B6B" : theme.primary}
           />
         </View>
 
@@ -82,30 +82,30 @@ export default function UpdateModal({ visible, type, onLater, storeUrl }: Props)
   );
 }
 
-function makeStyles(theme: any) {
+function makeStyles(theme: any, isDark: boolean) {
   return StyleSheet.create({
     overlay: {
       position: "absolute",
       width: "100%",
       height: "100%",
-      backgroundColor: theme.card,
+      backgroundColor: theme.backdrop,
       justifyContent: "center",
       alignItems: "center",
     },
     container: {
       width: "85%",
-      backgroundColor: theme.background,
+      backgroundColor: theme.modalBackground,
       borderRadius: 24,
       padding: 24,
       alignItems: "center",
       // Shadow
-      shadowColor: theme.background,
+      shadowColor: isDark ? "#000000" : "#1E3A34",
       shadowOpacity: 0.4,
       shadowRadius: 20,
       elevation: 10,
     },
     iconWrapper: {
-      backgroundColor: theme.background,
+      backgroundColor: theme.inputBackground,
       padding: 14,
       borderRadius: 50,
       marginBottom: 12,
@@ -139,13 +139,13 @@ function makeStyles(theme: any) {
       fontWeight: "500",
     },
     updateBtn: {
-      backgroundColor: theme.card,
+      backgroundColor: theme.primary,
       paddingVertical: 12,
       paddingHorizontal: 20,
       borderRadius: 12,
     },
     updateText: {
-      color: theme.background,
+      color: theme.modalBackground,
       fontWeight: "700",
     },
   });
