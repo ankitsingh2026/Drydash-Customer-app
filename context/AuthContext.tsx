@@ -3,6 +3,7 @@ import {
   registerCustomerPushToken,
   unregisterCustomerPushToken,
 } from "../lib/notifications/pushNotifications";
+import { referralApi } from "@/features/auth/referral.api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, {
   createContext,
@@ -28,9 +29,11 @@ type Tokens = {
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
+  walletInitialized: boolean;
 
   saveTokens: (tokens: Tokens) => Promise<void>;
   setAuthUser: (user: AuthUser) => Promise<void>;
+  initializeWallet: (referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -43,6 +46,7 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: PropsWithChildren) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [walletInitialized, setWalletInitialized] = useState(false);
 
   /* Restore auth state on app start */
   useEffect(() => {
@@ -83,6 +87,33 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
     ]);
   };
 
+  /* Initialize wallet and referral code for new/existing customer */
+  const initializeWallet = async (referralCode?: string) => {
+    const customerId = user?.user?.id ?? user?.id;
+    if (!customerId) {
+      console.log("No customer ID found for wallet initialization");
+      return;
+    }
+
+    // Check if already initialized
+    const alreadyInitialized = await AsyncStorage.getItem(`wallet_init_${customerId}`);
+    if (alreadyInitialized) {
+      setWalletInitialized(true);
+      return;
+    }
+
+    try {
+      console.log("Initializing wallet and referral for customer:", customerId);
+      await referralApi.initializeCustomer({ appCustomerId: customerId.toString(), referralCode });
+      await AsyncStorage.setItem(`wallet_init_${customerId}`, "true");
+      setWalletInitialized(true);
+      console.log("Wallet and referral initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize wallet:", error);
+      // Don't throw - don't block app usage if wallet init fails
+    }
+  };
+
   /* Set / update logged-in user */
   const setAuthUser = async (user: AuthUser) => {
     await AsyncStorage.setItem("user", JSON.stringify(user));
@@ -106,8 +137,10 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
       value={{
         user,
         loading,
+        walletInitialized,
         saveTokens,
         setAuthUser,
+        initializeWallet,
         logout,
       }}
     >
@@ -118,10 +151,12 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
 /* ---------------- HOOK ---------------- */
 
-export const useAuthContext = () => {
+export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {
     throw new Error("AuthContext not found");
   }
   return ctx;
 };
+
+export const useAuthContext = useAuth;

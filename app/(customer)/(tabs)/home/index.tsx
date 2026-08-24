@@ -104,7 +104,7 @@ const QUICK_SERVICES = [
     slug: "dryclean",
     label: "APPAREL DRY CLEAN",
     subtitle: "Gentle and premium care",
-    timelineText: "Up to 8 hours",
+    timelineText: "Up to 24 hours",
     icon: DrycleanIcon,
   },
   {
@@ -837,6 +837,22 @@ export default function Home() {
                   </TouchableOpacity>
                 )}
 
+                {showSearchResults && (
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowSearchResults(false)}
+                    style={{
+                      position: "absolute",
+                      top: -100,
+                      left: -50,
+                      right: -50,
+                      bottom: -3000,
+                      backgroundColor: "rgba(0, 0, 0, 0.45)",
+                      zIndex: 999,
+                    }}
+                  />
+                )}
+
                 <View style={{ position: "relative", zIndex: 1000 }}>
                   <Animated.View
                     style={[styles.searchBarWrap, { opacity: fadeAnim }]}
@@ -1231,15 +1247,15 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     left: 16,
     right: 16,
     maxHeight: 400,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: "hidden",
     zIndex: 1001,
-    elevation: 6,
-    shadowColor: theme.background,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    elevation: 0,
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
     backgroundColor: theme.modalBackground,
     borderColor: theme.border,
   },

@@ -1,4 +1,3 @@
-// components/UPIPaymentSelector.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,6 +11,7 @@ import {
   Platform,
   UIManager,
   Modal,
+  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
@@ -21,6 +21,9 @@ import { oldApiClient } from '@/lib/api/client';
 import { DarkTheme } from '@/constants/colors';
 import { removeCouponApi } from '@/features/coupons/coupons.api';
 import { useTheme } from '@/context/ThemeContext';
+import { useWallet } from '@/context/WalletContext';
+import { walletApi } from '@/features/auth/wallet.api';
+import { razorpayPaymentInitiate } from '@/features/payment/payment.api';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -132,14 +135,17 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
   // const [installedApps, setInstalledApps] = useState<any[]>([]);
   // const [selectedApp, setSelectedApp] = useState<any>(null);
 
-  const [installedApps] = useState<any[]>([
-  ONLINE_OPTION,
-  COD_OPTION,
-]);
+  const { wallet, useWalletForPayment } = useWallet();
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
 
-const [selectedApp, setSelectedApp] = useState<any>(
-  defaultCod ? COD_OPTION : ONLINE_OPTION
-);
+  const [installedApps] = useState<any[]>([
+    ONLINE_OPTION,
+    COD_OPTION,
+  ]);
+
+  const [selectedApp, setSelectedApp] = useState<any>(
+    defaultCod ? COD_OPTION : ONLINE_OPTION
+  );
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showCodConfirm, setShowCodConfirm] = useState(false);
@@ -249,9 +255,19 @@ const [selectedApp, setSelectedApp] = useState<any>(
       } catch (err) {
         console.error('Failed to remove coupon for COD:', err);
       }
+
+      // Debit wallet first if split payment with COD
+      if (useWalletBalance && wallet && wallet.balance > 0) {
+        const totalRupees = amount / 100;
+        await useWalletForPayment({
+          orderId,
+          amount: totalRupees,
+          useFullBalance: true,
+        });
+      }
+
       const response = await oldApiClient.post(`/v1/payments/confirm-cod/${orderId}`);
       if (response.data.success) {
-        // The backend only sets isCODConfirmed = true, no payment details are saved.
         onSuccess({
           razorpay_payment_id: 'COD',
           razorpay_order_id: razorpayOrderId,
@@ -274,39 +290,102 @@ const [selectedApp, setSelectedApp] = useState<any>(
       return;
     }
 
-    // ---------- Cash on Delivery (uses confirm-cod API, no payment object saved) ----------
+    const totalRupees = amount / 100;
+    const usableWalletRupees = (useWalletBalance && wallet && wallet.balance > 0)
+      ? Math.min(wallet.balance, totalRupees)
+      : 0;
+
+    // ---------- Case 1: Full Wallet Payment ----------
+    if (selectedApp.isWallet || (useWalletBalance && usableWalletRupees >= totalRupees)) {
+      setLoading(true);
+      try {
+        const walletRes = await useWalletForPayment({
+          orderId,
+          amount: totalRupees,
+          useFullBalance: true,
+        });
+        onSuccess({
+          razorpay_payment_id: walletRes.transaction?.id || `WALLET_${Date.now()}`,
+          razorpay_order_id: razorpayOrderId,
+          razorpay_signature: 'WALLET',
+        });
+      } catch (error: any) {
+        onFailure(error.message || 'Wallet payment failed');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ---------- Case 2: Cash on Delivery ----------
     if (selectedApp.isCod) {
       setShowCodConfirm(true);
       return;
     }
 
-    // ---------- UPI Intent ----------
+    // ---------- Case 3: Online Razorpay Payment ----------
     setLoading(true);
-    const options = {
-      key: razorpayKeyId,
-      amount: amount.toString(),
-      currency: 'INR',
-      order_id: razorpayOrderId,
-      name: 'DryDash',
-      description: `Order ${razorpayOrderId}`,
-      prefill: { name: customerName, email: customerEmail, contact: customerPhone },
-      theme: { color: themeColor },
-      method: 'upi',
-      upi_app_package_name: selectedApp.package_name,
-      '_[flow]': 'intent',
-    };
-    RazorpayCheckout.open(options)
-      .then(onSuccess)
-      .catch((error: any) => {
-        if (error.code === 0 || error.code === 'PAYMENT_CANCELLED') onFailure('Payment cancelled');
-        else onFailure(error.description || error.message || 'Payment failed');
-      })
-      .finally(() => setLoading(false));
+    try {
+      let activeOrderId = razorpayOrderId;
+      let activeAmountPaise = amount;
+
+      // If split payment, create a Razorpay order for remaining balance
+      if (useWalletBalance && usableWalletRupees > 0) {
+        const initRes = await razorpayPaymentInitiate(orderId, usableWalletRupees);
+        if (initRes?.data?.success && initRes.data.razorpayOrderId) {
+          activeOrderId = initRes.data.razorpayOrderId;
+          activeAmountPaise = initRes.data.amount; // amount in paise for remaining
+        } else {
+          throw new Error('Failed to create payment order for remaining balance');
+        }
+      }
+
+      const options: any = {
+        key: razorpayKeyId,
+        amount: activeAmountPaise.toString(),
+        currency: 'INR',
+        order_id: activeOrderId,
+        name: 'DryDash',
+        description: `Order ${orderId}`,
+        prefill: { name: customerName, email: customerEmail, contact: customerPhone },
+        theme: { color: themeColor },
+      };
+
+      if (selectedApp.package_name) {
+        options.method = 'upi';
+        options.upi_app_package_name = selectedApp.package_name;
+        options['_[flow]'] = 'intent';
+      }
+
+      const paymentSuccessData = await RazorpayCheckout.open(options);
+
+      // Backend verifyRazorpayPayment handles split wallet debit server-side atomically upon verification
+      onSuccess(paymentSuccessData);
+    } catch (error: any) {
+      if (error.code === 0 || error.code === 'PAYMENT_CANCELLED') {
+        onFailure('Payment cancelled');
+      } else {
+        onFailure(error.description || error.message || 'Payment failed');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getAllOptions = () => {
     const options = [...installedApps];
-    if (!options.some(opt => opt.isCod)) {
+    const totalRupees = amount / 100;
+    if (wallet && wallet.balance >= totalRupees) {
+      if (!options.some((opt) => opt.isWallet)) {
+        options.unshift({
+          id: 'wallet',
+          name: `Pay with Wallet (₹${wallet.balance} available)`,
+          isCod: false,
+          isWallet: true,
+        });
+      }
+    }
+    if (!options.some((opt) => opt.isCod)) {
       options.push(COD_OPTION);
     }
     return options;
@@ -318,11 +397,22 @@ const [selectedApp, setSelectedApp] = useState<any>(
 
   const renderPaymentIcon = (item: any, size: number = 40) => {
     const iconStyle = size === 40 ? styles.paymentIcon : styles.otherIcon;
+    if (item.isWallet) {
+      return (
+        <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
+          <Ionicons
+            name="wallet"
+            size={size === 40 ? 24 : 20}
+            color={themeColor || "#16a34a"}
+          />
+        </View>
+      );
+    }
     if (item.isCod) {
       return (
         <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
           <Ionicons
-            name="wallet-outline"
+            name="cash-outline"
             size={size === 40 ? 24 : 20}
             color="#22c55e"
           />
@@ -425,6 +515,49 @@ const [selectedApp, setSelectedApp] = useState<any>(
         )}
 
         <View style={styles.container}>
+          {wallet && wallet.balance > 0 && !selectedApp.isWallet && (
+            <View style={{ marginBottom: 12 }}>
+              <TouchableOpacity
+                onPress={() => setUseWalletBalance(!useWalletBalance)}
+                activeOpacity={0.85}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 12,
+                  backgroundColor: useWalletBalance ? (isDark ? 'rgba(78, 112, 96, 0.15)' : '#f0fdf4') : (isDark ? theme.background : '#f8fafc'),
+                  borderWidth: 1,
+                  borderColor: useWalletBalance ? theme.primary : theme.border,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <Ionicons name="wallet" size={20} color={useWalletBalance ? theme.primary : theme.textSecondary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: theme.text }}>
+                      Use Wallet Balance (₹{wallet.balance} available)
+                    </Text>
+                    {useWalletBalance && (
+                      <Text style={{ fontSize: 11, color: theme.primary, marginTop: 2, fontWeight: '600' }}>
+                        {wallet.balance >= (amount / 100)
+                          ? `Paying ₹${(amount / 100).toFixed(0)} fully from Wallet`
+                          : `₹${wallet.balance} from Wallet + ₹${((amount / 100) - wallet.balance).toFixed(0)} via ${selectedApp.name}`}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <Switch
+                  value={useWalletBalance}
+                  onValueChange={setUseWalletBalance}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor="#ffffff"
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.mainRow}>
             <TouchableOpacity
               style={styles.paymentSelectSection}
@@ -464,10 +597,15 @@ const [selectedApp, setSelectedApp] = useState<any>(
                 ) : (
                   <View style={styles.buttonContent}>
                     <Text style={styles.placeOrderText}>
-                      {selectedApp.isCod ? 'Confirm' : 'Pay Now'}
+                      {selectedApp.isWallet ? 'Pay with Wallet' : selectedApp.isCod ? 'Confirm' : 'Pay Now'}
                     </Text>
                     {!selectedApp.isCod && (
-                      <Text style={styles.buttonAmount}>₹{(amount / 100).toFixed(2)}</Text>
+                      <Text style={styles.buttonAmount}>
+                        ₹{selectedApp.isWallet
+                          ? (amount / 100).toFixed(0)
+                          : Math.max((amount / 100) - (useWalletBalance && wallet ? Math.min(wallet.balance, amount / 100) : 0), 0).toFixed(0)
+                        }
+                      </Text>
                     )}
                   </View>
                 )}

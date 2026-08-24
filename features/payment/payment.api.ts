@@ -27,11 +27,12 @@ import { oldApiClient } from "@/lib/api/client";
 //   return res.json();
 // }
 
-export const razorpayPaymentInitiate = async (orderid: string) => {
+export const razorpayPaymentInitiate = async (orderid: string, walletAmount?: number) => {
   try {
-    console.log("this is the orderid inside", orderid);
+    console.log("this is the orderid inside", orderid, "walletAmount:", walletAmount);
     const res = await oldApiClient.post(`/v1/payments/initiate`, {
       orderId: orderid,
+      walletAmount: walletAmount || 0,
     });
     console.log("this is the res==>>", res);
     return res;

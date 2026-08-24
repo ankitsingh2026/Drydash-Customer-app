@@ -16,6 +16,7 @@ import {
   UserPen,
   Sun,
   Moon,
+  Wallet,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -347,26 +348,8 @@ export default function Profile() {
 
   const displayContact = profile?.user?.phone || profile?.user?.email || "";
 
-  const onShareReferral = useCallback(async () => {
-    try {
-      await Share.share({
-        message: `🎉 Get ₹50 on your first DryDash order!
- 
-Download DryDash:
- 
-Android:
-https://play.google.com/store/apps/details?id=com.drydash.newCustomer
- 
-iOS:
-https://apps.apple.com/in/app/drydash/id6761757578
- 
-Use my referral code: DRYDASH50
- 
-Laundry • Dry Clean • Shoe Spa 🚀`,
-      });
-    } catch (error) {
-      console.log(error);
-    }
+  const onShareReferral = useCallback(() => {
+    router.push("/(customer)/refer-and-earn");
   }, []);
 
   const referGradColors = useMemo(
@@ -542,6 +525,28 @@ Laundry • Dry Clean • Shoe Spa 🚀`,
             iconColor={iconColor}
             label="Edit Profile"
             onPress={onEditProfile}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
+          />
+          <GridTile
+            Icon={Wallet}
+            iconColor={iconColor}
+            label="Wallet"
+            sub="Balance, transactions & top-up"
+            onPress={() => router.push("/(customer)/wallet")}
+            cardColor={activeColors.card}
+            borderColor={activeColors.border}
+            textColor={activeColors.text}
+            subColor={activeColors.subText}
+          />
+          <GridTile
+            Icon={Gift}
+            iconColor={iconColor}
+            label="Refer & Earn"
+            sub="Share code, earn bonuses"
+            onPress={() => router.push("/(customer)/refer-and-earn")}
             cardColor={activeColors.card}
             borderColor={activeColors.border}
             textColor={activeColors.text}
