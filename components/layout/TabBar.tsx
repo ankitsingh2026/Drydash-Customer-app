@@ -512,7 +512,7 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               activeOpacity={0.8}
               onPress={handleBellPress}
               style={styles.iconBtn}
@@ -526,7 +526,7 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
                   </Text>
                 </View>
               )}
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
       </View>
