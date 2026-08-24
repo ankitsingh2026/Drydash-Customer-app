@@ -9,11 +9,13 @@ import {
   View,
   Dimensions,
   StatusBar,
+  Image,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { SvgUri } from "react-native-svg";
 import { useAddress } from "@/context/AddressContext";
 import { useTheme } from "@/context/ThemeContext";
+import { useHomeData } from "@/context/HomeDataContext";
 import ShoesIcon from "../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../assets/homeicons/DryClean-logo.svg";
 import LaundryIcon from "../../../assets/homeicons/Laundry-logo.svg";
@@ -25,68 +27,112 @@ import BtoBIcon from "../../../assets/homeicons/B2B.svg";
 
 const { width } = Dimensions.get("window");
 
-const SERVICES = [
+const ICON_MAP: Record<string, React.FC<any>> = {
+  "shoe-spa": ShoesIcon,
+  "shoe": ShoesIcon,
+  "dry-clean": DrycleanIcon,
+  "dryclean": DrycleanIcon,
+  "leather-luxury": LeatherIcon,
+  "leather": LeatherIcon,
+  "laundry": LaundryIcon,
+  "on-site": OnsiteIcon,
+  "onsite": OnsiteIcon,
+  "car-wash": CarwashIcon,
+  "carwash": CarwashIcon,
+  "b2b-services": BtoBIcon,
+  "b2b": BtoBIcon,
+  "8-hours-delivery": ExpressIcon,
+  "express": ExpressIcon,
+};
+
+const normalizeServiceSlug = (slug: string = ""): string => {
+  const s = slug.toLowerCase().trim();
+  if (s === "shoe-spa" || s === "shoe") return "shoe";
+  if (s === "dry-clean" || s === "dryclean") return "dryclean";
+  if (s === "leather-luxury" || s === "leather") return "leather";
+  if (s === "laundry") return "laundry";
+  if (s === "on-site" || s === "onsite") return "onsite";
+  if (s === "car-wash" || s === "carwash") return "carwash";
+  if (s === "b2b-services" || s === "b2b") return "b2b";
+  if (s === "8-hours-delivery" || s === "express") return "express";
+  return s;
+};
+
+const FALLBACK_SERVICES = [
   {
-    key: "Shoe Spa",
-    slug: "shoe",
-    label: "SHOE SPA",
+    _id: "shoe",
+    slug: "shoe-spa",
+    title: "SHOE SPA",
     subtitle: "Deep Clean and restore",
-    icon: ShoesIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Dry Clean",
-    slug: "dryclean",
-    label: "DRY CLEAN",
+    _id: "dryclean",
+    slug: "dry-clean",
+    title: "DRY CLEAN",
     subtitle: "Gentle and premium care",
-    icon: DrycleanIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Laundry",
+    _id: "laundry",
     slug: "laundry",
-    label: "LAUNDRY",
+    title: "LAUNDRY",
     subtitle: "Fresh & hygienic",
-    icon: LaundryIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Leather",
-    slug: "leather",
-    label: "LEATHER & LUXURY",
+    _id: "leather",
+    slug: "leather-luxury",
+    title: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
-    icon: LeatherIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Onsite",
-    slug: "onsite",
-    label: "ON-SITE",
+    _id: "onsite",
+    slug: "on-site",
+    title: "ON-SITE",
     subtitle: "Expert service, right where you are",
-    icon: OnsiteIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "CarWash",
-    slug: "carwash",
-    label: "CAR-WASH",
+    _id: "carwash",
+    slug: "car-wash",
+    title: "CAR-WASH",
     subtitle: "Drive away fresh and clean",
-    icon: CarwashIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "B2B",
-    slug: "b2b",
-    label: "B2B SERVICES",
+    _id: "b2b",
+    slug: "b2b-services",
+    title: "B2B SERVICES",
     subtitle: "Tailored solutions for organizations",
-    icon: BtoBIcon,
+    mediaUrl: "",
+    mediaType: "image",
   },
 ];
+
 export default function ServicesPage() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { selectedAddress } = useAddress();
+  const { layoutContent } = useHomeData();
   const styles = makeStyles(theme);
-  console.log("Selected Address in Services Page:", selectedAddress);
+
+  const servicesList = (layoutContent?.services_section?.services && layoutContent.services_section.services.length > 0)
+    ? layoutContent.services_section.services
+    : FALLBACK_SERVICES;
+  const sectionTitle = layoutContent?.services_section?.title?.trim() || "OUR SERVICES";
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
-      <View style={{ flex: 1, }}>
+      <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
@@ -107,45 +153,53 @@ export default function ServicesPage() {
               </Text>
             </View>
           </View>
-
-          {/* <TouchableOpacity style={styles.bellBtn}>
-            <Ionicons name="notifications-outline" size={20} color={theme.text} />
-          </TouchableOpacity> */}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.sectionTitle}>OUR SERVICES</Text>
+          <Text style={styles.sectionTitle}>{sectionTitle.toUpperCase()}</Text>
 
           <View style={styles.grid}>
-            {SERVICES.map((s) => {
-              const Icon = s.icon;
+            {servicesList.map((s: any, index: number) => {
+              const normalized = normalizeServiceSlug(s.slug);
+              const FallbackIcon = ICON_MAP[s.slug] || ICON_MAP[normalized] || ShoesIcon;
+              const mediaUrl = s.mediaUrl?.trim() || "";
+              const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
+              const isHttp = mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://");
+
+              const subText = s.subtitle || (normalized === "onsite" ? "Expert service, right where you are" : normalized === "carwash" ? "Drive away fresh and clean" : normalized === "b2b" ? "Tailored solutions for organizations" : s.deliveryHours ? `Up to ${s.deliveryHours} hours` : "Premium care");
 
               return (
                 <TouchableOpacity
-                  key={s.key}
+                  key={s._id || s.slug || String(index)}
                   activeOpacity={0.85}
                   onPress={() => {
-                    if (["shoe", "laundry", "leather", "dryclean"].includes(s.slug)) {
+                    if (["shoe", "laundry", "leather", "dryclean"].includes(normalized)) {
                       router.push({
                         pathname: "/services/[service]",
-                        params: { service: s.slug as any },
+                        params: { service: normalized as any },
                       });
                     } else {
-                      router.push(`/services/${s.slug}`);
+                      router.push(`/services/${normalized}` as any);
                     }
                   }}
                   style={styles.card}
                 >
                   <View style={styles.iconContainer}>
-                    <Icon width="90%" height="90%" />
+                    {isHttp && isSvg ? (
+                      <SvgUri uri={mediaUrl} width="90%" height="90%" />
+                    ) : isHttp ? (
+                      <Image source={{ uri: mediaUrl }} style={{ width: "90%", height: "90%" }} resizeMode="contain" />
+                    ) : (
+                      <FallbackIcon width="90%" height="90%" />
+                    )}
                   </View>
 
                   <View style={styles.divider} />
 
                   <View style={styles.textContainer}>
-                    <Text style={styles.cardTitle}>{s.label}</Text>
+                    <Text style={styles.cardTitle}>{s.title || s.label}</Text>
                     <Text style={styles.cardSub} numberOfLines={1}>
-                      {s.subtitle}
+                      {subText}
                     </Text>
                   </View>
                 </TouchableOpacity>
