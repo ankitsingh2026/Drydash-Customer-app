@@ -1,4 +1,5 @@
 import { useTheme } from "@/context/ThemeContext";
+import { ContentSection } from "@/features/content/content.types";
 import { useFocusEffect, useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { useCallback, useEffect } from "react";
@@ -15,14 +16,11 @@ import {
 
 const { width } = Dimensions.get("window");
 
-const FEATURE_VIDEO = {
-  title: "See How DryDash Works",
-  subtitle: "Watch our premium cleaning process",
-  duration: "1:20",
-  video: {
-    uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4",
-  },
-};
+const DEFAULT_VIDEO_URL = "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4";
+
+interface LearnExploreSectionProps {
+  sectionData?: ContentSection;
+}
 
 const ARTICLES = [
   {
@@ -51,13 +49,25 @@ const ARTICLES = [
   },
 ];
 
-export default function LearnExploreSection() {
+export default function LearnExploreSection({ sectionData }: LearnExploreSectionProps = {}) {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   const router = useRouter();
 
+  if (sectionData && sectionData.isActive === false) {
+    return null;
+  }
+
+  const sectionTitle = sectionData?.title?.trim() || "Learn & Explore";
+
+  // Use the API-provided video URL if it's a video, otherwise fall back to the hardcoded one
+  const apiMediaUrl = sectionData?.mediaUrl?.trim() || "";
+  const isVideo = apiMediaUrl &&
+    (sectionData?.mediaType === "video" || apiMediaUrl.endsWith(".mp4") || apiMediaUrl.endsWith(".mov"));
+  const videoUri = isVideo ? apiMediaUrl : DEFAULT_VIDEO_URL;
+
   // muted, looping, no controls — background-style preview
-  const player = useVideoPlayer(FEATURE_VIDEO.video.uri, (player) => {
+  const player = useVideoPlayer(videoUri, (player) => {
     player.loop = true;
     player.muted = true;
   });
@@ -116,7 +126,7 @@ export default function LearnExploreSection() {
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Learn & Explore</Text>
+        <Text style={styles.headerTitle}>{sectionTitle}</Text>
       </View>
 
       {/* ── Featured Video Card ── */}

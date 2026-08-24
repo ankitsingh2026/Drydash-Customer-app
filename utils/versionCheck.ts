@@ -31,10 +31,10 @@ export const checkUpdate = async (): Promise<UpdateResult> => {
 
     // ✅ Default values
     await setDefaults(rc, {
-      android_latest_version: "1.1.29",
-      android_min_version: "1.1.28",
-      ios_latest_version: "1.1.29",
-      ios_min_version: "1.1.28",
+      android_latest_version: "1.1.0",
+      android_min_version: "1.1.0",
+      ios_latest_version: "1.1.0",
+      ios_min_version: "1.1.0",
       force_update: false,
       update_message: "A new update is available 🚀",
       android_store_url:
