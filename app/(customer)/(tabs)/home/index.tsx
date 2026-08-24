@@ -900,16 +900,18 @@ export default function Home() {
                       activeOpacity={0.92}
                       onPress={handleHeroPress}
                       style={{
-                        height: 130,
+                        height: 250,
                         width: "100%",
                         paddingHorizontal: 16,
+                        marginBottom:6,
+                        marginTop:6
                       }}
                     >
                       {isLottie || !mediaUrl ? (
                         <DotLottie
                           key={lottieKey + (mediaUrl || "default")}
                           source={mediaUrl ? { uri: mediaUrl } : require("../../../../assets/Anim_Banner.lottie")}
-                          autoPlay
+                          autoplay
                           loop
                           style={{ width: "100%", height: "100%" }}
                         />
@@ -918,7 +920,7 @@ export default function Home() {
                       ) : (
                         <Image
                           source={{ uri: mediaUrl }}
-                          style={{ width: "100%", height: "100%", borderRadius: 16 }}
+                          style={{ width: "100%", height: "100%", borderRadius: 10 }}
                           resizeMode="cover"
                         />
                       )}
