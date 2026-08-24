@@ -228,9 +228,9 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
     }
   }, [allAddresses, loading]);
 
-  const fetchFullServiceData = async (lat: number, lng: number) => {
+  const fetchFullServiceData = async (lat: number, lng: number, forceRefresh = false) => {
     try {
-      const data = await getFullServiceData(lat, lng, true); // force refresh
+      const data = await getFullServiceData(lat, lng, forceRefresh);
       updateServiceData(data);
     } catch (error) {
       console.error("Full service data error:", error);
@@ -252,19 +252,6 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
       setSelectedAddress(address);
     }
     if (label) setLocationText(label);
-  };
-
-  const handleBellPress = async () => {
-    if (isFetchingRef.current) return;
-    isFetchingRef.current = true;
-    try {
-      await refreshNotifications();
-      onOpenNotifications?.();
-    } catch (e) {
-      console.error("Notification refresh failed", e);
-    } finally {
-      isFetchingRef.current = false;
-    }
   };
 
   // Helper to get best slot from serviceData (API response)
@@ -623,25 +610,6 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.border,
     shadowColor: theme.accent,
-    // shadowOpacity: 0.15,
-    // shadowRadius: 10,
-    // elevation: 6,
-  },
-  badge: {
-    position: "absolute",
-    top: 3,
-    right: 4,
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.error,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: "800",
   },
   deliveryLabel: {
     fontSize: 12,
