@@ -25,6 +25,35 @@ export default function SplashScreen() {
   useEffect(() => {
     let appState = AppState.currentState;
 
+    // Handle deep links on cold start
+    const handleInitialUrl = async () => {
+      const url = await Linking.getInitialURL();
+      if (url) {
+        console.log("Cold start deep link:", url);
+        handleDeepLink(url);
+      }
+    };
+
+    // Handle deep links when app is in background
+    const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
+      console.log("Deep link received:", url);
+      handleDeepLink(url);
+    });
+
+    const handleDeepLink = (url: string) => {
+      try {
+        const parsedUrl = new URL(url);
+        const refCode = parsedUrl.searchParams.get('ref');
+        if (refCode && parsedUrl.pathname.includes('/signup')) {
+          // Store referral code for signup screen
+          router.replace(`/auth?ref=${refCode.toUpperCase()}`);
+        }
+      } catch (e) {
+        console.error("Error parsing deep link:", e);
+      }
+    };
+
+    handleInitialUrl();
 
     const runCheck = async () => {
       try {
@@ -75,18 +104,12 @@ export default function SplashScreen() {
 
     return () => {
       subscription.remove();
+      linkingSubscription.remove();
     };
   }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* <Image
-        source={require("../assets/images/drydashlogo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-
-      <Text style={[styles.slogan, { color: colors.subText }]}>Smart Laundry. Seamless Life.</Text> */}
       <UpdateModal
         visible={!!updateType}
         type={updateType}

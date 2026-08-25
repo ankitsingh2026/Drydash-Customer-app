@@ -76,13 +76,17 @@ export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId 
       
       const grandTotal = Number(apiData.totalAmount) || 0;
 
-      // Load logo as base64
+      // Load logo as base64 safely
       let logoSrc = '';
       try {
-        const [asset] = await Asset.loadAsync(require('../../assets/images/drydashlogo.png'));
-        if (asset && asset.localUri) {
-          const logoBase64 = await FileSystem.readAsStringAsync(asset.localUri, { encoding: FileSystem.EncodingType.Base64 });
+        const assets = await Asset.loadAsync(require('../../assets/images/drydashlogo.png'));
+        const asset = assets?.[0];
+        const targetUri = asset?.localUri || asset?.uri;
+        if (targetUri && targetUri.startsWith('file://')) {
+          const logoBase64 = await FileSystem.readAsStringAsync(targetUri, { encoding: FileSystem.EncodingType.Base64 });
           logoSrc = `data:image/png;base64,${logoBase64}`;
+        } else if (targetUri) {
+          logoSrc = targetUri;
         }
       } catch (e) {
         console.log('Failed to load logo', e);
@@ -288,25 +292,37 @@ export const DownloadBillButton: React.FC<DownloadBillButtonProps> = ({ orderId 
 
       // 4. Save and share the file with a clear filename
       const customFileName = `Bill_${apiData.order_id || apiData.orderId || orderId}.pdf`;
-      const newUri = FileSystem.documentDirectory + customFileName;
-      
-      // Move to a properly named file
-      await FileSystem.moveAsync({
-        from: uri,
-        to: newUri
-      });
+      let shareUri = uri;
+
+      if (FileSystem.documentDirectory) {
+        const targetUri = FileSystem.documentDirectory + customFileName;
+        try {
+          await FileSystem.deleteAsync(targetUri, { idempotent: true });
+          await FileSystem.moveAsync({
+            from: uri,
+            to: targetUri
+          });
+          shareUri = targetUri;
+        } catch (moveError) {
+          console.log('Move file error, falling back to temp uri:', moveError);
+          shareUri = uri;
+        }
+      }
 
       showAlert({
         type: 'success',
         title: 'Success',
-        message: 'Bill downloaded successfully.',
+        message: 'Bill generated successfully.',
       });
 
-      await Sharing.shareAsync(newUri, {
-        mimeType: 'application/pdf',
-        dialogTitle: 'Save or Share Bill',
-        UTI: 'com.adobe.pdf'
-      });
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(shareUri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Save or Share Bill',
+          UTI: 'com.adobe.pdf'
+        });
+      }
 
     } catch (error: any) {
       console.log('Bill error:', error);

@@ -8,6 +8,7 @@ import {
 import { getOrdersApi, getSingleOrderDetailsApi } from "@/features/orders/orders.api";
 import {
   razorpayPaymentInitiate,
+  verifyRazorpayPayment,
 } from "@/features/payment/payment.api";
 import { useAuth } from "@/hooks/useAuth";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -396,6 +397,7 @@ export default function OrderReceipt() {
     }
 
     const orderDetails = normalizeOrderDetails(rawOrderDetails);
+
     setSingleOrderDetails(orderDetails ? { ...orderDetails } : null);
 
     if (orderDetails?.Coupon?.coupon?.code) {
@@ -659,9 +661,8 @@ export default function OrderReceipt() {
       console.log("payment success data==>>", data);
       setPaymentLoading(true);
 
-      // Check if it's a COD payment (no real payment ID)
+      // 1. Cash on Delivery
       if (data.razorpay_payment_id === 'COD') {
-        // For COD, coupons don't apply. The amount is the total amount without discount.
         const fullAmount = (singleOrderDetails?.totalAmount || 0) + (singleOrderDetails?.discountAmount || 0);
         setIsPaymentDone(true);
         router.replace({
@@ -678,16 +679,37 @@ export default function OrderReceipt() {
         return;
       }
 
-      // For online payments, wait for Razorpay UI to close and then set data
-      // The useEffect will trigger redirection once both Razorpay and Socket confirm success
-      setRazorpaySuccessData(data);
+      // 2. 100% Wallet Payment
+      if (data.razorpay_signature === 'WALLET' || (data.razorpay_payment_id && String(data.razorpay_payment_id).startsWith('WALLET'))) {
+        setIsPaymentDone(true);
+        if (orderId) {
+          confirmCouponApi({ orderId }).catch(console.error);
+        }
+        await getSingleOrderDetails();
+        setPaymentLoading(false);
+        return;
+      }
 
-      // Fallback: If socket webhook doesn't arrive within 4 seconds, proceed anyway
-      setTimeout(() => {
-        setSocketVerified(true);
-      }, 4000);
-    } catch (error) {
+      // 3. Online Razorpay Payment (Full or Split) - Call Verification API directly!
+      const verifyRes = await verifyRazorpayPayment({
+        razorpay_order_id: data.razorpay_order_id,
+        razorpay_payment_id: data.razorpay_payment_id,
+        razorpay_signature: data.razorpay_signature,
+      });
+
+      if (verifyRes && verifyRes.success) {
+        setIsPaymentDone(true);
+        if (orderId) {
+          confirmCouponApi({ orderId }).catch(console.error);
+        }
+        await getSingleOrderDetails();
+      } else {
+        throw new Error(verifyRes?.message || "Payment verification failed");
+      }
+    } catch (error: any) {
       console.error('Payment success error:', error);
+      handlePaymentFailure(error.message || 'Payment verification failed');
+    } finally {
       setPaymentLoading(false);
     }
   };

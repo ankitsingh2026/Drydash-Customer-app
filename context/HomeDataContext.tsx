@@ -9,6 +9,8 @@
  */
 
 import React, { createContext, useCallback, useContext, useState } from "react";
+import { LayoutContentData } from "@/features/content/content.types";
+import { getContentLayoutApi } from "@/features/content/content.api";
 
 type ActiveType = "none" | "pickup" | "order";
 
@@ -25,6 +27,11 @@ interface HomeDataContextType {
 
   cachedUserName: string | null;
   setCachedUserName: (name: string) => void;
+
+  // ── Dynamic Layout Content ──────────────────────────────────────────────
+  layoutContent: LayoutContentData | null;
+  layoutLoading: boolean;
+  fetchLayoutContent: (forceRefresh?: boolean) => Promise<LayoutContentData | null>;
 
   // ── Booking confirmation modal (owned here so it survives navigation) ───
   bookingModalVisible: boolean;
@@ -59,6 +66,30 @@ export const HomeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [cachedActiveBooking, setCachedActiveBooking] = useState<any>(null);
   const [cachedActiveType, setCachedActiveType] = useState<ActiveType>("none");
   const [cachedUserName, setCachedUserName] = useState<string | null>(null);
+
+  // ── dynamic layout ────────────────────────────────────────────────────────
+  const [layoutContent, setLayoutContent] = useState<LayoutContentData | null>(null);
+  const [layoutLoading, setLayoutLoading] = useState(false);
+
+  const fetchLayoutContent = useCallback(async (forceRefresh: boolean = false) => {
+    if (layoutContent && !forceRefresh) {
+      return layoutContent;
+    }
+    try {
+      setLayoutLoading(true);
+      const res = await getContentLayoutApi();
+      if (res?.success && res?.data) {
+        setLayoutContent(res.data);
+        return res.data;
+      }
+      return null;
+    } catch (err) {
+      console.log("Error fetching dynamic layout content:", err);
+      return null;
+    } finally {
+      setLayoutLoading(false);
+    }
+  }, [layoutContent]);
 
   const setCachedData = useCallback((booking: any, type: ActiveType) => {
     setCachedActiveBooking(booking);
@@ -102,6 +133,9 @@ export const HomeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCachedData,
         cachedUserName,
         setCachedUserName,
+        layoutContent,
+        layoutLoading,
+        fetchLayoutContent,
         bookingModalVisible,
         bookingModalConfirmed,
         bookingModalAddress,

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useTheme } from "../../../context/ThemeContext";
 import { StyleSheet, Text, View, Animated, Easing } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -12,8 +12,8 @@ export default function PaymentSuccess() {
     orderId?: string;
   }>();
 
-  const scaleAnim = new Animated.Value(0);
-  const opacityAnim = new Animated.Value(0);
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Animation for checkmark

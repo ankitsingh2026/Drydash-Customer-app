@@ -25,7 +25,7 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { CirclePlus } from "lucide-react-native";
+import { CirclePlus, Wallet as WalletIcon } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -48,6 +48,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LocationPickerModal from "../../components/LocationPickerModal";
 import { useTheme } from "../../context/ThemeContext";
+import { useWallet } from "@/context/WalletContext";
 import { useSlotSocket } from "@/context/SlotSocketContext";
 import SlotPicker from "@/components/SlotPicker";
 import { showAlert } from "@/components/Customalert";
@@ -219,6 +220,9 @@ export default function BookPickup() {
     () => buildPhoneCandidates(user?.user?.phone ?? user?.phone ?? ""),
     [user?.phone, user?.user?.phone],
   );
+
+  const { wallet, useWalletForPayment } = useWallet();
+  const [useWalletBalance, setUseWalletBalance] = useState(false);
 
   const [couponOpen, setCouponOpen] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
@@ -875,6 +879,21 @@ export default function BookPickup() {
       }
 
       await createOrderApi(orderDetails);
+
+      // Process wallet payment if wallet balance is selected
+      if (useWalletBalance && wallet && wallet.balance > 0) {
+        try {
+          const refId = orderDetails.bookingId || orderDetails.tempPickupAdresssId || `ord_${Date.now()}`;
+          await useWalletForPayment({
+            orderId: refId,
+            amount: total,
+            useFullBalance: true,
+          });
+        } catch (walletErr) {
+          console.error("Wallet payment error during booking:", walletErr);
+        }
+      }
+
       // Signal animation modal that booking succeeded
       confirmBookingModal();
     } catch (err: any) {
@@ -1441,10 +1460,56 @@ export default function BookPickup() {
               </TouchableOpacity>
             </View>
 
+            {/* PAY WITH WALLET */}
+            {wallet && wallet.balance > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <TouchableOpacity
+                  onPress={() => setUseWalletBalance(!useWalletBalance)}
+                  activeOpacity={0.85}
+                  style={{
+                    borderRadius: 14,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    backgroundColor: useWalletBalance ? (isDark ? "rgba(78, 112, 96, 0.12)" : "#F0FDF4") : theme.card,
+                    borderWidth: 1,
+                    borderColor: useWalletBalance ? theme.primary : theme.border,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                    <WalletIcon size={20} color={useWalletBalance ? theme.primary : theme.textSecondary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: theme.text, fontWeight: "800", fontSize: 14 }}>
+                        Pay using Wallet
+                      </Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 12, marginTop: 2 }}>
+                        Available Balance: ₹{wallet.balance}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Switch
+                    value={useWalletBalance}
+                    onValueChange={setUseWalletBalance}
+                    trackColor={{ false: theme.border, true: theme.primary }}
+                    thumbColor="#ffffff"
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* SUBTOTAL & TOTAL PAYABLE */}
             <View style={{ marginTop: 18 }}>
               <BreakRow label="Subtotal" value={cartSubtotal} />
               {discount > 0 && <BreakRow label="Discount" value={`${discount}`} />}
+              {useWalletBalance && wallet && wallet.balance > 0 && (
+                <BreakRow
+                  label="Wallet Used"
+                  value={`-${Math.min(wallet.balance, Math.max(cartSubtotal - discount, 0))}`}
+                />
+              )}
 
               <View
                 style={{
@@ -1454,7 +1519,18 @@ export default function BookPickup() {
                 }}
               />
 
-              <BreakRow label="Total Payable" value={grandTotal} total />
+              <BreakRow
+                label="Total Payable"
+                value={Math.max(
+                  cartSubtotal -
+                    discount -
+                    (useWalletBalance && wallet && wallet.balance > 0
+                      ? Math.min(wallet.balance, Math.max(cartSubtotal - discount, 0))
+                      : 0),
+                  0
+                )}
+                total
+              />
             </View>
           </>
         )}

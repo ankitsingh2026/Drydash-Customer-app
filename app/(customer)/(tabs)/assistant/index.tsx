@@ -74,7 +74,7 @@ export default function SupportIndex() {
           </View>
 
           {/* search bar */}
-          <Animated.View style={[styles.searchWrapper, { opacity: fade }]}>
+          {/* <Animated.View style={[styles.searchWrapper, { opacity: fade }]}>
             <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
             <TextInput
               value={search}
@@ -84,7 +84,7 @@ export default function SupportIndex() {
               style={styles.searchInput}
               returnKeyType="search"
             />
-          </Animated.View>
+          </Animated.View> */}
 
           {/* action buttons */}
           <Animated.View style={styles.actionRow}>

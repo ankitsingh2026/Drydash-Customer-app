@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSmsUserConsent } from "@eabdullazyanov/react-native-sms-user-consent";
 import { Ionicons } from "@expo/vector-icons";
 import { showPhoneNumberHint } from "@shayrn/react-native-android-phone-number-hint";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -28,6 +28,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
 import DryDashLogo from "../../assets/images/logo/drydashLogo.svg";
 import { registerCustomerPushToken } from "@/lib/notifications/fcm";
+import { referralApi } from "@/features/auth/referral.api";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
  
 let OtpVerify: any = null;
@@ -62,6 +63,7 @@ export default function AuthScreen() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [hash, setHash] = useState<string[]>([]);
   const [avatar, setAvatar] = useState<string | null>(null);
  
@@ -79,10 +81,36 @@ export default function AuthScreen() {
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   //  const errorShake = useRef(new Animated.Value(0)).current;
   const userIsTyping = useRef(false);
- 
+
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
   const retrievedCode = useSmsUserConsent();
- 
+
+  const { ref } = useLocalSearchParams<{ ref?: string }>();
+
+  // Read referral code from URL params (for deep links)
+  useEffect(() => {
+    if (ref) {
+      const refCode = ref.toString().toUpperCase();
+      setReferralCode(refCode);
+      // Validate the referral code
+      validateReferralCode(refCode);
+    }
+  }, [ref]);
+
+  const validateReferralCode = async (code: string) => {
+    try {
+      const result = await referralApi.validateReferralCode(code);
+      if (result.success) {
+        showAlert({ type: 'success', title: 'Referral Applied!', message: `You'll get ₹${result.data?.refereeBonusAmount} bonus on first order!` });
+      } else {
+        showAlert({ type: 'warning', title: 'Invalid Code', message: result.message || 'Referral code is invalid or expired.' });
+        setReferralCode("");
+      }
+    } catch (e) {
+      console.error("Referral validation error:", e);
+    }
+  };
+
   // Animate on step change
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -298,7 +326,7 @@ export default function AuthScreen() {
     }
   }, [step]);
  
-  const { saveTokens, setAuthUser } = useAuth();
+  const { saveTokens, setAuthUser, initializeWallet } = useAuth();
  
   const verifyOtp = async (otpValue?: string) => {
     const otpToVerify = otpValue || otp;
@@ -330,8 +358,10 @@ export default function AuthScreen() {
       if (!res.isNewUser) {
         await setAuthUser(res.user);
 
-          await registerCustomerPushToken(res.user.id);
+        await registerCustomerPushToken(res.user.id);
 
+        // Initialize wallet & referral
+        await initializeWallet();
 
         router.replace("/(customer)/(tabs)/home");
       } else {
@@ -396,6 +426,8 @@ export default function AuthScreen() {
  
       await setAuthUser(updatedUser);
  
+      // Initialize wallet & referral for new user
+      await initializeWallet(referralCode ? referralCode.trim() : undefined);
       router.replace("/(customer)/(tabs)/home");
     } catch (e: any) {
       //  setError(e.message);
@@ -405,6 +437,7 @@ export default function AuthScreen() {
       setFirstName("");
       setLastName("");
       setEmail("");
+      setReferralCode("");
       setLoading(false);
     }
   };
@@ -664,6 +697,14 @@ export default function AuthScreen() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                   autoComplete="email"
+                />
+
+                <Input
+                  icon="gift-outline"
+                  placeholder="Referral Code (optional)"
+                  value={referralCode}
+                  onChangeText={(text: string) => setReferralCode(text.toUpperCase())}
+                  autoCapitalize="characters"
                 />
               </>
             )}

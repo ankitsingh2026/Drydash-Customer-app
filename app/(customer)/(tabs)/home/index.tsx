@@ -1,7 +1,9 @@
 import AppLoader from "@/components/AppLoader";
 import CartSheet from "@/components/CartSheet";
 import FloatingCart from "@/components/FloatingCart";
+import HowItWorksSection from "@/components/home/HowItWorksSection";
 import LearnExploreSection from "@/components/home/Learnexploresection";
+import TestimonialsSection from "@/components/home/TestimonialsSection";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { TabBar } from "@/components/layout/TabBar";
 import HomeActiveOrderCard from "@/components/orders/HomeActiveOrderCard";
@@ -24,6 +26,7 @@ import {
   Dimensions,
   Easing,
   Image,
+  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -45,14 +48,19 @@ import SlotPicker from "@/components/SlotPicker";
 import SwipeToAction from "@/components/SwipeToAction";
 import ShoesIcon from "../../../../assets/homeicons/Shoes.svg";
 import DrycleanIcon from "../../../../assets/homeicons/DryClean-logo.svg";
+import LaundryIcon from "../../../../assets/homeicons/Laundry-logo.svg";
 import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
 // import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 import Banner from "../../../../assets/homeicons/Banner1.svg";
+import BtoBIcon from "../../../../assets/homeicons/B2B.svg";
+import { SvgUri } from "react-native-svg";
+import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 import { useCart } from "@/context/CartContext";
 import { useHomeData } from "@/context/HomeDataContext";
+import { ContentServiceItem } from "@/features/content/content.types";
 
 const { width } = Dimensions.get("window");
 
@@ -91,54 +99,111 @@ type SearchResultItem = {
   };
 };
 
-const QUICK_SERVICES = [
+const ICON_MAP: Record<string, React.FC<any>> = {
+  "shoe-spa": ShoesIcon,
+  "shoe": ShoesIcon,
+  "dry-clean": DrycleanIcon,
+  "dryclean": DrycleanIcon,
+  "leather-luxury": LeatherIcon,
+  "leather": LeatherIcon,
+  "laundry": LaundryIcon,
+  "on-site": OnsiteIcon,
+  "onsite": OnsiteIcon,
+  "car-wash": CarwashIcon,
+  "carwash": CarwashIcon,
+  "b2b-services": BtoBIcon,
+  "b2b": BtoBIcon,
+  "8-hours-delivery": ExpressIcon,
+  "express": ExpressIcon,
+};
+
+export const normalizeServiceSlug = (slug: string = ""): string => {
+  const s = slug.toLowerCase().trim();
+  if (s === "shoe-spa" || s === "shoe") return "shoe";
+  if (s === "dry-clean" || s === "dryclean") return "dryclean";
+  if (s === "leather-luxury" || s === "leather") return "leather";
+  if (s === "laundry") return "laundry";
+  if (s === "on-site" || s === "onsite") return "onsite";
+  if (s === "car-wash" || s === "carwash") return "carwash";
+  if (s === "b2b-services" || s === "b2b") return "b2b";
+  if (s === "8-hours-delivery" || s === "express") return "express";
+  return s;
+};
+
+const QUICK_SERVICES: ContentServiceItem[] = [
   {
-    key: "Shoe Spa",
-    slug: "shoe",
-    label: "SHOE SPA",
+    _id: "shoe",
+    slug: "shoe-spa",
+    title: "SHOE SPA",
     subtitle: "Deep Clean and restore",
-    timelineText: "Up to 24 hours",
-    icon: ShoesIcon,
-    featured: true,
+    deliveryHours: "24",
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Dry Clean",
-    slug: "dryclean",
-    label: "APPAREL DRY CLEAN",
+    _id: "dryclean",
+    slug: "dry-clean",
+    title: "DRY CLEAN",
     subtitle: "Gentle and premium care",
-    timelineText: "Up to 24 hours",
-    icon: DrycleanIcon,
+    deliveryHours: "24",
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Leather",
-    slug: "leather",
-    label: "LEATHER & LUXURY",
+    _id: "leather",
+    slug: "leather-luxury",
+    title: "LEATHER & LUXURY",
     subtitle: "Specialized care for leather",
-    timelineText: "Up to 48 hours",
-    icon: LeatherIcon,
+    deliveryHours: "48",
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "Onsite",
-    slug: "onsite",
-    label: "On-Site",
+    _id: "laundry",
+    slug: "laundry",
+    title: "LAUNDRY",
+    subtitle: "Fresh & hygienic",
+    deliveryHours: "24",
+    mediaUrl: "",
+    mediaType: "image",
+  },
+  {
+    _id: "onsite",
+    slug: "on-site",
+    title: "ON-SITE",
     subtitle: "At-home service",
-    icon: OnsiteIcon,
+    deliveryHours: "",
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "carwash",
-    slug: "carwash",
-    label: "Car-Wash",
+    _id: "carwash",
+    slug: "car-wash",
+    title: "CAR-WASH",
     subtitle: "At-home service",
-    icon: CarwashIcon,
+    deliveryHours: "",
+    mediaUrl: "",
+    mediaType: "image",
   },
   {
-    key: "express",
-    slug: "express",
-    label: "8-Hour Delivery",
-    subtitle: "Express Delivery",
-    icon: ExpressIcon,
+    _id: "b2b",
+    slug: "b2b-services",
+    title: "B2B SERVICES",
+    subtitle: "Tailored solutions",
+    deliveryHours: "",
+    mediaUrl: "",
+    mediaType: "image",
   },
 ];
+
+interface ServiceTileProps {
+  service: ContentServiceItem | (typeof QUICK_SERVICES)[number];
+  cardColor: string;
+  borderColor: string;
+  textColor: string;
+  subTextColor: string;
+  onPress: (slug: string) => void;
+}
 
 const ServiceTile = React.memo(function ServiceTile({
   service,
@@ -147,15 +212,17 @@ const ServiceTile = React.memo(function ServiceTile({
   textColor,
   subTextColor,
   onPress,
-}: {
-  service: (typeof QUICK_SERVICES)[number];
-  cardColor: string;
-  borderColor: string;
-  textColor: string;
-  subTextColor: string;
-  onPress: (slug: string) => void;
-}) {
-  const Icon = service.icon;
+}: ServiceTileProps) {
+  const normalized = normalizeServiceSlug(service.slug);
+  const FallbackIcon = ICON_MAP[service.slug] || ICON_MAP[normalized] || ShoesIcon;
+
+  const mediaUrl = service.mediaUrl?.trim() || "";
+  const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
+  const isHttp = mediaUrl.startsWith("http://") || mediaUrl.startsWith("https://");
+
+  const timelineText = service.deliveryHours ? `Up to ${service.deliveryHours} hours` : "";
+  const subText = service.subtitle || (normalized === "onsite" || normalized === "carwash" ? "At-home service" : normalized === "b2b" ? "Tailored solutions" : "");
+
   return (
     <TouchableOpacity
       style={[serviceTileStyles.tile, { backgroundColor: cardColor, borderColor }]}
@@ -163,24 +230,30 @@ const ServiceTile = React.memo(function ServiceTile({
       onPress={() => onPress(service.slug)}
     >
       <View style={serviceTileStyles.iconWrap}>
-        <Icon width="80%" height="80%" />
+        {isHttp && isSvg ? (
+          <SvgUri uri={mediaUrl} width="80%" height="80%" />
+        ) : isHttp ? (
+          <Image source={{ uri: mediaUrl }} style={{ width: "80%", height: "80%" }} resizeMode="contain" />
+        ) : (
+          <FallbackIcon width="80%" height="80%" />
+        )}
       </View>
       <View style={serviceTileStyles.textWrap}>
         <Text style={[serviceTileStyles.label, { color: textColor }]} numberOfLines={1}>
-          {service.label}
+          {service.title}
         </Text>
-        {service.timelineText ? (
+        {timelineText ? (
           <View style={serviceTileStyles.timelineRow}>
             <Ionicons name="time-outline" size={12} color={subTextColor} />
             <Text style={[serviceTileStyles.timelineText, { color: subTextColor }]} numberOfLines={1}>
-              {service.timelineText}
+              {timelineText}
             </Text>
           </View>
-        ) : (
+        ) : subText ? (
           <Text style={[serviceTileStyles.subtitle, { color: subTextColor }]} numberOfLines={2}>
-            {service.subtitle}
+            {subText}
           </Text>
-        )}
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -273,7 +346,11 @@ export default function Home() {
   const cartTotalQty = cartItems.reduce((sum, item) => sum + item.qty, 0);
 
   // HomeData context – used to skip redundant fetches after a booking redirect
-  const { skipNextFetch, setSkipNextFetch } = useHomeData();
+  const { skipNextFetch, setSkipNextFetch, layoutContent, fetchLayoutContent } = useHomeData();
+
+  useEffect(() => {
+    fetchLayoutContent();
+  }, [fetchLayoutContent]);
 
   // Force DotLottie to re-mount every time this screen gains focus
   const [lottieKey, setLottieKey] = useState(0);
@@ -434,13 +511,14 @@ export default function Home() {
       await Promise.all([
         refreshAddresses(),
         refreshBooking(),
+        fetchLayoutContent(true),
       ]);
     } catch (e) {
       console.log("Pull to refresh error:", e);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshAddresses, refreshBooking]);
+  }, [refreshAddresses, refreshBooking, fetchLayoutContent]);
 
   const words = ["Shoe Spa", "Laundry", "Dry Cleaning"];
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -541,11 +619,12 @@ export default function Home() {
   const [hasAvailableSlots, setHasAvailableSlots] = useState(true);
 
   const onServicePress = useCallback(
-    (slug: string) => {
-      if (["shoe", "leather", "dryclean"].includes(slug)) {
+    (rawSlug: string) => {
+      const slug = normalizeServiceSlug(rawSlug);
+      if (["shoe", "leather", "dryclean", "laundry"].includes(slug)) {
         router.push({ pathname: "/services/[service]", params: { service: slug as any } });
       } else {
-        router.push(`/services/${slug}`);
+        router.push(`/services/${slug}` as any);
       }
     },
     [router]
@@ -587,7 +666,7 @@ export default function Home() {
 
             <ScrollView
               style={[styles.root, { backgroundColor: delayInfo?.isDelay && delayInfo?.category === 'WEATHER' ? 'transparent' : theme.background }]}
-              contentContainerStyle={{ paddingBottom: 100 }}
+              contentContainerStyle={{ paddingBottom: 50 }}
               scrollEnabled={true}
               refreshControl={
                 <RefreshControl
@@ -641,6 +720,22 @@ export default function Home() {
                       </View>
                     </View>
                   </TouchableOpacity>
+                )}
+
+                {showSearchResults && (
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowSearchResults(false)}
+                    style={{
+                      position: "absolute",
+                      top: -100,
+                      left: -50,
+                      right: -50,
+                      bottom: -3000,
+                      backgroundColor: "rgba(0, 0, 0, 0.45)",
+                      zIndex: 999,
+                    }}
+                  />
                 )}
 
                 <View style={{ position: "relative", zIndex: 1000 }}>
@@ -780,33 +875,61 @@ export default function Home() {
                       )}
                     </View>
                   )}
-                </View>
-
-                {delayInfo?.isDelay && (
+                </View>                {delayInfo?.isDelay && (
                   <DelayBanner delayInfo={delayInfo} />
                 )}
 
-                <TouchableOpacity
-                  activeOpacity={0.92}
-                  style={{
-                    height: 130,
-                    width: "100%",
-                    paddingHorizontal: 16,
-                  }}
-                >
-                   <Banner
-                    width="100%"
-                    height={130}
-                    preserveAspectRatio="xMidYMid meet"
-                  /> 
-                  {/* <DotLottie
-                    key={lottieKey}
-                    source={require("../../../../assets/Anim_Banner.lottie")}
-                    autoPlay
-                    loop
-                    style={{ width: "100%", height: "100%" }}
-                  /> */}
-                </TouchableOpacity>
+                {/* ── HERO BANNER ── */}
+                {layoutContent?.hero_banner?.isActive !== false && (() => {
+                  const hero = layoutContent?.hero_banner;
+                  const mediaUrl = hero?.mediaUrl?.trim() || "";
+                  const mediaType = hero?.mediaType || (mediaUrl.endsWith(".lottie") ? "lottie" : "lottie");
+                  const isLottie = mediaType === "lottie" || mediaUrl.endsWith(".lottie") || mediaUrl.endsWith(".json");
+                  const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
+
+                  const handleHeroPress = () => {
+                    if (!hero?.link?.trim()) return;
+                    const link = hero.link.trim();
+                    if (link.startsWith("http://") || link.startsWith("https://")) {
+                      Linking.openURL(link);
+                    } else {
+                      router.push(link as any);
+                    }
+                  };
+
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.92}
+                      onPress={handleHeroPress}
+                      style={{
+                        height: 250,
+                        width: "100%",
+                        paddingHorizontal: 16,
+                        marginBottom:6,
+                        marginTop:6
+                      }}
+                    >
+                      {isLottie || !mediaUrl ? (
+                        <DotLottie
+                          key={lottieKey + (mediaUrl || "default")}
+                          source={mediaUrl ? { uri: mediaUrl } : require("../../../../assets/Anim_Banner.lottie")}
+                          autoplay
+                          loop
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                      ) : isSvg ? (
+                        <SvgUri uri={mediaUrl} width="100%" height="100%" />
+                      ) : (
+                        <Image
+                          source={{ uri: mediaUrl }}
+                          style={{ width: "100%", height: "100%", borderRadius: 10 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })()}
+
                 {/* ── AVAILABLE SLOTS ── */}
                 {activeType === 'none' && !bookingLoading && (
                   <View style={{ marginHorizontal: 12 }}>
@@ -918,32 +1041,55 @@ export default function Home() {
                 ) : null}
 
                 {/* ── SERVICES ── */}
-                <Animated.View style={{ opacity: fadeAnim }}>
-                  <View style={styles.section}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>OUR SERVICES </Text>
-                      <TouchableOpacity onPress={() => router.push('/services')}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}  >
-                        <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {QUICK_SERVICES.slice(0, 3).map((s) => (
-                        <ServiceTile
-                          key={s.key}
-                          service={s}
-                          cardColor={theme.card}
-                          borderColor={theme.border}
-                          textColor={theme.text}
-                          subTextColor={theme.textSecondary}
-                          onPress={onServicePress}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                </Animated.View>
+                {layoutContent?.services_section?.isActive !== false && (() => {
+                  const servicesSec = layoutContent?.services_section;
+                  const servicesList = (servicesSec?.services && servicesSec.services.length > 0)
+                    ? servicesSec.services
+                    : QUICK_SERVICES;
+                  const sectionTitle = servicesSec?.title?.trim() || "OUR SERVICES";
+
+                  return (
+                    <Animated.View style={{ opacity: fadeAnim }}>
+                      <View style={styles.section}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <Text style={{ color: theme.textSecondary, fontSize: 11, fontWeight: '600', letterSpacing: 0.7 }}>
+                            {sectionTitle.toUpperCase()}{" "}
+                          </Text>
+                          <TouchableOpacity
+                            onPress={() => router.push('/services')}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <Text style={{ color: theme.subText, fontSize: 12, fontWeight: '600' }}>VIEW ALL </Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          {servicesList.slice(0, 3).map((s: ContentServiceItem, index: number) => (
+                            <ServiceTile
+                              key={s._id || s.slug || String(index)}
+                              service={s}
+                              cardColor={theme.card}
+                              borderColor={theme.border}
+                              textColor={theme.text}
+                              subTextColor={theme.textSecondary}
+                              onPress={onServicePress}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    </Animated.View>
+                  );
+                })()}
+
               </View>
-              <LearnExploreSection />
+
+              {/* ── HOW IT WORKS ── */}
+              <HowItWorksSection sectionData={layoutContent?.process_section} />
+
+              {/* ── LEARN & EXPLORE / EXPERIENCE THE CARE ── */}
+              <LearnExploreSection sectionData={layoutContent?.mid_section} />
+
+              {/* ── WHAT OUR CUSTOMERS SAY ── */}
+              <TestimonialsSection sectionData={layoutContent?.testimonials_section} />
 
               <View style={styles.wrapper}>
                 <LinearGradient
@@ -957,7 +1103,7 @@ export default function Home() {
                   <Text style={styles.tag}>SUSTAINABLE CHOICE</Text>
 
                   <Text style={styles.title}>
-                    Eco-Friendly{"\n"}Cleaning{"\n"}Solvents
+                    Eco-Friendly Cleaning{"\n"}Solvents
                   </Text>
 
                   <Text style={styles.desc}>
@@ -1034,15 +1180,15 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     left: 16,
     right: 16,
     maxHeight: 400,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: "hidden",
     zIndex: 1001,
-    elevation: 6,
-    shadowColor: theme.background,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    elevation: 0,
+    shadowColor: "transparent",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
     backgroundColor: theme.modalBackground,
     borderColor: theme.border,
   },
@@ -1179,7 +1325,7 @@ const makeStyles = (theme: any, isDark: boolean = false) => StyleSheet.create({
     fontSize: 13,
     color: theme.textSecondary,
     lineHeight: 18,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   glowCircle: {
     position: "absolute",

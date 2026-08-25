@@ -114,6 +114,15 @@ var options = {
     color:"${themeColor}"
   },
 
+  config: {
+   display: {
+   methods: {
+   upi: true,
+   card: true,
+   netbanking: true,
+   wallet: true }
+   }
+
   handler:function(response){
     window.ReactNativeWebView.postMessage(JSON.stringify({
       event:"payment_success",

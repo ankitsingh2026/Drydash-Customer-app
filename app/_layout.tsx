@@ -1,4 +1,4 @@
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { ChatProvider } from "@/context/ChatContext";
 import { Stack } from "expo-router";
@@ -6,6 +6,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { CartProvider } from "../context/CartContext";
 import { ThemeProvider } from "../context/ThemeContext";
+import { WalletProvider } from "../context/WalletContext";
 
 import { AddressProvider } from "@/context/AddressContext";
 import { setupInterceptors } from "../lib/api/interceptors";
@@ -44,17 +45,19 @@ export default function RootLayout() {
       <ThemeProvider>                        
         <AlertProvider>                          
           <AuthProvider>
-            <NotificationProvider>
-              <ChatProvider>
-                <AddressProvider>
-                  <CartProvider>
-                    <SlotSocketProvider>
-                      <RootLayoutNav />
-                    </SlotSocketProvider>
-                  </CartProvider>
-                </AddressProvider>
-              </ChatProvider>
-            </NotificationProvider>
+            <WalletProvider>
+              <NotificationProvider>
+                <ChatProvider>
+                  <AddressProvider>
+                    <CartProvider>
+                      <SlotSocketProvider>
+                        <RootLayoutNav />
+                      </SlotSocketProvider>
+                    </CartProvider>
+                  </AddressProvider>
+                </ChatProvider>
+              </NotificationProvider>
+            </WalletProvider>
           </AuthProvider>
         </AlertProvider>
       </ThemeProvider>

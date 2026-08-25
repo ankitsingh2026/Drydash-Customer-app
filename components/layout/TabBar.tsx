@@ -4,7 +4,7 @@ import { getFullServiceData } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { Wallet } from "lucide-react-native";
+import { Bell, Wallet } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -20,6 +20,7 @@ import { useNotifications } from "../../context/NotificationContext";
 import { useTheme } from "../../context/ThemeContext";
 import { useSlotSocket } from "@/context/SlotSocketContext";
 import { findNearbySavedAddress } from "@/utils/distance";
+import { useWallet } from "@/context/WalletContext";
 
 type TabBarProps = {
   onOpenNotifications?: () => void;
@@ -27,10 +28,12 @@ type TabBarProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export const TabBar = ({ onWalletPress, style }: TabBarProps) => {
-  const { theme, isDark } = useTheme();
+export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProps) => {
+  const { colors, theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
+  const { unreadCount, refreshNotifications } = useNotifications();
+  const { wallet } = useWallet();
   const isFetchingRef = useRef(false);
   const isFetchingCurrentLocRef = useRef(false);
 
@@ -490,14 +493,41 @@ export const TabBar = ({ onWalletPress, style }: TabBarProps) => {
             </TouchableOpacity>
           </View>
 
-          {/* <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => onWalletPress?.()}
-            style={styles.walletBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Wallet size={18} color={theme.text} />
-          </TouchableOpacity> */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                if (onWalletPress) {
+                  onWalletPress();
+                } else {
+                  router.push("/(customer)/wallet");
+                }
+              }}
+              style={styles.walletBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Wallet size={16} color={theme.text} />
+              <Text style={styles.walletText}>
+                ₹{wallet?.balance !== undefined ? wallet.balance.toLocaleString('en-IN') : "0"}
+              </Text>
+            </TouchableOpacity>
+
+            {/* <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={handleBellPress}
+              style={styles.iconBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Bell size={18} color={theme.text} />
+              {unreadCount > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity> */}
+          </View>
         </View>
       </View>
 
@@ -554,6 +584,23 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     maxWidth: 200,
   },
   walletBtn: {
+    height: 38,
+    borderRadius: 20,
+    backgroundColor: theme.surface,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  walletText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: theme.text,
+  },
+  iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,

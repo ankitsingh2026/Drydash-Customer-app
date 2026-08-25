@@ -18,11 +18,28 @@
       },
       "bundleIdentifier": "com.drydash.customer",
       "entitlements": {
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.developer.associated-domains": [
+          "applinks:app.drydash.com",
+          "applinks:www.drydash.com"
+        ]
       },
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"]
-      }
+        "UIBackgroundModes": ["remote-notification"],
+        "LSApplicationQueriesSchemes": [
+          "upi",
+          "gpay",
+          "phonepe",
+          "paytm",
+          "cred",
+          "bhim",
+          "whatsapp"
+        ]
+      },
+      "associatedDomains": [
+        "applinks:app.drydash.com",
+        "applinks:www.drydash.com"
+      ]
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -53,7 +70,52 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.drydash.newCustomer"
+      "intentFilters": [
+  {
+    "action": "VIEW",
+    "autoVerify": true,
+    "data": [
+      {
+        "scheme": "https",
+        "host": "app.drydash.com",
+        "pathPrefix": "/signup"
+      },
+      {
+        "scheme": "https",
+        "host": "www.drydash.com",
+        "pathPrefix": "/signup"
+      }
+    ],
+    "category": [
+      "BROWSABLE",
+      "DEFAULT"
+    ]
+  },
+  {
+    "action": "VIEW",
+    "data": [
+      {
+        "scheme": "upi"
+      }
+    ],
+    "category": [
+      "BROWSABLE",
+      "DEFAULT"
+    ]
+  },
+  {
+    "action": "VIEW",
+    "data": [
+      {
+        "scheme": "drydash"
+      }
+    ],
+    "category": [
+      "BROWSABLE",
+      "DEFAULT"
+    ]
+  }
+]
     },
     "web": {
       "output": "static",
