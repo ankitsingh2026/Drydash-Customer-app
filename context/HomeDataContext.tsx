@@ -71,6 +71,62 @@ export const HomeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [layoutContent, setLayoutContent] = useState<LayoutContentData | null>(null);
   const [layoutLoading, setLayoutLoading] = useState(false);
 
+  const normalizeLayoutData = useCallback((raw: any): LayoutContentData => {
+    if (!raw) return raw;
+
+    const hero = raw.herosection || raw.hero_banner || {};
+    const mid = raw.midsection || raw.mid_section || {};
+    const services = Array.isArray(raw.services)
+      ? raw.services
+      : Array.isArray(raw.services_section?.services)
+      ? raw.services_section.services
+      : [];
+    const process = Array.isArray(raw.process)
+      ? raw.process
+      : Array.isArray(raw.process_section?.processStages)
+      ? raw.process_section.processStages
+      : [];
+    const testimonials = Array.isArray(raw.testimonials)
+      ? raw.testimonials
+      : Array.isArray(raw.testimonials_section?.testimonials)
+      ? raw.testimonials_section.testimonials
+      : [];
+    const adBanner = raw.ad_banner || raw.adBanner || {};
+    const recentBlogs = Array.isArray(raw.recent_blogs)
+      ? raw.recent_blogs
+      : Array.isArray(raw.recentBlogs)
+      ? raw.recentBlogs
+      : [];
+
+    return {
+      ...raw,
+      herosection: hero,
+      hero_banner: hero,
+      midsection: mid,
+      mid_section: mid,
+      services,
+      services_section: {
+        title: raw.services_section?.title || "OUR SERVICES",
+        isActive: raw.services_section?.isActive ?? true,
+        services,
+      },
+      ad_banner: adBanner,
+      process,
+      process_section: {
+        title: raw.process_section?.title || "How it Works",
+        isActive: raw.process_section?.isActive ?? true,
+        processStages: process,
+      },
+      testimonials,
+      testimonials_section: {
+        title: raw.testimonials_section?.title || "What our customers say",
+        isActive: raw.testimonials_section?.isActive ?? true,
+        testimonials,
+      },
+      recent_blogs: recentBlogs,
+    };
+  }, []);
+
   const fetchLayoutContent = useCallback(async (forceRefresh: boolean = false) => {
     if (layoutContent && !forceRefresh) {
       return layoutContent;
@@ -79,8 +135,9 @@ export const HomeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLayoutLoading(true);
       const res = await getContentLayoutApi();
       if (res?.success && res?.data) {
-        setLayoutContent(res.data);
-        return res.data;
+        const normalized = normalizeLayoutData(res.data);
+        setLayoutContent(normalized);
+        return normalized;
       }
       return null;
     } catch (err) {
@@ -89,7 +146,7 @@ export const HomeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } finally {
       setLayoutLoading(false);
     }
-  }, [layoutContent]);
+  }, [layoutContent, normalizeLayoutData]);
 
   const setCachedData = useCallback((booking: any, type: ActiveType) => {
     setCachedActiveBooking(booking);

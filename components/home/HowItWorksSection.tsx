@@ -48,6 +48,7 @@ const STEP_ICON_FALLBACKS: (keyof typeof Ionicons.glyphMap)[] = [
 
 interface HowItWorksProps {
   sectionData?: ContentSection;
+  processList?: ContentProcessStage[];
 }
 
 function StepMedia({ stage, color }: { stage: ContentProcessStage; color: string }) {
@@ -67,7 +68,7 @@ function StepMedia({ stage, color }: { stage: ContentProcessStage; color: string
   return <Ionicons name={STEP_ICON_FALLBACKS[idx]} size={24} color={color} />;
 }
 
-export default function HowItWorksSection({ sectionData }: HowItWorksProps) {
+export default function HowItWorksSection({ sectionData, processList }: HowItWorksProps) {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
 
@@ -78,8 +79,12 @@ export default function HowItWorksSection({ sectionData }: HowItWorksProps) {
   const title = sectionData?.title?.trim() || "How it Works";
 
   // Use API processStages when available (sorted by stepNumber), else fall back to defaults
-  const apiStages = (sectionData?.processStages ?? []).filter(
-    (s) => s.stageName?.trim()
+  const rawStages = (processList && processList.length > 0)
+    ? processList
+    : (sectionData?.processStages ?? []);
+
+  const apiStages = rawStages.filter(
+    (s) => s.stageName?.trim() || s.title?.trim()
   );
   const sortedApiStages = [...apiStages].sort(
     (a, b) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0)
@@ -109,7 +114,7 @@ export default function HowItWorksSection({ sectionData }: HowItWorksProps) {
                     </View>
                   </View>
                   <Text style={styles.stepTitle} numberOfLines={1}>
-                    {stage.stageName}
+                    {stage.stageName || stage.title}
                   </Text>
                   {stage.description ? (
                     <Text style={styles.stepSubtitle} numberOfLines={2}>

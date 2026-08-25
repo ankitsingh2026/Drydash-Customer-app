@@ -1,8 +1,8 @@
 import { useTheme } from "@/context/ThemeContext";
-import { ContentSection } from "@/features/content/content.types";
+import { ContentSection, ContentMidSection, ContentBlogItem } from "@/features/content/content.types";
 import { useFocusEffect, useRouter } from "expo-router";
 import { VideoView, useVideoPlayer } from "expo-video";
-import { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   AppState,
   Dimensions,
@@ -19,7 +19,8 @@ const { width } = Dimensions.get("window");
 const DEFAULT_VIDEO_URL = "https://customer-app-image.s3.ap-south-1.amazonaws.com/home-videos/home-video.mp4";
 
 interface LearnExploreSectionProps {
-  sectionData?: ContentSection;
+  sectionData?: ContentSection | ContentMidSection;
+  recentBlogs?: ContentBlogItem[];
 }
 
 const ARTICLES = [
@@ -49,7 +50,7 @@ const ARTICLES = [
   },
 ];
 
-export default function LearnExploreSection({ sectionData }: LearnExploreSectionProps = {}) {
+export default function LearnExploreSection({ sectionData, recentBlogs }: LearnExploreSectionProps = {}) {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
   const router = useRouter();
@@ -122,11 +123,33 @@ export default function LearnExploreSection({ sectionData }: LearnExploreSection
     };
   }, [safePlay, safePause]);
 
+  const hasDynamicBlogs = Array.isArray(recentBlogs) && recentBlogs.length > 0;
+  const displayedArticles = hasDynamicBlogs
+    ? recentBlogs.map((blog, idx) => ({
+        key: blog.slug || blog.key || blog._id || String(idx),
+        slug: blog.slug || blog.key || blog._id,
+        title: blog.title || "Latest Update",
+        subtitle: blog.brief || blog.subtitle || blog.description || "",
+        image: blog.mediaUrl
+          ? { uri: blog.mediaUrl }
+          : typeof blog.image === "string"
+          ? { uri: blog.image }
+          : blog.image || { uri: "https://customer-app-image.s3.ap-south-1.amazonaws.com/blogs-images/h_shoe.png" },
+        link: blog.link,
+      }))
+    : ARTICLES;
+
   return (
     <View style={styles.container}>
       {/* ── Header ── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{sectionTitle}</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/(customer)/blog" as any)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.viewAll}>VIEW ALL</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Featured Video Card ── */}
@@ -146,12 +169,21 @@ export default function LearnExploreSection({ sectionData }: LearnExploreSection
         contentContainerStyle={styles.articlesScroll}
         removeClippedSubviews
       >
-        {ARTICLES.map((article) => (
+        {displayedArticles.map((article: any) => (
           <TouchableOpacity
             key={article.key}
             style={styles.articleCard}
             activeOpacity={0.85}
-            onPress={() => router.push(`/(customer)/blog/${article.key}` as any)}
+            onPress={() => {
+              const targetSlug = article.slug || article.key;
+              if (targetSlug) {
+                router.push(`/(customer)/blog/${targetSlug}` as any);
+              } else if (article.link?.startsWith("http://") || article.link?.startsWith("https://")) {
+                router.push(article.link as any);
+              } else if (article.link) {
+                router.push(article.link as any);
+              }
+            }}
           >
             <View style={styles.imageContainer}>
               <Image

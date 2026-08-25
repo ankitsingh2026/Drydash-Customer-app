@@ -20,6 +20,7 @@ export interface Testimonial {
   role: string;
   message: string;
   rating: number;
+  customerImage?: string;
   tag?: string;
 }
 
@@ -91,24 +92,35 @@ export const testimonialsRow2: Testimonial[] = [
 
 interface TestimonialsProps {
   sectionData?: ContentSection;
+  testimonialsList?: ContentTestimonial[];
 }
 
 function TestimonialCard({ item }: { item: Testimonial }) {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
+  const [imageError, setImageError] = React.useState(false);
 
   const initial = item.name ? item.name.trim()[0].toUpperCase() : "U";
   const fullStars = Math.floor(item.rating);
   const hasHalfStar = item.rating % 1 >= 0.5;
+  const hasImage = Boolean(item.customerImage?.trim()) && !imageError;
 
   return (
     <View style={styles.card}>
       {/* User Profile Header */}
       <View style={styles.profileRow}>
-        {/* Same unified theme avatar */}
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        {hasImage ? (
+          <Image
+            source={{ uri: item.customerImage }}
+            style={styles.avatarImage}
+            onError={() => setImageError(true)}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+        )}
 
         <View style={styles.profileTextWrap}>
           <Text style={styles.userName} numberOfLines={1}>
@@ -130,7 +142,7 @@ function TestimonialCard({ item }: { item: Testimonial }) {
       </View>
 
       {/* Stars Row */}
-      <View style={styles.starsRow}>
+      {/* <View style={styles.starsRow}>
         {[...Array(fullStars)].map((_, i) => (
           <Ionicons
             key={`full-${i}`}
@@ -148,7 +160,7 @@ function TestimonialCard({ item }: { item: Testimonial }) {
             style={{ marginRight: 2 }}
           />
         )}
-      </View>
+      </View> */}
 
       {/* Review Quote */}
       <Text style={styles.reviewText} numberOfLines={4}>
@@ -172,7 +184,7 @@ function TestimonialCard({ item }: { item: Testimonial }) {
   );
 }
 
-export default function TestimonialsSection({ sectionData }: TestimonialsProps) {
+export default function TestimonialsSection({ sectionData, testimonialsList }: TestimonialsProps) {
   const { theme, isDark } = useTheme();
   const styles = makeStyles(theme, isDark);
 
@@ -182,17 +194,23 @@ export default function TestimonialsSection({ sectionData }: TestimonialsProps) 
 
   const title = sectionData?.title?.trim() || "What our customers say";
 
-  // Use API testimonials if the admin has populated them, otherwise fall back to hardcoded ones
-  const apiTestimonials: ContentTestimonial[] = sectionData?.testimonials ?? [];
+  // Use API testimonials if available (from testimonialsList or sectionData.testimonials), otherwise fall back to hardcoded ones
+  const apiTestimonials: ContentTestimonial[] =
+    (testimonialsList && testimonialsList.length > 0)
+      ? testimonialsList
+      : sectionData?.testimonials ?? [];
+
   const hasApiTestimonials = apiTestimonials.some((t) => t.reviewText?.trim() || t.customerName?.trim());
 
   // Map API testimonials to the Testimonial shape used by TestimonialCard
   const apiMapped: Testimonial[] = apiTestimonials.map((t, idx) => ({
     id: t._id ?? idx,
     name: t.customerName || "Customer",
-    role: "Verified Customer",
+    role: t.role || "Verified Customer",
     message: t.reviewText || "",
     rating: t.rating ?? 5,
+    customerImage: t.customerImage,
+    tag: t.tag,
   }));
 
   const displayedTestimonials = hasApiTestimonials ? apiMapped : testimonialsRow2;
@@ -271,6 +289,13 @@ const makeStyles = (theme: any, isDark: boolean) =>
       backgroundColor: theme.subText, 
       alignItems: "center",
       justifyContent: "center",
+      marginRight: 10,
+    },
+    avatarImage: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: theme.subText,
       marginRight: 10,
     },
     avatarText: {

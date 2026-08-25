@@ -124,7 +124,9 @@ export default function ServicesPage() {
   const { layoutContent } = useHomeData();
   const styles = makeStyles(theme);
 
-  const servicesList = (layoutContent?.services_section?.services && layoutContent.services_section.services.length > 0)
+  const servicesList = (layoutContent?.services && layoutContent.services.length > 0)
+    ? layoutContent.services
+    : (layoutContent?.services_section?.services && layoutContent.services_section.services.length > 0)
     ? layoutContent.services_section.services
     : FALLBACK_SERVICES;
   const sectionTitle = layoutContent?.services_section?.title?.trim() || "OUR SERVICES";

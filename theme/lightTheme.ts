@@ -9,7 +9,7 @@ export const lightTheme = {
     gradient: ["#E6F4F0", "#D3EBE4"] as [string, string, ...string[]],
     card: "#FFFFFF",
     text: "#0A251E",
-    subText: "#00A374",
+    subText: "#00751E",
     textSecondary: "#5A736E",
     border: "#E0EDEA",
     ordergradient: ["#E6F4F0", "#D3EBE4", "#C0E2D8"] as [string, string, string],
@@ -20,7 +20,7 @@ export const lightTheme = {
     // UI specific element colors
     inputBackground: "#E6F4F0",
     placeholderText: "#7BA79A",
-    icon: "#00A374",
+    icon: "#00751E",
     tabBarBackground: "#FFFFFF",
     headerBackground: "#FFFFFF",
     modalBackground: "#FFFFFF",
