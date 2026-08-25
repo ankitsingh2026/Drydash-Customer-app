@@ -49,7 +49,7 @@ import LeatherIcon from "../../../../assets/homeicons/leather.svg";
 import OnsiteIcon from "../../../../assets/homeicons/on-site.svg";
 import CarwashIcon from "../../../../assets/homeicons/car-wash.svg";
 import ExpressIcon from "../../../../assets/homeicons/8-hours-delivery.svg";
-import { DotLottie } from '@lottiefiles/dotlottie-react-native';
+// import { DotLottie } from '@lottiefiles/dotlottie-react-native';
 import Banner from "../../../../assets/homeicons/Banner1.svg";
 import { useCart } from "@/context/CartContext";
 import { useHomeData } from "@/context/HomeDataContext";
