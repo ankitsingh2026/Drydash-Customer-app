@@ -65,8 +65,8 @@ export default function PickupConfirmationModal({
   const insets = useSafeAreaInsets();
 
   // ── Target Coordinates for Home Screen Docking ─────────────────────────
-  // TabBar (~78px) + Search (~52px) + Banner (~130px) + insets.top = insets.top + 260px
-  const targetHomeCardTop = insets.top + 260;
+  // TabBar (~70px) + Search (~52px) + Hero Banner (250px + 12px margins = 262px) + insets.top = insets.top + 384px
+  const targetHomeCardTop = insets.top + 384;
   const bottomRestingCardTop = SCREEN_H - (195 + insets.bottom);
 
   // ── Local states ───────────────────────────────────────────────────────

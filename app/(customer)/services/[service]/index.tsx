@@ -19,22 +19,33 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   PanResponder,
   StatusBar,
 } from "react-native";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const GRID_COLS = 3;
+const GRID_GAP = 8;
+const GRID_H_PAD = 16; // matches root paddingHorizontal
+const CARD_W = (SCREEN_WIDTH - GRID_H_PAD * 2 - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
 import { useCart } from "../../../../context/CartContext";
 import { useTheme } from "../../../../context/ThemeContext";
-
 /* ---------- TABS ---------- */
 const TABS = [
   { key: "shoe", label: "Shoe Spa", icon: LucideShovel },
@@ -46,6 +57,8 @@ const TABS = [
 type Item = {
   id: string;
   title: string;
+  mainHeading?: string;
+  mainDescription?: string;
   price: number;
   category: string;
   image: string;
@@ -123,6 +136,13 @@ export default function ServiceDetail() {
   const [popupVisible, setPopupVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // ── Filter state ──────────────────────────────────────────────────────────
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [sortBy, setSortBy] = useState<"none" | "price_asc" | "price_desc">("none");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+
   const isEditMode = mode === "edit" && Boolean(pickupId);
   const [pickupLoading, setPickupLoading] = useState(false);
   const [pickupError, setPickupError] = useState<string | null>(null);
@@ -166,6 +186,12 @@ export default function ServiceDetail() {
       ),
     ]).start();
     setTab(i);
+    // Reset filters and search when switching category tabs
+    setSortBy("none");
+    setMinPrice("");
+    setMaxPrice("");
+    setTypeFilter("all");
+    setSearchQuery("");
   };
 
   const [layoutReady, setLayoutReady] = useState(false);
@@ -366,14 +392,41 @@ export default function ServiceDetail() {
     return catalogData[activeKey] || EMPTY_ARRAY;
   }, [activeTab?.key, apiData]);
 
-  // Filter items based on search query
+  // Derive available types for the active tab
+  const availableTypes = useMemo(() => {
+    const types = Array.from(new Set(currentItems.map((i) => i.unit || i.type || "").filter(Boolean)));
+    return types;
+  }, [currentItems]);
+
+  const activeFilterCount = [
+    sortBy !== "none",
+    minPrice !== "" || maxPrice !== "",
+    typeFilter !== "all",
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setSortBy("none");
+    setMinPrice("");
+    setMaxPrice("");
+    setTypeFilter("all");
+  };
+
+  // Filter items based on search query + active filters
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return currentItems;
-    const q = searchQuery.toLowerCase();
-    return currentItems.filter((item) =>
-      item.title.toLowerCase().includes(q)
-    );
-  }, [searchQuery, currentItems]);
+    let items = currentItems;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter((item) => item.title.toLowerCase().includes(q));
+    }
+    const min = minPrice !== "" ? parseFloat(minPrice) : null;
+    const max = maxPrice !== "" ? parseFloat(maxPrice) : null;
+    if (min !== null && !isNaN(min)) items = items.filter((i) => i.price >= min);
+    if (max !== null && !isNaN(max)) items = items.filter((i) => i.price <= max);
+    if (typeFilter !== "all") items = items.filter((i) => (i.unit || i.type || "") === typeFilter);
+    if (sortBy === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
+    else if (sortBy === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
+    return items;
+  }, [searchQuery, currentItems, sortBy, minPrice, maxPrice, typeFilter]);
 
   const isLoading =
     activeTab?.key && ["shoe", "laundry", "leather", "dryclean"].includes(activeTab.key)
@@ -502,20 +555,15 @@ export default function ServiceDetail() {
         })}
       </View>
 
-      {/* ---------- SEARCH BAR ---------- */}
+      {/* ---------- SEARCH + FILTER BAR ---------- */}
       <View style={styles.searchContainer}>
         <View
           style={[
             styles.searchBar,
-            { backgroundColor: theme.card, borderColor: theme.border },
+            { backgroundColor: theme.card, borderColor: theme.border, flex: 1 },
           ]}
         >
-          <Ionicons
-            name="search-outline"
-            size={18}
-            color={theme.subText}
-            style={{ marginRight: 8 }}
-          />
+          <Ionicons name="search-outline" size={18} color={theme.subText} style={{ marginRight: 8 }} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -530,7 +578,93 @@ export default function ServiceDetail() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Filter button */}
+        <TouchableOpacity
+          onPress={() => setFilterVisible(true)}
+          style={[
+            styles.filterBtn,
+            {
+              backgroundColor: activeFilterCount > 0 ? theme.primary : theme.card,
+              borderColor: activeFilterCount > 0 ? theme.primary : theme.border,
+            },
+          ]}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="options-outline"
+            size={19}
+            color={activeFilterCount > 0 ? theme.background : theme.text}
+          />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
+
+      {/* Active filter pills */}
+      {activeFilterCount > 0 && (
+        <View style={styles.activePillsRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.activePillsContent}
+          >
+            {sortBy !== "none" && (
+              <TouchableOpacity
+                style={[
+                  styles.activePill,
+                  { borderColor: theme.primary, backgroundColor: isDark ? "rgba(0,163,116,0.15)" : "rgba(0,117,88,0.08)" },
+                ]}
+                onPress={() => setSortBy("none")}
+              >
+                <Text style={[styles.activePillText, { color: theme.primary }]}>
+                  {sortBy === "price_asc" ? "Low → High" : "High → Low"}
+                </Text>
+                <View style={[styles.pillClose, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="close" size={9} color={theme.background} />
+                </View>
+              </TouchableOpacity>
+            )}
+            {(minPrice !== "" || maxPrice !== "") && (
+              <TouchableOpacity
+                style={[
+                  styles.activePill,
+                  { borderColor: theme.primary, backgroundColor: isDark ? "rgba(0,163,116,0.15)" : "rgba(0,117,88,0.08)" },
+                ]}
+                onPress={() => { setMinPrice(""); setMaxPrice(""); }}
+              >
+                <Text style={[styles.activePillText, { color: theme.primary }]}>
+                  {minPrice !== "" && maxPrice !== ""
+                    ? `₹${minPrice}–₹${maxPrice}`
+                    : minPrice !== ""
+                    ? `Min ₹${minPrice}`
+                    : `Max ₹${maxPrice}`}
+                </Text>
+                <View style={[styles.pillClose, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="close" size={9} color={theme.background} />
+                </View>
+              </TouchableOpacity>
+            )}
+            {typeFilter !== "all" && (
+              <TouchableOpacity
+                style={[
+                  styles.activePill,
+                  { borderColor: theme.primary, backgroundColor: isDark ? "rgba(0,163,116,0.15)" : "rgba(0,117,88,0.08)" },
+                ]}
+                onPress={() => setTypeFilter("all")}
+              >
+                <Text style={[styles.activePillText, { color: theme.primary }]}>{typeFilter}</Text>
+                <View style={[styles.pillClose, { backgroundColor: theme.primary }]}>
+                  <Ionicons name="close" size={9} color={theme.background} />
+                </View>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Notice Banner for Laundry service */}
       {activeTab?.key === "laundry" && (
@@ -645,153 +779,258 @@ export default function ServiceDetail() {
         </View>
       )}
 
-      {/* ---------- LIST ---------- */}
+      {/* ---------- 3-COLUMN GRID ---------- */}
       {!isLoading && !hasError && (
         <FlatList
+          style={{ flex: 1 }}
           data={filteredItems}
           keyExtractor={(i) => i.id}
+          numColumns={GRID_COLS}
+          columnWrapperStyle={{ gap: GRID_GAP }}
           contentContainerStyle={{
             paddingBottom: 100 + insets.bottom,
-            gap: 10,
+            gap: GRID_GAP,
           }}
-          ItemSeparatorComponent={() => <View style={{ height: 0 }} />}
           renderItem={({ item }) => {
             const qty = cart.getQty(item.id);
+            const isBroken = brokenImages.has(item.id);
+            const emoji =
+              item.category === "Shoe Spa" ? "👟"
+              : item.category === "Leather" ? "👜"
+              : item.category === "DryClean" ? "✨"
+              : "🧺";
+
             return (
               <View
                 style={[
-                  styles.row,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                  },
+                  styles.card,
+                  { backgroundColor: theme.card, borderColor: theme.border },
                 ]}
               >
+                {/* ── Image / placeholder ── */}
                 <TouchableOpacity
-                  onPress={() => {
-                    setSelectedProduct(item);
-                    setPopupVisible(true);
-                  }}
-                  activeOpacity={0.7}
-                  style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}
+                  activeOpacity={0.75}
+                  onPress={() => { setSelectedProduct(item); setPopupVisible(true); }}
+                  style={styles.cardImageWrap}
                 >
-                  {brokenImages.has(item.id) ? (
-                    <View
-                      style={[
-                        styles.imagePlaceholder,
-                        { backgroundColor: theme.card },
-                      ]}
-                    >
-                      <View style={styles.placeholderIconWrap}>
-                        <Text style={styles.placeholderEmoji}>
-                          {item.category === "Shoe Spa"
-                            ? "👟"
-                            : item.category === "Leather"
-                              ? "👜"
-                              : item.category === "DryClean"
-                                ? "✨"
-                                : "🧺"}
-                        </Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.placeholderLabel,
-                          { color: theme.subText },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {item.title.split(" ")[0]}
-                      </Text>
+                  {isBroken ? (
+                    <View style={[styles.cardImagePlaceholder, { backgroundColor: theme.inputBackground }]}>
+                      <Text style={{ fontSize: 28 }}>{emoji}</Text>
                     </View>
                   ) : (
                     <Image
                       source={{ uri: item.image }}
-                      style={styles.image}
+                      style={styles.cardImage}
                       resizeMode="cover"
-                      onError={() =>
-                        setBrokenImages((prev) => new Set([...prev, item.id]))
-                      }
+                      onError={() => setBrokenImages((prev) => new Set([...prev, item.id]))}
                     />
                   )}
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.itemTitle, { color: theme.text }]}>
-                      {item.title}
-                    </Text>
-                    <Text style={{ color: theme.subText, marginTop: 2, fontWeight: "500" }}>
-                      {formatDisplayPrice(item)}
-                    </Text>
-                  </View>
                 </TouchableOpacity>
 
-                {qty === 0 ? (
-                  <TouchableOpacity
-                    onPress={() =>
-                      cart.addItem({
-                        id: item.id,
-                        title: item.title,
-                        price: item.price,
-                        image: item.image,
-                        type: item.type,
-                      })
-                    }
-                    style={[styles.addBtn]}
-                  >
-                    <Text style={{ fontWeight: "600", color: theme.text }}>
-                      <Plus size={20} color={theme.text} />
-                    </Text>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.qtyBox}>
-                    <TouchableOpacity
-                      onPress={() => cart.decreaseQty(item.id)}
-                      style={styles.qtyBtn}
-                    >
-                      <Minus size={14} color={theme.text} />
-                    </TouchableOpacity>
+                {/* ── Title + price ── */}
+                <View style={styles.cardBody}>
+                  <Text style={[styles.cardTitle, { color: theme.text }]} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  <Text style={[styles.cardPrice, { color: theme.subText }]} numberOfLines={1}>
+                    {formatDisplayPrice(item)}
+                  </Text>
+                </View>
 
-                    <Text style={[styles.qtyText, { color: theme.text }]}>
-                      {qty}
-                    </Text>
-
+                {/* ── Add / qty stepper ── */}
+                <View style={styles.cardFooter}>
+                  {qty === 0 ? (
                     <TouchableOpacity
-                      onPress={() =>
-                        cart.addItem({
-                          id: item.id,
-                          title: item.title,
-                          price: item.price,
-                          image: item.image,
-                          type: item.type,
-                        })
-                      }
-                      style={styles.qtyBtn}
+                      onPress={() => cart.addItem({ id: item.id, title: item.title, price: item.price, image: item.image, type: item.type })}
+                      style={[styles.gridAddBtn, { borderColor: theme.border }]}
                     >
-                      <Plus size={14} color={theme.text} />
+                      <Plus size={16} color={theme.primary} />
                     </TouchableOpacity>
-                  </View>
-                )}
+                  ) : (
+                    <View style={[styles.gridQtyBox, { borderColor: theme.border }]}>
+                      <TouchableOpacity onPress={() => cart.decreaseQty(item.id)} style={styles.gridQtyBtn}>
+                        <Minus size={12} color={theme.text} />
+                      </TouchableOpacity>
+                      <Text style={[styles.gridQtyText, { color: theme.text }]}>{qty}</Text>
+                      <TouchableOpacity
+                        onPress={() => cart.addItem({ id: item.id, title: item.title, price: item.price, image: item.image, type: item.type })}
+                        style={styles.gridQtyBtn}
+                      >
+                        <Plus size={12} color={theme.text} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
               </View>
             );
           }}
           ListEmptyComponent={
             searchQuery.length > 0 && filteredItems.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Ionicons
-                  name="search-outline"
-                  size={60}
-                  color={theme.subText}
-                />
-                <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                  No products found
-                </Text>
-                <Text style={[styles.emptySubtitle, { color: theme.subText }]}>
-                  Try searching with different keywords
-                </Text>
+                <Ionicons name="search-outline" size={60} color={theme.subText} />
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>No products found</Text>
+                <Text style={[styles.emptySubtitle, { color: theme.subText }]}>Try searching with different keywords</Text>
               </View>
             ) : null
           }
         />
       )}
+
+      {/* ═══════════ FILTER BOTTOM SHEET ═══════════ */}
+      <Modal
+        visible={filterVisible}
+        transparent
+        animationType="slide"
+        statusBarTranslucent
+        onRequestClose={() => setFilterVisible(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          {/* Backdrop */}
+          <TouchableWithoutFeedback onPress={() => setFilterVisible(false)}>
+            <View style={[StyleSheet.absoluteFillObject, styles.filterBackdrop]} />
+          </TouchableWithoutFeedback>
+
+          {/* Sheet */}
+          <View style={[styles.filterSheet, { backgroundColor: theme.background, borderTopColor: theme.border }]}>
+            {/* Handle */}
+            <View style={[styles.filterHandle, { backgroundColor: theme.border }]} />
+
+            {/* Header */}
+            <View style={styles.filterHeader}>
+              <Text style={[styles.filterHeaderTitle, { color: theme.text }]}>Filters</Text>
+              <TouchableOpacity onPress={clearAllFilters}>
+                <Text style={[styles.filterClearAll, { color: theme.primary }]}>Clear all</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+
+              {/* ── SORT BY ── */}
+              <Text style={[styles.filterSectionTitle, { color: theme.textSecondary }]}>SORT BY</Text>
+              <View style={styles.filterChipRow}>
+                {([
+                  { label: "Default",            value: "none"       },
+                  { label: "Price: Low \u2192 High", value: "price_asc"  },
+                  { label: "Price: High \u2192 Low", value: "price_desc" },
+                ] as const).map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    onPress={() => setSortBy(opt.value)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        backgroundColor: sortBy === opt.value ? theme.primary : theme.card,
+                        borderColor:     sortBy === opt.value ? theme.primary : theme.border,
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.filterChipText, { color: sortBy === opt.value ? theme.background : theme.text }]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* ── PRICE RANGE ── */}
+              <Text style={[styles.filterSectionTitle, { color: theme.textSecondary }]}>PRICE RANGE</Text>
+              <View style={styles.filterChipRow}>
+                {([
+                  { label: "Any",            min: "",     max: ""     },
+                  { label: "Under \u20b9100",    min: "",     max: "100"  },
+                  { label: "\u20b9100\u2013\u20b9500",    min: "100",  max: "500"  },
+                  { label: "\u20b9500\u2013\u20b91000",   min: "500",  max: "1000" },
+                  { label: "Above \u20b91000",   min: "1000", max: ""     },
+                ] as const).map((opt) => {
+                  const active = minPrice === opt.min && maxPrice === opt.max;
+                  return (
+                    <TouchableOpacity
+                      key={opt.label}
+                      onPress={() => { setMinPrice(opt.min); setMaxPrice(opt.max); }}
+                      style={[
+                        styles.filterChip,
+                        {
+                          backgroundColor: active ? theme.primary : theme.card,
+                          borderColor:     active ? theme.primary : theme.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.filterChipText, { color: active ? theme.background : theme.text }]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Custom min / max */}
+              <View style={styles.priceInputRow}>
+                <View style={[styles.priceInputWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Text style={[styles.priceInputPrefix, { color: theme.textSecondary }]}>{"\u20b9"}</Text>
+                  <TextInput
+                    value={minPrice}
+                    onChangeText={(v) => setMinPrice(v.replace(/[^0-9]/g, ""))}
+                    keyboardType="number-pad"
+                    placeholder="Min"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[styles.priceInput, { color: theme.text }]}
+                    returnKeyType="done"
+                  />
+                </View>
+                <View style={[styles.priceSeparator, { backgroundColor: theme.border }]} />
+                <View style={[styles.priceInputWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <Text style={[styles.priceInputPrefix, { color: theme.textSecondary }]}>{"\u20b9"}</Text>
+                  <TextInput
+                    value={maxPrice}
+                    onChangeText={(v) => setMaxPrice(v.replace(/[^0-9]/g, ""))}
+                    keyboardType="number-pad"
+                    placeholder="Max"
+                    placeholderTextColor={theme.textSecondary}
+                    style={[styles.priceInput, { color: theme.text }]}
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+
+              {/* ── TYPE (dynamic, only when >1 unit type) ── */}
+              {availableTypes.length > 1 && (
+                <>
+                  <Text style={[styles.filterSectionTitle, { color: theme.textSecondary }]}>TYPE</Text>
+                  <View style={styles.filterChipRow}>
+                    {(["all", ...availableTypes] as string[]).map((t) => (
+                      <TouchableOpacity
+                        key={t}
+                        onPress={() => setTypeFilter(t)}
+                        style={[
+                          styles.filterChip,
+                          {
+                            backgroundColor: typeFilter === t ? theme.primary : theme.card,
+                            borderColor:     typeFilter === t ? theme.primary : theme.border,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.filterChipText, { color: typeFilter === t ? theme.background : theme.text }]}>
+                          {t === "all" ? "All" : t}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+            </ScrollView>
+
+            {/* Apply / show results button */}
+            <TouchableOpacity
+              style={[styles.filterApplyBtn, { backgroundColor: theme.primary }]}
+              onPress={() => setFilterVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.filterApplyText, { color: theme.background }]}>
+                Show {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {isEditMode ? (
         <View style={[styles.editFooter, { paddingBottom: insets.bottom + 12 }]}>
@@ -879,14 +1118,83 @@ const makeStyles = (theme: any) =>
       fontWeight: "800",
       marginBottom: 12,
     },
-    row: {
+    // ── 3-column grid card (Blinkit/Zepto style) ──
+    card: {
+      width: CARD_W,
+      borderRadius: 12,
+      borderWidth: 1,
+      overflow: "hidden",
+      elevation: 2,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.07,
+      shadowRadius: 4,
+    },
+    cardImageWrap: {
+      width: "100%",
+      aspectRatio: 1,
+      backgroundColor: "transparent",
+    },
+    cardImage: {
+      width: "100%",
+      height: "100%",
+    },
+    cardImagePlaceholder: {
+      width: "100%",
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    cardBody: {
+      paddingHorizontal: 7,
+      paddingTop: 6,
+      paddingBottom: 4,
+    },
+    cardTitle: {
+      fontSize: 11,
+      fontWeight: "700",
+      lineHeight: 14,
+      marginBottom: 2,
+    },
+    cardPrice: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    cardFooter: {
+      paddingHorizontal: 7,
+      paddingBottom: 8,
+      paddingTop: 2,
+      alignItems: "flex-end",
+    },
+    gridAddBtn: {
+      width: 32,
+      height: 28,
+      borderRadius: 8,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gridQtyBox: {
       flexDirection: "row",
       alignItems: "center",
-      padding: 5,
-      borderRadius: 10,
+      borderRadius: 8,
       borderWidth: 1,
-      elevation: 2,
+      overflow: "hidden",
+      height: 28,
     },
+    gridQtyBtn: {
+      width: 26,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gridQtyText: {
+      minWidth: 22,
+      textAlign: "center",
+      fontSize: 12,
+      fontWeight: "800",
+    },
+    // ── kept for any remaining references ──
     imagePlaceholder: {
       width: 56,
       height: 56,
@@ -899,57 +1207,18 @@ const makeStyles = (theme: any) =>
       borderStyle: "dashed",
       gap: 2,
     },
-    placeholderIconWrap: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    placeholderEmoji: {
-      fontSize: 20,
-    },
-    placeholderLabel: {
-      fontSize: 8,
-      fontWeight: "600",
-      letterSpacing: 0.2,
-    },
-    itemTitle: {
-      fontSize: 15,
-      fontWeight: "700",
-    },
-    addBtn: {
-      height: 34,
-      paddingHorizontal: 16,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-      // backgroundColor: theme.primary,
-    },
-    qtyBox: {
+    placeholderIconWrap: { alignItems: "center", justifyContent: "center" },
+    placeholderEmoji: { fontSize: 20 },
+    placeholderLabel: { fontSize: 8, fontWeight: "600", letterSpacing: 0.2 },
+    itemTitle: { fontSize: 15, fontWeight: "700" },
+    addBtn: { height: 34, paddingHorizontal: 16, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+    qtyBox: { flexDirection: "row", alignItems: "center", borderRadius: 12, borderWidth: 1, borderColor: theme.border, overflow: "hidden" },
+    qtyBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+    qtyText: { minWidth: 28, textAlign: "center", fontWeight: "800" },
+    image: { width: 56, height: 56, borderRadius: 12, marginRight: 12, backgroundColor: theme.isDark ? theme.card : "#E5E7EB" },
+    searchContainer: {
       flexDirection: "row",
       alignItems: "center",
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: theme.border,
-      overflow: "hidden",
-    },
-    qtyBtn: {
-      width: 32,
-      height: 32,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    qtyText: {
-      minWidth: 28,
-      textAlign: "center",
-      fontWeight: "800",
-    },
-    image: {
-      width: 56,
-      height: 56,
-      borderRadius: 12,
-      marginRight: 12,
-      backgroundColor: theme.isDark ? theme.card : "#E5E7EB",
-    },
-    searchContainer: {
       marginBottom: 12,
       marginTop: 4,
     },
@@ -1089,5 +1358,170 @@ const makeStyles = (theme: any) =>
       color: theme.background,
       fontWeight: "800",
       fontSize: 14,
+    },
+
+    // ── Search + Filter row ──────────────────────────────────────────────────
+    filterBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 8,
+      position: "relative",
+    },
+    filterBadge: {
+      position: "absolute",
+      top: -4,
+      right: -4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      backgroundColor: "#EF4444",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+    },
+    filterBadgeText: {
+      color: "#fff",
+      fontSize: 9,
+      fontWeight: "800",
+    },
+
+    // ── Active filter pills ──────────────────────────────────────────────────
+    activePillsRow: {
+      flexGrow: 0,
+      marginBottom: 10,
+    },
+    activePillsContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 2,
+    },
+    activePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    activePillText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    pillClose: {
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    // ── Filter bottom sheet ──────────────────────────────────────────────────
+    filterBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.45)",
+    },
+    filterSheet: {
+      borderTopLeftRadius: 22,
+      borderTopRightRadius: 22,
+      borderTopWidth: 1,
+      paddingHorizontal: 20,
+      paddingBottom: 32,
+      paddingTop: 12,
+      maxHeight: "80%",
+    },
+    filterHandle: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      alignSelf: "center",
+      marginBottom: 16,
+    },
+    filterHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    },
+    filterHeaderTitle: {
+      fontSize: 18,
+      fontWeight: "800",
+    },
+    filterClearAll: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
+    filterSectionTitle: {
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.2,
+      marginBottom: 10,
+      marginTop: 6,
+    },
+    filterChipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginBottom: 18,
+    },
+    filterChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    filterChipText: {
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    filterApplyBtn: {
+      marginTop: 8,
+      paddingVertical: 14,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    filterApplyText: {
+      fontSize: 15,
+      fontWeight: "800",
+    },
+
+    // ── Custom price inputs ──────────────────────────────────────────────────
+    priceInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 18,
+      marginTop: 4,
+    },
+    priceInputWrap: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 12,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      height: 46,
+    },
+    priceInputPrefix: {
+      fontSize: 16,
+      fontWeight: "700",
+      marginRight: 4,
+    },
+    priceInput: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: "600",
+      paddingVertical: 0,
+    },
+    priceSeparator: {
+      width: 16,
+      height: 2,
+      borderRadius: 1,
     },
   });

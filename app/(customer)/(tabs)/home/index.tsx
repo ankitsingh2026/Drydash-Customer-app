@@ -880,10 +880,10 @@ export default function Home() {
                 )}
 
                 {/* ── HERO BANNER ── */}
-                {layoutContent?.hero_banner?.isActive !== false && (() => {
-                  const hero = layoutContent?.hero_banner;
+                {layoutContent?.herosection?.isActive !== false && layoutContent?.hero_banner?.isActive !== false && (() => {
+                  const hero = layoutContent?.herosection || layoutContent?.hero_banner;
                   const mediaUrl = hero?.mediaUrl?.trim() || "";
-                  const mediaType = hero?.mediaType || (mediaUrl.endsWith(".lottie") ? "lottie" : "lottie");
+                  const mediaType = hero?.mediaType?.toLowerCase() || (mediaUrl.endsWith(".lottie") ? "lottie" : "lottie");
                   const isLottie = mediaType === "lottie" || mediaUrl.endsWith(".lottie") || mediaUrl.endsWith(".json");
                   const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
 
@@ -905,8 +905,8 @@ export default function Home() {
                         height: 250,
                         width: "100%",
                         paddingHorizontal: 16,
-                        marginBottom:6,
-                        marginTop:6
+                        marginBottom: 6,
+                        marginTop: 6,
                       }}
                     >
                       {isLottie || !mediaUrl ? (
@@ -1042,11 +1042,12 @@ export default function Home() {
 
                 {/* ── SERVICES ── */}
                 {layoutContent?.services_section?.isActive !== false && (() => {
-                  const servicesSec = layoutContent?.services_section;
-                  const servicesList = (servicesSec?.services && servicesSec.services.length > 0)
-                    ? servicesSec.services
+                  const servicesList = (layoutContent?.services && layoutContent.services.length > 0)
+                    ? layoutContent.services
+                    : (layoutContent?.services_section?.services && layoutContent.services_section.services.length > 0)
+                    ? layoutContent.services_section.services
                     : QUICK_SERVICES;
-                  const sectionTitle = servicesSec?.title?.trim() || "OUR SERVICES";
+                  const sectionTitle = layoutContent?.services_section?.title?.trim() || "OUR SERVICES";
 
                   return (
                     <Animated.View style={{ opacity: fadeAnim }}>
@@ -1080,16 +1081,77 @@ export default function Home() {
                   );
                 })()}
 
+                {/* ── AD BANNER ── */}
+                {layoutContent?.ad_banner && Boolean(layoutContent.ad_banner.mediaUrl?.trim()) && (() => {
+                  const banner = layoutContent.ad_banner!;
+                  const mediaUrl = banner.mediaUrl!.trim();
+                  const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
+                  const isLottie = banner.mediaType === "lottie" || mediaUrl.endsWith(".lottie") || mediaUrl.endsWith(".json");
+
+                  const handleBannerPress = () => {
+                    if (!banner.link?.trim()) return;
+                    const link = banner.link.trim();
+                    if (link.startsWith("http://") || link.startsWith("https://")) {
+                      Linking.openURL(link);
+                    } else {
+                      router.push(link as any);
+                    }
+                  };
+
+                  return (
+                    <TouchableOpacity
+                      activeOpacity={0.9}
+                      onPress={handleBannerPress}
+                      style={{
+                        marginHorizontal: 16,
+                        marginTop: 14,
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        height: 120,
+                        borderWidth: 1,
+                        borderColor: theme.border,
+                        backgroundColor: theme.card,
+                      }}
+                    >
+                      {isLottie ? (
+                        <DotLottie
+                          source={{ uri: mediaUrl }}
+                          autoplay
+                          loop
+                          style={{ width: "100%", height: "100%" }}
+                        />
+                      ) : isSvg ? (
+                        <SvgUri uri={mediaUrl} width="100%" height="100%" />
+                      ) : (
+                        <Image
+                          source={{ uri: mediaUrl }}
+                          style={{ width: "100%", height: "100%" }}
+                          resizeMode="cover"
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })()}
+
               </View>
 
               {/* ── HOW IT WORKS ── */}
-              <HowItWorksSection sectionData={layoutContent?.process_section} />
+              <HowItWorksSection
+                sectionData={layoutContent?.process_section}
+                processList={layoutContent?.process}
+              />
 
               {/* ── LEARN & EXPLORE / EXPERIENCE THE CARE ── */}
-              <LearnExploreSection sectionData={layoutContent?.mid_section} />
+              <LearnExploreSection
+                sectionData={layoutContent?.midsection || layoutContent?.mid_section}
+                recentBlogs={layoutContent?.recent_blogs}
+              />
 
               {/* ── WHAT OUR CUSTOMERS SAY ── */}
-              <TestimonialsSection sectionData={layoutContent?.testimonials_section} />
+              <TestimonialsSection
+                sectionData={layoutContent?.testimonials_section}
+                testimonialsList={layoutContent?.testimonials}
+              />
 
               <View style={styles.wrapper}>
                 <LinearGradient
