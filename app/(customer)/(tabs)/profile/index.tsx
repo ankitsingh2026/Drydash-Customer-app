@@ -32,6 +32,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
 import { useNotifications } from "@/context/NotificationContext";
+import { useWallet } from "@/context/WalletContext";
 
 /* ================= HELPERS ================= */
 
@@ -272,8 +273,13 @@ export default function Profile() {
   const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
   const { logout, setAuthUser } = useAuthContext();
   const { unreadCount, refreshNotifications } = useNotifications();
+  const { referralData, fetchReferralData } = useWallet();
   const [profile, setProfile] = useState<any>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    fetchReferralData().catch(() => {});
+  }, []);
 
   const activeColors = useMemo(
     () => ({
@@ -504,42 +510,44 @@ export default function Profile() {
           <StatBox label="SERVICES" value={profile?.services ?? 0} color={activeColors.text} subColor={activeColors.subText} />
         </View>
 
-        {/* ── REFER & EARN ── */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={onShareReferral}
-          style={[
-            styles.referWrapper,
-            { borderColor: isDark ? theme.card : activeColors.border },
-          ]}
-        >
-          <LinearGradient
-            colors={referGradColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.referGradient}
+        {/* ── REFER & EARN (Visible only after placing 1st order) ── */}
+        {(referralData?.isEligibleToRefer || (profile?.orders ?? 0) > 0) && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={onShareReferral}
+            style={[
+              styles.referWrapper,
+              { borderColor: isDark ? theme.card : activeColors.border },
+            ]}
           >
-            <View style={styles.referIconBox}>
-              <LinearGradient
-                colors={[activeColors.primary, activeColors.primaryDim]}
-                style={styles.referIconGrad}
-              >
-                <Gift size={18} color={isDark ? theme.background : theme.text} />
-              </LinearGradient>
-            </View>
+            <LinearGradient
+              colors={referGradColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.referGradient}
+            >
+              <View style={styles.referIconBox}>
+                <LinearGradient
+                  colors={[activeColors.primary, activeColors.primaryDim]}
+                  style={styles.referIconGrad}
+                >
+                  <Gift size={18} color={isDark ? theme.background : theme.text} />
+                </LinearGradient>
+              </View>
 
-            <View style={styles.referText}>
-              <Text style={[styles.referTitle, { color: activeColors.text }]}>
-                Refer &amp; Earn
-              </Text>
-              <Text style={[styles.referSub, { color: activeColors.subText }]}>
-                Get ₹50 for every friend joined
-              </Text>
-            </View>
+              <View style={styles.referText}>
+                <Text style={[styles.referTitle, { color: activeColors.text }]}>
+                  Refer &amp; Earn
+                </Text>
+                <Text style={[styles.referSub, { color: activeColors.subText }]}>
+                  Get ₹50 for every friend joined
+                </Text>
+              </View>
 
-            <ChevronRight size={18} color={activeColors.subText} />
-          </LinearGradient>
-        </TouchableOpacity>
+              <ChevronRight size={18} color={activeColors.subText} />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
         <View
           style={[
             styles.themeCard,
@@ -579,17 +587,6 @@ export default function Profile() {
             label="Wallet"
             sub="Balance, transactions & top-up"
             onPress={() => router.push("/(customer)/wallet")}
-            cardColor={activeColors.card}
-            borderColor={activeColors.border}
-            textColor={activeColors.text}
-            subColor={activeColors.subText}
-          />
-          <GridTile
-            Icon={Gift}
-            iconColor={iconColor}
-            label="Refer & Earn"
-            sub="Share code, earn bonuses"
-            onPress={() => router.push("/(customer)/refer-and-earn")}
             cardColor={activeColors.card}
             borderColor={activeColors.border}
             textColor={activeColors.text}

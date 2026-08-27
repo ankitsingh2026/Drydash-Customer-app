@@ -1,254 +1,98 @@
 import { Stack, useRouter } from "expo-router";
-import { ArrowLeft, Plus, Wallet } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
 import {
-  Animated,
+  ArrowLeft,
+  Bell,
+  ChevronRight,
+  Filter,
+  Gift,
+  Plus,
+  ShoppingBag,
+  ArrowDownLeft,
+  Wallet,
+} from "lucide-react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
   ActivityIndicator,
+  Animated,
   FlatList,
-  Linking,
+  Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
-  Alert,
-  RefreshControl,
 } from "react-native";
-import { useTheme } from "../../../context/ThemeContext";
-import { useWallet } from "../../../context/WalletContext";
-import { useAuth } from "../../../context/AuthContext";
-import { showAlert } from "@/components/Customalert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import RazorpayCheckout from "react-native-razorpay";
-
-import type {
-  RazorpayPaymentSuccess,
-  RazorpayPaymentError,
-  RazorpayCreateOrderResponse,
-} from "../../../types/wallet.types";
+import NotificationsTopSheet from "@/components/layout/NotificationsTopSheet";
+import { useNotifications } from "@/context/NotificationContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useWallet } from "@/context/WalletContext";
 
 export default function WalletPage() {
   const { theme, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = makeStyles(theme, isDark);
   const router = useRouter();
-  const { user } = useAuth();
 
   const {
     wallet,
     transactions,
+    referralData,
     loadingWallet,
     loadingTransactions,
     fetchWallet,
     fetchTransactions,
-    createTopupOrder,
-    verifyTopup,
+    fetchReferralData,
   } = useWallet();
 
+  const { unreadCount } = useNotifications();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<"ALL" | "CREDIT" | "DEBIT">("ALL");
+  const [refreshing, setRefreshing] = useState(false);
 
-  console.log("txn", transactions);
-
-  // Get user details for Razorpay prefill
-  // AuthUser has nested user object with: id, phone, role, isPhoneVerified, isEmailVerified
-  // But firstName, lastName, email are on the outer AuthUser
-  const customerPhone = user?.user?.phone || user?.phone || '';
-  const customerName = user?.firstName
-    ? `${user.firstName} ${user.lastName || ''}`.trim()
-    : '';
-  const customerEmail = user?.email || '';
-
-  //  animation
   const fade = useRef(new Animated.Value(0)).current;
-  const slide = useRef(new Animated.Value(24)).current;
+  const slide = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fade, {
         toValue: 1,
-        duration: 350,
+        duration: 300,
         useNativeDriver: true,
       }),
       Animated.timing(slide, {
         toValue: 0,
-        duration: 350,
+        duration: 300,
         useNativeDriver: true,
       }),
     ]).start();
   }, []);
 
-  // Load wallet data on mount
   useEffect(() => {
-    loadWalletData();
+    loadData();
   }, []);
 
-  const loadWalletData = async () => {
+  const loadData = async () => {
     try {
-      await fetchWallet();
-      await fetchTransactions({ limit: 20 });
+      await Promise.all([
+        fetchWallet(),
+        fetchTransactions({ limit: 30 }),
+        fetchReferralData(),
+      ]);
     } catch (err) {
-      console.error("Failed to load wallet data:", err);
+      console.error("Failed to load wallet page data:", err);
     }
   };
-
-  // local UI states
-  const [amount, setAmount] = useState<string>("500");
-  const [loading, setLoading] = useState(false);
-
-  async function handleTopUp() {
-    const amt = Number(amount);
-
-    if (!amt || amt <= 0) {
-      showAlert({ type: 'warning', title: 'Invalid amount', message: 'Enter a valid top-up amount.' });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      // Create Razorpay order via washrz backend
-      const orderData = await createTopupOrder(amt);
-
-      console.log("this is the orderData====>>>>>>>>", orderData);
-
-      // Open Razorpay checkout using react-native-razorpay (native module)
-      // Standard checkout shows ALL payment methods: Cards, NetBanking, Wallets, UPI
-      // No need for method: 'upi' - that restricts to only UPI and requires upi_app_package_name
-      const options = {
-        description: 'Wallet Top Up',
-        image: 'https://your-logo-url.png',
-        currency: orderData.currency,
-        key: orderData.key,
-        amount: orderData.amount.toString(), // Already in paise from backend
-        order_id: orderData.orderId,
-        name: 'DryDash',
-        prefill: {
-          contact: customerPhone,
-          name: customerName,
-          email: customerEmail,
-        },
-        theme: { color: theme.primary },
-      };
-
-      console.log("Razorpay options:", options);
-
-      const paymentData: RazorpayPaymentSuccess = await RazorpayCheckout.open(options);
-
-      // Verify payment
-      await verifyTopup({
-        amount: amt,
-        razorpay_order_id: paymentData.razorpay_order_id,
-        razorpay_payment_id: paymentData.razorpay_payment_id,
-        razorpay_signature: paymentData.razorpay_signature,
-      });
-
-      showAlert({
-        type: 'success',
-        title: 'Top up successful',
-        message: `₹${amt} added to your wallet`,
-      });
-
-      // Refresh wallet data
-      await loadWalletData();
-    } catch (err: any) {
-      const rzpErr = err as RazorpayPaymentError;
-      if (rzpErr?.code === 0) {
-        // User cancelled - don't show error
-        return;
-      }
-      showAlert({ type: 'error', title: 'Top up failed', message: err.message || 'Unknown error' });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function renderTransactionItem({ item }: { item: typeof transactions[0] }) {
-    const isCredit = item.type === 'credit';
-    const categoryColor = getCategoryColor(item.category);
-
-    return (
-      <View style={[styles.transactionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: theme.text, fontWeight: "700", fontSize: 14 }}>
-            {getCategoryLabel(item.category)}
-          </Text>
-          <Text style={{ color: theme.subText, fontSize: 12, marginTop: 2 }}>
-            {formatDate(item.createdAt)}
-          </Text>
-          {item.description ? (
-            <Text style={{ color: theme.subText, fontSize: 11, marginTop: 2, opacity: 0.8 }}>
-              {item.description}
-            </Text>
-          ) : null}
-        </View>
-
-        <Text
-          style={{
-            color: isCredit ? "#16a34a" : "#dc2626",
-            fontWeight: "900",
-            fontSize: 16,
-          }}
-        >
-          {isCredit ? "+" : "−"}₹{item.amount}
-        </Text>
-      </View>
-    );
-  }
-
-  function getCategoryLabel(category: string): string {
-    const labels: Record<string, string> = {
-      referral_bonus: "Referral Bonus",
-      referee_bonus: "Welcome Bonus",
-      order_payment: "Order Payment",
-      order_refund: "Order Refund",
-      cashback: "Cashback",
-      admin_credit: "Admin Credit",
-      admin_debit: "Admin Debit",
-      topup: "Wallet Top Up",
-      withdrawal: "Withdrawal",
-      partial_payment: "Partial Payment",
-      expired_referral: "Expired Referral",
-    };
-    return labels[category] || category;
-  }
-
-  function getCategoryColor(category: string): string {
-    const colors: Record<string, string> = {
-      referral_bonus: "#16a34a",
-      referee_bonus: "#16a34a",
-      order_payment: "#dc2626",
-      order_refund: "#16a34a",
-      cashback: "#16a34a",
-      admin_credit: "#16a34a",
-      admin_debit: "#dc2626",
-      topup: "#16a34a",
-      withdrawal: "#dc2626",
-      partial_payment: "#dc2626",
-      expired_referral: "#dc2626",
-    };
-    return colors[category] || theme.subText;
-  }
-
-  function formatDate(dateString: string): string {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateString;
-    }
-  }
-
-  const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await loadWalletData();
+      await loadData();
     } catch (err) {
       console.error(err);
     } finally {
@@ -256,19 +100,138 @@ export default function WalletPage() {
     }
   };
 
+  const filteredTransactions = (transactions || []).filter((item) => {
+    if (activeFilter === "CREDIT") return item.type === "credit";
+    if (activeFilter === "DEBIT") return item.type === "debit";
+    return true;
+  });
+
+  const totalReferralEarned = useMemo(() => {
+    const fromTxns = (transactions || [])
+      .filter(
+        (t) =>
+          (t.category === "referral_bonus" || t.category === "referee_bonus") &&
+          t.type === "credit"
+      )
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    const fromStats = Number(
+      referralData?.totalEarned ?? referralData?.stats?.totalEarned ?? 0
+    );
+
+    return Math.max(fromTxns, fromStats);
+  }, [transactions, referralData]);
+
+  function renderTransactionItem({ item }: { item: typeof transactions[0] }) {
+    const isCredit = item.type === "credit";
+    const isOrder = item.category === "order_payment" || item.category === "partial_payment";
+    const isReferral = item.category === "referral_bonus" || item.category === "referee_bonus";
+
+    let iconNode;
+    let iconBg;
+    if (isCredit) {
+      if (isReferral) {
+        iconBg = isDark ? "rgba(16, 185, 129, 0.15)" : "#E6F4F0";
+        iconNode = <Gift size={18} color="#007A33" />;
+      } else {
+        iconBg = isDark ? "rgba(16, 185, 129, 0.15)" : "#E6F4F0";
+        iconNode = <ArrowDownLeft size={18} color="#007A33" />;
+      }
+    } else {
+      iconBg = isDark ? "rgba(148, 163, 184, 0.15)" : "#F1F5F9";
+      iconNode = <ShoppingBag size={18} color={isDark ? "#94A3B8" : "#64748B"} />;
+    }
+
+    return (
+      <View style={[styles.txnCard, { backgroundColor: isDark ? theme.card : "#FFFFFF", borderColor: isDark ? theme.border : "#F1F5F9" }]}>
+        <View style={[styles.txnIconWrap, { backgroundColor: iconBg }]}>
+          {iconNode}
+        </View>
+
+        <View style={{ flex: 1, paddingRight: 8 }}>
+          <Text style={[styles.txnTitle, { color: isDark ? theme.text : "#0F172A" }]}>
+            {getCategoryTitle(item)}
+          </Text>
+          <Text style={[styles.txnSubtext, { color: isDark ? theme.subText : "#64748B" }]}>
+            {getCategorySubtext(item)}
+          </Text>
+        </View>
+
+        <Text
+          style={[
+            styles.txnAmount,
+            { color: isCredit ? "#007A33" : isDark ? theme.text : "#0F172A" },
+          ]}
+        >
+          {isCredit ? "+ " : "- "}₹{item.amount.toLocaleString("en-IN")}
+        </Text>
+      </View>
+    );
+  }
+
+  function getCategoryTitle(item: any): string {
+    const category = item.category;
+    if (category === "topup") return "Added to Wallet";
+    if (category === "order_payment" || category === "partial_payment") return "Order Payment";
+    if (category === "referral_bonus") return "Referral Bonus";
+    if (category === "referee_bonus") return "Welcome Bonus";
+    if (category === "order_refund") return "Order Refund";
+    if (category === "cashback") return "Cashback Earned";
+    return item.description || "Wallet Transaction";
+  }
+
+  function getCategorySubtext(item: any): string {
+    const formattedDate = formatDate(item.createdAt);
+    if (item.referenceId) {
+      return `Order #${item.referenceId} • ${formattedDate}`;
+    }
+    if (item.category === "topup") {
+      return `UPI • ${formattedDate}`;
+    }
+    if (item.category === "referral_bonus" || item.category === "referee_bonus") {
+      return `Referral • ${formattedDate}`;
+    }
+    return formattedDate;
+  }
+
+  function formatDate(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {
+      return dateString;
+    }
+  }
+
+  const headerTopPadding = Math.max(
+    insets.top + 8,
+    Platform.OS === "android" ? (StatusBar.currentHeight || 28) + 8 : 20
+  );
+
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <View style={[styles.root, { backgroundColor: isDark ? theme.background : "#F8FAFC" }]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* HEADER - FIXED */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+      {/* HEADER */}
+      <View style={[styles.header, { paddingTop: headerTopPadding }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.headerIconBtn}
+        >
           <ArrowLeft size={22} color={theme.text} />
         </TouchableOpacity>
 
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Wallet</Text>
+        <Text style={[styles.headerTitle, { color: theme.text }]}>My Wallet</Text>
 
-        <View style={{ width: 22 }} />
+        <View style={{ width: 36 }} />
       </View>
 
       <Animated.View
@@ -278,213 +241,444 @@ export default function WalletPage() {
           flex: 1,
         }}
       >
-        {/* FIXED TOP SECTION */}
-        {/* BALANCE CARD */}
-        <View
-          style={[
-            styles.balanceCard,
-            { backgroundColor: theme.card, borderColor: theme.border },
-          ]}
-        >
-          <View style={styles.balanceRow}>
-            <Wallet size={22} color={theme.primary} />
-            <Text style={[styles.balanceLabel, { color: theme.subText }]}>
-              Wallet Balance
-            </Text>
-            {loadingWallet && (
-              <ActivityIndicator size="small" color={theme.primary} style={{ marginLeft: 8 }} />
-            )}
-          </View>
-
-          <Text style={[styles.balance, { color: theme.text }]}>
-            ₹ {wallet?.balance?.toLocaleString('en-IN') || "0"}
-          </Text>
-        </View>
-
-        {/* AMOUNT INPUT */}
-        <View style={[styles.section, { paddingTop: 4 }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Top up amount</Text>
-          <View style={[styles.rowInput, {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-          }]}>
-            <Text style={{ color: theme.subText, marginRight: 8 }}>₹</Text>
-            <TextInput
-              value={amount}
-              keyboardType="numeric"
-              onChangeText={setAmount}
-              style={{ flex: 1, color: theme.text, fontWeight: "800" }}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#007A33"]}
+              tintColor="#007A33"
             />
-          </View>
-
-          <TouchableOpacity
-            onPress={handleTopUp}
-            style={[
-              styles.topUpBtn,
-              { backgroundColor: theme.primary, marginTop: 16 },
-            ]}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color={theme.background} />
-            ) : (
-              <>
-                <Plus size={16} color={theme.background} />
-                <Text style={styles.topUpText}>Top Up ₹{amount}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* RECENT TRANSACTIONS HEADER - FIXED */}
-        <View style={[styles.section, { marginTop: 20, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>Recent Transactions</Text>
-          {loadingTransactions && (
-            <ActivityIndicator size="small" color={theme.primary} />
-          )}
-        </View>
-
-        {/* SCROLLABLE LIST - ONLY TRANSACTIONS SCROLL */}
-        {(!transactions || transactions.length === 0) && !loadingTransactions ? (
-          <View style={styles.section}>
-            <View style={[styles.transactionCard, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              <Text style={{ color: theme.subText }}>No recent transactions</Text>
+          }
+        >
+          {/* WALLET BALANCE CARD */}
+          <View style={[styles.balanceCard, { backgroundColor: isDark ? theme.card : "#FFFFFF", borderColor: isDark ? theme.border : "#E2E8F0" }]}>
+            <View style={styles.balanceHeaderRow}>
+              <Wallet size={16} color={isDark ? theme.subText : "#64748B"} />
+              <Text style={[styles.balanceHeaderLabel, { color: isDark ? theme.subText : "#64748B" }]}>
+                WALLET BALANCE
+              </Text>
+              {loadingWallet && <ActivityIndicator size="small" color="#007A33" style={{ marginLeft: 6 }} />}
             </View>
+
+            <Text style={[styles.balanceAmount, { color: isDark ? theme.text : "#0F172A" }]}>
+              ₹{wallet?.balance !== undefined ? wallet.balance.toLocaleString("en-IN") : "0"}
+            </Text>
+
+            <Text style={[styles.balanceSubtitle, { color: isDark ? theme.subText : "#64748B" }]}>
+              Available Balance
+            </Text>
           </View>
-        ) : (
-          <FlatList
-            data={transactions || []}
-            keyExtractor={(item, index) => (item?.id || `txn_${index}`) + (item?.createdAt || "")}
-            renderItem={renderTransactionItem}
-            scrollEnabled={true}
-            showsVerticalScrollIndicator={true}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[theme.primary]}
-                tintColor={theme.primary}
-              />
-            }
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: Math.max(insets.bottom + 32, 48) }}
-            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-            style={{ flex: 1 }}
-          />
-        )}
+
+          {/* REFERRAL EARNINGS BANNER */}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push("/(customer)/refer-and-earn")}
+            style={[
+              styles.referralBanner,
+              {
+                backgroundColor: isDark ? "rgba(16, 185, 129, 0.12)" : "#F0FDF4",
+                borderColor: isDark ? "rgba(16, 185, 129, 0.25)" : "#DCFCE7",
+              },
+            ]}
+          >
+            <View style={styles.referralLeft}>
+              <View style={styles.giftIconCircle}>
+                <Gift size={16} color="#007A33" />
+              </View>
+              <Text style={styles.referralEarnedText} numberOfLines={1} adjustsFontSizeToFit>
+                <Text style={styles.referralAmountBold}>₹{totalReferralEarned}</Text>
+                <Text style={{ color: isDark ? theme.subText : "#475569" }}> earned from referrals</Text>
+              </Text>
+            </View>
+
+            <View style={styles.referralRightLink}>
+              <Text style={styles.inviteLinkText}>Invite Friends</Text>
+              <ChevronRight size={14} color="#007A33" />
+            </View>
+          </TouchableOpacity>
+
+          {/* TRANSACTION HISTORY HEADER & FILTER */}
+          <View style={styles.txnHeaderRow}>
+            <Text style={[styles.txnHeaderTitle, { color: isDark ? theme.subText : "#64748B" }]}>
+              TRANSACTION HISTORY
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => setFilterModalVisible(true)}
+              style={styles.filterBtn}
+            >
+              <Text style={styles.filterBtnText}>
+                {activeFilter === "ALL" ? "Filter" : activeFilter === "CREDIT" ? "Credits" : "Debits"}
+              </Text>
+              <Filter size={14} color="#007A33" />
+            </TouchableOpacity>
+          </View>
+
+          {/* TRANSACTION HISTORY CONTAINER */}
+          <View
+            style={[
+              styles.txnListContainer,
+              {
+                backgroundColor: isDark ? theme.card : "#FFFFFF",
+                borderColor: isDark ? theme.border : "#E2E8F0",
+              },
+            ]}
+          >
+            {loadingTransactions && (!transactions || transactions.length === 0) ? (
+              <View style={styles.emptyWrap}>
+                <ActivityIndicator size="small" color="#007A33" />
+              </View>
+            ) : filteredTransactions.length === 0 ? (
+              <View style={styles.emptyWrap}>
+                <Text style={[styles.emptyText, { color: isDark ? theme.subText : "#64748B" }]}>
+                  No transactions found
+                </Text>
+              </View>
+            ) : (
+              filteredTransactions.map((item, index) => (
+                <React.Fragment key={(item?.id || `txn_${index}`) + index}>
+                  {renderTransactionItem({ item })}
+                  {index < filteredTransactions.length - 1 && (
+                    <View style={[styles.txnDivider, { backgroundColor: isDark ? theme.border : "#F1F5F9" }]} />
+                  )}
+                </React.Fragment>
+              ))
+            )}
+          </View>
+        </ScrollView>
       </Animated.View>
+
+      {/* FILTER MODAL */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setFilterModalVisible(false)}
+          style={styles.modalBackdrop}
+        >
+          <View style={[styles.modalCard, { backgroundColor: isDark ? theme.card : "#FFFFFF" }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Filter Transactions</Text>
+
+            <TouchableOpacity
+              style={[styles.modalOption, activeFilter === "ALL" && styles.modalOptionActive]}
+              onPress={() => {
+                setActiveFilter("ALL");
+                setFilterModalVisible(false);
+              }}
+            >
+              <Text style={[styles.modalOptionText, activeFilter === "ALL" && styles.modalOptionTextActive]}>
+                All Transactions
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalOption, activeFilter === "CREDIT" && styles.modalOptionActive]}
+              onPress={() => {
+                setActiveFilter("CREDIT");
+                setFilterModalVisible(false);
+              }}
+            >
+              <Text style={[styles.modalOptionText, activeFilter === "CREDIT" && styles.modalOptionTextActive]}>
+                Credits Only (+ Money Added, Refunds, Referral)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalOption, activeFilter === "DEBIT" && styles.modalOptionActive]}
+              onPress={() => {
+                setActiveFilter("DEBIT");
+                setFilterModalVisible(false);
+              }}
+            >
+              <Text style={[styles.modalOptionText, activeFilter === "DEBIT" && styles.modalOptionTextActive]}>
+                Debits Only (- Order Payments)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* FIXED BOTTOM ADD MONEY BUTTON */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 12, 16) }]}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => router.push("/(customer)/wallet/add-money")}
+          style={styles.addMoneyMainBtn}
+        >
+          <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={styles.addMoneyMainBtnText}>Add Money</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* NOTIFICATIONS SHEET */}
+      <NotificationsTopSheet
+        visible={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </View>
   );
 }
 
-/* ================= STYLES ================= */
-
-const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
-  root: { flex: 1 },
-
-  header: {
-    marginTop: 40,
-    height: 56,
-    paddingHorizontal: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-
-  balanceCard: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-
-  balanceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  balanceLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  balance: {
-    fontSize: 36,
-    fontWeight: "900",
-    marginVertical: 14,
-  },
-
-  topUpBtn: {
-    height: 46,
-    borderRadius: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 16,
-  },
-
-  topUpText: {
-    fontWeight: "900",
-    color: theme.background,
-    fontSize: 14,
-  },
-
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 10,
-  },
-
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-
-  rowInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-
-  smallBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: theme.primary,
-  },
-
-  paymentMethodSelector: {
-    paddingHorizontal: 16,
-  },
-
-  methodOptions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  methodOption: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-
-  transactionCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-});
+const makeStyles = (theme: any, isDark: boolean) =>
+  StyleSheet.create({
+    root: {
+      flex: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      paddingBottom: 12,
+    },
+    headerIconBtn: {
+      width: 36,
+      height: 36,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+    },
+    bellBadge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      backgroundColor: "#EF4444",
+      borderRadius: 9,
+      minWidth: 16,
+      height: 16,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 4,
+    },
+    bellBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: 40,
+    },
+    balanceCard: {
+      borderRadius: 20,
+      borderWidth: 1,
+      padding: 20,
+      marginTop: 8,
+      marginBottom: 16,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    balanceHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    balanceHeaderLabel: {
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+    },
+    balanceAmount: {
+      fontSize: 38,
+      fontWeight: "900",
+      marginTop: 12,
+      marginBottom: 2,
+    },
+    balanceSubtitle: {
+      fontSize: 13,
+      fontWeight: "600",
+      marginBottom: 18,
+    },
+    footer: {
+      paddingHorizontal: 20,
+      paddingTop: 12,
+      backgroundColor: isDark ? theme.background : "#F8FAFC",
+      borderTopWidth: 1,
+      borderTopColor: isDark ? theme.border : "#E2E8F0",
+    },
+    addMoneyMainBtn: {
+      height: 50,
+      backgroundColor: "#007A33",
+      borderRadius: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      shadowColor: "#007A33",
+      shadowOpacity: 0.2,
+      shadowRadius: 6,
+      elevation: 3,
+    },
+    addMoneyMainBtnText: {
+      color: "#FFFFFF",
+      fontSize: 15,
+      fontWeight: "800",
+    },
+    referralBanner: {
+      borderRadius: 16,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 24,
+      gap: 6,
+    },
+    referralLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      flex: 1,
+      paddingRight: 4,
+    },
+    giftIconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: "#D1FAE5",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    referralEarnedText: {
+      fontSize: 13,
+      fontWeight: "500",
+      flex: 1,
+    },
+    referralAmountBold: {
+      fontWeight: "900",
+      color: "#007A33",
+      fontSize: 14,
+    },
+    referralRightLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 2,
+      flexShrink: 0,
+    },
+    inviteLinkText: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: "#007A33",
+    },
+    txnHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    txnHeaderTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+    },
+    filterBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    filterBtnText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: "#007A33",
+    },
+    txnListContainer: {
+      borderRadius: 20,
+      borderWidth: 1,
+      overflow: "hidden",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.03,
+      shadowRadius: 6,
+      elevation: 1,
+    },
+    txnCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 16,
+    },
+    txnIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 14,
+    },
+    txnTitle: {
+      fontSize: 15,
+      fontWeight: "800",
+    },
+    txnSubtext: {
+      fontSize: 12,
+      fontWeight: "500",
+      marginTop: 2,
+    },
+    txnAmount: {
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    txnDivider: {
+      height: 1,
+      marginHorizontal: 16,
+    },
+    emptyWrap: {
+      padding: 32,
+      alignItems: "center",
+    },
+    emptyText: {
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    modalCard: {
+      width: "100%",
+      borderRadius: 20,
+      padding: 20,
+      gap: 8,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "800",
+      marginBottom: 8,
+    },
+    modalOption: {
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+    },
+    modalOptionActive: {
+      backgroundColor: "rgba(0, 122, 51, 0.1)",
+    },
+    modalOptionText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: "#64748B",
+    },
+    modalOptionTextActive: {
+      color: "#007A33",
+      fontWeight: "800",
+    },
+  });

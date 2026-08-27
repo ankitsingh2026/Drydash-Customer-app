@@ -9,6 +9,25 @@
       "client_info": {
         "mobilesdk_app_id": "1:42050047801:android:45a4a7570c9087988362e8",
         "android_client_info": {
+          "package_name": "com.drydash.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZmdZ5At_O24DHOot44qIys1sNbzlcNRg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:42050047801:android:45a4a7570c9087988362e8",
+        "android_client_info": {
           "package_name": "com.drydash.newCustomer"
         }
       },

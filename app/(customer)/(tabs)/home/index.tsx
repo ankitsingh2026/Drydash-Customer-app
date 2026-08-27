@@ -469,7 +469,10 @@ export default function Home() {
   };
 
   const refreshBooking = useCallback(async () => {
+    console.log('this is the user===>>>',user)
     const phone = user?.user?.phone ?? user?.phone ?? "";
+
+    console.log('this is the phone====>',phone)
     if (!phone) {
       setActiveType("none");
       setActiveBooking(null);
@@ -477,6 +480,8 @@ export default function Home() {
       return;
     }
     const phoneWithCountryCode = `91${phone}`;
+
+    console.log("this is the phonewithCountryCode============>>>>>>>>>>>", phoneWithCountryCode);
 
     try {
       setBookingLoading(true);
@@ -873,7 +878,9 @@ export default function Home() {
                       )}
                     </View>
                   )}
-                </View>                {delayInfo?.isDelay && (
+                </View>
+
+                {delayInfo?.isDelay && (
                   <DelayBanner delayInfo={delayInfo} />
                 )}
 

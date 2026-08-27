@@ -33,7 +33,7 @@ type AuthContextType = {
 
   saveTokens: (tokens: Tokens) => Promise<void>;
   setAuthUser: (user: AuthUser) => Promise<void>;
-  initializeWallet: (referralCode?: string) => Promise<void>;
+  initializeWallet: (referralCode?: string, targetCustomerId?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -88,8 +88,8 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
   };
 
   /* Initialize wallet and referral code for new/existing customer */
-  const initializeWallet = async (referralCode?: string) => {
-    const customerId = user?.user?.id ?? user?.id;
+  const initializeWallet = async (referralCode?: string, targetCustomerId?: string) => {
+    const customerId = targetCustomerId ?? user?.user?.id ?? user?.id;
     if (!customerId) {
       console.log("No customer ID found for wallet initialization");
       return;
@@ -97,14 +97,15 @@ export const AuthProvider = ({ children }: PropsWithChildren) => {
 
     // Check if already initialized
     const alreadyInitialized = await AsyncStorage.getItem(`wallet_init_${customerId}`);
-    if (alreadyInitialized) {
+    if (alreadyInitialized && !referralCode) {
       setWalletInitialized(true);
       return;
     }
 
     try {
-      console.log("Initializing wallet and referral for customer:", customerId);
-      await referralApi.initializeCustomer({ appCustomerId: customerId.toString(), referralCode });
+      console.log("Initializing wallet and referral for customer:", customerId, "Referral Code:", referralCode);
+      const res = await referralApi.initializeCustomer({ appCustomerId: customerId.toString(), referralCode });
+      console.log("Wallet & Referral init API response:", res);
       await AsyncStorage.setItem(`wallet_init_${customerId}`, "true");
       setWalletInitialized(true);
       console.log("Wallet and referral initialized successfully");

@@ -4,16 +4,19 @@
     "slug": "DryDash",
     "version": "1.1.29",
     "orientation": "portrait",
-    "backgroundColor": "#000000",
-    "icon": "./assets/images/icon.png",
+    "backgroundColor": "#FFFFFF",
+    "icon": "./assets/images/logo/Drydash_logo_2.svg",
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
+    "notification": {
+      "icon": "./assets/images/android-icon-foreground.png",
+      "color": "#EB3B2F"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "googleServicesFile": "./GoogleService-Info.plist",
       "config": {
-        // "googleMapsApiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
         "googleMapsApiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
       },
       "bundleIdentifier": "com.drydash.customer",
@@ -21,11 +24,16 @@
         "aps-environment": "production",
         "com.apple.developer.associated-domains": [
           "applinks:app.drydash.com",
-          "applinks:www.drydash.com"
+          "applinks:www.drydash.com",
+          "applinks:api.drydash.in",
+          "applinks:api.shiptos.com",
+          "applinks:staging.shiptos.com"
         ]
       },
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "LSApplicationQueriesSchemes": [
           "upi",
           "gpay",
@@ -38,8 +46,12 @@
       },
       "associatedDomains": [
         "applinks:app.drydash.com",
-        "applinks:www.drydash.com"
-      ]
+        "applinks:www.drydash.com",
+        "applinks:api.drydash.in",
+        "applinks:api.shiptos.com",
+        "applinks:staging.shiptos.com"
+      ],
+      "deploymentTarget": "15.4"
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -50,72 +62,162 @@
         "FOREGROUND_SERVICE",
         "POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "FOREGROUND_SERVICE",
+        "POST_NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
-          // "apiKey": "AIzaSyAT-o42Ycc63KWHxbIiGX2KgluW4BpdaYM"
           "apiKey": "AIzaSyDGSQ0H6zb3kLpfWQgQEDWJUZdWvNyWDFY"
         }
       },
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-foreground.png"
       },
       "notification": {
-        "icon": "./assets/images/favicon.png",
-        "color": "#000000"
+        "icon": "./assets/images/android-icon-monochrome.png",
+        "color": "#EB3B2F"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
-  {
-    "action": "VIEW",
-    "autoVerify": true,
-    "data": [
-      {
-        "scheme": "https",
-        "host": "app.drydash.com",
-        "pathPrefix": "/signup"
-      },
-      {
-        "scheme": "https",
-        "host": "www.drydash.com",
-        "pathPrefix": "/signup"
-      }
-    ],
-    "category": [
-      "BROWSABLE",
-      "DEFAULT"
-    ]
-  },
-  {
-    "action": "VIEW",
-    "data": [
-      {
-        "scheme": "upi"
-      }
-    ],
-    "category": [
-      "BROWSABLE",
-      "DEFAULT"
-    ]
-  },
-  {
-    "action": "VIEW",
-    "data": [
-      {
-        "scheme": "drydash"
-      }
-    ],
-    "category": [
-      "BROWSABLE",
-      "DEFAULT"
-    ]
-  }
-]
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "staging.shiptos.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "api.shiptos.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "api.drydash.in",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "app.drydash.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "app.drydash.com",
+              "pathPrefix": "/signup"
+            },
+            {
+              "scheme": "https",
+              "host": "www.drydash.com",
+              "pathPrefix": "/signup"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "upi"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "drydash"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "staging.shiptos.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "api.shiptos.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "api.drydash.in",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "app.drydash.com",
+              "pathPrefix": "/api/v1/referral"
+            },
+            {
+              "scheme": "https",
+              "host": "app.drydash.com",
+              "pathPrefix": "/signup"
+            },
+            {
+              "scheme": "https",
+              "host": "www.drydash.com",
+              "pathPrefix": "/signup"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "upi"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "drydash"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "package": "com.drydash.customer"
     },
     "web": {
       "output": "static",
@@ -146,7 +248,8 @@
       "@react-native-firebase/app",
       "@react-native-firebase/messaging",
       "expo-build-properties",
-      "@lottiefiles/dotlottie-react-native/plugin"
+      "@lottiefiles/dotlottie-react-native/plugin",
+      "./plugins/withManifestFix.js"
     ],
     "experiments": {
       "typedRoutes": true,

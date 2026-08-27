@@ -10,6 +10,7 @@ import {
   Animated,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -85,17 +86,49 @@ export default function AuthScreen() {
   const validatePhone = (v: string) => /^[6-9]\d{9}$/.test(v);
   const retrievedCode = useSmsUserConsent();
 
-  const { ref } = useLocalSearchParams<{ ref?: string }>();
+  const params = useLocalSearchParams<{ ref?: string; referralCode?: string }>();
 
-  // Read referral code from URL params (for deep links)
+  // Read referral code from URL/scheme params (for deep links)
   useEffect(() => {
-    if (ref) {
-      const refCode = ref.toString().toUpperCase();
-      setReferralCode(refCode);
-      // Validate the referral code
-      validateReferralCode(refCode);
+    const processCode = (rawCode: string) => {
+      const cleanCode = rawCode.toString().toUpperCase().trim();
+      if (cleanCode && cleanCode !== referralCode) {
+        setReferralCode(cleanCode);
+        validateReferralCode(cleanCode);
+      }
+    };
+
+    const incomingCode = params.ref || params.referralCode;
+    if (incomingCode) {
+      processCode(incomingCode);
     }
-  }, [ref]);
+
+    // Direct listener for deep link events while Auth screen is open
+    const handleUrl = (url: string) => {
+      let extracted: string | null = null;
+      const match = url.match(/[?&](ref|referralCode|code)=([^&]+)/i);
+      if (match && match[2]) {
+        extracted = decodeURIComponent(match[2]);
+      } else if (url.includes('/share/')) {
+        const parts = url.split('/share/');
+        if (parts[1]) extracted = parts[1].split('?')[0].split('/')[0];
+      } else if (url.includes('/r/')) {
+        const parts = url.split('/r/');
+        if (parts[1]) extracted = parts[1].split('?')[0].split('/')[0];
+      }
+
+      if (extracted) {
+        processCode(extracted);
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+
+    const sub = Linking.addEventListener("url", ({ url }) => handleUrl(url));
+    return () => sub.remove();
+  }, [params.ref, params.referralCode]);
 
   const validateReferralCode = async (code: string) => {
     try {
@@ -357,11 +390,12 @@ export default function AuthScreen() {
  
       if (!res.isNewUser) {
         await setAuthUser(res.user);
+        const customerId = res.user?.user?.id ?? res.user?.id ?? res.user?._id;
 
-        await registerCustomerPushToken(res.user.id);
+        await registerCustomerPushToken(customerId?.toString());
 
         // Initialize wallet & referral
-        await initializeWallet();
+        await initializeWallet(undefined, customerId?.toString());
 
         router.replace("/(customer)/(tabs)/home");
       } else {
@@ -426,9 +460,26 @@ export default function AuthScreen() {
  
       await setAuthUser(updatedUser);
  
-      // Initialize wallet & referral for new user
-      await initializeWallet(referralCode ? referralCode.trim() : undefined);
-      router.replace("/(customer)/(tabs)/home");
+      const customerId = updatedUser?.user?.id ?? updatedUser?.id ?? updatedUser?._id;
+      const refCodeToApply = referralCode ? referralCode.trim().toUpperCase() : undefined;
+      console.log("👉 Submitting Account Signup - Customer ID:", customerId, "Referral Code:", refCodeToApply);
+
+      // Register push token & request notification + location permissions on signup
+      await registerCustomerPushToken(customerId?.toString());
+
+      // Initialize wallet & referral for new user with explicit customerId
+      await initializeWallet(refCodeToApply, customerId?.toString());
+      
+      // Collect primary delivery address right after signup
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
+      router.replace({
+        pathname: "/(customer)/(edit)/edit-address",
+        params: {
+          fromSignup: "true",
+          contactName: fullName,
+          contactPhone: phone,
+        },
+      });
     } catch (e: any) {
       //  setError(e.message);
       showAlert({ type: 'error', title: 'Could not create account', message: e.message });
