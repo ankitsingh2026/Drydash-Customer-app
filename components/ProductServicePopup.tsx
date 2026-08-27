@@ -28,23 +28,13 @@ type ProcessStep = {
   description: string;
 };
 
+import { Item } from "../constants/catalog";
+
 type ProductServicePopupProps = {
   visible: boolean;
   onClose: () => void;
   onOpenCart: () => void;
-  product: {
-    id: string;
-    title: string;
-    mainHeading: string;
-    price: number;
-    category: string;
-    image: string;
-    description?: string;
-    process?: ProcessStep[];
-    displayPrice?: string;
-    unit?: string;
-    type?: string;
-  } | null;
+  product: Item | null;
 };
 
 export default function ProductServicePopup({

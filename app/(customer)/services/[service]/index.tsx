@@ -1,5 +1,6 @@
 import ProductServicePopup from "@/components/ProductServicePopup";
-import { catalogData } from "@/constants/catalog";
+import { CatalogSkeleton } from "@/components/skeleton";
+import { catalogData, Item } from "@/constants/catalog";
 import { getCatalogApi } from "@/features/catalog/catalog.api";
 import {
   getCustomerSinglePickupDetails,
@@ -53,21 +54,6 @@ const TABS = [
   { key: "leather", label: "Leather", icon: Shirt },
   { key: "dryclean", label: "Dry Clean", icon: Sparkles },
 ];
-
-type Item = {
-  id: string;
-  title: string;
-  mainHeading?: string;
-  mainDescription?: string;
-  price: number;
-  category: string;
-  image: string;
-  description?: string;
-  process?: ProcessStep[];
-  displayPrice?: string;
-  unit?: string;
-  type?: string;
-};
 
 type ProcessStep = {
   step: number;
@@ -702,16 +688,12 @@ export default function ServiceDetail() {
         </Text>
       )}
 
-      {/* Loading State */}
+      {/* Skeleton Loading State */}
       {(isLoading || pickupLoading) && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.primary} />
-          <Text style={[styles.loadingText, { color: theme.subText }]}>
-            {pickupLoading
-              ? "Loading pickup details..."
-              : `Loading ${activeTab?.label} services...`}
-          </Text>
-        </View>
+        <CatalogSkeleton
+          count={9}
+          // showNotice={activeTab?.key === "laundry"}
+        />
       )}
 
       {/* Error State */}
@@ -780,7 +762,7 @@ export default function ServiceDetail() {
       )}
 
       {/* ---------- 3-COLUMN GRID ---------- */}
-      {!isLoading && !hasError && (
+      {!isLoading && !pickupLoading && !hasError && !pickupError && (
         <FlatList
           style={{ flex: 1 }}
           data={filteredItems}
