@@ -4,7 +4,7 @@
     "slug": "DryDash",
     "version": "1.1.29",
     "orientation": "portrait",
-    "backgroundColor": "#0B1F1A",
+    "backgroundColor": "#000000",
     "icon": "./assets/images/icon.png",
     "scheme": "drydash",
     "userInterfaceStyle": "dark",
@@ -59,14 +59,14 @@
         }
       },
       "adaptiveIcon": {
-        "backgroundColor": "#0B1F1A",
+        "backgroundColor": "#ffffff",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "notification": {
         "icon": "./assets/images/favicon.png",
-        "color": "#0B1F1A"
+        "color": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -129,9 +129,9 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#0B1F1A",
+          "backgroundColor": "#FFFFFF",
           "dark": {
-            "backgroundColor": "#0B1F1A"
+            "backgroundColor": "#FFFFFF"
           }
         }
       ],

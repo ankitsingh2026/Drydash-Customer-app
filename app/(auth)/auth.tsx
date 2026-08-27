@@ -26,7 +26,7 @@ import {
 import { showAlert } from "@/components/Customalert";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTheme } from "@/theme/useTheme";
-import DryDashLogo from "../../assets/images/logo/drydashLogo.svg";
+import DrydashLogo48 from "@/assets/images/Drydash_logo_48x48.svg";
 import { registerCustomerPushToken } from "@/lib/notifications/fcm";
 import { referralApi } from "@/features/auth/referral.api";
 type Step = "MOBILE" | "OTP" | "REGISTER" | "SUCCESS";
@@ -479,26 +479,16 @@ export default function AuthScreen() {
             style={{
               opacity: fadeAnim,
               transform: [{ scale: scaleAnim }],
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+              marginTop: 8,
             }}
           >
-            <Image
-              source={require("../../assets/images/logo/dd_logo.png")}
-              style={styles.logoDD}
-              resizeMode="contain"
+            <DrydashLogo48
+              width={96}
+              height={96}
             />
-          </Animated.View>
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            }}
-          >
-            <View style={styles.logoContainer}>
-              <DryDashLogo
-                width={160}
-                height={100}
-              />
-            </View>
           </Animated.View>
  
           {/* CARD with animation */}
