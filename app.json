@@ -2,12 +2,12 @@
   "expo": {
     "name": "DryDash",
     "slug": "DryDash",
-    "version": "1.1.29",
+    "version": "1.1.31",
     "orientation": "portrait",
     "backgroundColor": "#0B1F1A",
     "icon": "./assets/images/icon.png",
     "scheme": "drydash",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,

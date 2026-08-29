@@ -950,7 +950,7 @@ export default function Home() {
                         lng={contextSelectedAddress.longitude}
                         zoneId={zoneData?.zoneId}
                         selectedSlot={selectedSlotIndex}
-                        autoScroll={selectedSlotIndex < 0}
+                      //  autoScroll={selectedSlotIndex < 0}
                         onSelect={(index: number, slot: any) => {
                           setSelectedSlotIndex(index);
                           setSelectedSlotData(slot);
