@@ -4,7 +4,7 @@ import { getFullServiceData } from "@/features/location/location.api";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
-import { Bell, Wallet } from "lucide-react-native";
+import { Bell, Wallet, Gift } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,9 +33,16 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
   const styles = makeStyles(theme, isDark);
   const insets = useSafeAreaInsets();
   const { unreadCount, refreshNotifications } = useNotifications();
-  const { wallet } = useWallet();
+  const { wallet, referralData, fetchReferralData } = useWallet();
   const isFetchingRef = useRef(false);
   const isFetchingCurrentLocRef = useRef(false);
+
+  useEffect(() => {
+    fetchReferralData().catch(() => {});
+  }, []);
+
+
+  console.log("referralData?.isEligibleToRefer", referralData?.isEligibleToRefer);
 
   const {
     selectedAddress,
@@ -511,6 +518,26 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
                 ₹{wallet?.balance !== undefined ? wallet.balance.toLocaleString('en-IN') : "0"}
               </Text>
             </TouchableOpacity>
+
+            {referralData?.isEligibleToRefer && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => router.push("/(customer)/refer-and-earn")}
+                style={[
+                  styles.walletBtn,
+                  {
+                    backgroundColor: isDark ? "rgba(16, 185, 129, 0.15)" : "#ECFDF5",
+                    borderColor: isDark ? "rgba(16, 185, 129, 0.3)" : "#A7F3D0",
+                  },
+                ]}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Gift size={15} color={theme.primary} />
+                <Text style={[styles.walletText, { color: theme.primary }]}>
+                  ₹{referralData?.referrerBonusAmount ?? 100}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* <TouchableOpacity
               activeOpacity={0.8}

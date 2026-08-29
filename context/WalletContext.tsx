@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { walletApi } from "@/features/auth/wallet.api";
 import { referralApi } from "@/features/auth/referral.api";
 import { useAuth } from "./AuthContext";
+import { useSlotSocket } from "./SlotSocketContext";
 
 /* ---------------- TYPES ---------------- */
 
@@ -40,6 +41,8 @@ export interface ReferralData {
   totalReferrals: number;
   successfulReferrals: number;
   totalEarnings: number;
+  isEligibleToRefer?: boolean;
+  completedOrdersCount?: number;
   shareMessage?: string;
   referralLink?: string;
 }
@@ -134,11 +137,31 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   const appCustomerId = user?.user?.id || user?.id;
 
   // Auto-fetch wallet data when user logs in
+  const { onWalletUpdate, onReferralUpdate } = useSlotSocket();
+
   useEffect(() => {
     if (user) {
       loadInitialData();
     }
   }, [user]);
+
+  useEffect(() => {
+    const unsubWallet = onWalletUpdate((data) => {
+      if (data?.balance !== undefined) {
+        setWallet((prev) => (prev ? { ...prev, balance: Number(data.balance) } : { balance: Number(data.balance), currency: "INR" }));
+      }
+      fetchWallet();
+      fetchTransactions({ limit: 20 });
+    });
+    const unsubReferral = onReferralUpdate(() => {
+      fetchReferralData();
+      fetchReferralHistory({ limit: 20 });
+    });
+    return () => {
+      unsubWallet();
+      unsubReferral();
+    };
+  }, [onWalletUpdate, onReferralUpdate]);
 
   const loadInitialData = async () => {
     try {

@@ -283,27 +283,44 @@ export default function EditAddress() {
       if (addressForm.contactName.trim()) payload.contactName = addressForm.contactName.trim();
       if (addressForm.contactPhone.trim()) payload.contactPhone = addressForm.contactPhone.trim();
 
+      const isSignupFlow = params.fromSignup === "true";
+      const navigateNext = () => {
+        if (isSignupFlow) {
+          router.replace("/(customer)/(tabs)/home");
+        } else {
+          router.back();
+        }
+      };
+
       if (isEditing) {
         await updateAddressApi(editId, payload);
-        router.back();
       } else {
         await saveAddressApi(payload);
-        router.back();
       }
 
       await refreshAddresses();
       showAlert({
         type: 'success',
         title: isEditing ? 'Address updated!' : 'Address saved!',
-        primaryLabel: 'Go Back',
-        onPrimary: () => router.back(),
-        duration: 4000,
+        primaryLabel: isSignupFlow ? 'Go to Home' : 'Continue',
+        onPrimary: navigateNext,
+        duration: 3000,
       });
+
+      navigateNext();
     } catch (error: any) {
       const message = error?.response?.data?.message || error?.message || "Failed to save address";
       showAlert({ type: 'error', title: 'Could not save address', message });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBackPress = () => {
+    if (params.fromSignup === "true") {
+      router.replace("/(customer)/(tabs)/home");
+    } else {
+      router.back();
     }
   };
 
@@ -340,7 +357,7 @@ export default function EditAddress() {
 
             {/* Top Search Overlay */}
             <View style={[styles.headerOverlay, { paddingTop: 12 }]}>
-              <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.8}>
+              <TouchableOpacity style={styles.backBtn} onPress={handleBackPress} activeOpacity={0.8}>
                 <Ionicons name="arrow-back" size={24} color={theme.text} />
               </TouchableOpacity>
 

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import { useChat } from "../../../../context/ChatContext";
 import { useTheme } from "../../../../context/ThemeContext";
+import DrydashLogo48 from "@/assets/images/Drydash_logo_48x48.svg";
 import {
   Animated,
   BackHandler,
@@ -64,10 +65,9 @@ export default function SupportIndex() {
 
             {/* RIGHT: logo */}
             <Animated.View style={{ opacity: fade, transform: [{ translateY: slideY }] }}>
-              <Image
-                source={require("../../../../assets/images/logo/dd_logo.png")}
-                style={styles.logoDD}
-                resizeMode="contain"
+              <DrydashLogo48
+                width={70}
+                height={70}
               />
             </Animated.View>
 

@@ -655,6 +655,8 @@ export default function BookPickup() {
           return;
         }
 
+        console.log("this is the phone number===>>",phone)
+
         const res = await getActivePickupOrOrder(phone);
 
         if (
@@ -1235,7 +1237,7 @@ export default function BookPickup() {
                 }}
               >
                 <Ionicons name="trash-outline" size={13} color={isDark ? "#FCA5A5" : "#F87171"} />
-                <Text
+                {/* <Text
                   style={{
                     color: isDark ? "#FCA5A5" : "#F87171",
                     fontSize: 11,
@@ -1244,7 +1246,7 @@ export default function BookPickup() {
                   }}
                 >
                   CLEAR ALL
-                </Text>
+                </Text> */}
               </TouchableOpacity>
             )}
 

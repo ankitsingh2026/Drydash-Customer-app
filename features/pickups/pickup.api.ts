@@ -82,9 +82,11 @@ export const getCustomerSinglePickupDetails = async (pickupId: string) => {
 
 export const getActivePickupOrOrder = async (phone: string) => {
   try {
+    console.log("this is phone in active booking api==>>", phone);
     const res = await oldApiClient.get(
       `/app/getActivePickupOrOrder/${phone}`
     );
+    console.log("i am getting this ==========>>>>>>>>>",res)
     return res;
   } catch (error) {
     console.log("Active booking API error", error);

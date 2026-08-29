@@ -4,6 +4,13 @@ export type Item = {
   price: number;
   category: string;
   image: string;
+  mainHeading?: string;
+  mainDescription?: string;
+  description?: string;
+  displayPrice?: string;
+  unit?: string;
+  type?: string;
+  process?: Array<{ step: number; heading: string; description: string }>;
 };
 
 const S3_BASE =

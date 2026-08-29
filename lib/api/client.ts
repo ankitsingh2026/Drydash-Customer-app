@@ -25,10 +25,10 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
-oldApiClient.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem("accessToken");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// oldApiClient.interceptors.request.use(async (config) => {
+//   const token = await AsyncStorage.getItem("accessToken");
+//   if (token) config.headers.Authorization = `Bearer ${token}`;
+//   return config;
+// });
 
 export const BASE_URL = "https://api.shiptos.com"; 
