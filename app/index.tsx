@@ -1,13 +1,22 @@
 import { router } from "expo-router";
-import { useEffect, useState, useRef } from "react";
-import { Image, Platform, StyleSheet, Text, View, Linking, Alert, AppState } from "react-native";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
-  PERMISSIONS,
-  request
-} from "react-native-permissions";
+  StyleSheet,
+  View,
+  Linking,
+  AppState,
+  StatusBar,
+  Image,
+} from "react-native";
+import { gsap } from "gsap";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
+import * as SplashScreen from "expo-splash-screen";
 import { checkUpdate } from "@/utils/versionCheck";
 import UpdateModal from "@/components/UpdateModal";
-import { useTheme } from "@/theme/useTheme";
+import { useAuthContext } from "@/context/AuthContext";
 import { requestAppPermissionsOnStart } from "@/lib/notifications/fcm";
 
 type UpdateResult = {
@@ -17,31 +26,142 @@ type UpdateResult = {
 };
 type UpdateType = "force" | "optional";
 
-export default function SplashScreen() {
-  const { colors } = useTheme();
+export default function AnimatedSplashScreen() {
+  const { user } = useAuthContext();
   const [updateType, setUpdateType] = useState<UpdateType | null>(null);
   const updateTypeRef = useRef<UpdateType | null>(null);
   const [storeUrl, setStoreUrl] = useState<string | null>(null);
 
+  // Animation timeline references
+  const idleTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const exitTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const navTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Navigation tracking
+  const hasNavigatedRef = useRef(false);
+  const mountTimeRef = useRef(Date.now());
+  const deepLinkRouteRef = useRef<string | null>(null);
+
+  // ── Reanimated Shared Values Driven by GSAP ───────────────────────────
+  const logoScale = useSharedValue(1);
+  const logoOpacity = useSharedValue(1);
+  const containerOpacity = useSharedValue(1);
+
+  // ── Clean up all GSAP timelines & timers ───────────────────────────────
+  const killAllAnimations = useCallback(() => {
+    if (navTimerRef.current) {
+      clearTimeout(navTimerRef.current);
+      navTimerRef.current = null;
+    }
+    idleTimelineRef.current?.kill();
+    idleTimelineRef.current = null;
+    exitTimelineRef.current?.kill();
+    exitTimelineRef.current = null;
+  }, []);
+
+  // ── Trigger Zoom Out to Large & Redirect ──────────────────────────────
+  const triggerExitAnimation = useCallback((targetRoute: string) => {
+    if (hasNavigatedRef.current || updateTypeRef.current === "force") return;
+
+    // Stop idle animation
+    idleTimelineRef.current?.kill();
+    idleTimelineRef.current = null;
+
+    // Master GSAP Exit Timeline (Logo Zoom Out to Large)
+    const exitTl = gsap.timeline({
+      onComplete: () => {
+        if (!hasNavigatedRef.current) {
+          hasNavigatedRef.current = true;
+          router.replace(targetRoute as any);
+        }
+      },
+    });
+    exitTimelineRef.current = exitTl;
+
+    // 1. Quick anticipatory recoil
+    exitTl
+      .to(
+        logoScale,
+        {
+          value: 0.92,
+          duration: 0.15,
+          ease: "power2.out",
+        },
+        0
+      )
+      // 2. Zoom Out to Large (Expand huge to fill screen)
+      .to(
+        logoScale,
+        {
+          value: 28,
+          duration: 0.55,
+          ease: "power3.in",
+        },
+        0.15
+      )
+      // 3. Fade container at the end of the expansion
+      .to(
+        containerOpacity,
+        {
+          value: 0,
+          duration: 0.18,
+          ease: "power2.out",
+        },
+        0.52
+      );
+  }, []);
+
+  // ── Idle GSAP Animation ────────────────────────────────────────────────
+  useEffect(() => {
+    // Seamless handoff from native splash to animated splash
+    SplashScreen.hideAsync().catch(() => { });
+
+    mountTimeRef.current = Date.now();
+    hasNavigatedRef.current = false;
+
+    // Reset shared values
+    logoScale.value = 1;
+    logoOpacity.value = 1;
+    containerOpacity.value = 1;
+
+    // Gentle breathing idle animation
+    const idleTl = gsap.timeline({ repeat: -1, yoyo: true });
+    idleTimelineRef.current = idleTl;
+
+    idleTl.to(
+      logoScale,
+      {
+        value: 1.04,
+        duration: 1.0,
+        ease: "sine.inOut",
+      },
+      0
+    );
+
+    return () => {
+      killAllAnimations();
+    };
+  }, [killAllAnimations]);
+
+  // ── Deep Links, Permissions, & Version Check ───────────────────────────
   useEffect(() => {
     let appState = AppState.currentState;
-    let hasDeepLinkNavigated = false;
 
     const extractRefCode = (url: string): string | null => {
       try {
-        // 1. Query parameter search (ref, referralCode, code)
         const match = url.match(/[?&](ref|referralCode|code)=([^&]+)/i);
         if (match && match[2]) {
           return decodeURIComponent(match[2]).trim().toUpperCase();
         }
-        // 2. Path-based extraction (/share/REF123 or /r/REF123)
-        if (url.includes('/share/')) {
-          const parts = url.split('/share/');
-          if (parts[1]) return parts[1].split('?')[0].split('/')[0].trim().toUpperCase();
+        if (url.includes("/share/")) {
+          const parts = url.split("/share/");
+          if (parts[1])
+            return parts[1].split("?")[0].split("/")[0].trim().toUpperCase();
         }
-        if (url.includes('/r/')) {
-          const parts = url.split('/r/');
-          if (parts[1]) return parts[1].split('?')[0].split('/')[0].trim().toUpperCase();
+        if (url.includes("/r/")) {
+          const parts = url.split("/r/");
+          if (parts[1])
+            return parts[1].split("?")[0].split("/")[0].trim().toUpperCase();
         }
       } catch (e) {
         console.error("Error extracting ref code:", e);
@@ -50,37 +170,27 @@ export default function SplashScreen() {
     };
 
     const handleDeepLink = (url: string) => {
-      console.log("Processing deep link:", url);
       const refCode = extractRefCode(url);
       if (refCode) {
-        console.log("✅ Referral code extracted from deep link:", refCode);
-        hasDeepLinkNavigated = true;
-        router.replace(`/(auth)/auth?ref=${refCode}`);
+        deepLinkRouteRef.current = `/(auth)/auth?ref=${refCode}`;
         return true;
       }
       return false;
     };
 
-    // Handle deep links on cold start
-    const handleInitialUrl = async () => {
-      const url = await Linking.getInitialURL();
-      if (url) {
-        console.log("Cold start deep link:", url);
-        handleDeepLink(url);
-      }
-    };
+    // Cold start deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
 
-    // Handle deep links when app is in background
-    const linkingSubscription = Linking.addEventListener('url', ({ url }) => {
-      console.log("Deep link received in background:", url);
+    // Background deep link
+    const linkingSubscription = Linking.addEventListener("url", ({ url }) => {
       handleDeepLink(url);
     });
 
-    handleInitialUrl();
-
     const runCheck = async () => {
       try {
-        // Request Location & Notification permissions on App Start if not granted
+        // Request app permissions
         await requestAppPermissionsOnStart();
 
         if (updateTypeRef.current === "force") return;
@@ -95,35 +205,46 @@ export default function SplashScreen() {
         if (update.type === "force") {
           setStoreUrl(update.storeUrl || null);
           setUpdateType("force");
+          updateTypeRef.current = "force";
           return;
         }
 
         if (update.type === "optional") {
           setStoreUrl(update.storeUrl || null);
           setUpdateType("optional");
+          updateTypeRef.current = "optional";
           return;
         }
 
         if (update.type === "none" && updateTypeRef.current === null) {
-          if (!hasDeepLinkNavigated) {
-            router.replace("/(auth)/auth");
-          }
+          scheduleExitTransition();
         }
       } catch (err) {
-        console.log("Error:", err);
-        if (!hasDeepLinkNavigated) {
-          router.replace("/(auth)/auth");
-        }
+        console.log("Splash runCheck error:", err);
+        scheduleExitTransition();
       }
     };
 
-    // Initial run
+    const scheduleExitTransition = () => {
+      const elapsed = Date.now() - mountTimeRef.current;
+      const MIN_SPLASH_TIME = 500;
+      const remainingTime = Math.max(0, MIN_SPLASH_TIME - elapsed);
+
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+
+      navTimerRef.current = setTimeout(() => {
+        const destination =
+          deepLinkRouteRef.current ||
+          (user ? "/(customer)/(tabs)/home" : "/(auth)/auth");
+        triggerExitAnimation(destination);
+      }, remainingTime);
+    };
+
     runCheck();
 
-    // 🔥 Re-run when app comes back
+    // Re-check if app resumes
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (appState.match(/inactive|background/) && nextState === "active") {
-        console.log("App resumed → rechecking version");
         runCheck();
       }
       appState = nextState;
@@ -132,18 +253,49 @@ export default function SplashScreen() {
     return () => {
       subscription.remove();
       linkingSubscription.remove();
+      if (navTimerRef.current) {
+        clearTimeout(navTimerRef.current);
+      }
     };
-  }, []);
+  }, [triggerExitAnimation, user]);
+
+  // ── Reanimated Style Mappings ──────────────────────────────────────────
+  const containerAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: containerOpacity.value,
+  }));
+
+  const logoAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: logoScale.value }],
+  }));
 
   return (
-    <View style={[styles.container, { backgroundColor: "#FFFFFF" }]}>
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      <Animated.View style={[styles.container, containerAnimatedStyle]}>
+        {/* Centered Green Circular Logo matching Image 1 */}
+        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
+          <Image
+            source={require("@/assets/images/splash-icon.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+        </Animated.View>
+      </Animated.View>
+
+      {/* Force / Optional Update Modal */}
       <UpdateModal
         visible={!!updateType}
         type={updateType}
         storeUrl={storeUrl}
         onLater={() => {
           setUpdateType(null);
-          router.replace("/(auth)/auth");
+          updateTypeRef.current = null;
+          const destination =
+            deepLinkRouteRef.current ||
+            (user ? "/(customer)/(tabs)/home" : "/(auth)/auth");
+          triggerExitAnimation(destination);
         }}
       />
     </View>
@@ -151,19 +303,26 @@ export default function SplashScreen() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+  },
   container: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
-  logo: {
-    width: 160,
-    height: 160,
-    marginBottom: 4,
+  logoContainer: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  slogan: {
-    paddingBottom: 20,
-    fontSize: 16,
-    letterSpacing: 0.8,
+  logoImage: {
+    width: 200,
+    height: 200,
   },
 });

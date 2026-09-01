@@ -1,7 +1,7 @@
 import ProductServicePopup from "@/components/ProductServicePopup";
 import { CatalogSkeleton } from "@/components/skeleton";
 import { catalogData, Item } from "@/constants/catalog";
-import { getCatalogApi } from "@/features/catalog/catalog.api";
+import { getCatalogApi, getCatalogCategoriesApi } from "@/features/catalog/catalog.api";
 import {
   getCustomerSinglePickupDetails,
 } from "@/features/pickups/pickup.api";
@@ -36,6 +36,15 @@ import {
   PanResponder,
   StatusBar,
 } from "react-native";
+import { SvgUri } from "react-native-svg";
+import ShoesIcon from "@/assets/homeicons/Shoes.svg";
+import DrycleanIcon from "@/assets/homeicons/DryClean-logo.svg";
+import LaundryIcon from "@/assets/homeicons/Laundry-logo.svg";
+import OnsiteIcon from "@/assets/homeicons/on-site.svg";
+import CarwashIcon from "@/assets/homeicons/car-wash.svg";
+import ExpressIcon from "@/assets/homeicons/8-hours-delivery.svg";
+import LeatherIcon from "@/assets/homeicons/leather.svg";
+import BtoBIcon from "@/assets/homeicons/B2B.svg";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const GRID_COLS = 3;
@@ -47,13 +56,105 @@ import CartSheet from "../../../../components/CartSheet";
 import FloatingCart from "../../../../components/FloatingCart";
 import { useCart } from "../../../../context/CartContext";
 import { useTheme } from "../../../../context/ThemeContext";
-/* ---------- TABS ---------- */
-const TABS = [
-  { key: "shoe", label: "Shoe Spa", icon: LucideShovel },
-  { key: "laundry", label: "Laundry", icon: Shirt },
-  { key: "leather", label: "Leather", icon: Shirt },
-  { key: "dryclean", label: "Dry Clean", icon: Sparkles },
+/* ---------- DYNAMIC CATEGORIES ---------- */
+export type DynamicCategory = {
+  id: string;
+  key: string;
+  slug: string;
+  label: string;
+  coverImage?: string;
+  itemCount?: number;
+  mainHeading?: string;
+  mainDescription?: string;
+};
+
+const DEFAULT_CATEGORIES: DynamicCategory[] = [
+  { id: "shoe", key: "shoe", slug: "shoespa", label: "Shoe Spa" },
+  { id: "laundry", key: "laundry", slug: "laundry", label: "Laundry" },
+  { id: "leather", key: "leather", slug: "leather", label: "Leather" },
+  { id: "dryclean", key: "dryclean", slug: "dryclean", label: "Dry Clean" },
 ];
+
+const LOCAL_CATEGORY_SVG_MAP: Record<string, React.FC<any>> = {
+  "shoe-spa": ShoesIcon,
+  "shoespa": ShoesIcon,
+  "shoe": ShoesIcon,
+  "shoes": ShoesIcon,
+  "dry-clean": DrycleanIcon,
+  "dryclean": DrycleanIcon,
+  "dry": DrycleanIcon,
+  "laundry": LaundryIcon,
+  "wash": LaundryIcon,
+  "leather-luxury": LeatherIcon,
+  "leather": LeatherIcon,
+  "on-site": OnsiteIcon,
+  "onsite": OnsiteIcon,
+  "car-wash": CarwashIcon,
+  "carwash": CarwashIcon,
+  "b2b-services": BtoBIcon,
+  "b2b": BtoBIcon,
+  "8-hours-delivery": ExpressIcon,
+  "express": ExpressIcon,
+};
+
+const isSvgUrl = (url?: string): boolean => {
+  if (!url) return false;
+  const clean = url.split("?")[0].trim().toLowerCase();
+  return clean.endsWith(".svg") || clean.includes(".svg");
+};
+
+const renderCategoryIcon = (slug = "", label = "", active = false, theme: any) => {
+  const s = (slug || label).toLowerCase().trim();
+  const color = active ? theme.primary : theme.subText;
+  const size = 24;
+
+  // 1. Check local SVG icon map first
+  const matchedKey = Object.keys(LOCAL_CATEGORY_SVG_MAP).find(
+    (k) => s === k || s.includes(k)
+  );
+  if (matchedKey) {
+    const LocalSvg = LOCAL_CATEGORY_SVG_MAP[matchedKey];
+    return <LocalSvg width={36} height={36} />;
+  }
+
+  // 2. Vector icon fallbacks
+  if (s.includes("shoe")) {
+    return <LucideShovel size={size} color={color} />;
+  }
+  if (s.includes("laundry") || s.includes("wash")) {
+    return <Shirt size={size} color={color} />;
+  }
+  if (s.includes("leather")) {
+    return <Ionicons name="briefcase-outline" size={size} color={color} />;
+  }
+  if (s.includes("dry") || s.includes("clean")) {
+    return <Sparkles size={size} color={color} />;
+  }
+  if (s.includes("linen")) {
+    return <Ionicons name="shirt-outline" size={size} color={color} />;
+  }
+  if (s.includes("travel") || s.includes("bag")) {
+    return <Ionicons name="bag-handle-outline" size={size} color={color} />;
+  }
+  if (s.includes("bed") || s.includes("curtain") || s.includes("decor") || s.includes("home")) {
+    return <Ionicons name="bed-outline" size={size} color={color} />;
+  }
+  if (s.includes("gift")) {
+    return <Ionicons name="gift-outline" size={size} color={color} />;
+  }
+  if (s.includes("beauty")) {
+    return <Ionicons name="color-palette-outline" size={size} color={color} />;
+  }
+  if (s.includes("pharma") || s.includes("med")) {
+    return <Ionicons name="medkit-outline" size={size} color={color} />;
+  }
+  if (s.includes("electr") || s.includes("gadget")) {
+    return <Ionicons name="headset-outline" size={size} color={color} />;
+  }
+
+  return <Ionicons name="sparkles-outline" size={size} color={color} />;
+};
+
 
 type ProcessStep = {
   step: number;
@@ -88,35 +189,17 @@ export default function ServiceDetail() {
   const insets = useSafeAreaInsets();
   const [brokenImages, setBrokenImages] = useState<Set<string>>(new Set());
 
+  const [categories, setCategories] = useState<DynamicCategory[]>(DEFAULT_CATEGORIES);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(true);
+  const categoryScrollRef = useRef<ScrollView>(null);
+
   const [tab, setTab] = useState(0);
   const [open, setOpen] = useState(false);
 
   // API data states
-  const [apiData, setApiData] = useState<Record<string, Item[]>>({
-    shoe: [],
-    laundry: [],
-    leather: [],
-    dryclean: [],
-  });
-  const [loading, setLoading] = useState<Record<string, boolean>>({
-    shoe: false,
-    laundry: false,
-    leather: false,
-    dryclean: false,
-  });
-  const [error, setError] = useState<Record<string, string | null>>({
-    shoe: null,
-    laundry: null,
-    leather: null,
-    dryclean: null,
-  });
-
-  // ── Tab transition animations ──
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const labelAnims = useRef(
-    TABS.map((_, i) => new Animated.Value(i === 0 ? 1 : 0)),
-  ).current;
-  const pillWidth = useRef(0);
+  const [apiData, setApiData] = useState<Record<string, Item[]>>({});
+  const [loading, setLoading] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<Record<string, string | null>>({});
 
   const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
   const [popupVisible, setPopupVisible] = useState(false);
@@ -139,98 +222,90 @@ export default function ServiceDetail() {
   const tabRef = useRef(tab);
   tabRef.current = tab;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 30 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx < -50) {
-          if (tabRef.current < TABS.length - 1) switchTab(tabRef.current + 1);
-        } else if (gestureState.dx > 50) {
-          if (tabRef.current > 0) switchTab(tabRef.current - 1);
-        }
-      },
-    })
-  ).current;
-
   const switchTab = (i: number) => {
-    Animated.parallel([
-      Animated.spring(slideAnim, {
-        toValue: i,
-        useNativeDriver: true,
-        damping: 18,
-        stiffness: 200,
-        mass: 0.6,
-      }),
-      ...TABS.map((_, idx) =>
-        Animated.timing(labelAnims[idx], {
-          toValue: idx === i ? 1 : 0,
-          duration: 180,
-          useNativeDriver: true,
-        }),
-      ),
-    ]).start();
     setTab(i);
+    const targetCat = categories[i];
+    if (targetCat) {
+      fetchCatalogData(targetCat.slug);
+    }
     // Reset filters and search when switching category tabs
     setSortBy("none");
     setMinPrice("");
     setMaxPrice("");
     setTypeFilter("all");
     setSearchQuery("");
+
+    categoryScrollRef.current?.scrollTo({
+      x: Math.max(0, i * 78 - SCREEN_WIDTH / 2 + 39),
+      animated: true,
+    });
   };
 
-  const [layoutReady, setLayoutReady] = useState(false);
 
-  // Update the transform function in fetchCatalogData
-  const fetchCatalogData = async (serviceType: string, slug: string) => {
-    const serviceKeys = ["shoe", "laundry", "leather", "dryclean"];
-    if (!serviceKeys.includes(serviceType)) return;
+  // Dynamic catalog data fetcher
+  const fetchCatalogData = async (slug: string) => {
+    if (!slug) return;
+    const apiSlug = slug === "shoe" ? "shoespa" : slug;
 
-    setLoading((prev) => ({ ...prev, [serviceType]: true }));
-    setError((prev) => ({ ...prev, [serviceType]: null }));
+    setLoading((prev) => ({ ...prev, [slug]: true, [apiSlug]: true }));
+    setError((prev) => ({ ...prev, [slug]: null, [apiSlug]: null }));
 
     try {
-      const response = await getCatalogApi(slug);
+      const response = await getCatalogApi(apiSlug);
       if (response?.data?.data?.items) {
         const items = response.data.data.items;
+        const catLabel =
+          categories.find((c) => c.slug === slug || c.key === slug)?.label || slug;
 
-        // Transform API items to match Item type with full data
         const transformedItems: Item[] = items.map((item: APIItem) => ({
           id: item._id,
           title: item.label,
           price: item.price,
           mainHeading: item.mainHeading || item.label,
-          category:
-            TABS.find((tab) => tab.key === serviceType)?.label || serviceType,
-          image: item.images?.[0]?.url || getFallbackImage(serviceType),
+          category: catLabel,
+          image: item.images?.[0]?.url || getFallbackImage(slug),
           description:
-            item.mainDescription || getDefaultDescription(serviceType),
-          process: item.process || [], // Store the process steps
+            item.mainDescription || getDefaultDescription(slug),
+          process: item.process || [],
           displayPrice: item.displayPrice,
           unit: item.unit,
           type: item.type,
         }));
 
-        setApiData((prev) => ({ ...prev, [serviceType]: transformedItems }));
+        setApiData((prev) => ({
+          ...prev,
+          [slug]: transformedItems,
+          [apiSlug]: transformedItems,
+        }));
+      } else if (catalogData[slug] || (slug === "shoespa" && catalogData["shoe"])) {
+        const fallback = catalogData[slug] || catalogData["shoe"];
+        setApiData((prev) => ({ ...prev, [slug]: fallback, [apiSlug]: fallback }));
       }
     } catch (err) {
-      console.error(`Error fetching ${serviceType} data:`, err);
-      setError((prev) => ({ ...prev, [serviceType]: "Failed to load data" }));
+      console.error(`Error fetching ${slug} catalog data:`, err);
+      if (catalogData[slug] || (slug === "shoespa" && catalogData["shoe"])) {
+        const fallback = catalogData[slug] || catalogData["shoe"];
+        setApiData((prev) => ({ ...prev, [slug]: fallback, [apiSlug]: fallback }));
+      } else {
+        setError((prev) => ({
+          ...prev,
+          [slug]: "Failed to load data",
+          [apiSlug]: "Failed to load data",
+        }));
+      }
     } finally {
-      setLoading((prev) => ({ ...prev, [serviceType]: false }));
+      setLoading((prev) => ({ ...prev, [slug]: false, [apiSlug]: false }));
     }
   };
 
   // Helper function for default descriptions
   const getDefaultDescription = (serviceType: string): string => {
     const descriptions = {
-      laundry:
-        "Fresh and hygienic wash, fold, and iron service.",
-      leather:
-        "Specialized leather care with gentle cleaning and conditioning.",
+      laundry: "Fresh and hygienic wash, fold, and iron service.",
+      leather: "Specialized leather care with gentle cleaning and conditioning.",
       dryclean: "Premium dry cleaning service using eco-friendly solvents.",
       shoe: "Expert shoe cleaning and restoration service.",
+      shoespa: "Expert shoe cleaning and restoration service.",
     };
     return (
       descriptions[serviceType as keyof typeof descriptions] ||
@@ -238,14 +313,13 @@ export default function ServiceDetail() {
     );
   };
 
-
-
   // Get fallback image based on service type
   const getFallbackImage = (serviceType: string): string => {
     const S3_BASE =
       "https://drydash-app-images.s3.ap-south-1.amazonaws.com/cart-images";
     switch (serviceType) {
       case "shoe":
+      case "shoespa":
         return `${S3_BASE}/sheo-spa/shoe_1.jpg`;
       case "laundry":
         return `https://drydash-app-images.s3.ap-south-1.amazonaws.com/service-catalog/laundry/laundry_1.png`;
@@ -268,29 +342,83 @@ export default function ServiceDetail() {
     return `₹${item.price}`;
   };
 
-  // Fetch data when tab changes or on initial load
+  // Load dynamic categories on mount
   useEffect(() => {
-    if (layoutReady) {
-      const currentTabKey = TABS[tab]?.key;
-      if (
-        currentTabKey &&
-        ["shoe", "laundry", "leather", "dryclean"].includes(currentTabKey)
-      ) {
-        const slug = currentTabKey === "shoe" ? "shoespa" : currentTabKey;
-        fetchCatalogData(currentTabKey, slug);
+    let isMounted = true;
+
+    const loadDynamicCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await getCatalogCategoriesApi();
+        if (response?.data?.data && Array.isArray(response.data.data)) {
+          const apiCats = response.data.data;
+          if (apiCats.length > 0 && isMounted) {
+            const mapped: DynamicCategory[] = apiCats
+              .filter((cat: any) => cat.isActive !== false)
+              .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+              .map((cat: any) => ({
+                id: cat._id || cat.slug || cat.label,
+                key: cat.slug || cat.label?.toLowerCase(),
+                slug: cat.slug || cat.label?.toLowerCase(),
+                label: cat.label || cat.mainHeading || cat.slug,
+                coverImage: cat.coverImage ? String(cat.coverImage).trim() : "",
+                itemCount: cat.itemCount,
+                mainHeading: cat.mainHeading,
+                mainDescription: cat.mainDescription,
+              }));
+            setCategories(mapped);
+
+            let initialIdx = 0;
+            if (service) {
+              const matchedIdx = mapped.findIndex(
+                (c) =>
+                  c.slug.toLowerCase() === service.toLowerCase() ||
+                  c.key.toLowerCase() === service.toLowerCase() ||
+                  (service === "shoe" && c.slug === "shoespa") ||
+                  (service === "shoespa" && c.slug === "shoe")
+              );
+              if (matchedIdx !== -1) initialIdx = matchedIdx;
+            }
+
+            setTab(initialIdx);
+            fetchCatalogData(mapped[initialIdx].slug);
+
+            setTimeout(() => {
+              categoryScrollRef.current?.scrollTo({
+                x: Math.max(0, initialIdx * 78 - SCREEN_WIDTH / 2 + 39),
+                animated: true,
+              });
+            }, 150);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load catalog categories from API:", err);
+      } finally {
+        if (isMounted) setCategoriesLoading(false);
       }
-    }
-  }, [tab, layoutReady]);
 
-  // Initial fetch based on service param
-  useEffect(() => {
-    if (!layoutReady) return;
+      // If API fails or returns empty, fallback to default categories
+      let fallbackIdx = 0;
+      if (service) {
+        const matched = DEFAULT_CATEGORIES.findIndex(
+          (c) =>
+            c.slug.toLowerCase() === service.toLowerCase() ||
+            c.key.toLowerCase() === service.toLowerCase() ||
+            (service === "shoe" && c.slug === "shoespa")
+        );
+        if (matched !== -1) fallbackIdx = matched;
+      }
+      setTab(fallbackIdx);
+      fetchCatalogData(DEFAULT_CATEGORIES[fallbackIdx].slug);
+    };
 
-    const index = TABS.findIndex((t) => t.key === service);
-    if (index !== -1 && index !== tab) {
-      switchTab(index);
-    }
-  }, [service, layoutReady]);
+    loadDynamicCategories();
+    return () => {
+      isMounted = false;
+    };
+  }, [service]);
+
 
   /* ---------- EDIT MODE: FETCH EXISTING ITEMS AND LOAD INTO CART ---------- */
   // In edit mode, we fetch existing pickup items and load them into the cart
@@ -367,16 +495,22 @@ export default function ServiceDetail() {
     [],
   );
 
-  const activeTab = TABS[tab];
+  const activeCategory = categories[tab] || categories[0] || DEFAULT_CATEGORIES[0];
 
-  // Get current items (API data for shoe/laundry/leather/dryclean with static catalog fallback)
+  // Get current items (API data with static catalog fallback)
   const currentItems = useMemo(() => {
-    const activeKey = activeTab?.key;
-    if (!activeKey) return EMPTY_ARRAY;
-    const apiItems = apiData[activeKey];
+    const slug = activeCategory?.slug;
+    const key = activeCategory?.key;
+    if (!slug && !key) return EMPTY_ARRAY;
+    const apiItems = apiData[slug] || (key ? apiData[key] : null);
     if (apiItems && apiItems.length > 0) return apiItems;
-    return catalogData[activeKey] || EMPTY_ARRAY;
-  }, [activeTab?.key, apiData]);
+    return (
+      (slug ? catalogData[slug] : null) ||
+      (key ? catalogData[key] : null) ||
+      (slug === "shoespa" || key === "shoe" ? catalogData["shoe"] : null) ||
+      EMPTY_ARRAY
+    );
+  }, [activeCategory?.slug, activeCategory?.key, apiData]);
 
   // Derive available types for the active tab
   const availableTypes = useMemo(() => {
@@ -415,13 +549,13 @@ export default function ServiceDetail() {
   }, [searchQuery, currentItems, sortBy, minPrice, maxPrice, typeFilter]);
 
   const isLoading =
-    activeTab?.key && ["shoe", "laundry", "leather", "dryclean"].includes(activeTab.key)
-      ? loading[activeTab.key]
+    activeCategory?.slug
+      ? Boolean(loading[activeCategory.slug] || (activeCategory.key && loading[activeCategory.key]))
       : false;
 
   const hasError =
-    activeTab?.key && ["shoe", "laundry", "leather", "dryclean"].includes(activeTab.key)
-      ? error[activeTab.key]
+    activeCategory?.slug
+      ? error[activeCategory.slug] || (activeCategory.key ? error[activeCategory.key] : null)
       : null;
 
   const handleAddToCart = () => {
@@ -467,81 +601,84 @@ export default function ServiceDetail() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]} {...panResponder.panHandlers}>
+    <View style={[styles.root, { backgroundColor: theme.background }]}>
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
       <Stack.Screen options={screenOptions} />
 
-      {/* ---------- SEGMENTED TABS ---------- */}
-      <View
-        style={[styles.tabsWrap, { backgroundColor: theme.card }]}
-        onLayout={(e) => {
-          const totalWidth = e.nativeEvent.layout.width;
-          const gap = 8;
-          const padding = 6;
-          pillWidth.current =
-            (totalWidth - padding * 2 - gap * (TABS.length - 1)) / TABS.length;
-          setLayoutReady(true);
-        }}
-      >
-        <Animated.View
-          style={[
-            styles.slidingPill,
-            {
-              transform: [
-                {
-                  translateX: slideAnim.interpolate({
-                    inputRange: TABS.map((_, i) => i),
-                    outputRange: TABS.map(
-                      (_, i) => i * (pillWidth.current + 8),
-                    ),
-                  }),
-                },
-              ],
-              width: pillWidth.current || (`${100 / TABS.length}%` as any),
-            },
-          ]}
-          pointerEvents="none"
+      {/* ---------- BLINKIT-STYLE HORIZONTAL CATEGORIES CAROUSEL ---------- */}
+      <View style={styles.categoryBarWrapper}>
+        <ScrollView
+          ref={categoryScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScrollContent}
         >
-          <LinearGradient
-            colors={[
-              isDark ? theme.primary : theme.tabColor,
-              isDark ? theme.primary : theme.tabColor,
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        {TABS.map((t, i) => {
-          const active = tab === i;
-          return (
-            <TouchableOpacity
-              key={t.key}
-              onPress={() => switchTab(i)}
-              activeOpacity={0.85}
-              style={styles.tabOuter}
-            >
-              <Animated.Text
-                style={[
-                  styles.tabLabel,
-                  {
-                    color: labelAnims[i].interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [theme.subText, theme.text],
-                    }),
-                    fontWeight: active ? "800" : "600",
-                  },
-                ]}
+          {categories.map((cat, i) => {
+            const active = tab === i;
+            return (
+              <TouchableOpacity
+                key={cat.id || cat.slug || i}
+                onPress={() => switchTab(i)}
+                activeOpacity={0.75}
+                style={styles.categoryItem}
               >
-                {t.label}
-              </Animated.Text>
-            </TouchableOpacity>
-          );
-        })}
+                {/* Category Icon - SVG / Remote Image / Local Fallback */}
+                <View style={styles.categoryIconWrap}>
+                  {cat.coverImage && !brokenImages.has(cat.slug || cat.id) ? (
+                    isSvgUrl(cat.coverImage) ? (
+                      <SvgUri
+                        uri={cat.coverImage}
+                        width={20}
+                        height={20}
+                        onError={() => {
+                          setBrokenImages((prev) => new Set(prev).add(cat.slug || cat.id));
+                        }}
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: cat.coverImage }}
+                        style={styles.categoryCoverImg}
+                        resizeMode="contain"
+                        onError={() => {
+                          setBrokenImages((prev) => new Set(prev).add(cat.slug || cat.id));
+                        }}
+                      />
+                    )
+                  ) : (
+                    renderCategoryIcon(cat.slug, cat.label, active, theme)
+                  )}
+                </View>
+
+                {/* Category Name below Icon */}
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.categoryItemText,
+                    {
+                      color: active ? theme.primary : theme.text,
+                      fontWeight: active ? "800" : "600",
+                    },
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+
+                {/* Active Indicator Underline */}
+                {active && (
+                  <View
+                    style={[
+                      styles.categoryActiveIndicator,
+                      { backgroundColor: theme.primary },
+                    ]}
+                  />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* ---------- SEARCH + FILTER BAR ---------- */}
+      {/* ---------- SEARCH + FILTER BAR (BELOW CATEGORY) ---------- */}
       <View style={styles.searchContainer}>
         <View
           style={[
@@ -553,7 +690,7 @@ export default function ServiceDetail() {
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search products..."
+            placeholder={`Search in ${activeCategory?.label || "products"}...`}
             placeholderTextColor="#4B5563"
             style={[styles.searchInput, { color: theme.text }]}
             returnKeyType="search"
@@ -653,7 +790,7 @@ export default function ServiceDetail() {
       )}
 
       {/* Notice Banner for Laundry service */}
-      {activeTab?.key === "laundry" && (
+      {(activeCategory?.slug === "laundry" || activeCategory?.key === "laundry") && (
         <View
           style={[
             styles.laundryNoticeCard,
@@ -746,11 +883,9 @@ export default function ServiceDetail() {
                     setPickupLoading(false);
                   });
               } else {
-                const currentTabKey = TABS[tab]?.key;
-                if (currentTabKey) {
-                  const slug =
-                    currentTabKey === "shoe" ? "shoespa" : currentTabKey;
-                  fetchCatalogData(currentTabKey, slug);
+                const currentTabSlug = activeCategory?.slug || activeCategory?.key;
+                if (currentTabSlug) {
+                  fetchCatalogData(currentTabSlug);
                 }
               }
             }}
@@ -1062,39 +1197,45 @@ const makeStyles = (theme: any) =>
       flex: 1,
       paddingHorizontal: 16,
     },
-    tabsWrap: {
+    // ── Blinkit-Style Horizontal Category Scroll ──
+    categoryBarWrapper: {
+      marginHorizontal: -16,
+      marginTop: 8,
+      marginBottom: 10,
+    },
+    categoryScrollContent: {
+      paddingHorizontal: 16,
       flexDirection: "row",
-      padding: 6,
-      borderRadius: 22,
-      marginVertical: 12,
-      gap: 8,
-      position: "relative",
+      alignItems: "flex-start",
+      gap: 12,
     },
-    slidingPill: {
-      position: "absolute",
-      top: 6,
-      bottom: 6,
-      left: 6,
-      width: `${100 / TABS.length}%` as any,
-      borderRadius: 16,
-      overflow: "hidden",
-      shadowColor: theme.primary,
-      shadowOpacity: 0.4,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 3 },
-      elevation: 5,
+    categoryItem: {
+      alignItems: "center",
+      width: 72,
     },
-    tabOuter: {
-      flex: 1,
-      paddingVertical: 9,
+    categoryIconWrap: {
+      width: 46,
+      height: 46,
       alignItems: "center",
       justifyContent: "center",
-      zIndex: 1,
     },
-    tabLabel: {
-      fontSize: 12,
-      letterSpacing: 0.1,
+    categoryCoverImg: {
+      width: 42,
+      height: 42,
     },
+    categoryItemText: {
+      fontSize: 11,
+      lineHeight: 14,
+      textAlign: "center",
+      // marginTop: 6,
+    },
+    categoryActiveIndicator: {
+      width: 20,
+      height: 3,
+      borderRadius: 2,
+      marginTop: 4,
+    },
+
     category: {
       fontSize: 17,
       fontWeight: "800",
