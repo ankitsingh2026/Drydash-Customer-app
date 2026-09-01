@@ -15,6 +15,9 @@ import { AlertProvider } from "@/components/Customalert";
 import messaging from "@react-native-firebase/messaging";
 
 
+import * as SplashScreen from "expo-splash-screen";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 setupInterceptors();
 
 import { useTheme } from "../theme/useTheme";

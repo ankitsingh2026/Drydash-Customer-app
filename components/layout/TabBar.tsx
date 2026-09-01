@@ -473,8 +473,7 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
               style={styles.locationRow}
               onPress={() => setModalVisible(true)}
               activeOpacity={0.75}
-              hitSlop={{ top: 15, bottom: 10, left: 10 }}
-
+              hitSlop={{ top: 15, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
                 name={
@@ -486,21 +485,25 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
                 }
                 size={16}
                 color={getServiceColor()}
-                style={{ marginRight: 5 }}
+                style={{ marginRight: 5, flexShrink: 0 }}
               />
-              <Text style={styles.locationText} numberOfLines={1}>
+              <Text
+                style={styles.locationText}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {locationText}
               </Text>
               <Ionicons
                 name="chevron-down"
                 size={16}
                 color="#8FB3A8"
-                style={{ marginLeft: 3 }}
+                style={{ marginLeft: 3, flexShrink: 0 }}
               />
             </TouchableOpacity>
           </View>
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => {
@@ -588,6 +591,8 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   },
   left: {
     flex: 1,
+    minWidth: 0,
+    marginRight: 10,
   },
   serviceRow: {
     flexDirection: "row",
@@ -603,12 +608,13 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 6,
+    maxWidth: "100%",
   },
   locationText: {
     fontSize: 14,
     color: theme.textSecondary,
     fontWeight: "500",
-    maxWidth: 200,
+    flexShrink: 1,
   },
   walletBtn: {
     height: 38,
