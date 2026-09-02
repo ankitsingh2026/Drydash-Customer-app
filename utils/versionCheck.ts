@@ -31,8 +31,8 @@ export const checkUpdate = async (): Promise<UpdateResult> => {
 
     // ✅ Default values
     await setDefaults(rc, {
-      android_latest_version: "1.1.31",
-      android_min_version: "1.1.30",
+      android_latest_version: "1.1.0",
+      android_min_version: "1.1.0",
       ios_latest_version: "1.1.0",
       ios_min_version: "1.1.0",
       force_update: false,
