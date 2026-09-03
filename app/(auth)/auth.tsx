@@ -8,6 +8,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Clipboard,
   Image,
   KeyboardAvoidingView,
   Linking,
@@ -87,14 +88,34 @@ export default function AuthScreen() {
   const retrievedCode = useSmsUserConsent();
 
   const params = useLocalSearchParams<{ ref?: string; referralCode?: string }>();
+  const processedRefParam = useRef<string | null>(null);
 
-  // Read referral code from URL/scheme params (for deep links)
+  // Read referral code from URL/scheme params or Clipboard for deferred referral auto-fill
   useEffect(() => {
     const processCode = (rawCode: string) => {
       const cleanCode = rawCode.toString().toUpperCase().trim();
-      if (cleanCode && cleanCode !== referralCode) {
+      if (cleanCode && processedRefParam.current !== cleanCode) {
+        processedRefParam.current = cleanCode;
         setReferralCode(cleanCode);
         validateReferralCode(cleanCode);
+      }
+    };
+
+    const checkClipboardForReferral = async () => {
+      if (processedRefParam.current) return;
+      try {
+        const text = await Clipboard.getString();
+        if (text) {
+          const clean = text.trim().toUpperCase();
+          if (
+            /^REF[A-Z0-9]{4,10}$/.test(clean) ||
+            (clean.length >= 6 && clean.length <= 12 && /^[A-Z0-9]+$/.test(clean))
+          ) {
+            processCode(clean);
+          }
+        }
+      } catch (e) {
+        console.log("Error reading clipboard for referral:", e);
       }
     };
 
@@ -115,6 +136,9 @@ export default function AuthScreen() {
       } else if (url.includes('/r/')) {
         const parts = url.split('/r/');
         if (parts[1]) extracted = parts[1].split('?')[0].split('/')[0];
+      } else if (url.includes('/referral/')) {
+        const parts = url.split('/referral/');
+        if (parts[1]) extracted = parts[1].split('?')[0].split('/')[0];
       }
 
       if (extracted) {
@@ -123,12 +147,34 @@ export default function AuthScreen() {
     };
 
     Linking.getInitialURL().then((url) => {
-      if (url) handleUrl(url);
+      if (url) {
+        handleUrl(url);
+      } else {
+        checkClipboardForReferral();
+      }
     });
 
     const sub = Linking.addEventListener("url", ({ url }) => handleUrl(url));
     return () => sub.remove();
   }, [params.ref, params.referralCode]);
+
+  useEffect(() => {
+    if (step === "REGISTER" && !referralCode && !processedRefParam.current) {
+      Clipboard.getString().then((text) => {
+        if (text) {
+          const clean = text.trim().toUpperCase();
+          if (
+            /^REF[A-Z0-9]{4,10}$/.test(clean) ||
+            (clean.length >= 6 && clean.length <= 12 && /^[A-Z0-9]+$/.test(clean))
+          ) {
+            processedRefParam.current = clean;
+            setReferralCode(clean);
+            validateReferralCode(clean);
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [step]);
 
   const validateReferralCode = async (code: string) => {
     try {
@@ -464,11 +510,17 @@ export default function AuthScreen() {
       const refCodeToApply = referralCode ? referralCode.trim().toUpperCase() : undefined;
       console.log("👉 Submitting Account Signup - Customer ID:", customerId, "Referral Code:", refCodeToApply);
 
-      // Register push token & request notification + location permissions on signup
-      await registerCustomerPushToken(customerId?.toString());
+      // Register push token & request notification + location permissions on signup (non-blocking)
+      registerCustomerPushToken(customerId?.toString()).catch((err) =>
+        console.log("Push token error on signup:", err)
+      );
 
-      // Initialize wallet & referral for new user with explicit customerId
-      await initializeWallet(refCodeToApply, customerId?.toString());
+      // Initialize wallet & referral for new user with explicit customerId (non-blocking)
+      try {
+        await initializeWallet(refCodeToApply, customerId?.toString());
+      } catch (wErr) {
+        console.error("Wallet init error on signup:", wErr);
+      }
       
       // Collect primary delivery address right after signup
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
@@ -485,10 +537,6 @@ export default function AuthScreen() {
       showAlert({ type: 'error', title: 'Could not create account', message: e.message });
  
     } finally {
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setReferralCode("");
       setLoading(false);
     }
   };

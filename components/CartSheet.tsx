@@ -169,13 +169,14 @@ export default function CartSheet({
             {/* PRICE SUMMARY */}
             {items.length > 0 && (
               <View style={styles.summary}>
-                <Row label="Subtotal" value={`₹${subtotal}`} />
+                <Row label="Subtotal" value={`₹${subtotal}`} textColor={theme.text} />
                 <Row
                   label="Discount"
                   value={`- ₹${discount}`}
                   highlight={discount > 0}
+                  textColor={theme.text}
                 />
-                <Row label="Total" value={`₹${total}`} bold />
+                <Row label="Total" value={`₹${total}`} bold textColor={theme.text} />
               </View>
             )}
 
@@ -208,17 +209,19 @@ function Row({
   value,
   bold,
   highlight,
+  textColor = "#1E293B",
 }: {
   label: string;
   value: string;
   bold?: boolean;
   highlight?: boolean;
+  textColor?: string;
 }) {
   return (
-    <View style={styles.totRow}>
+    <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
       <Text
         style={{
-          color: theme.text,
+          color: textColor,
           fontWeight: bold ? "900" : "600",
         }}
       >
@@ -226,7 +229,7 @@ function Row({
       </Text>
       <Text
         style={{
-          color: theme.text,
+          color: textColor,
           fontWeight: bold ? "900" : "700",
         }}
       >

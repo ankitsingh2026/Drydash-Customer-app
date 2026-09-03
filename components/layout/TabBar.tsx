@@ -42,7 +42,7 @@ export const TabBar = ({ onOpenNotifications, onWalletPress, style }: TabBarProp
   }, []);
 
 
-  console.log("referralData?.isEligibleToRefer", referralData?.isEligibleToRefer);
+  // console.log("referralData?.isEligibleToRefer", referralData?.isEligibleToRefer);
 
   const {
     selectedAddress,

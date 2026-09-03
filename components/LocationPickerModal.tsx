@@ -8,6 +8,8 @@ import { router } from "expo-router";
 import { Pencil, Trash2 } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   AppState,
   AppStateStatus,
@@ -220,11 +222,7 @@ export default function LocationPickerModal({
     try {
       await Linking.openURL("whatsapp://");
     } catch {
-      showAlert({
-        type: 'warning',
-        title: 'WhatsApp not found',
-        message: 'Please install WhatsApp to continue.',
-      });
+      Alert.alert('WhatsApp not found', 'Please install WhatsApp to continue.');
     }
   };
 

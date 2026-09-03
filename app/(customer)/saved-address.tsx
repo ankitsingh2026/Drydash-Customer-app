@@ -15,6 +15,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   BackHandler,
   Dimensions,
@@ -319,7 +320,7 @@ export default function SavedAddresses() {
         handleSelectAddress(selectedAddress);
       }
     } else {
-      showAlert({ type: 'warning', title: 'No address selected', message: 'Please select an address first.' });
+      Alert.alert('No address selected', 'Please select an address first.');
     }
   };
 

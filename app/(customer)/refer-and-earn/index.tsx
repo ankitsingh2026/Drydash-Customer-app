@@ -16,8 +16,12 @@ import {
 } from "lucide-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import RNShare from "react-native-share";
 import {
   ActivityIndicator,
+  Animated,
   Clipboard,
   Dimensions,
   Image,
@@ -39,7 +43,7 @@ import { showAlert } from "@/components/Customalert";
 import { useTheme } from "@/context/ThemeContext";
 import { useWallet, ReferralHistoryItem } from "@/context/WalletContext";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function ReferAndEarnPage() {
   const { theme, isDark } = useTheme();
@@ -60,9 +64,49 @@ export default function ReferAndEarnPage() {
   const [howItWorksVisible, setHowItWorksVisible] = useState(false);
   const [historyModalVisible, setHistoryModalVisible] = useState(false);
 
+  // How It Works Modal Animation Values
+  const slideAnim = React.useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  const openHowItWorks = () => {
+    setHowItWorksVisible(true);
+    slideAnim.setValue(SCREEN_HEIGHT * 0.7);
+    fadeAnim.setValue(0);
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 8,
+        tension: 45,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeHowItWorks = () => {
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: SCREEN_HEIGHT * 0.7,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setHowItWorksVisible(false);
+    });
+  };
+
   const headerTopPadding = Math.max(
     insets.top,
-    Platform.OS === "android" ? (StatusBar.currentHeight || 28) : 12
+    Platform.OS === "android" ? (StatusBar.currentHeight || 32) : 16
   );
 
   React.useEffect(() => {
@@ -116,17 +160,27 @@ export default function ReferAndEarnPage() {
     const code = referralData.referralCode;
     const refereeBonus = referralData.refereeBonusAmount || 100;
     const shareUrl = referralData?.referralLink || `https://drydash.in/referral/${code}`;
-    const message = `Hey! Use my referral code *${code}* on DryDash to get ₹${refereeBonus} off on your first laundry order! Download & book now: ${shareUrl}`;
+    const defaultMessage = `Hey! Use my referral code *${code}* on DryDash to get ₹${refereeBonus} off on your first order! Book now: ${shareUrl}`;
+
+    // Use custom admin-configured share message if available
+    const message = referralData?.shareMessage || defaultMessage;
+    const bannerUrl = referralData?.shareBannerUrl;
+
+    console.log("this is the shared data===>>", referralData);
 
     try {
+      Clipboard.setString(message);
+
       const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
       const canOpen = await Linking.canOpenURL(whatsappUrl);
+
       if (canOpen) {
         await Linking.openURL(whatsappUrl);
       } else {
         await Share.share({ message });
       }
     } catch (error) {
+      console.error("Error sharing referral:", error);
       await Share.share({ message });
     }
   };
@@ -136,6 +190,7 @@ export default function ReferAndEarnPage() {
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? theme.background : "#FFFFFF" }]}>
+      <StatusBar barStyle="light-content" backgroundColor="#014421" translucent={Platform.OS === "android"} />
       <Stack.Screen options={{ headerShown: false }} />
 
       {loadingReferral ? (
@@ -176,7 +231,7 @@ export default function ReferAndEarnPage() {
       ) : (
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 24, 32) }}
+          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 40, 56) }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -279,7 +334,7 @@ export default function ReferAndEarnPage() {
             <View style={styles.howItWorksWrap}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => setHowItWorksVisible(true)}
+                onPress={openHowItWorks}
                 style={styles.howItWorksPill}
               >
                 <Text style={styles.howItWorksPillText}>How its works</Text>
@@ -332,15 +387,24 @@ export default function ReferAndEarnPage() {
       <Modal
         visible={howItWorksVisible}
         transparent
-        animationType="fade"
-        onRequestClose={() => setHowItWorksVisible(false)}
+        animationType="none"
+        onRequestClose={closeHowItWorks}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setHowItWorksVisible(false)}
-          style={styles.modalBackdrop}
-        >
-          <View style={[styles.modalCard, { backgroundColor: isDark ? theme.card : "#FFFFFF" }]}>
+        <Animated.View style={[styles.modalBackdrop, { opacity: fadeAnim }]}>
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={closeHowItWorks}
+            style={StyleSheet.absoluteFill}
+          />
+          <Animated.View
+            style={[
+              styles.modalCard,
+              {
+                backgroundColor: isDark ? theme.card : "#FFFFFF",
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
             <Text style={[styles.modalTitle, { color: theme.text }]}>How Refer & Earn Works</Text>
 
             <View style={styles.stepItem}>
@@ -380,13 +444,13 @@ export default function ReferAndEarnPage() {
             </View>
 
             <TouchableOpacity
-              onPress={() => setHowItWorksVisible(false)}
+              onPress={closeHowItWorks}
               style={styles.closeModalBtn}
             >
               <Text style={styles.closeModalBtnText}>Got it!</Text>
             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
       </Modal>
 
       {/* REFERRAL HISTORY MODAL */}

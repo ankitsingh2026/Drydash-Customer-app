@@ -107,6 +107,7 @@ function AccordionCard({
   expanded,
   onPress,
   colors,
+  styles,
 }: {
   section: Section;
   expanded: boolean;
@@ -124,6 +125,7 @@ function AccordionCard({
     gradientB: string;
     gradientC: string;
   };
+  styles: any;
 }) {
   const maxHeight = React.useRef(new Animated.Value(0)).current;
   const fade = React.useRef(new Animated.Value(0)).current;
@@ -302,6 +304,7 @@ export default function TermsScreen() {
                 setOpenIndex(openIndex === index ? null : index)
               }
               colors={colors}
+              styles={styles}
             />
           ))}
         </View>
@@ -331,7 +334,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
    
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.card,
+    backgroundColor: theme?.card || "#F1F5F9",
   },
   headerCenter: {
     flex: 1,
@@ -351,7 +354,7 @@ const makeStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     lineHeight: 20,
     marginBottom: 10,
     fontWeight: "500",
-    color:theme.text
+    color: theme?.text || "#334155"
   },
 
   // scroll content
