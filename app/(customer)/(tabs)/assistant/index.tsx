@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SupportIndex() {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const styles = makeStyles(theme);
   const fade = useRef(new Animated.Value(0)).current;
   const slideY = useRef(new Animated.Value(20)).current;
@@ -126,7 +126,7 @@ export default function SupportIndex() {
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.pricingBtn}
-              onPress={() => router.push("/(assistant)/chat?topic=pricing")}
+              onPress={() => router.push("/(customer)/(assistant)/chat?topic=pricing")}
             >
               <Ionicons name="pricetag-outline" size={15} color={theme.textSecondary} />
               <Text style={styles.pricingText}>Know about pricing</Text>
