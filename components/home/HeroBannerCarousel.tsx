@@ -22,7 +22,7 @@ interface HeroBannerCarouselProps {
 }
 
 const DEFAULT_LOTTIE = require("../../assets/Anim_Banner.lottie");
-const AUTO_SCROLL_INTERVAL_MS = 4000;
+const AUTO_SCROLL_INTERVAL_MS = 8000;
 
 export default function HeroBannerCarousel({ hero, lottieKey = "" }: HeroBannerCarouselProps) {
   const router = useRouter();
