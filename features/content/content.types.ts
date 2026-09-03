@@ -1,11 +1,21 @@
 export type ContentMediaType = "lottie" | "video" | "image" | string;
 
+export interface ContentHeroBannerItem {
+  _id?: string;
+  title?: string;
+  mediaUrl?: string;
+  mediaType?: ContentMediaType;
+  link?: string;
+  isActive?: boolean;
+}
+
 export interface ContentHeroSection {
   mediaUrl?: string;
   mediaType?: ContentMediaType;
   isActive?: boolean;
   link?: string;
   title?: string;
+  banners?: ContentHeroBannerItem[];
 }
 
 export interface ContentMidSection {
