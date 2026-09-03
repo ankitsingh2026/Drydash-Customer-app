@@ -23,8 +23,8 @@
       "entitlements": {
         "aps-environment": "production",
         "com.apple.developer.associated-domains": [
-          "applinks:app.drydash.com",
-          "applinks:www.drydash.com",
+          "applinks:app.drydash.in",
+          "applinks:www.drydash.in",
           "applinks:api.drydash.in",
           "applinks:api.shiptos.com",
           "applinks:staging.shiptos.com"
@@ -45,8 +45,8 @@
         ]
       },
       "associatedDomains": [
-        "applinks:app.drydash.com",
-        "applinks:www.drydash.com",
+        "applinks:app.drydash.in",
+        "applinks:www.drydash.in",
         "applinks:api.drydash.in",
         "applinks:api.shiptos.com",
         "applinks:staging.shiptos.com"
@@ -55,7 +55,7 @@
     },
     "android": {
       "googleServicesFile": "./google-services.json",
-      "versionCode": 21,
+      "versionCode": 39,
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -217,7 +217,7 @@
           ]
         }
       ],
-      "package": "com.drydash.customer"
+      "package": "com.drydash.newCustomer"
     },
     "web": {
       "output": "static",

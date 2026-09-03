@@ -32,6 +32,10 @@ export interface WalletTransaction {
 
 export interface ReferralData {
   referralCode: string;
+  referralLink?: string;
+  shareMessage?: string;
+  shareBannerUrl?: string;
+  customShareMessage?: string;
   referrerBonusAmount: number;
   refereeBonusAmount: number;
   qualificationType: string;
@@ -41,16 +45,18 @@ export interface ReferralData {
   totalReferrals: number;
   successfulReferrals: number;
   totalEarnings: number;
+  totalEarned?: number;
+  stats?: { totalEarned?: number; [key: string]: any };
   isEligibleToRefer?: boolean;
   completedOrdersCount?: number;
-  shareMessage?: string;
-  referralLink?: string;
 }
 
 export interface ReferralHistoryItem {
+  id?: string;
   referralCode: string;
   referrerId: string;
   refereeId: string;
+  refereeName?: string;
   referrerBonusAmount: number;
   refereeBonusAmount: number;
   status: string;
@@ -148,7 +154,7 @@ export const WalletProvider = ({ children }: WalletProviderProps) => {
   useEffect(() => {
     const unsubWallet = onWalletUpdate((data) => {
       if (data?.balance !== undefined) {
-        setWallet((prev) => (prev ? { ...prev, balance: Number(data.balance) } : { balance: Number(data.balance), currency: "INR" }));
+        setWallet((prev) => (prev ? { ...prev, balance: Number(data.balance) } : { balance: Number(data.balance), currency: "INR", status: "active", totalCredits: 0, totalDebits: 0, creditCount: 0, debitCount: 0, lastTransactionAt: null }));
       }
       fetchWallet();
       fetchTransactions({ limit: 20 });

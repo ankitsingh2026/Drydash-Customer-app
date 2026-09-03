@@ -399,7 +399,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     const iconStyle = size === 40 ? styles.paymentIcon : styles.otherIcon;
     if (item.isWallet) {
       return (
-        <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
+        <View style={size === 40 ? (styles as any).iconContainer : (styles as any).smallIconContainer}>
           <Ionicons
             name="wallet"
             size={size === 40 ? 24 : 20}
@@ -410,7 +410,7 @@ export const UPIPaymentSelector: React.FC<UPIPaymentSelectorProps> = ({
     }
     if (item.isCod) {
       return (
-        <View style={size === 40 ? styles.iconContainer : styles.smallIconContainer}>
+        <View style={size === 40 ? (styles as any).iconContainer : (styles as any).smallIconContainer}>
           <Ionicons
             name="cash-outline"
             size={size === 40 ? 24 : 20}

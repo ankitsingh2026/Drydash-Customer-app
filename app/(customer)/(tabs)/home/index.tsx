@@ -1,6 +1,7 @@
 import AppLoader from "@/components/AppLoader";
 import CartSheet from "@/components/CartSheet";
 import FloatingCart from "@/components/FloatingCart";
+import HeroBannerCarousel from "@/components/home/HeroBannerCarousel";
 import HowItWorksSection from "@/components/home/HowItWorksSection";
 import LearnExploreSection from "@/components/home/Learnexploresection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
@@ -886,54 +887,11 @@ export default function Home() {
                   <DelayBanner delayInfo={delayInfo} />
                 )}
 
-                {/* ── HERO BANNER ── */}
+                {/* ── HERO BANNER CAROUSEL ── */}
                 {layoutContent?.herosection?.isActive !== false && layoutContent?.hero_banner?.isActive !== false && (() => {
                   const hero = layoutContent?.herosection || layoutContent?.hero_banner;
-                  const mediaUrl = hero?.mediaUrl?.trim() || "";
-                  const mediaType = hero?.mediaType?.toLowerCase() || (mediaUrl.endsWith(".lottie") ? "lottie" : "lottie");
-                  const isLottie = mediaType === "lottie" || mediaUrl.endsWith(".lottie") || mediaUrl.endsWith(".json");
-                  const isSvg = mediaUrl.endsWith(".svg") || mediaUrl.includes(".svg");
-
-                  const handleHeroPress = () => {
-                    if (!hero?.link?.trim()) return;
-                    const link = hero.link.trim();
-                    if (link.startsWith("http://") || link.startsWith("https://")) {
-                      Linking.openURL(link);
-                    } else {
-                      router.push(link as any);
-                    }
-                  };
-
                   return (
-                    <TouchableOpacity
-                      activeOpacity={0.92}
-                      onPress={handleHeroPress}
-                      style={{
-                        height: 250,
-                        width: "100%",
-                        paddingHorizontal: 16,
-                        marginBottom: 6,
-                        marginTop: 6,
-                      }}
-                    >
-                      {isLottie || !mediaUrl ? (
-                        <DotLottie
-                          key={lottieKey + (mediaUrl || "default")}
-                          source={mediaUrl ? { uri: mediaUrl } : require("../../../../assets/Anim_Banner.lottie")}
-                          autoplay
-                          loop
-                          style={{ width: "100%", height: "100%" }}
-                        />
-                      ) : isSvg ? (
-                        <SvgUri uri={mediaUrl} width="100%" height="100%" />
-                      ) : (
-                        <Image
-                          source={{ uri: mediaUrl }}
-                          style={{ width: "100%", height: "100%", borderRadius: 10 }}
-                          resizeMode="cover"
-                        />
-                      )}
-                    </TouchableOpacity>
+                    <HeroBannerCarousel hero={hero} lottieKey={lottieKey} />
                   );
                 })()}
 

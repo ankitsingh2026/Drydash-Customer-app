@@ -382,30 +382,25 @@ export default function EditAddress() {
 
             {showSuggestions && suggestions.length > 0 && (
               <View style={styles.suggestionsContainer}>
-                <FlatList
-                  data={suggestions}
-                  keyExtractor={(item) => item.place_id}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled={true}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={styles.suggestionItem}
-                      onPress={() => handleSelectSuggestion(item.place_id, item.description)}
-                    >
-                      <Ionicons name="location-outline" size={22} color={theme.textSecondary} style={{ marginRight: 12 }} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.suggestionMainText} numberOfLines={1}>
-                          {item.structured_formatting?.main_text || item.description}
+                {suggestions.map((item) => (
+                  <TouchableOpacity
+                    key={item.place_id}
+                    style={styles.suggestionItem}
+                    onPress={() => handleSelectSuggestion(item.place_id, item.description)}
+                  >
+                    <Ionicons name="location-outline" size={22} color={theme.textSecondary} style={{ marginRight: 12 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.suggestionMainText} numberOfLines={1}>
+                        {item.structured_formatting?.main_text || item.description}
+                      </Text>
+                      {item.structured_formatting?.secondary_text ? (
+                        <Text style={styles.suggestionSubText} numberOfLines={2}>
+                          {item.structured_formatting.secondary_text}
                         </Text>
-                        {item.structured_formatting?.secondary_text ? (
-                          <Text style={styles.suggestionSubText} numberOfLines={2}>
-                            {item.structured_formatting.secondary_text}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                />
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
 
